@@ -48,7 +48,7 @@ class EASE(Algorithm):
         return self.B
 
     def save(self, filename=None):
-        if not self.B:
+        if self.B is None:
             raise Exception("Fit a model before trying to save it, dumbass.")
 
         if not filename:  # TODO Check if filename is valid
@@ -59,7 +59,7 @@ class EASE(Algorithm):
         return filename
 
     def predict(self, X):
-        if not self.B:
+        if self.B is None:
             raise Exception("Fit a model before trying to predict with it.")
         return X @ self.B
 
