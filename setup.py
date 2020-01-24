@@ -7,15 +7,11 @@ setup(
     packages=find_packages(),
     # tests_require=["pytest"],
     install_requires=[
-        "intel-numpy==1.15.1",
-        "intel-scipy==1.1.0",
+        "numpy",
+        "scipy",
         "google-cloud-storage==1.23.0",
-        "pandas==0.25.3",
+        "pandas",
         "gcsfs==0.6.0"
     ],
-    entry_points={
-        "console_scripts": [
-            "train = synthetic_users_experiments.train:main",
-        ]
-    },
+    entry_points={},
 )
