@@ -24,14 +24,19 @@ class FoldInPercentage(Evaluator):
             self._max_index = fold_in_percentage.sp_mat_tr.shape[0]
 
         def __next__(self):
-            if self._index < self._max_index:
-                fold_in = self._fip.sp_mat_tr[self._index]
-                fold_out = self._fip.sp_mat_te[self._index]
+            while(True):
+                if self._index < self._max_index:
+                    fold_in = self._fip.sp_mat_tr[self._index]
+                    fold_out = self._fip.sp_mat_te[self._index]
 
-                self._index += 1
+                    if fold_in.nnz == 0 or fold_out.nnz == 0:
+                        self._index += 1
+                        continue
 
-                return fold_in, fold_out
-            raise StopIteration
+                    self._index += 1
+
+                    return fold_in[0], fold_out[0]
+                raise StopIteration
 
     def __init__(self, fold_in, sp_mat=None, shape=None, seed=None):
         self.fold_in = fold_in
@@ -39,7 +44,7 @@ class FoldInPercentage(Evaluator):
         self.sp_mat_tr = None
         self.sp_mat_te = None
 
-        if sp_mat:
+        if sp_mat is not None:
             sp_mat_tr, sp_mat_te = self.split(sp_mat, shape=shape)
 
         self.seed = seed if seed else 12345
