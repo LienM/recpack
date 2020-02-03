@@ -1,5 +1,7 @@
 import secrets
 
+from collections import Counter
+
 import numpy as np
 import numpy.random
 
@@ -87,6 +89,20 @@ class Random(Algorithm):
 
     def predict(self, K):
         return numpy.random.choice(self.items, size=K, replace=False)
+
+
+class Popularity(Algorithm):
+
+    def __init__(self):
+        super().__init__()
+        self.sorted_items = None
+
+    def fit(self, X):
+        items = list(X.nonzero()[1])
+        self.sorted_items = list(zip(*Counter(items).most_common()))[0]
+
+    def predict(self, K):
+        return self.sorted_items[0:K]
 
 
 ALGORITHMS = {
