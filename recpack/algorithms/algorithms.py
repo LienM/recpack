@@ -1,6 +1,7 @@
 import secrets
 
 import numpy as np
+import numpy.random
 
 
 class Algorithm:
@@ -75,8 +76,22 @@ class EASE(Algorithm):
         return X @ self.B
 
 
+class Random(Algorithm):
+
+    def __init__(self):
+        super().__init__()
+        self.items = None
+
+    def fit(self, X):
+        self.items = list(set(X.nonzero()[1]))
+
+    def predict(self, K):
+        return numpy.random.choice(self.items, size=K, replace=False)
+
+
 ALGORITHMS = {
-    'ease': EASE
+    'ease': EASE,
+    'random': Random
 }
 
 
