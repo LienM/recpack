@@ -107,7 +107,8 @@ class Popularity(Algorithm):
 
 ALGORITHMS = {
     'ease': EASE,
-    'random': Random
+    'random': Random,
+    'popularity': Popularity
 }
 
 
