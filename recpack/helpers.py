@@ -49,5 +49,5 @@ def upload_data_to_gcs(bucket_name, dataset_name, experiment_name, filename, cli
 
 
 def rescale_id_space(ids):
-    org_id_to_new_id = {val: ix + 1 for ix, val in enumerate(ids)}
+    org_id_to_new_id = {val: ix for ix, val in enumerate(ids)}
     return org_id_to_new_id
