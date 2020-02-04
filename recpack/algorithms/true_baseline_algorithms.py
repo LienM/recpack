@@ -19,7 +19,7 @@ class Random(Algorithm):
     def predict(self, X, K):
         """Predict K random scores for items per row in X
 
-        Returns sparse matrix of the same shape as X, with non zero scores for K items per row.
+        Returns numpy array of the same shape as X, with non zero scores for K items per row.
         """
         # For each user choose random K items, and generate a score for these items
         # Then create a matrix with the scores on the right indices
