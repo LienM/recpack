@@ -23,3 +23,12 @@ class ItemKNN(Algorithm):
     def predict(self, X):
         # TODO Implement. Wasn't sure how ItemKNN choses? 
         pass
+
+
+class SharedAccount(ItemKNN):
+
+    def __init__(self, K):
+        super().__init__(K)
+
+    def predict(self, X):
+        pass
