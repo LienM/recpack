@@ -13,7 +13,6 @@ class RecallK(Metric):
         self.num_users = 0
 
     def update(self, X_pred, X_true):
-
         topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
         topK_set = set(topK_list)
 
