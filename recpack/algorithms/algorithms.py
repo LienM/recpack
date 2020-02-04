@@ -34,6 +34,9 @@ class EASE(Algorithm):
         # Eq. 21: B = I − P · diagMat(1 ⊘ diag(P)
         # Compute P
         P = np.linalg.inv(X.T @ X + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
+        # Somehow Robin's local env seems to not want to make P an ndarray, and makes it a matrix
+        if type(P) == np.matrix:
+            P = P.A
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))
         B[np.diag_indices(B.shape[0])] = .0
