@@ -1,3 +1,7 @@
+from collections import Counter, defaultdict
+import math
+
+from scipy.sparse import diags
 
 from .algorithm_base import Algorithm
 
@@ -6,9 +10,16 @@ class ItemKNN(Algorithm):
 
     def __init__(self, K):
         self.K = K
+        self.item_co_occurrences = None
 
     def fit(self, X):
-        self.items = list(set(X.nonzero()[1]))
 
-    def predict(self, K):
-        return np.random.choice(self.items, size=K, replace=False)
+        co_mat = X.T @ X
+        # TODO This division could also be done on an item-basis when predicting. Not sure which is better.
+        A = diags(1 / co_mat.diagonal())
+        # This has all item-co-occurences. Now we should probably set N-K to zero
+        self.item_co_occurences = A @ co_mat
+
+    def predict(self, X):
+        # TODO Implement. Wasn't sure how ItemKNN choses? 
+        pass
