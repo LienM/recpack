@@ -1,28 +1,50 @@
 from collections import Counter, defaultdict
 import math
-
+import numpy as np
+import scipy
 from scipy.sparse import diags
+
 
 from .algorithm_base import Algorithm
 
 
 class ItemKNN(Algorithm):
 
-    def __init__(self, K):
+    def __init__(self, K=200):
+        """Construct an ItemKNN model. Before use make sure to fit the model.
+        The K parameter defines the how much best neighbours are kept for each item."""
         self.K = K
-        self.item_co_occurrences = None
+        self.item_cosine_similarities = None
 
     def fit(self, X):
-
+        """Fit a cosine similarity matrix from item to item"""
         co_mat = X.T @ X
-        # TODO This division could also be done on an item-basis when predicting. Not sure which is better.
+        # Do the cosine similarity computation here, this way we can set the diagonal to zero
+        # to avoid self recommendation
         A = diags(1 / co_mat.diagonal())
-        # This has all item-co-occurences. Now we should probably set N-K to zero
-        self.item_co_occurences = A @ co_mat
+
+        # This has all item-cosine similarities. Now we should probably set N-K to zero
+        self.item_cosine_similarities = A @ co_mat
+
+        # Set diagonal to 0, because we don't support self similarity
+        self.item_cosine_similarities.setdiag(0)
+
+        # resolve top K per item
+        # Get indices of top K items per item
+        indices = [
+            (i, j)
+            for i, best_items_row in enumerate(np.argpartition(self.item_cosine_similarities.toarray(), -self.K))
+            for j in best_items_row[-self.K:]
+        ]
+        # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
+        mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))))
+        self.item_cosine_similarities = self.item_cosine_similarities.multiply(mask)
 
     def predict(self, X):
-        # TODO Implement. Wasn't sure how ItemKNN choses? 
-        pass
+        # Use total sum of similarities
+        # TODO: Use average?
+        scores = X @ self.item_cosine_similarities
+        return scores.toarray()
 
 
 class SharedAccount(ItemKNN):
@@ -31,4 +53,4 @@ class SharedAccount(ItemKNN):
         super().__init__(K)
 
     def predict(self, X):
-        pass
+        raise NotImplementedError("Under construction, the gnomes are working on it.")
