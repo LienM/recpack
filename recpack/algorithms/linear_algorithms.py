@@ -2,21 +2,7 @@ import secrets
 
 import numpy as np
 
-
-class Algorithm:
-
-    def fit(X):
-        B = None
-        return B
-
-    def predict(X):
-        pass
-
-    def save(filename):
-        pass
-
-    def load(filename):
-        pass
+from .algorithm_base import Algorithm
 
 
 class EASE(Algorithm):
@@ -76,12 +62,3 @@ class EASE(Algorithm):
         if self.B is None:
             raise Exception("Fit a model before trying to predict with it.")
         return X @ self.B
-
-
-ALGORITHMS = {
-    'ease': EASE
-}
-
-
-def get_algorithm(algorithm_name):
-    return ALGORITHMS[algorithm_name]
