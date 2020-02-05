@@ -43,6 +43,8 @@ class ItemKNN(Algorithm):
     def predict(self, X):
         # Use total sum of similarities
         # TODO: Use average?
+        if self.item_cosine_similarities is None:
+            raise Exception("Fit a model before trying to predict with it.")
         scores = X @ self.item_cosine_similarities
         return scores.toarray()
 

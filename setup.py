@@ -9,6 +9,7 @@ setup(
     install_requires=[
         "numpy",
         "scipy",
+        "sklearn",
         "google-cloud-storage==1.23.0",
         "pandas",
         "gcsfs==0.6.0"
