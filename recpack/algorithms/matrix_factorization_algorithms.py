@@ -1,0 +1,33 @@
+import numpy as np
+import scipy.sparse
+import sklearn.decomposition
+
+from .algorithm_base import Algorithm
+
+
+class NMF(Algorithm):
+    # TODO check params NMF to see which ones are useful.
+    def __init__(self, K=100):
+        self.K = K
+
+        self.similarity_matrix = None
+
+    def fit(self, X):
+        # Using Sklearn NMF implementation. For info and parameters:
+        # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
+        model = sklearn.decomposition.NMF(n_components=self.K, init='random', random_state=0)
+
+        # Factorization is W * H. Where W contains user latent vectors, and H contains item latent vectors
+        W = model.fit_transform(X)
+        H = model.components_
+
+        # Compute an item to item similarity matrix by self multiplying the latent factors.
+        self.similarity_matrix = H.T @ H
+
+    def predict(self, X):
+        if self.similarity_matrix is None:
+            raise Exception("Fit a model before trying to predict with it.")
+
+        # TODO again the same similarity approach
+        scores = X @ self.similarity_matrix
+        return scores
