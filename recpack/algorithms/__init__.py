@@ -1,7 +1,7 @@
 from .linear_algorithms import EASE, SLIM
 from .true_baseline_algorithms import Popularity, Random
 from .nn_algorithms import ItemKNN
-from .matrix_factorization_algorithms import NMF
+from .matrix_factorization_algorithms import NMF, SVD
 
 
 ALGORITHMS = {
@@ -10,6 +10,7 @@ ALGORITHMS = {
     'popularity': Popularity,
     'itemKNN': ItemKNN,
     'NMF': NMF,
+    'SVD': SVD,
     'slim': SLIM,
 }
 
