@@ -13,13 +13,27 @@ class RecallK(Metric):
         self.num_users = 0
 
     def update(self, X_pred, X_true):
-        topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
-        topK_set = set(topK_list)
+        # resolve top K items per user
+        # Get indices of top K items per user
 
-        items = X_true.indices
+        # Per user get a set of the topK predicted items
+        topK_items_sets = {
+            u: set(best_items_row[-self.K:])
+            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
+        }
 
-        self.recall += len(topK_set.intersection(items)) / min(self.K, len(items))
-        self.num_users += 1
+        # Per user get a set of interacted items.
+        items_sets = {
+            u: set(X_true[u].nonzero()[1])
+            for u in range(X_true.shape[0])
+        }
+
+        for u in topK_items_sets.keys():
+            recommended_items = topK_items_sets[u]
+            true_items = items_sets[u]
+
+            self.recall += len(recommended_items.intersection(true_items)) / min(self.K, len(true_items))
+            self.num_users += 1
 
         return
 
@@ -67,6 +81,9 @@ class NDCGK(Metric):
         self.IDCG = {K: self.discount_template[:K].sum()}
 
     def update(self, X_pred, X_true):
+
+        print(type(X_pred), X_pred)
+        print(type(X_true), X_true)
         topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
         # Extract top-K highest scores into a sorted list
         sorted_topK_list = topK_list[numpy.argsort(X_pred[topK_list])][::-1]

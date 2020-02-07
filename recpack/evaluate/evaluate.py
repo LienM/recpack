@@ -25,24 +25,33 @@ class FoldInPercentage(Evaluator):
 
         def __next__(self):
             while(True):
+                # Yield multi line fold.
                 if self._index < self._max_index:
-                    fold_in = self._fip.sp_mat_tr[self._index]
-                    fold_out = self._fip.sp_mat_te[self._index]
+                    start = self._index
+                    end = self._index + self._fip.batch_size
+                    # make sure we don't go out of range
+                    if end >= self._max_index:
+                        end = self._max_index
 
+                    fold_in = self._fip.sp_mat_tr[start: end]
+                    fold_out = self._fip.sp_mat_te[start: end]
+
+                    # TODO Filter out users with all zeros?
                     if fold_in.nnz == 0 or fold_out.nnz == 0:
-                        self._index += 1
+                        self._index = end
                         continue
 
-                    self._index += 1
-
-                    return fold_in[0], fold_out[0]
+                    self._index = end
+                    return fold_in, fold_out
                 raise StopIteration
 
-    def __init__(self, fold_in, sp_mat=None, shape=None, seed=None):
+    def __init__(self, fold_in, sp_mat=None, shape=None, seed=None, batch_size=1):
         self.fold_in = fold_in
 
         self.sp_mat_tr = None
         self.sp_mat_te = None
+
+        self.batch_size = batch_size
 
         if sp_mat is not None:
             sp_mat_tr, sp_mat_te = self.split(sp_mat, shape=shape)
@@ -60,7 +69,8 @@ class FoldInPercentage(Evaluator):
 
         items_by_user_dct = defaultdict(list)
 
-        # Unsure if U and I are sorted, which is a requirement for itertools.groupby. So add them to a defaultdict to be sure
+        # Unsure if U and I are sorted, which is a requirement for itertools.groupby.
+        # So add them to a defaultdict to be sure
         groups = groupby(zip(U, I, V), lambda x: x[0])
         for key, subiter in groups:
             items_by_user_dct[key].extend(subiter)
