@@ -13,13 +13,27 @@ class RecallK(Metric):
         self.num_users = 0
 
     def update(self, X_pred, X_true):
-        topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
-        topK_set = set(topK_list)
+        # resolve top K items per user
+        # Get indices of top K items per user
 
-        items = X_true.indices
+        # Per user get a set of the topK predicted items
+        topK_items_sets = {
+            u: set(best_items_row[-self.K:])
+            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
+        }
 
-        self.recall += len(topK_set.intersection(items)) / min(self.K, len(items))
-        self.num_users += 1
+        # Per user get a set of interacted items.
+        items_sets = {
+            u: set(X_true[u].nonzero()[1])
+            for u in range(X_true.shape[0])
+        }
+
+        for u in topK_items_sets.keys():
+            recommended_items = topK_items_sets[u]
+            true_items = items_sets[u]
+
+            self.recall += len(recommended_items.intersection(true_items)) / min(self.K, len(true_items))
+            self.num_users += 1
 
         return
 
@@ -36,17 +50,24 @@ class MeanReciprocalRankK(Metric):
         self.num_users = 0
 
     def update(self, X_pred, X_true):
+        # Per user get a sorted list of the topK predicted items
+        topK_items = {
+            u: best_items_row[-self.K:][numpy.argsort(X_pred[u][best_items_row[-self.K:]])][::-1]
+            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
+        }
 
-        topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
-        sorted_topK_list = topK_list[numpy.argsort(X_pred[topK_list])][::-1]
+        items_sets = {
+            u: set(X_true[u].nonzero()[1])
+            for u in range(X_true.shape[0])
+        }
 
-        items = X_true.indices
+        for u in topK_items.keys():
+            for ix, item in enumerate(topK_items[u]):
+                if item in items_sets[u]:
+                    self.rr += 1 / (ix + 1)
+                    break
 
-        for ix, item in enumerate(sorted_topK_list):
-            if item in items:
-                self.rr += 1 / (ix + 1)
-
-        self.num_users += 1
+            self.num_users += 1
 
         return
 
@@ -67,28 +88,35 @@ class NDCGK(Metric):
         self.IDCG = {K: self.discount_template[:K].sum()}
 
     def update(self, X_pred, X_true):
-        topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
-        # Extract top-K highest scores into a sorted list
-        sorted_topK_list = topK_list[numpy.argsort(X_pred[topK_list])][::-1]
 
-        items = X_true.indices
+        topK_items = {
+            u: best_items_row[-self.K:][numpy.argsort(X_pred[u][best_items_row[-self.K:]])][::-1]
+            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
+        }
 
-        M = len(items)
+        items_sets = {
+            u: set(X_true[u].nonzero()[1])
+            for u in range(X_true.shape[0])
+        }
 
-        if M < self.K:
-            IDCG = self.IDCG.get(M)
+        for u in topK_items.keys():
+            M = len(items_sets[u])
+            if M < self.K:
+                IDCG = self.IDCG.get(M)
 
-            if not IDCG:
-                IDCG = self.discount_template[:M].sum()
-                self.IDCG[M] = IDCG
-        else:
-            IDCG = self.IDCG[self.K]
+                if not IDCG:
+                    IDCG = self.discount_template[:M].sum()
+                    self.IDCG[M] = IDCG
+            else:
+                IDCG = self.IDCG[self.K]
 
-        # Compute DCG
-        DCG = sum((self.discount_template[rank] * (item in items)) for rank, item in enumerate(sorted_topK_list))
+            # Compute DCG
+            DCG = sum(
+                (self.discount_template[rank] * (item in items_sets[u])) for rank, item in enumerate(topK_items[u])
+            )
 
-        self.num_users += 1
-        self.NDCG += DCG / IDCG
+            self.num_users += 1
+            self.NDCG += DCG / IDCG
 
         return
 
