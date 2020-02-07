@@ -52,11 +52,10 @@ class FoldInPercentage(Evaluator):
         self.sp_mat_te = None
 
         self.batch_size = batch_size
+        self.seed = seed if seed else 12345
 
         if sp_mat is not None:
             sp_mat_tr, sp_mat_te = self.split(sp_mat, shape=shape)
-
-        self.seed = seed if seed else 12345
 
     def split(self, sp_mat, shape=None):
         """
@@ -76,6 +75,9 @@ class FoldInPercentage(Evaluator):
             items_by_user_dct[key].extend(subiter)
 
         in_fold, out_fold = [], []
+
+        # Seed random
+        numpy.random.seed(self.seed)
 
         for u in items_by_user_dct.keys():
             usr_hist = items_by_user_dct[u]

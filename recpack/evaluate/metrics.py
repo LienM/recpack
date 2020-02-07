@@ -50,17 +50,24 @@ class MeanReciprocalRankK(Metric):
         self.num_users = 0
 
     def update(self, X_pred, X_true):
+        # Per user get a sorted list of the topK predicted items
+        topK_items = {
+            u: best_items_row[-self.K:][numpy.argsort(X_pred[u][best_items_row[-self.K:]])][::-1]
+            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
+        }
 
-        topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
-        sorted_topK_list = topK_list[numpy.argsort(X_pred[topK_list])][::-1]
+        items_sets = {
+            u: set(X_true[u].nonzero()[1])
+            for u in range(X_true.shape[0])
+        }
 
-        items = X_true.indices
+        for u in topK_items.keys():
+            for ix, item in enumerate(topK_items[u]):
+                if item in items_sets[u]:
+                    self.rr += 1 / (ix + 1)
+                    break
 
-        for ix, item in enumerate(sorted_topK_list):
-            if item in items:
-                self.rr += 1 / (ix + 1)
-
-        self.num_users += 1
+            self.num_users += 1
 
         return
 
@@ -82,30 +89,34 @@ class NDCGK(Metric):
 
     def update(self, X_pred, X_true):
 
-        print(type(X_pred), X_pred)
-        print(type(X_true), X_true)
-        topK_list = numpy.argpartition(X_pred, -self.K)[-self.K:]
-        # Extract top-K highest scores into a sorted list
-        sorted_topK_list = topK_list[numpy.argsort(X_pred[topK_list])][::-1]
+        topK_items = {
+            u: best_items_row[-self.K:][numpy.argsort(X_pred[u][best_items_row[-self.K:]])][::-1]
+            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
+        }
 
-        items = X_true.indices
+        items_sets = {
+            u: set(X_true[u].nonzero()[1])
+            for u in range(X_true.shape[0])
+        }
 
-        M = len(items)
+        for u in topK_items.keys():
+            M = len(items_sets[u])
+            if M < self.K:
+                IDCG = self.IDCG.get(M)
 
-        if M < self.K:
-            IDCG = self.IDCG.get(M)
+                if not IDCG:
+                    IDCG = self.discount_template[:M].sum()
+                    self.IDCG[M] = IDCG
+            else:
+                IDCG = self.IDCG[self.K]
 
-            if not IDCG:
-                IDCG = self.discount_template[:M].sum()
-                self.IDCG[M] = IDCG
-        else:
-            IDCG = self.IDCG[self.K]
+            # Compute DCG
+            DCG = sum(
+                (self.discount_template[rank] * (item in items_sets[u])) for rank, item in enumerate(topK_items[u])
+            )
 
-        # Compute DCG
-        DCG = sum((self.discount_template[rank] * (item in items)) for rank, item in enumerate(sorted_topK_list))
-
-        self.num_users += 1
-        self.NDCG += DCG / IDCG
+            self.num_users += 1
+            self.NDCG += DCG / IDCG
 
         return
 
