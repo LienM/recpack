@@ -31,9 +31,9 @@ class StrongGeneralization(TrainTestSplit):
         te_u, te_i, te_vals = [], [], []
 
         for ix, user in enumerate(nonzero_users):
-            u_nzi = self.sp_mat[user].indices
+            u_nzi = sp_mat[user].indices
             u = [user] * len(u_nzi)
-            vals = self.sp_mat[user, u_nzi].todense().A[0]
+            vals = sp_mat[user, u_nzi].todense().A[0]
 
             if row_cnt / total_rows >= self.tr_perc:
                 te_i.extend(u_nzi)
