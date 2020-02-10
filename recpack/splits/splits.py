@@ -3,33 +3,19 @@ import scipy.sparse
 
 
 class TrainTestSplit:
-    def __init__(self, sp_mat):
-        self.sp_mat = sp_mat
-        self.next_sp_mat = None
+    def __init__(self):
+        pass
 
     def split(self):
         pass
 
-    def __iter__(self):
-        self.next_sp_mat = self.sp_mat
-        return self
-
-    def __next__(self):
-        if self.next_sp_mat:
-            tr_sp_mat, te_sp_mat, next_sp_mat = self.split(self.next_sp_mat)
-            self.next_sp_mat = next_sp_mat
-            return tr_sp_mat, te_sp_mat
-        else:
-            raise StopIteration
-
 
 class StrongGeneralization(TrainTestSplit):
-    def __init__(self, sp_mat, tr_perc=0.7, iters=1):
-        self.sp_mat = sp_mat
-        self.max = iters
+    def __init__(self, tr_perc=0.7):
         self.tr_perc = tr_perc
 
     def split(self, sp_mat):
+
         shape = sp_mat.shape
         dtype = sp_mat.dtype
 
