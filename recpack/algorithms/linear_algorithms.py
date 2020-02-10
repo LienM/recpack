@@ -80,7 +80,7 @@ class SLIM(Algorithm):
         self.l2_reg = l2_reg
         # Translate regression parameters into the expected sgd parameters
         self.alpha = self.l1_reg + self.l2_reg
-        self.l1_ratio = self.l1_reg/self.alpha
+        self.l1_ratio = self.l1_reg / self.alpha
         self.fit_intercept = fit_intercept
         self.ignore_neg_weights = ignore_neg_weights
 
