@@ -1,5 +1,9 @@
 class Algorithm:
 
+    @property
+    def name(self):
+        return None
+
     def fit(self, X):
         B = None
         return B
