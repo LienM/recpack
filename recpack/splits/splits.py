@@ -9,10 +9,18 @@ class TrainTestSplit:
     def split(self):
         pass
 
+    @property
+    def name(self):
+        return None
+
 
 class StrongGeneralization(TrainTestSplit):
     def __init__(self, tr_perc=0.7):
         self.tr_perc = tr_perc
+
+    @property
+    def name(self):
+        return f"strong_generalization_tr_{self.tr_perc*100}_te_{(1-self.tr_perc)*100}"
 
     def split(self, sp_mat):
 
