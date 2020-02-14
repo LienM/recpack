@@ -1,4 +1,3 @@
-import numpy as np
 import scipy.sparse
 import sklearn.decomposition
 
@@ -22,6 +21,10 @@ class MF(Algorithm):
         scores = X @ self.similarity_matrix
         return scores
 
+    @property
+    def name(self):
+        return f"MF_K_{self.K}"
+
 
 class NMF(MF):
     # TODO check params NMF to see which ones are useful.
@@ -32,14 +35,19 @@ class NMF(MF):
         model = sklearn.decomposition.NMF(n_components=self.K, init='random', random_state=0)
 
         # Factorization is W * H. Where W contains user latent vectors, and H contains item latent vectors
-        W = model.fit_transform(X)
+        _ = model.fit_transform(X)
         H = model.components_
 
         # Compute an item to item similarity matrix by self multiplying the latent factors.
         self.similarity_matrix = H.T @ H
 
+    @property
+    def name(self):
+        return f"NMF_K_{self.K}"
+
 
 class SVD(MF):
+
     def fit(self, X):
         # TODO use other parameter options?
         model = sklearn.decomposition.TruncatedSVD(n_components=self.K, n_iter=7, random_state=42)
@@ -50,3 +58,7 @@ class SVD(MF):
         V = model.components_
         sigma = scipy.sparse.diags(model.singular_values_)
         self.similarity_matrix = V.T @ sigma @ V
+
+    @property
+    def name(self):
+        return f"SVD_K_{self.K}"
