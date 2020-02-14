@@ -1,10 +1,9 @@
 import secrets
 
 import numpy as np
-
 import scipy.sparse
 
-from sklearn.linear_model import SGDRegressor, ElasticNet
+from sklearn.linear_model import SGDRegressor
 
 from .algorithm_base import Algorithm
 
@@ -67,6 +66,10 @@ class EASE(Algorithm):
             raise Exception("Fit a model before trying to predict with it.")
         return X @ self.B
 
+    @property
+    def name(self):
+        return f"ease_lambda_{self.l2}"
+
 
 class SLIM(Algorithm):
     """ Implementation of the SLIM model.
@@ -80,7 +83,7 @@ class SLIM(Algorithm):
         self.l2_reg = l2_reg
         # Translate regression parameters into the expected sgd parameters
         self.alpha = self.l1_reg + self.l2_reg
-        self.l1_ratio = self.l1_reg/self.alpha
+        self.l1_ratio = self.l1_reg / self.alpha
         self.fit_intercept = fit_intercept
         self.ignore_neg_weights = ignore_neg_weights
 
@@ -153,3 +156,7 @@ class SLIM(Algorithm):
         # TODO, this looks exactly the same as NN's recommendation -> refactor into a similarity based class.
         scores = X @ self.similarity_matrix
         return scores.toarray()
+
+    @property
+    def name(self):
+        return f"slim_l1_{self.l1_reg}_l2_{self.l2_reg}_{self.model}"
