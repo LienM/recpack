@@ -50,7 +50,7 @@ class Pipeline:
 
     def run(self, sp_mat):
 
-        tr_mat, te_mat = self.splitter.split(sp_mat)
+        tr_mat, val_mat, te_mat = self.splitter.split(sp_mat)
 
         for algo in self.algorithms:
             algo.fit(tr_mat)
