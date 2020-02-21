@@ -64,7 +64,7 @@ class PredefinedSplit(TrainValidationTestSplit):
         shape = sp_mat.shape
         dtype = sp_mat.dtype
 
-        assert shape[1] == (len(self.tr_indices) + len(self.te_indices) + len(self.val_indices))
+        assert shape[0] == (len(self.tr_indices) + len(self.te_indices) + len(self.val_indices))
 
         tr_mat = create_sp_mat_from_indices(sp_mat, self.tr_indices)
         val_mat = create_sp_mat_from_indices(sp_mat, self.val_indices)
