@@ -12,6 +12,8 @@ setup(
         "sklearn",
         "google-cloud-storage==1.23.0",
         "pandas",
+        "pytest",
+        "pytest-cov",
         "gcsfs==0.6.0"
     ],
     entry_points={},

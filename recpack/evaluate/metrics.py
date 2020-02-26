@@ -39,6 +39,9 @@ class RecallK(Metric):
 
     @property
     def value(self):
+        if self.num_users == 0:
+            return 0
+
         return self.recall / self.num_users
 
 
@@ -73,6 +76,9 @@ class MeanReciprocalRankK(Metric):
 
     @property
     def value(self):
+        if self.num_users == 0:
+            return 0
+
         return self.rr / self.num_users
 
 
@@ -122,4 +128,7 @@ class NDCGK(Metric):
 
     @property
     def value(self):
+        if self.num_users == 0:
+            return 0
+
         return self.NDCG / self.num_users
