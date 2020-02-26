@@ -33,6 +33,10 @@ class Random(Algorithm):
         score_matrix = sp.sparse.csr_matrix((scores, (user_idxs, item_idxs)), shape=X.shape)
         return score_matrix.toarray()
 
+    @property
+    def name(self):
+        return f"random_{self.K}"
+
 
 class Popularity(Algorithm):
 
@@ -50,3 +54,7 @@ class Popularity(Algorithm):
         for i, s in self.sorted_scores[:self.K]:
             score_list[i] = s
         return np.repeat([score_list], X.shape[0], axis=0)
+
+    @property
+    def name(self):
+        return f"popularity_{self.K}"

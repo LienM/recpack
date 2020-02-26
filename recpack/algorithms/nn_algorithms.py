@@ -48,6 +48,10 @@ class ItemKNN(Algorithm):
         scores = X @ self.item_cosine_similarities
         return scores.toarray()
 
+    @property
+    def name(self):
+        return f"item_knn_{self.K}"
+
 
 class SharedAccount(ItemKNN):
 

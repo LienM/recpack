@@ -1,72 +1,48 @@
-from collections import defaultdict
-from recpack.evaluate import RecallK, MeanReciprocalRankK, NDCGK
+class DataM:
+    def __init__(self, values_sp_m, timestamps_sp_m=None):
+        self._values = values_sp_m
+        self._timestamps = timestamps_sp_m
+        self._validate_matrices_shape()
 
-
-class MetricRegistry:
-
-    METRICS = {"NDCG": NDCGK, "Recall": RecallK, "MRR": MeanReciprocalRankK}
-
-    def __init__(self, algorithms, metric_names, K_values):
-        self.registry = defaultdict(dict)
-        self.K_values = K_values
-        self.metric_names = metric_names
-
-        self.algorithms = algorithms
-
-        for algo in algorithms:
-            for m in self.metric_names:
-                for K in K_values:
-                    self._create(algo.name, m, K)
-
-    def _create(self, algorithm_name, metric_name, K):
-        metric = self.METRICS[metric_name](K)
-        self.registry[algorithm_name][f"{metric_name}_K_{K}"] = metric
-        return
-
-    def __getitem__(self, key):
-        return self.registry[key]
+    def _validate_matrices_shape(self):
+        if self._timestamps is not None:
+            assert self._values.shape == self._timestamps.shape
 
     @property
-    def metrics(self):
-        results = defaultdict(dict)
-        for key in self.registry:
-            for k in self.registry[key]:
-                results[key][k] = self.registry[key][k].value
-        return results
+    def values(self):
+        self._validate_matrices_shape()
+        return self._values
 
+    @property
+    def timestamps(self):
+        self._validate_matrices_shape()
+        if self._timestamps is None:
+            raise AttributeError("timestamps is None, and should not be used")
+        return self._timestamps
 
-class Pipeline:
-    """
-    Performs all steps in order and holds on to results. 
-    """
+    @property
+    def shape(self):
+        return self._values.shape
 
-    def __init__(self, splitter, algorithms, evaluator, metric_names, K_values):
-        self.splitter = splitter
-        self.algorithms = algorithms
-        self.evaluator = evaluator
-        self.metric_names = metric_names
-        self.K_values = K_values
-        self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
+    def apply_mask(self, mask_sp_m):
+        """
+        Pointwise multiple the matrices with the mask provided. Shape of mask should match shape of object.
+        Will edit matrices in place.
 
-    def run(self, sp_mat):
+        :param mask_sp_m: The mask to apply to the data matrices. 
+                          A mask is a 1 and 0 matrix which will be pointwise multiplated with data matrices.
+        :type mask_sp_m: `scipy.sparse.csr_matrix`
+        """
+        # Make sure shapes are correct
+        assert mask_sp_m.shape == self._values.shape
+        self._validate_matrices_shape()
 
-        tr_mat, val_mat, te_mat = self.splitter.split(sp_mat)
+        self._values = self._values.multiply(mask_sp_m)
+        if self._timestamps is not None:
+            self._timestamps = self._timestamps.multiply(mask_sp_m)
 
-        for algo in self.algorithms:
-            algo.fit(tr_mat)
+    def copy(self):
+        c_values = self._values.copy()
+        c_timestamps = None if self._timestamps is None else self._timestamps.copy()
 
-        self.evaluator.split(te_mat)
-
-        for _in, _out in self.evaluator:
-            for algo in self.algorithms:
-
-                metrics = self.metric_registry[algo.name]
-                X_pred = algo.predict(_in)
-
-                for metric in metrics.values():
-
-                    metric.update(X_pred, _out)
-
-    def get(self):
-        return self.metric_registry.metrics
-
+        return DataM(c_values, c_timestamps)

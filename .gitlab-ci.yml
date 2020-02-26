@@ -19,16 +19,18 @@ cache:
     - venv/
 
 before_script:
-  - python -V  # Print out python version for debugging
+  - python -V # Print out python version for debugging
   - pip install virtualenv
   - virtualenv venv
   - source venv/bin/activate
+  - pip install .
 
 test:
   script:
-    - python setup.py test
-    - pip install tox flake8  # you can also use tox
-    - tox -e py36,flake8
+    - pytest --cov=recpack recpack/tests/ --cov-config=.coveragerc
+    # - python setup.py test
+    # - pip install tox flake8 # you can also use tox
+    # - tox -e py36,flake8
 
 run:
   script:
@@ -39,6 +41,8 @@ run:
   artifacts:
     paths:
       - dist/*.whl
+  only:
+    - master
 
 pages:
   script:
