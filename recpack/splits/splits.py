@@ -1,3 +1,4 @@
+import math
 import numpy
 import scipy.sparse
 
@@ -176,7 +177,73 @@ class StrongGeneralization(TrainValidationTestSplit):
         return tr_data, val_data, te_data
 
 
-class TimedSplit():
+class WeakGeneralization(TrainValidationTestSplit):
+
+    def __init__(self, tr_perc=0.7, val_perc=0, seed=None):
+        self.tr_perc = tr_perc
+        self.val_perc = val_perc
+        self.test_perc = 1 - tr_perc - val_perc
+        self.seed = seed
+
+    @property
+    def name(self):
+        return f"weak_generalization_tr_{self.tr_perc*100}_val_{(self.val_perc)*100}_te_{(self.te_perc)*100}"
+
+    def split(self, data, validation_data=None):
+        """
+        Splits a user-interaction matrix by randomly shuffling interactions,
+        and filling up the different data slices with the right percentages of data.
+
+        :param data: recpack.DataM containing the data values matrix
+                     and potentially timestamp matrix which will be split.
+        :type data: class:`recpack.DataM`
+        :param evaluation_data: DataM object unused in this splitter.
+        :return: A tuple containing the training, validation and test data objects in that order.
+        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        """
+
+        shape = data.shape
+
+        sp_mat = data.values
+        indices = sp_mat.nonzero()
+        number_of_interactions = len(indices[0])
+        # each interaction is assigned its rank as value
+        # These values will be shuffled, and the corresponding user, item indices
+        # will be added to the various output slices.
+        interaction_indices = list(range(number_of_interactions))
+
+        # In case of a floating point end of slice we round up.
+        tr_start = 0
+        tr_end = math.ceil(number_of_interactions * self.tr_perc)
+
+        val_start = tr_end
+        val_end = tr_end + math.ceil(number_of_interactions * self.val_perc)
+
+        te_start = val_end
+        te_end = number_of_interactions
+
+        # Seed to make testing possible
+        if self.seed is not None:
+            numpy.random.seed(self.seed)
+
+        numpy.random.shuffle(interaction_indices)
+
+        # Slice the user and item indices by using the list of interaction indices
+        tr_u = indices[0][interaction_indices[tr_start:tr_end]]
+        tr_i = indices[1][interaction_indices[tr_start:tr_end]]
+        val_u = indices[0][interaction_indices[val_start:val_end]]
+        val_i = indices[1][interaction_indices[val_start:val_end]]
+        te_u = indices[0][interaction_indices[te_start:te_end]]
+        te_i = indices[1][interaction_indices[te_start:te_end]]
+
+        tr_data = slice_data(data, (tr_u, tr_i))
+        val_data = slice_data(data, (val_u, val_i))
+        te_data = slice_data(data, (te_u, te_i))
+
+        return tr_data, val_data, te_data
+
+
+class TimedSplit(TrainValidationTestSplit):
     """
         Use this class if you want to split your data on a timestamp.
         Training data will be all data before t,
