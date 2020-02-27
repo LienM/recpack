@@ -3,5 +3,6 @@ from .splits import (
     EvaluationDataForTestTimedSplit,
     PredefinedUserSplit,
     StrongGeneralization,
-    TimedSplit
+    TimedSplit,
+    WeakGeneralization
 )
