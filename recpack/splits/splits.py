@@ -261,11 +261,11 @@ class TimedSplit(TrainValidationTestSplit):
 
     @property
     def name(self):
-        return f"time_split_t{self.t}_t_delta_{self.t_delta}"
+        return f"timed_split_t{self.t}_t_delta_{self.t_delta}"
 
     def split(self, data, evaluation_data=None):
         """
-        Split the input data by using the timestamps provided in the tinestamp field of data.
+        Split the input data by using the timestamps provided in the timestamp field of data.
 
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be split.
@@ -317,14 +317,17 @@ class EvaluationDataForTestSplit(TrainValidationTestSplit):
 
     def split(self, data, evaluation_data):
         """
+        Generate train, validation and test data.
         Split the input data by making train = data and evaluation will be split into validation and test.
         """
 
         # reuse Strong Generalization splitter
         sgs = StrongGeneralization(0.0, val_perc=self.val_perc, seed=self.seed)
 
+        # evaluation_data is used to generate validation and test data
         _, val_data, te_data = sgs.split(evaluation_data)
 
+        # Training data is the data object.
         tr_data = data.copy()
 
         return tr_data, val_data, te_data
@@ -332,14 +335,14 @@ class EvaluationDataForTestSplit(TrainValidationTestSplit):
 
 class EvaluationDataForTestTimedSplit(TrainValidationTestSplit):
     """
-        Use this class if you want to split your data on a timestamp.
-        Training data will be before t,
-        the test data will be the data in the interval [t, t+t_delta)
+    Use this class if you want to split your data on a timestamp.
+    Training data will be before t,
+    the test data will be the data in the interval [t, t+t_delta)
 
-        :param t: epoch timestamp to split on
-        :type t: int
-        :param t_delta: seconds past t to consider as test data (default is None, all data > t is considered)
-        :type t_delta: int
+    :param t: epoch timestamp to split on
+    :type t: int
+    :param t_delta: seconds past t to consider as test data (default is None, all data > t is considered)
+    :type t_delta: int
     """
 
     def __init__(self, t, t_delta=None):
@@ -348,16 +351,16 @@ class EvaluationDataForTestTimedSplit(TrainValidationTestSplit):
 
     @property
     def name(self):
-        return f"time_split_t{self.t}_t_delta_{self.t_delta}"
+        return f"evaluation_for_test_timed_split_t{self.t}_t_delta_{self.t_delta}"
 
-    def split(self, data, evaluation_data=None):
+    def split(self, data, evaluation_data):
         """
-        Split the input data by using the timestamps provided in the tinestamp field of data.
+        Split the input data by using the timestamps provided in the timestamp field of data and validation_data.
 
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be used for train data.
         :type data: class:`recpack.DataM`
-        :param evaluation_data: DataM object used to generate train and validation data.
+        :param evaluation_data: DataM object used to generate validation and test data.
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
