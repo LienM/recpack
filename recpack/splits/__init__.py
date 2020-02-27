@@ -1,1 +1,1 @@
-from .splits import PredefinedUserSplit, StrongGeneralization, TimedSplit
+from .splits import PredefinedUserSplit, StrongGeneralization, TimedSplit, WeakGeneralization

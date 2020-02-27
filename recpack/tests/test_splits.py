@@ -1,5 +1,6 @@
 import recpack.splits
 import recpack.helpers
+import math
 import pandas as pd
 import pytest
 import numpy
@@ -300,3 +301,40 @@ def test_predefined_split_no_full_split():
     splitter = recpack.splits.PredefinedUserSplit([0, 1], [], [3], 'ordered')
     with pytest.raises(AssertionError):
         tr, val, te = splitter.split(data, None)
+
+
+@pytest.mark.parametrize(
+    "tr_perc, val_perc",
+    [
+        (
+            0.75,
+            0
+        ),
+        (
+            0.5,
+            0.25,
+        ),
+        (
+            0.45,
+            0.20
+        )
+    ]
+)
+def test_weak_generalization(tr_perc, val_perc):
+    data = generate_data()
+    num_interactions = len(data.values.nonzero()[0])
+
+    num_tr_interactions = math.ceil(num_interactions * tr_perc)
+    num_val_interactions = math.ceil(num_interactions * val_perc)
+    num_te_interactions = num_interactions - num_tr_interactions - num_val_interactions
+
+    splitter = recpack.splits.WeakGeneralization(tr_perc, val_perc, seed=42)
+    tr, val, te = splitter.split(data)
+
+    assert len(tr.values.nonzero()[0]) == num_tr_interactions
+    assert len(val.values.nonzero()[0]) == num_val_interactions
+    assert len(te.values.nonzero()[0]) == num_te_interactions
+
+    assert len(tr.timestamps.nonzero()[0]) == num_tr_interactions
+    assert len(val.timestamps.nonzero()[0]) == num_val_interactions
+    assert len(te.timestamps.nonzero()[0]) == num_te_interactions
