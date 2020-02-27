@@ -2,6 +2,7 @@ import recpack.splits
 import recpack.helpers
 import pandas as pd
 import pytest
+import math
 import numpy
 
 
@@ -300,3 +301,65 @@ def test_predefined_split_no_full_split():
     splitter = recpack.splits.PredefinedUserSplit([0, 1], [], [3], 'ordered')
     with pytest.raises(AssertionError):
         tr, val, te = splitter.split(data, None)
+
+
+@pytest.mark.parametrize(
+    "val_perc",
+    [
+        0., 0.25, 0.5, 1.
+    ]
+)
+def test_evaluation_as_test_data(val_perc):
+    data = generate_data()
+    evaluation_data = generate_data()
+
+    num_interactions = len(data.values.nonzero()[0])
+    num_evaluation_interactions = len(evaluation_data.values.nonzero()[0])
+
+    num_tr_interactions = num_interactions
+    num_val_interactions = math.ceil(num_evaluation_interactions * val_perc)
+    num_te_interactions = num_evaluation_interactions - num_val_interactions
+
+    splitter = recpack.splits.EvaluationDataForTestSplit(val_perc, seed=42)
+    tr, val, te = splitter.split(data, evaluation_data)
+
+    assert len(tr.values.nonzero()[0]) == num_tr_interactions
+    assert len(val.values.nonzero()[0]) == num_val_interactions
+    assert len(te.values.nonzero()[0]) == num_te_interactions
+
+    assert len(tr.timestamps.nonzero()[0]) == num_tr_interactions
+    assert len(val.timestamps.nonzero()[0]) == num_val_interactions
+    assert len(te.timestamps.nonzero()[0]) == num_te_interactions
+
+
+@pytest.mark.parametrize(
+    "t, t_delta",
+    [
+        (20, None,),
+        (20, 10,)
+    ]
+)
+def test_evaluation_as_test_data_timed_split(t, t_delta):
+    data = generate_data()
+    evaluation_data = generate_data()
+
+    splitter = recpack.splits.EvaluationDataForTestTimedSplit(t, t_delta)
+    tr, val, te = splitter.split(data, evaluation_data)
+
+    # Assert all data in train has timestamp < t
+    tr_indices = tr.timestamps.nonzero()
+    for i, j in zip(tr_indices[0], tr_indices[1]):
+        assert tr.timestamps[i, j] < t
+
+    # Assert all data in test has timestamp in [t, t+t_delta]
+    te_indices = te.timestamps.nonzero()
+    for i, j in zip(te_indices[0], te_indices[1]):
+        ts = te.timestamps[i, j]
+        if t_delta is None:
+            assert ts >= t
+        else:
+            assert t <= ts and ts < t + t_delta
+
+    # Assert validation is empty
+    assert val.values.nnz == 0
+    assert val.timestamps.nnz == 0

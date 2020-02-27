@@ -1,1 +1,7 @@
-from .splits import PredefinedUserSplit, StrongGeneralization, TimedSplit
+from .splits import (
+    EvaluationDataForTestSplit,
+    EvaluationDataForTestTimedSplit,
+    PredefinedUserSplit,
+    StrongGeneralization,
+    TimedSplit
+)
