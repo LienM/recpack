@@ -10,9 +10,14 @@ from .algorithm_base import Algorithm
 
 class Random(Algorithm):
 
-    def __init__(self, K=200):
+    def __init__(self, K=200, seed=None):
         self.items = None
         self.K = K
+        self.seed = seed
+
+        # TODO: Do we need this in the predict method, or is this enough.
+        if self.seed is not None:
+            random.seed(self.seed)
 
     def fit(self, X):
         self.items = list(set(X.nonzero()[1]))
