@@ -369,6 +369,7 @@ def test_evaluation_as_test_data(val_perc):
     assert len(val.timestamps.nonzero()[0]) == num_val_interactions
     assert len(te.timestamps.nonzero()[0]) == num_te_interactions
 
+
 @pytest.mark.parametrize(
     "t, t_delta",
     [
