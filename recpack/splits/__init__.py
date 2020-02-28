@@ -1,6 +1,6 @@
 from .splits import (
-    EvaluationDataForTestSplit,
-    EvaluationDataForTestTimedSplit,
+    SeparateDataForValidationAndTestSplit,
+    SeparateDataForValidationAndTestTimedSplit,
     PredefinedUserSplit,
     StrongGeneralization,
     TimedSplit,
