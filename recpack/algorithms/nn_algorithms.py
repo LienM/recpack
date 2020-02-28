@@ -3,6 +3,7 @@ import math
 import numpy as np
 import scipy
 from scipy.sparse import diags
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 from .algorithm_base import Algorithm
@@ -18,15 +19,12 @@ class ItemKNN(Algorithm):
 
     def fit(self, X):
         """Fit a cosine similarity matrix from item to item"""
-        co_mat = X.T @ X
         # Do the cosine similarity computation here, this way we can set the diagonal to zero
         # to avoid self recommendation
-        A = diags(1 / co_mat.diagonal())
+        # X.T otherwise we are doing a user KNN
+        self.item_cosine_similarities = cosine_similarity(X.T, dense_output=False)
 
-        # This has all item-cosine similarities. Now we should probably set N-K to zero
-        self.item_cosine_similarities = A @ co_mat
-
-        # Set diagonal to 0, because we don't support self similarity
+        # Set diagonal to 0, because we don't want to support self similarity
         self.item_cosine_similarities.setdiag(0)
 
         # resolve top K per item
