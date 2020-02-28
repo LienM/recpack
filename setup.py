@@ -14,7 +14,6 @@ setup(
         "pandas",
         "pytest",
         "pytest-cov",
-        "sklean",
         "gcsfs==0.6.0"
     ],
     entry_points={},
