@@ -22,7 +22,7 @@ def test_fold_in_evaluator():
     splitter = recpack.splits.TimedSplit(20, None)
     evaluator = recpack.evaluate.FoldInPercentage(0.5, seed=42)
 
-    tr, val, te = splitter.split(data, None)
+    tr, val, te = splitter.split(data)
     in_, out_ = evaluator.split(tr, val, te)
 
     assert (in_.toarray() == numpy.array([
@@ -41,7 +41,7 @@ def test_train_in_test_out_evaluator():
     splitter = recpack.splits.TimedSplit(20, None)
     evaluator = recpack.evaluate.TrainingInTestOutEvaluator()
 
-    tr, val, te = splitter.split(data, None)
+    tr, val, te = splitter.split(data)
     in_, out_ = evaluator.split(tr, val, te)
 
     assert (in_.toarray() == numpy.array([

@@ -7,7 +7,7 @@ class TrainValidationTestSplit:
     def __init__(self):
         pass
 
-    def split(self, data, evaluation_data=None):
+    def split(self, data):
         pass
 
     @property
@@ -47,14 +47,13 @@ class PredefinedUserSplit(TrainValidationTestSplit):
     def name(self):
         return f"copy_split_{self.split_name}"
 
-    def split(self, data, evaluation_data=None):
+    def split(self, data):
         """
         Splits a user-interaction matrix by the user indices defined for each set upon construction of the object.
 
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be split.
         :type data: class:`recpack.DataM`
-        :param evaluation_data: DataM object unused in this splitter.
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
@@ -118,7 +117,7 @@ class StrongGeneralization(TrainValidationTestSplit):
     def name(self):
         return f"strong_generalization_tr_{self.tr_perc*100}_val_{(self.val_perc)*100}_te_{(self.te_perc)*100}"
 
-    def split(self, data, validation_data=None):
+    def split(self, data):
         """
         Splits a user-interaction matrix by randomly shuffling users,
         and filling up the different data slices with the right percentages of data.
@@ -126,7 +125,6 @@ class StrongGeneralization(TrainValidationTestSplit):
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be split.
         :type data: class:`recpack.DataM`
-        :param evaluation_data: DataM object unused in this splitter.
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
@@ -189,7 +187,7 @@ class WeakGeneralization(TrainValidationTestSplit):
     def name(self):
         return f"weak_generalization_tr_{self.tr_perc*100}_val_{(self.val_perc)*100}_te_{(self.te_perc)*100}"
 
-    def split(self, data, validation_data=None):
+    def split(self, data):
         """
         Splits a user-interaction matrix by randomly shuffling interactions,
         and filling up the different data slices with the right percentages of data.
@@ -197,7 +195,6 @@ class WeakGeneralization(TrainValidationTestSplit):
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be split.
         :type data: class:`recpack.DataM`
-        :param evaluation_data: DataM object unused in this splitter.
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
@@ -261,16 +258,15 @@ class TimedSplit(TrainValidationTestSplit):
 
     @property
     def name(self):
-        return f"time_split_t{self.t}_t_delta_{self.t_delta}"
+        return f"timed_split_t{self.t}_t_delta_{self.t_delta}"
 
-    def split(self, data, evaluation_data=None):
+    def split(self, data):
         """
-        Split the sparse matrix by using the timestamps provided in the tinestamp sp_mat.
+        Split the input data by using the timestamps provided in the timestamp field of data.
 
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be split.
         :type data: class:`recpack.DataM`
-        :param evaluation_data: DataM object unused in this splitter.
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
@@ -293,5 +289,116 @@ class TimedSplit(TrainValidationTestSplit):
         tr_data = slice_data(data, (tr_u, tr_i))
         val_data = slice_data(data, (val_u, val_i))
         te_data = slice_data(data, (te_u, te_i))
+
+        return tr_data, val_data, te_data
+
+
+# Splitters that take 2 data objects as input in their split function.
+class TrainValidationSplitTwoDataInputs:
+    """
+    Abstract base class for splitters which take 2 data objects and turn them into train, validation, test data objects.
+    This can be useful to encode side info, add a distinct evaluation dataset and others.
+    """
+    def __init__(self):
+        pass
+
+    def split(self, data_1, data_2):
+        pass
+
+    @property
+    def name(self):
+        return None
+
+
+class SeparateDataForValidationAndTestSplit(TrainValidationSplitTwoDataInputs):
+    """
+    Use this class if you want to use a separate data object for training and evaluation.
+
+    :param val_perc: the percentage of the evaluation data to use for validation set.
+    :type val_perc: `float`
+    :param seed: Seed for randomisation in function, set this to a specified value in order to get expected results.
+    :type seed: `int`
+
+    """
+    def __init__(self, val_perc=0., seed=None):
+        self.val_perc = val_perc
+        self.seed = seed
+
+    @property
+    def name(self):
+        return f"separate_data_for_validation_and_test_{val_perc}"
+
+    def split(self, data_1, data_2):
+        """
+        Split the input data objects as train = data_1 and val + test = data_2
+
+        :param data_1: recpack.DataM containing the data values matrix
+                     and potentially timestamp matrix which be used as training data.
+        :type data_1: class:`recpack.DataM`
+        :param data_2: recpack.DataM containing the data values matrix
+                     and potentially timestamp matrix which will be split in validation and test
+                     according to the parameter set in the constructor.
+        :type data_2: class:`recpack.DataM`
+        :return: A tuple containing the training, validation and test data objects in that order.
+        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        """
+
+        # reuse Strong Generalization splitter
+        sgs = StrongGeneralization(0.0, val_perc=self.val_perc, seed=self.seed)
+
+        # data_2 is used to generate validation and test data
+        _, val_data, te_data = sgs.split(data_2)
+
+        # Training data is the data_1 object.
+        tr_data = data_1.copy()
+
+        return tr_data, val_data, te_data
+
+
+class SeparateDataForValidationAndTestTimedSplit(TrainValidationSplitTwoDataInputs):
+    """
+    Use this class if you want to use a different data object for training and evaluation, 
+    and also split your data on a timestamp.
+    Training data will be before t,
+    the test data will be the data in the interval [t, t+t_delta)
+    No validation data is generated.
+
+    :param t: epoch timestamp to split on
+    :type t: int
+    :param t_delta: seconds past t to consider as test data (default is None, all data > t is considered)
+    :type t_delta: int
+    """
+
+    def __init__(self, t, t_delta=None):
+        self.t = t
+        self.t_delta = t_delta
+
+    @property
+    def name(self):
+        return f"separate_data_for_validation_and_test_timed_split_t{self.t}_t_delta_{self.t_delta}"
+
+    def split(self, data_1, data_2):
+        """
+        Split the input data.
+        Train = all interactions in data_1 which happen before the timestamp t.
+        by using the timestamps provided in the timestamp field of data and validation_data.
+        Test = all interaction in data_1 which occurred in the interval [t, t+t_delta).
+        Where t and t_delta are defined in the constructor
+
+        :param data_1: recpack.DataM containing the data values matrix
+                     and potentially timestamp matrix which will be used for the training data.
+        :type data_1: class:`recpack.DataM`
+        :param data_2: recpack.DataM containing the data values matrix
+                     and potentially timestamp matrix from which test will be extracted.
+                     according to the parameter set in the constructor.
+        :return: A tuple containing the training, validation and test data objects in that order.
+        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        """
+
+        # Reuse timed split func.
+        tsp = TimedSplit(self.t, self.t_delta)
+
+        tr_data, _, _ = tsp.split(data_1)
+        _, val_data, te_data = tsp.split(data_2)
 
         return tr_data, val_data, te_data
