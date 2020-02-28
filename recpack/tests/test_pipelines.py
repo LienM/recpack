@@ -5,6 +5,7 @@ import recpack.evaluate
 import recpack.pipelines
 import recpack.algorithms
 import pandas as pd
+import pytest
 
 
 def generate_data():
@@ -20,10 +21,29 @@ def test_pipeline():
     data = generate_data()
     splitter = recpack.splits.TimedSplit(20, None)
     evaluator = recpack.evaluate.TrainingInTestOutEvaluator()
-    algo = recpack.algorithms.get_algorithm('itemKNN')(K=2)
+    algo = recpack.algorithms.get_algorithm('popularity')(K=2)
 
     p = recpack.pipelines.Pipeline(splitter, [algo], evaluator, ['NDCG', 'Recall'], [2])
     p.run(data)
+
+    metrics = p.get()
+    assert algo.name in metrics
+    assert "NDCG_K_2" in metrics[algo.name]
+    assert "Recall_K_2" in metrics[algo.name]
+
+
+def test_pipeline_2_data_obj():
+    data = generate_data()
+    data_2 = generate_data()
+    splitter = recpack.splits.SeparateDataForValidationAndTestSplit(0.0, seed=42)
+    evaluator = recpack.evaluate.TrainingInTestOutEvaluator()
+    algo = recpack.algorithms.get_algorithm('popularity')(K=2)
+
+    p = recpack.pipelines.Pipeline(splitter, [algo], evaluator, ['NDCG', 'Recall'], [2])
+    with pytest.raises(AssertionError):
+        p.run(data)
+
+    p.run(data, data_2)
 
     metrics = p.get()
     assert algo.name in metrics
@@ -36,7 +56,7 @@ def test_parameter_generator_pipeline():
     NUM_SLICES = 3
     splitter = recpack.splits.TimedSplit
     evaluator = recpack.evaluate.TrainingInTestOutEvaluator
-    algo = recpack.algorithms.get_algorithm('itemKNN')(K=2)
+    algo = recpack.algorithms.get_algorithm('popularity')(K=2)
     parameter_generator = recpack.pipelines.TemporalSWParameterGenerator(10, None, 10, NUM_SLICES)
     p = recpack.pipelines.ParameterGeneratorPipeline(
         parameter_generator, splitter, [algo], evaluator, ['NDCG', 'Recall'], [2]

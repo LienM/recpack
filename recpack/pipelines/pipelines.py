@@ -1,5 +1,6 @@
 from collections import defaultdict
 from recpack.evaluate import RecallK, MeanReciprocalRankK, NDCGK
+from recpack.splits.splits import TrainValidationTestSplit, TrainValidationSplitTwoDataInputs
 
 
 class MetricRegistry:
@@ -68,9 +69,30 @@ class Pipeline:
         self.K_values = K_values
         self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
 
-    def run(self, data, evaluation_data=None):
+    def run(self, data, data_2=None):
+        """
+        Run the pipeline with the input data.
+        This will use the different components in the pipeline to:
+        1. Split data into train, validation, test
+        2. Train models
+        3. Split test data into in and out
+        4. Evaluate models
+        5. Store metrics
 
-        tr_data, val_data, te_data = self.splitter.split(data, evaluation_data)
+        :param data: The first data object to use. This data will be used in the splitters.
+        :type data: `recpack.DataM`
+        :param data_2: Additional data.
+                       If the splitter expects a second data object to generate the train, validation and test,
+                       you should use this one to give it that information.
+        :type data_2: `recpack.DataM`
+        """
+
+        # Check if splitter expects 2nd data source:
+        if issubclass(type(self.splitter), TrainValidationSplitTwoDataInputs):
+            assert data_2 is not None
+            tr_data, val_data, te_data = self.splitter.split(data, data_2)
+        else:
+            tr_data, val_data, te_data = self.splitter.split(data)
 
         for algo in self.algorithms:
             # Only pass the sparse training interaction matrix to algo
