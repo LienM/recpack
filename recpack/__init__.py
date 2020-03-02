@@ -49,17 +49,3 @@ class DataM:
         c_timestamps = None if self._timestamps is None else self._timestamps.copy()
 
         return DataM(c_values, c_timestamps)
-
-
-@cli.command()
-@click.option('-c', '--config', type=click.Path(readable=True), required=True)
-@click.option('--input_file', type=click.Path(readable=True), required=True)
-@click.option('--input_file_2', type=click.Path(readable=True), required=False)
-@click.option('--user_index', type=str, default='userId', show_default=True)
-@click.option('--item_index', type=str, default='itemId', show_default=True)
-@click.option('--timestamp_index', type=str, default=None, show_default=True)
-# @click.pass_context
-def run_pipeline(config, input_file, input_file_2, user_index, item_index, timestamp_index):
-
-    dataframe = pd.dataframe
-    
