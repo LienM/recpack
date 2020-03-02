@@ -368,13 +368,17 @@ class SeparateDataForValidationAndTestTimedSplit(TrainValidationSplitTwoDataInpu
 
     :param t: epoch timestamp to split on
     :type t: int
-    :param t_delta: seconds past t to consider as test data (default is None, all data > t is considered)
+    :param t_delta: seconds past t to consider as test data (default is None, all data >= t is considered)
     :type t_delta: int
+
+    :param t_alpha: seconds before t to consider as training data (default is None, all data < t is considered)
+    :type t_alpha: int
     """
 
-    def __init__(self, t, t_delta=None):
+    def __init__(self, t, t_delta=None, t_alpha=None):
         self.t = t
         self.t_delta = t_delta
+        self.t_alpha = t_alpha
 
     @property
     def name(self):
@@ -399,7 +403,7 @@ class SeparateDataForValidationAndTestTimedSplit(TrainValidationSplitTwoDataInpu
         """
 
         # Reuse timed split func.
-        tsp = TimedSplit(self.t, self.t_delta)
+        tsp = TimedSplit(self.t, t_delta=self.t_delta, t_alpha=self.t_alpha)
 
         tr_data, _, _ = tsp.split(data_1)
         _, val_data, te_data = tsp.split(data_2)

@@ -394,13 +394,15 @@ def test_separate_data_for_validation_and_test(val_perc):
 
 
 @pytest.mark.parametrize(
-    "t, t_delta",
+    "t, t_delta, t_alpha",
     [
-        (20, None,),
-        (20, 10,)
+        (20, None, None),
+        (20, 10, None),
+        (20, None, 10),
+        (20, 10, 10),
     ]
 )
-def test_separate_data_for_validation_and_test_timed_split(t, t_delta):
+def test_separate_data_for_validation_and_test_timed_split(t, t_delta, t_alpha):
     data = generate_data()
     evaluation_data = generate_data()
 
@@ -410,7 +412,10 @@ def test_separate_data_for_validation_and_test_timed_split(t, t_delta):
     # Assert all data in train has timestamp < t
     tr_indices = tr.timestamps.nonzero()
     for i, j in zip(tr_indices[0], tr_indices[1]):
-        assert tr.timestamps[i, j] < t
+        if t_alpha is None:
+            assert tr.timestamps[i, j] < t
+        else:
+            assert tr.timestamps[i, j] < t and tr.timestamps[i, j] >= t - t_alpha
 
     # Assert all data in test has timestamp in [t, t+t_delta]
     te_indices = te.timestamps.nonzero()
