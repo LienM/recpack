@@ -16,7 +16,7 @@ setup(
         "pytest",
         "pytest-cov",
         "gcsfs==0.6.0",
-        "yaml"
+        "PyYaml"
     ],
     entry_points={
         "console_scripts": [
