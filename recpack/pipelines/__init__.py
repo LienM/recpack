@@ -1,8 +1,9 @@
 from .pipelines import Pipeline, ParameterGeneratorPipeline
-from .parameter_generators import ParameterGenerator, TemporalSWParameterGenerator
+from .parameter_generators import ParameterGenerator, TemporalSWParameterGenerator, SplitterGridSearchGenerator
 
 PARAMETER_GENERATORS = {
-    "TemporalSWParameterGenerator": TemporalSWParameterGenerator
+    "TemporalSWParameterGenerator": TemporalSWParameterGenerator,
+    "SplitterGridSearchGenerator": SplitterGridSearchGenerator
 }
 
 

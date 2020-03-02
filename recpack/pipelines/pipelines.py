@@ -154,9 +154,9 @@ class ParameterGeneratorPipeline(Pipeline):
     def run(self, data, validation_data=None):
 
         for params in self.parameterGenerator:
-            splitter = self.splitter_class(*params.splitter_params)
+            splitter = self.splitter_class(**params.splitter_params)
             # TODO batch size
-            evaluator = self.evaluator_class(*params.evaluator_params)
+            evaluator = self.evaluator_class(**params.evaluator_params)
 
             pipeline = Pipeline(splitter, self.algorithms, evaluator, self.metric_names, self.K_values)
 
