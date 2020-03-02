@@ -44,9 +44,9 @@ def prep_data(input_file, input_file_2, item_column_name, user_column_name, time
 
     df_2 = None
     if dataframe_2 is not None:
-        data_frame_2[cleaned_item_column_name] = data_frame_2[item_column_name].map(
+        dataframe_2[cleaned_item_column_name] = dataframe_2[item_column_name].map(
             lambda x: item_id_mapping[x])
-        data_frame_2[cleaned_user_column_name] = data_frame_2[user_column_name].map(
+        dataframe_2[cleaned_user_column_name] = dataframe_2[user_column_name].map(
             lambda x: user_id_mapping[x])
         # To avoid confusion, and free up some memory delete the raw fields.
         df_2 = dataframe_2.drop([user_column_name, item_column_name], axis=1)
