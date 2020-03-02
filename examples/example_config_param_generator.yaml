@@ -1,0 +1,33 @@
+parameter_generator:
+  type: TemporalSWParrameterGenerator
+  params:
+    t_0: 1580623200
+    t_delta: 1800
+    interval_between_t: 1800
+    nr_t: 8
+
+splitter:
+  type: TimedSplit
+  params:
+    t: 1580630400
+    t_delta: 7200
+
+evaluator:
+  type: TrainingInTestOut
+
+algorithms:
+  - type: "popularity"
+  - type: "ease"
+  - type: "itemKNN"
+    params:
+      K: 50
+
+metrics:
+  - "NDCG"
+  - "Recall"
+
+K_values:
+  - 5
+  - 10
+  - 20
+  - 100
