@@ -15,7 +15,8 @@ setup(
         "pandas",
         "pytest",
         "pytest-cov",
-        "gcsfs==0.6.0"
+        "gcsfs==0.6.0",
+        "yaml"
     ],
     entry_points={
         "console_scripts": [
