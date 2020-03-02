@@ -52,24 +52,29 @@ class TemporalSWParameterGenerator(ParameterGenerator):
                 Typically equal to the minimal timestamp in your dataset.
     :type t_0: `int`
 
-    :param t_delta: The size in seconds of the test part of the data.
-    :type t_0: `int`
-
     :param interval_between_t: The number of seconds from previous slice in each subsequent slice.
     :type interval_between_t: `int`
 
     :param nr_t: The number of slices to generate
     :type nr_t: `int`
+
+    :param t_delta: The size in seconds of the test part of the data.
+    :type t_delta: `int`
+
+    :param t_alpha: The size in seconds of the train part of the data.
+    :type t_alpha: `int`
+
     """
-    def __init__(self, t_0, t_delta, interval_between_t, nr_t):
+    def __init__(self, t_0, interval_between_t, nr_t, t_delta=None, t_alpha=None):
         self.t_0 = t_0
         self.t_delta = t_delta
+        self.t_alpha = t_alpha
         self.interval_between_t = interval_between_t
         self.nr_t = nr_t
 
     def get(self, i):
         # Do i + 1 because in the first iteration t should be interval away from t_0
-        splitter_params = [self.t_0 + ((i+1) * self.interval_between_t), self.t_delta]
+        splitter_params = [self.t_0 + ((i+1) * self.interval_between_t), self.t_delta, self.t_alpha]
         return Params(splitter_params=splitter_params)
 
     def __len__(self):

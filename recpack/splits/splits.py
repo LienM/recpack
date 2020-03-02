@@ -248,17 +248,20 @@ class TimedSplit(TrainValidationTestSplit):
 
         :param t: epoch timestamp to split on
         :type t: int
-        :param t_delta: seconds past t to consider as test data (default is None, all data > t is considered)
+        :param t_delta: seconds past t to consider as test data (default is None, all data >= t is considered)
         :type t_delta: int
+        :param t_alpha: seconds before t to use as training data (default is None -> all data < t is considered)
+        :type t_alpha: int
     """
 
-    def __init__(self, t, t_delta=None):
+    def __init__(self, t, t_delta=None, t_alpha=None):
         self.t = t
         self.t_delta = t_delta
+        self.t_alpha = t_alpha
 
     @property
     def name(self):
-        return f"timed_split_t{self.t}_t_delta_{self.t_delta}"
+        return f"timed_split_t{self.t}_t_delta_{self.t_delta}_t_alpha_{self.t_alpha}"
 
     def split(self, data):
         """
@@ -278,11 +281,11 @@ class TimedSplit(TrainValidationTestSplit):
         val_u, val_i = [], []
 
         for u, i, timestamp in zip(*scipy.sparse.find(data.timestamps)):
-            if timestamp < self.t:
+            if timestamp < self.t and ((self.t_alpha is None) or (timestamp >= self.t - self.t_alpha)):
                 tr_u.append(u)
                 tr_i.append(i)
 
-            elif (self.t_delta is None) or (timestamp < (self.t + self.t_delta)):
+            elif timestamp > self.t and ((self.t_delta is None) or (timestamp < (self.t + self.t_delta))):
                 te_u.append(u)
                 te_i.append(i)
 

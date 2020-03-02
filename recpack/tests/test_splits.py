@@ -205,6 +205,29 @@ def test_timed_split_windowed():
     ])).all()
 
 
+@pytest.mark.parametrize(
+    "T, T_ALPHA",
+    [
+        (20, 10),
+        (20, 3)
+    ]
+)
+def test_timed_split_windowed_alpha(T, T_ALPHA):
+    data = generate_data()
+    splitter = recpack.splits.TimedSplit(T, t_alpha=T_ALPHA)
+
+    tr, val, te = splitter.split(data)
+    tr_indices = tr.timestamps.nonzero()
+    for i, j in zip(tr_indices[0], tr_indices[1]):
+        assert tr.timestamps[i, j] < T and tr.timestamps[i, j] >= T - T_ALPHA
+
+    assert len(val.values.nonzero()[0]) == 0
+
+    te_indices = te.timestamps.nonzero()
+    for i, j in zip(te_indices[0], te_indices[1]):
+        assert te.timestamps[i, j] >= T
+
+
 def test_predefined_split():
     data = generate_data()
     splitter = recpack.splits.PredefinedUserSplit([0, 1], [2], [3], 'ordered')
