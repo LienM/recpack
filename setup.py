@@ -7,6 +7,7 @@ setup(
     packages=find_packages(),
     # tests_require=["pytest"],
     install_requires=[
+        "click",
         "numpy",
         "scipy",
         "sklearn",
@@ -14,7 +15,13 @@ setup(
         "pandas",
         "pytest",
         "pytest-cov",
-        "gcsfs==0.6.0"
+        "gcsfs==0.6.0",
+        "PyYaml"
     ],
-    entry_points={},
+    entry_points={
+        "console_scripts": [
+            "run_pipeline = recpack.cli:run_pipeline",
+            "run_parameter_generator_pipeline = recpack.cli:run_parameter_generator_pipeline",
+        ]
+    },
 )
