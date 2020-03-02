@@ -1,5 +1,5 @@
 parameter_generator:
-  type: TemporalSWParrameterGenerator
+  type: TemporalSWParameterGenerator
   params:
     t_0: 1580623200
     t_delta: 1800

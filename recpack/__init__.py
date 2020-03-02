@@ -1,6 +1,3 @@
-import click
-import pandas as pd
-
 class DataM:
     def __init__(self, values_sp_m, timestamps_sp_m=None):
         self._values = values_sp_m

@@ -2,7 +2,7 @@ from .evaluate import FoldInPercentage, LeavePOutCrossValidation, TrainingInTest
 from .metrics import RecallK, NDCGK, MeanReciprocalRankK
 
 EVALUATORS = {
-    'foldInPercentage': FoldInPercentage,
+    'FoldInPercentage': FoldInPercentage,
     'LPOCV': LeavePOutCrossValidation,
     'TrainingInTestOut': TrainingInTestOutEvaluator,
 }
