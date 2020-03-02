@@ -7,7 +7,6 @@ import recpack.evaluate
 class PipelineConfig:
     def __init__(self, config_file):
         self.config = yaml.safe_load(config_file)
-        print(self.config)
         self.validate()
 
     def validate(self):
