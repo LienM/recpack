@@ -7,6 +7,7 @@ setup(
     packages=find_packages(),
     # tests_require=["pytest"],
     install_requires=[
+        "click",
         "numpy",
         "scipy",
         "sklearn",
