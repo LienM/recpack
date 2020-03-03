@@ -20,7 +20,7 @@ def test_fold_in_evaluator():
     data = generate_data()
 
     splitter = recpack.splits.TimedSplit(20, None)
-    evaluator = recpack.evaluate.FoldInPercentage(0.5, seed=42)
+    evaluator = recpack.evaluate.FoldInPercentageEvaluator(0.5, seed=42)
 
     tr, val, te = splitter.split(data)
     in_, out_ = evaluator.split(tr, val, te)
@@ -57,7 +57,7 @@ def test_train_in_test_out_evaluator():
 def test_timed_test_split():
     data = generate_data()
     splitter = recpack.splits.TimedSplit(20, None)
-    evaluator = recpack.evaluate.TimedTestSplit(30)
+    evaluator = recpack.evaluate.TimedSplitEvaluator(30)
 
     tr, val, te = splitter.split(data)
     in_, out_ = evaluator.split(tr, val, te)

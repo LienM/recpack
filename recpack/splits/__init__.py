@@ -2,18 +2,18 @@ from .splits import (
     SeparateDataForValidationAndTestSplit,
     SeparateDataForValidationAndTestTimedSplit,
     PredefinedUserSplit,
-    StrongGeneralization,
+    StrongGeneralizationSplit,
     TimedSplit,
     StrongGeneralizationTimedSplit,
-    WeakGeneralization
+    WeakGeneralizationSplit
 )
 
 SPLITTERS = {
     'PredefinedUserSplit': PredefinedUserSplit,
-    'StrongGeneralization': StrongGeneralization,
+    'StrongGeneralizationSplit': StrongGeneralizationSplit,
     'TimedSplit': TimedSplit,
     'StrongGeneralizationTimedSplit': StrongGeneralizationTimedSplit,
-    'WeakGeneralization': WeakGeneralization,
+    'WeakGeneralizationSplit': WeakGeneralizationSplit,
     'SeparateDataForValidationAndTestSplit': SeparateDataForValidationAndTestSplit,
     'SeparateDataForValidationAndTestTimedSplit': SeparateDataForValidationAndTestTimedSplit,
 }

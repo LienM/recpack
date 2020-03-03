@@ -19,7 +19,7 @@ def generate_data():
 def test_strong_generalization_split_w_validation_set():
 
     data = generate_data()
-    splitter = recpack.splits.StrongGeneralization(0.5, 0.25, seed=42)
+    splitter = recpack.splits.StrongGeneralizationSplit(0.5, 0.25, seed=42)
 
     tr, val, te = splitter.split(data)
 
@@ -66,7 +66,7 @@ def test_strong_generalization_split_w_validation_set():
 
 def test_strong_generalization_split_no_validation_set():
     data = generate_data()
-    splitter = recpack.splits.StrongGeneralization(0.5, 0, seed=42)
+    splitter = recpack.splits.StrongGeneralizationSplit(0.5, 0, seed=42)
 
     tr, val, te = splitter.split(data)
 
@@ -352,7 +352,7 @@ def test_weak_generalization(tr_perc, val_perc):
     num_val_interactions = math.ceil(num_interactions * val_perc)
     num_te_interactions = num_interactions - num_tr_interactions - num_val_interactions
 
-    splitter = recpack.splits.WeakGeneralization(tr_perc, val_perc, seed=42)
+    splitter = recpack.splits.WeakGeneralizationSplit(tr_perc, val_perc, seed=42)
     tr, val, te = splitter.split(data)
 
     assert len(tr.values.nonzero()[0]) == num_tr_interactions

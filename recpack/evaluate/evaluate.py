@@ -9,7 +9,7 @@ class Evaluator:
     pass
 
 
-class LeavePOutCrossValidation(Evaluator):
+class LeavePOutCrossValidationEvaluator(Evaluator):
     # TODO: Implement
 
     def __init__(self, p):
@@ -53,7 +53,7 @@ class FoldIterator:
             raise StopIteration
 
 
-class FoldInPercentage(Evaluator):
+class FoldInPercentageEvaluator(Evaluator):
     """
     Evaluator which generates in matrices by taking `fold_in` percentage of items a user has seen,
     the expected output are the remaining items for that user.
@@ -200,7 +200,7 @@ class TrainingInTestOutEvaluator(Evaluator):
         return FoldIterator(self, self.batch_size)
 
 
-class TimedTestSplit(Evaluator):
+class TimedSplitEvaluator(Evaluator):
     def __init__(self, t, batch_size=1):
         self.t = t
         self.batch_size = 1

@@ -93,7 +93,7 @@ class PredefinedUserSplit(TrainValidationTestSplit):
         return tr_data, val_data, te_data
 
 
-class StrongGeneralization(TrainValidationTestSplit):
+class StrongGeneralizationSplit(TrainValidationTestSplit):
     """
     Implementation of strong generalization split. All events for a user will always occur only in the same split.
 
@@ -175,7 +175,7 @@ class StrongGeneralization(TrainValidationTestSplit):
         return tr_data, val_data, te_data
 
 
-class WeakGeneralization(TrainValidationTestSplit):
+class WeakGeneralizationSplit(TrainValidationTestSplit):
 
     def __init__(self, tr_perc=0.7, val_perc=0, seed=None):
         self.tr_perc = tr_perc
@@ -411,7 +411,7 @@ class SeparateDataForValidationAndTestSplit(TrainValidationSplitTwoDataInputs):
         """
 
         # reuse Strong Generalization splitter
-        sgs = StrongGeneralization(0.0, val_perc=self.val_perc, seed=self.seed)
+        sgs = StrongGeneralizationSplit(0.0, val_perc=self.val_perc, seed=self.seed)
 
         # data_2 is used to generate validation and test data
         _, val_data, te_data = sgs.split(data_2)
