@@ -5,7 +5,11 @@ class Params:
     """
     Simple struct for storing parameters.
     """
-    def __init__(self, splitter_params={}, evaluator_params={}):
+    def __init__(self, splitter_params=None, evaluator_params=None):
+        if splitter_params is None:
+            splitter_params = {}
+        if evaluator_params is None:
+            evaluator_params = {}
         self.splitter_params = splitter_params
         self.evaluator_params = evaluator_params
 
