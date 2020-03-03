@@ -52,3 +52,21 @@ def test_train_in_test_out_evaluator():
         [0., 0., 1., 0., 1.],
         [0., 0., 0., 1., 1.]
     ])).all()
+
+
+def test_timed_test_split():
+    data = generate_data()
+    splitter = recpack.splits.TimedSplit(20, None)
+    evaluator = recpack.evaluate.TimedTestSplit(30)
+
+    tr, val, te = splitter.split(data)
+    in_, out_ = evaluator.split(tr, val, te)
+
+    assert (in_.toarray() == numpy.array([
+        [0., 0., 1., 0., 0.],
+        [0., 0., 0., 1., 1.]
+    ])).all()
+    assert (out_.toarray() == numpy.array([
+        [0., 0., 0., 0., 1.],
+        [0., 0., 0., 0., 0.]
+    ])).all()

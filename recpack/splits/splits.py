@@ -296,6 +296,70 @@ class TimedSplit(TrainValidationTestSplit):
         return tr_data, val_data, te_data
 
 
+class StrongGeneralizationTimedSplit(TrainValidationTestSplit):
+    """
+        Use this class if you want to split your data on a timestamp and make sure users in test
+        do not occur in the training dataset.
+        Test users are users with events in the interval [t, t+t_delta)
+        The test data will be all data for these test users
+        Training data will be all data in interval [t, t_alpha) except data for the test users.
+
+        :param t: epoch timestamp to split on
+        :type t: int
+        :param t_delta: seconds past t to consider as test interval (default is None, all data >= t is considered)
+        :type t_delta: int
+        :param t_alpha: seconds before t to use as training interval (default is None -> all data < t is considered)
+        :type t_alpha: int
+    """
+
+    def __init__(self, t, t_delta=None, t_alpha=None):
+        self.t = t
+        self.t_delta = t_delta
+        self.t_alpha = t_alpha
+
+    @property
+    def name(self):
+        return f"timed_split_t{self.t}_t_delta_{self.t_delta}_t_alpha_{self.t_alpha}"
+
+    def split(self, data):
+        """
+        Split the input data by using the timestamps provided in the timestamp field of data.
+
+        :param data: recpack.DataM containing the data values matrix
+                     and potentially timestamp matrix which will be split.
+        :type data: class:`recpack.DataM`
+        :return: A tuple containing the training, validation and test data objects in that order.
+        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        """
+
+        # Holds indices of training data
+        tr_u, tr_i = [], []
+        # Holds indices of test data
+        te_u, te_i = [], []
+        # val indices will be empty, this splitter does not support a validation data slice.
+        val_u, val_i = [], []
+
+        # Get the users who have data in the [t, t+t_delta) interval
+        test_users = set()
+        for u, i, timestamp in zip(*scipy.sparse.find(data.timestamps)):
+            if timestamp > self.t and ((self.t_delta is None) or (timestamp < (self.t + self.t_delta))):
+                test_users.add(u)
+
+        for u, i, timestamp in zip(*scipy.sparse.find(data.timestamps)):
+            if u in test_users:
+                te_u.append(u)
+                te_i.append(i)
+            elif timestamp < self.t and ((self.t_alpha is None) or (timestamp >= self.t - self.t_alpha)):
+                tr_u.append(u)
+                tr_i.append(i)
+
+        tr_data = slice_data(data, (tr_u, tr_i))
+        val_data = slice_data(data, (val_u, val_i))
+        te_data = slice_data(data, (te_u, te_i))
+
+        return tr_data, val_data, te_data
+
+
 # Splitters that take 2 data objects as input in their split function.
 class TrainValidationSplitTwoDataInputs:
     """

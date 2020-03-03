@@ -4,6 +4,7 @@ from .splits import (
     PredefinedUserSplit,
     StrongGeneralization,
     TimedSplit,
+    StrongGeneralizationTimedSplit,
     WeakGeneralization
 )
 
@@ -11,6 +12,7 @@ SPLITTERS = {
     'PredefinedUserSplit': PredefinedUserSplit,
     'StrongGeneralization': StrongGeneralization,
     'TimedSplit': TimedSplit,
+    'StrongGeneralizationTimedSplit': StrongGeneralizationTimedSplit,
     'WeakGeneralization': WeakGeneralization,
     'SeparateDataForValidationAndTestSplit': SeparateDataForValidationAndTestSplit,
     'SeparateDataForValidationAndTestTimedSplit': SeparateDataForValidationAndTestTimedSplit,

@@ -198,3 +198,52 @@ class TrainingInTestOutEvaluator(Evaluator):
 
     def __iter__(self):
         return FoldIterator(self, self.batch_size)
+
+
+class TimedTestSplit(Evaluator):
+    def __init__(self, t, batch_size=1):
+        self.t = t
+        self.batch_size = 1
+
+    def __iter__(self):
+        return FoldIterator(self, self.batch_size)
+
+    def split(self, tr_data, val_data, te_data, shape=None):
+        """
+        Split the data into in and out matrices.
+        The in matrix will be the training data, and the out matrix will be the test data.
+        """
+        if not shape:
+            shape = tr_data.shape
+        assert shape == tr_data.shape
+        assert shape == val_data.shape
+        assert shape == te_data.shape
+
+        U_in, I_in, V_in = [], [], []
+        U_out, I_out, V_out = [], [], []
+
+        # Split test data into before t and after t
+        # in will be before t
+        # out will be after t.
+
+        nonzero_users = list(set(te_data.values.nonzero()[0]))
+        te_sp_mat = te_data.values
+        te_timestamps = te_data.timestamps
+        for user in nonzero_users:
+            # Add the in data
+            for item in te_timestamps[user].indices:
+                if te_timestamps[user, item] < self.t:
+                    U_in.append(user)
+                    I_in.append(item)
+                    V_in.append(te_sp_mat[user, item])
+
+                else:
+                    U_out.append(user)
+                    I_out.append(item)
+                    V_out.append(te_sp_mat[user, item])
+
+        self.sp_mat_in = scipy.sparse.csr_matrix((V_in, (U_in, I_in)), shape=shape)
+
+        self.sp_mat_out = scipy.sparse.csr_matrix((V_out, (U_out, I_out)), shape=shape)
+
+        return self.sp_mat_in, self.sp_mat_out

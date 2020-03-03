@@ -1,10 +1,11 @@
-from .evaluate import FoldInPercentage, LeavePOutCrossValidation, TrainingInTestOutEvaluator
+from .evaluate import FoldInPercentage, LeavePOutCrossValidation, TrainingInTestOutEvaluator, TimedTestSplit
 from .metrics import RecallK, NDCGK, MeanReciprocalRankK
 
 EVALUATORS = {
     'FoldInPercentage': FoldInPercentage,
     'LPOCV': LeavePOutCrossValidation,
     'TrainingInTestOut': TrainingInTestOutEvaluator,
+    'TimedTestSplit': TimedTestSplit
 }
 
 
