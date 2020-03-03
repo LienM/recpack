@@ -5,6 +5,15 @@ import numpy
 import scipy.sparse
 
 
+def csr_row_set_nz_to_val(csr, row, value=0):
+    """Set all nonzero elements (elements currently in the sparsity pattern)
+    to the given value. Useful to set to 0 mostly.
+    """
+    if not isinstance(csr, scipy.sparse.csr_matrix):
+        raise ValueError('Matrix given must be of CSR format.')
+    csr.data[csr.indptr[row]:csr.indptr[row+1]] = value
+
+
 class Evaluator:
     pass
 
@@ -27,6 +36,7 @@ class FoldIterator:
         self._index = 0
         self._max_index = fold_instance.sp_mat_in.shape[0]
         self.batch_size = batch_size
+        assert self.batch_size > 0  # Avoid inf loops
 
     def __next__(self):
         # While loop to make it possible to skip any cases where user has no items in in or out set.
@@ -42,9 +52,28 @@ class FoldIterator:
                 fold_in = self._fi.sp_mat_in[start: end]
                 fold_out = self._fi.sp_mat_out[start: end]
 
-                # TODO Filter out users with all zeros?
-                # This does not yet work with batches I think.
-                if fold_in.nnz == 0 or fold_out.nnz == 0:
+                # Filter out users with missing data in either in or out.
+
+                # Get row sum for both in and out
+                in_sum = fold_in.sum(1)
+                out_sum = fold_out.sum(1)
+                # Rows with sum == 0 are rows that should be removed in both in and out.
+                rows_to_delete = []
+                for i in range(len(in_sum)):
+                    if in_sum[i, 0] == 0 or out_sum[i, 0] == 0:
+                        rows_to_delete.append(i)
+                # Set 0 values for rows to delete
+                if len(rows_to_delete) > 0:
+                    for r_to_del in rows_to_delete:
+                        csr_row_set_nz_to_val(fold_in, r_to_del, value=0)
+                        csr_row_set_nz_to_val(fold_out, r_to_del, value=0)
+                    fold_in.eliminate_zeros()
+                    fold_out.eliminate_zeros()
+                    # Remove rows with 0 values
+                    fold_in = fold_in[fold_in.getnnz(1) > 0]
+                    fold_out = fold_out[fold_out.getnnz(1) > 0]
+                # If no matrix is left over, continue to next batch without returning.
+                if fold_in.nnz == 0:
                     self._index = end
                     continue
 
