@@ -50,6 +50,11 @@ def test_pipeline_2_data_obj():
     assert "NDCG_K_2" in metrics[algo.name]
     assert "Recall_K_2" in metrics[algo.name]
 
+    users_used = p.get_number_of_users_evaluated()
+    assert algo.name in users_used
+    assert "NDCG_K_2" in users_used[algo.name]
+    assert "Recall_K_2" in users_used[algo.name]
+
 
 def test_parameter_generator_pipeline():
     data = generate_data()
@@ -71,3 +76,10 @@ def test_parameter_generator_pipeline():
         assert algo.name in metric
         assert "NDCG_K_2" in metric[algo.name]
         assert "Recall_K_2" in metric[algo.name]
+
+    users_used = p.get_number_of_users_evaluated()
+    assert len(users_used) == NUM_SLICES
+    for c in users_used:
+        assert algo.name in c
+        assert "NDCG_K_2" in c[algo.name]
+        assert "Recall_K_2" in c[algo.name]

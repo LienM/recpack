@@ -118,6 +118,7 @@ def run_pipeline(
 
     # Write metrics to json file.
     json.dump(metrics, output_file, indent=4)
+    print("Number of users used to evaluate at each slice: ", pipeline.get_number_of_users_evaluated())
 
 
 @click.command()
@@ -177,3 +178,4 @@ def run_parameter_generator_pipeline(
 
     # Write metrics to json file.
     json.dump(metrics, output_file, indent=4)
+    print("Number of users used to evaluate at each slice: ", pipeline.get_number_of_users_evaluated())
