@@ -76,12 +76,13 @@ class TemporalSWParameterGenerator(ParameterGenerator):
     :type t_alpha: `int`
 
     """
-    def __init__(self, t_0, interval_between_t, nr_t, t_delta=None, t_alpha=None):
+    def __init__(self, t_0, interval_between_t, nr_t, t_delta=None, t_alpha=None, batch_size=1):
         self.t_0 = t_0
         self.t_delta = t_delta
         self.t_alpha = t_alpha
         self.interval_between_t = interval_between_t
         self.nr_t = nr_t
+        self.batch_size = batch_size
 
     def get(self, i):
         # Do i + 1 because in the first iteration t should be interval away from t_0
@@ -90,7 +91,10 @@ class TemporalSWParameterGenerator(ParameterGenerator):
             "t_delta": self.t_delta,
             "t_alpha": self.t_alpha
         }
-        return Params(splitter_params=splitter_params)
+        evaluator_params = {
+            "batch_size": self.batch_size
+        }
+        return Params(splitter_params=splitter_params, evaluator_params=evaluator_params)
 
     def __len__(self):
         return self.nr_t
