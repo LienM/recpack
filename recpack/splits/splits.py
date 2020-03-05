@@ -319,7 +319,7 @@ class StrongGeneralizationTimedSplit(TrainValidationTestSplit):
 
     @property
     def name(self):
-        return f"timed_split_t{self.t}_t_delta_{self.t_delta}_t_alpha_{self.t_alpha}"
+        return f"strong_generalization_timed_split_t{self.t}_t_delta_{self.t_delta}_t_alpha_{self.t_alpha}"
 
     def split(self, data):
         """
