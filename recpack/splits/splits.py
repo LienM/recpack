@@ -424,7 +424,7 @@ class SeparateDataForValidationAndTestSplit(TrainValidationSplitTwoDataInputs):
 
 class SeparateDataForValidationAndTestTimedSplit(TrainValidationSplitTwoDataInputs):
     """
-    Use this class if you want to use a different data object for training and evaluation, 
+    Use this class if you want to use a different data object for training and evaluation,
     and also split your data on a timestamp.
     Training data will be before t,
     the test data will be the data in the interval [t, t+t_delta)
