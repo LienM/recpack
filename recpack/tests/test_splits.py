@@ -19,7 +19,7 @@ def generate_data():
 def test_strong_generalization_split_w_validation_set():
 
     data = generate_data()
-    splitter = recpack.splits.StrongGeneralization(0.5, 0.25, seed=42)
+    splitter = recpack.splits.StrongGeneralizationSplit(0.5, 0.25, seed=42)
 
     tr, val, te = splitter.split(data)
 
@@ -66,7 +66,7 @@ def test_strong_generalization_split_w_validation_set():
 
 def test_strong_generalization_split_no_validation_set():
     data = generate_data()
-    splitter = recpack.splits.StrongGeneralization(0.5, 0, seed=42)
+    splitter = recpack.splits.StrongGeneralizationSplit(0.5, 0, seed=42)
 
     tr, val, te = splitter.split(data)
 
@@ -205,6 +205,29 @@ def test_timed_split_windowed():
     ])).all()
 
 
+@pytest.mark.parametrize(
+    "T, T_ALPHA",
+    [
+        (20, 10),
+        (20, 3)
+    ]
+)
+def test_timed_split_windowed_alpha(T, T_ALPHA):
+    data = generate_data()
+    splitter = recpack.splits.TimedSplit(T, t_alpha=T_ALPHA)
+
+    tr, val, te = splitter.split(data)
+    tr_indices = tr.timestamps.nonzero()
+    for i, j in zip(tr_indices[0], tr_indices[1]):
+        assert tr.timestamps[i, j] < T and tr.timestamps[i, j] >= T - T_ALPHA
+
+    assert len(val.values.nonzero()[0]) == 0
+
+    te_indices = te.timestamps.nonzero()
+    for i, j in zip(te_indices[0], te_indices[1]):
+        assert te.timestamps[i, j] >= T
+
+
 def test_predefined_split():
     data = generate_data()
     splitter = recpack.splits.PredefinedUserSplit([0, 1], [2], [3], 'ordered')
@@ -329,7 +352,7 @@ def test_weak_generalization(tr_perc, val_perc):
     num_val_interactions = math.ceil(num_interactions * val_perc)
     num_te_interactions = num_interactions - num_tr_interactions - num_val_interactions
 
-    splitter = recpack.splits.WeakGeneralization(tr_perc, val_perc, seed=42)
+    splitter = recpack.splits.WeakGeneralizationSplit(tr_perc, val_perc, seed=42)
     tr, val, te = splitter.split(data)
 
     assert len(tr.values.nonzero()[0]) == num_tr_interactions
@@ -371,13 +394,15 @@ def test_separate_data_for_validation_and_test(val_perc):
 
 
 @pytest.mark.parametrize(
-    "t, t_delta",
+    "t, t_delta, t_alpha",
     [
-        (20, None,),
-        (20, 10,)
+        (20, None, None),
+        (20, 10, None),
+        (20, None, 10),
+        (20, 10, 10),
     ]
 )
-def test_separate_data_for_validation_and_test_timed_split(t, t_delta):
+def test_separate_data_for_validation_and_test_timed_split(t, t_delta, t_alpha):
     data = generate_data()
     evaluation_data = generate_data()
 
@@ -387,7 +412,10 @@ def test_separate_data_for_validation_and_test_timed_split(t, t_delta):
     # Assert all data in train has timestamp < t
     tr_indices = tr.timestamps.nonzero()
     for i, j in zip(tr_indices[0], tr_indices[1]):
-        assert tr.timestamps[i, j] < t
+        if t_alpha is None:
+            assert tr.timestamps[i, j] < t
+        else:
+            assert tr.timestamps[i, j] < t and tr.timestamps[i, j] >= t - t_alpha
 
     # Assert all data in test has timestamp in [t, t+t_delta]
     te_indices = te.timestamps.nonzero()
@@ -401,3 +429,46 @@ def test_separate_data_for_validation_and_test_timed_split(t, t_delta):
     # Assert validation is empty
     assert val.values.nnz == 0
     assert val.timestamps.nnz == 0
+
+
+@pytest.mark.parametrize(
+    "t, t_delta, t_alpha",
+    [
+        (20, None, None),
+        (20, 10, None),
+        (20, None, 10),
+        (20, 10, 10),
+    ]
+)
+def test_strong_generalization_timed_split(t, t_delta, t_alpha):
+    input_dict = {'userId': [2, 1, 0, 0], 'movieId': [1, 0, 1, 0], 'timestamp': [15, 26, 10, 100]}
+
+    df = pd.DataFrame.from_dict(input_dict)
+    data = recpack.helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
+
+    splitter = recpack.splits.StrongGeneralizationTimedSplit(t, t_delta=t_delta, t_alpha=t_alpha)
+
+    tr, val, te = splitter.split(data)
+
+    assert val.values.nnz == 0
+    assert val.timestamps.nnz == 0
+
+    train_users = set()
+    test_users = set()
+
+    tr_indices = tr.timestamps.nonzero()
+    # Check that all timestamps in train are in the right interval.
+    for i, j in zip(tr_indices[0], tr_indices[1]):
+        train_users.add(i)
+        ts = tr.timestamps[i, j]
+        if t_alpha is None:
+            assert ts < t
+        else:
+            assert ts < t and ts >= t - t_alpha
+
+    # Build the set of test users
+    te_indices = te.timestamps.nonzero()
+    for i, j in zip(te_indices[0], te_indices[1]):
+        test_users.add(i)
+
+    assert train_users.intersection(test_users) == set()

@@ -1,8 +1,15 @@
+import sklearn.model_selection
+
+
 class Params:
     """
     Simple struct for storing parameters.
     """
-    def __init__(self, splitter_params=[], evaluator_params=[]):
+    def __init__(self, splitter_params=None, evaluator_params=None):
+        if splitter_params is None:
+            splitter_params = {}
+        if evaluator_params is None:
+            evaluator_params = {}
         self.splitter_params = splitter_params
         self.evaluator_params = evaluator_params
 
@@ -48,11 +55,12 @@ class TemporalSWParameterGenerator(ParameterGenerator):
     Parameter generator to use with ParameterGeneratorPipeline to evaluate algorithms using a sliding window approach.
     SW approach detailed in paper by Olivier Jeunen (http://adrem.uantwerpen.be/bibrem/pubs/OfflineEvalJeunen2018.pdf).
 
+    each iteration provides a params object.
+    With for splitter_params a kwarg dict with t, t_delta and t_alpha
+    which should be used as input for a time based splitter.
+
     :param t_0: The epoch timestamp of the start of the first window.
                 Typically equal to the minimal timestamp in your dataset.
-    :type t_0: `int`
-
-    :param t_delta: The size in seconds of the test part of the data.
     :type t_0: `int`
 
     :param interval_between_t: The number of seconds from previous slice in each subsequent slice.
@@ -60,17 +68,50 @@ class TemporalSWParameterGenerator(ParameterGenerator):
 
     :param nr_t: The number of slices to generate
     :type nr_t: `int`
+
+    :param t_delta: The size in seconds of the test part of the data.
+    :type t_delta: `int`
+
+    :param t_alpha: The size in seconds of the train part of the data.
+    :type t_alpha: `int`
+
     """
-    def __init__(self, t_0, t_delta, interval_between_t, nr_t):
+    def __init__(self, t_0, interval_between_t, nr_t, t_delta=None, t_alpha=None, batch_size=1):
         self.t_0 = t_0
         self.t_delta = t_delta
+        self.t_alpha = t_alpha
         self.interval_between_t = interval_between_t
         self.nr_t = nr_t
+        self.batch_size = batch_size
 
     def get(self, i):
         # Do i + 1 because in the first iteration t should be interval away from t_0
-        splitter_params = [self.t_0 + ((i+1) * self.interval_between_t), self.t_delta]
-        return Params(splitter_params=splitter_params)
+        splitter_params = {
+            "t": self.t_0 + ((i+1) * self.interval_between_t),
+            "t_delta": self.t_delta,
+            "t_alpha": self.t_alpha
+        }
+        evaluator_params = {
+            "batch_size": self.batch_size
+        }
+        return Params(splitter_params=splitter_params, evaluator_params=evaluator_params)
 
     def __len__(self):
         return self.nr_t
+
+
+class SplitterGridSearchGenerator(ParameterGenerator):
+    """
+    Generator to perform a gridsearch over all combinations of parameters.
+    Be aware that gridsearches are expensive, and you should avoid running them with too many dimensions and parameters.
+    """
+    def __init__(self, splitter_params):
+        self.splitter_params = splitter_params
+
+        self.splitter_param_grid = sklearn.model_selection.ParameterGrid(splitter_params)
+
+    def get(self, i):
+        return Params(splitter_params=self.splitter_param_grid[i])
+
+    def __len__(self):
+        return len(self.splitter_param_grid)

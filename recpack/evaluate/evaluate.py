@@ -5,11 +5,20 @@ import numpy
 import scipy.sparse
 
 
+def csr_row_set_nz_to_val(csr, row, value=0):
+    """Set all nonzero elements (elements currently in the sparsity pattern)
+    to the given value. Useful to set to 0 mostly.
+    """
+    if not isinstance(csr, scipy.sparse.csr_matrix):
+        raise ValueError('Matrix given must be of CSR format.')
+    csr.data[csr.indptr[row]:csr.indptr[row+1]] = value
+
+
 class Evaluator:
     pass
 
 
-class LeavePOutCrossValidation(Evaluator):
+class LeavePOutCrossValidationEvaluator(Evaluator):
     # TODO: Implement
 
     def __init__(self, p):
@@ -27,6 +36,7 @@ class FoldIterator:
         self._index = 0
         self._max_index = fold_instance.sp_mat_in.shape[0]
         self.batch_size = batch_size
+        assert self.batch_size > 0  # Avoid inf loops
 
     def __next__(self):
         # While loop to make it possible to skip any cases where user has no items in in or out set.
@@ -42,9 +52,28 @@ class FoldIterator:
                 fold_in = self._fi.sp_mat_in[start: end]
                 fold_out = self._fi.sp_mat_out[start: end]
 
-                # TODO Filter out users with all zeros?
-                # This does not yet work with batches I think.
-                if fold_in.nnz == 0 or fold_out.nnz == 0:
+                # Filter out users with missing data in either in or out.
+
+                # Get row sum for both in and out
+                in_sum = fold_in.sum(1)
+                out_sum = fold_out.sum(1)
+                # Rows with sum == 0 are rows that should be removed in both in and out.
+                rows_to_delete = []
+                for i in range(len(in_sum)):
+                    if in_sum[i, 0] == 0 or out_sum[i, 0] == 0:
+                        rows_to_delete.append(i)
+                # Set 0 values for rows to delete
+                if len(rows_to_delete) > 0:
+                    for r_to_del in rows_to_delete:
+                        csr_row_set_nz_to_val(fold_in, r_to_del, value=0)
+                        csr_row_set_nz_to_val(fold_out, r_to_del, value=0)
+                    fold_in.eliminate_zeros()
+                    fold_out.eliminate_zeros()
+                    # Remove rows with 0 values
+                    fold_in = fold_in[fold_in.getnnz(1) > 0]
+                    fold_out = fold_out[fold_out.getnnz(1) > 0]
+                # If no matrix is left over, continue to next batch without returning.
+                if fold_in.nnz == 0:
                     self._index = end
                     continue
 
@@ -53,7 +82,7 @@ class FoldIterator:
             raise StopIteration
 
 
-class FoldInPercentage(Evaluator):
+class FoldInPercentageEvaluator(Evaluator):
     """
     Evaluator which generates in matrices by taking `fold_in` percentage of items a user has seen,
     the expected output are the remaining items for that user.
@@ -198,3 +227,52 @@ class TrainingInTestOutEvaluator(Evaluator):
 
     def __iter__(self):
         return FoldIterator(self, self.batch_size)
+
+
+class TimedSplitEvaluator(Evaluator):
+    def __init__(self, t, batch_size=1):
+        self.t = t
+        self.batch_size = 1
+
+    def __iter__(self):
+        return FoldIterator(self, self.batch_size)
+
+    def split(self, tr_data, val_data, te_data, shape=None):
+        """
+        Split the data into in and out matrices.
+        The in matrix will be the training data, and the out matrix will be the test data.
+        """
+        if not shape:
+            shape = tr_data.shape
+        assert shape == tr_data.shape
+        assert shape == val_data.shape
+        assert shape == te_data.shape
+
+        U_in, I_in, V_in = [], [], []
+        U_out, I_out, V_out = [], [], []
+
+        # Split test data into before t and after t
+        # in will be before t
+        # out will be after t.
+
+        nonzero_users = list(set(te_data.values.nonzero()[0]))
+        te_sp_mat = te_data.values
+        te_timestamps = te_data.timestamps
+        for user in nonzero_users:
+            # Add the in data
+            for item in te_timestamps[user].indices:
+                if te_timestamps[user, item] < self.t:
+                    U_in.append(user)
+                    I_in.append(item)
+                    V_in.append(te_sp_mat[user, item])
+
+                else:
+                    U_out.append(user)
+                    I_out.append(item)
+                    V_out.append(te_sp_mat[user, item])
+
+        self.sp_mat_in = scipy.sparse.csr_matrix((V_in, (U_in, I_in)), shape=shape)
+
+        self.sp_mat_out = scipy.sparse.csr_matrix((V_out, (U_out, I_out)), shape=shape)
+
+        return self.sp_mat_in, self.sp_mat_out

@@ -38,6 +38,14 @@ class MetricRegistry:
                 results[key][k] = self.registry[key][k].value
         return results
 
+    @property
+    def number_of_users_evaluated(self):
+        results = defaultdict(dict)
+        for key in self.registry:
+            for k in self.registry[key]:
+                results[key][k] = self.registry[key][k].num_users
+        return results
+
 
 class Pipeline:
     """
@@ -113,6 +121,9 @@ class Pipeline:
     def get(self):
         return self.metric_registry.metrics
 
+    def get_number_of_users_evaluated(self):
+        return self.metric_registry.number_of_users_evaluated
+
 
 class ParameterGeneratorPipeline(Pipeline):
     """
@@ -154,9 +165,9 @@ class ParameterGeneratorPipeline(Pipeline):
     def run(self, data, validation_data=None):
 
         for params in self.parameterGenerator:
-            splitter = self.splitter_class(*params.splitter_params)
+            splitter = self.splitter_class(**params.splitter_params)
             # TODO batch size
-            evaluator = self.evaluator_class(*params.evaluator_params)
+            evaluator = self.evaluator_class(**params.evaluator_params)
 
             pipeline = Pipeline(splitter, self.algorithms, evaluator, self.metric_names, self.K_values)
 
@@ -177,3 +188,9 @@ class ParameterGeneratorPipeline(Pipeline):
         Returns a list of metric registry metrics (in order of execution)
         """
         return [m.metrics for m in self.metric_registries]
+
+    def get_number_of_users_evaluated(self):
+        """
+        Returns the number of users used for evaluation in each of the slices
+        """
+        return [m.number_of_users_evaluated for m in self.metric_registries]

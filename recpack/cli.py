@@ -16,11 +16,30 @@ def prep_data(input_file, input_file_2, item_column_name, user_column_name, time
     Take the raw input files, and turn them into DataM objects.
     """
     # Load file data
-    dataframe = pd.read_csv(input_file)
+    loaded_dataframe = pd.read_csv(input_file)
+
+    # Cleanup duplicates
+    loaded_dataframe.reset_index(inplace=True)
+    data_dd = loaded_dataframe[[item_column_name, user_column_name]].drop_duplicates()
+    data_dd.reset_index(inplace=True)
+    dataframe = pd.merge(
+        data_dd, loaded_dataframe,
+        how='inner', on=['index', item_column_name, user_column_name]
+    )
+
+    del data_dd
 
     dataframe_2 = None
     if input_file_2 is not None:
-        dataframe_2 = pd.read_csv(input_file_2)
+        loaded_dataframe_2 = pd.read_csv(input_file_2)
+        loaded_dataframe_2.reset_index(inplace=True)
+        data_dd = loaded_dataframe_2[[item_column_name, user_column_name]].drop_duplicates()
+        data_dd.reset_index(inplace=True)
+        dataframe_2 = pd.merge(
+            data_dd, loaded_dataframe_2,
+            how='inner', on=['index', item_column_name, user_column_name]
+        )
+        del data_dd
 
     # Convert user and item ids into a continuous sequence to make
     # training faster and use much less memory.

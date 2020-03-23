@@ -54,7 +54,7 @@ class ParameterGeneratorPipelineConfig(PipelineConfig):
 
         assert "parameter_generator" in self.config
         assert "type" in self.config["parameter_generator"]
-        assert self.config["parameter_generator"]["type"] in recpack.pipelines.PARAMETER_GENERATOS
+        assert self.config["parameter_generator"]["type"] in recpack.pipelines.PARAMETER_GENERATORS
 
         assert "splitter" in self.config
         assert "type" in self.config["splitter"]
