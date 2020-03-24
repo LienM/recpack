@@ -192,16 +192,12 @@ class SNIPS(Metric):
             # (0 contribution to the score if the item is not in X_true)
             hit_score = X_hit_inverse_propensities[user].sum()
 
-            print("hit_score", hit_score)
-
             # Compute the max possible hit score, as the sum of the propensities of recommended items.
             max_possible_hit_score = X_true_as_propensity[user].sum()
 
-            print("max_possible_hit_score", max_possible_hit_score)
             # Compute the user's actual number of interactions to normalise the metric.
             # And take min with self.K since it will be impossible to hit all of the items if there are more than K
             number_true_interactions = X_true[user].sum()
-            print("number_true_interactions", number_true_interactions)
 
             if number_true_interactions > 0:
                 self.num_users += 1
