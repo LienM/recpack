@@ -78,7 +78,11 @@ class FoldIterator:
                     continue
 
                 self._index = end
-                return fold_in, fold_out
+                # Get a list of users we return as recommendations
+                users = numpy.array([i for i in range(start, end)])
+                users = list(set(users) - set(users[rows_to_delete]))
+
+                return fold_in, fold_out, users
             raise StopIteration
 
 

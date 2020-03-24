@@ -78,7 +78,8 @@ def test_timed_test_split():
     "batch_size",
     [
         1,
-        2
+        2,
+        3
     ]
 )
 def test_iterator(batch_size):
@@ -98,9 +99,13 @@ def test_iterator(batch_size):
     LEN = 10
     fold_i = FoldInstance(length=LEN, batch_size=batch_size)
     row_counts = []
-    for in_, out_ in fold_i:
+    for in_, out_, users in fold_i:
         assert in_.nnz > 0
         assert out_.nnz > 0
+
+        assert len(users) == in_.shape[0]
+        assert len(users) == out_.shape[0]
+
         row_counts.append(in_.shape[0])
 
     # Because of how the out matrix is build, half of the rows should be skipped
