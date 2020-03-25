@@ -239,7 +239,7 @@ class UniformInversePropensity():
         return self.inverse_propensities
 
     def _get_propensities(self, data_matrix):
-        nr_items = data.shape[1]
+        nr_items = data_matrix.shape[1]
         return numpy.array([[1/nr_items for i in range(nr_items)]])
 
 
@@ -254,8 +254,8 @@ class GlobalInversePropensity(InversePropensity):
         return self.inverse_propensities
 
     def _get_propensities(self, data_matrix):
-        item_count = data.sum(axis=0)
-        total = data.sum()
+        item_count = data_matrix.sum(axis=0)
+        total = data_matrix.sum()
         return item_count/total
 
 
@@ -274,8 +274,8 @@ class UserInversePropensity(InversePropensity):
         return inverse_propensities
 
     def _get_propensities(self, users):
-        row_sum = self.data[users].sum(axis=1)
-        propensities = scipy.sparse.csr_matrix(self.data[users] / row_sum)
+        row_sum = self.data_matrix[users].sum(axis=1)
+        propensities = scipy.sparse.csr_matrix(self.data_matrix[users] / row_sum)
         return propensities
 
 
