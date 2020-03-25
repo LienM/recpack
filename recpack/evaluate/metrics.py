@@ -137,19 +137,34 @@ class NDCGK(Metric):
 
 
 class PropensityType(enum.Enum):
+    """
+    Propensity Type enum.
+    - Uniform means each item has the same propensity
+    - Global means each item has a single propensity for all users
+    - User means that for each user, item combination a unique propensity is computed.
+    """
     UNIFORM = 1
     GLOBAL = 2
     USER = 3
 
 
+class InversePropensity:
+    """
+    Abstract inverse propensity class
+    """
+    def __init__(self, data_matrix):
+        self.data_matrix = data_matrix
+
+    def get(self, users):
+        pass
+
+
 class SNIPS(Metric):
 
-    def __init__(self, K, inverse_propensities, propensity_type):
+    def __init__(self, K: int, inverse_propensities: InversePropensity):
         self.K = K
         self.num_users = 0
-        self.recall = 0
-
-        self.propensity_type = propensity_type
+        self.score = 0
 
         self.inverse_propensities = inverse_propensities
 
@@ -177,10 +192,7 @@ class SNIPS(Metric):
         # binarize the prediction matrix
         x_pred_top_k[x_pred_top_k > 0] = 1
 
-        ip = self.inverse_propensities
-        if self.propensity_type == PropensityType.USER:
-            # Slice a part of the inverse propensities, so we only have the selected users
-            ip = self.inverse_propensities[users]
+        ip = self.inverse_propensities.get(users)
 
         X_pred_as_propensity = x_pred_top_k.multiply(ip).tocsr()
         X_true_as_propensity = X_true.multiply(ip).tocsr()
@@ -201,53 +213,87 @@ class SNIPS(Metric):
 
             if number_true_interactions > 0:
                 self.num_users += 1
-                self.recall += (1/max_possible_hit_score) * hit_score
+                self.score += (1/max_possible_hit_score) * hit_score
 
     @property
     def value(self):
         if self.num_users == 0:
             return 0
 
-        return self.recall / self.num_users
+        return self.score / self.num_users
 
     @property
     def name(self):
         return f"SNIPS@{self.K}"
 
 
+class UniformInversePropensity():
+    """
+    Helper class which will do the uniform propensity computation up front
+    and return the results
+    """
+    def __init__(self, data_matrix):
+        self.inverse_propensities = 1/self._get_propensities(data_matrix)
+
+    def get(self, users):
+        return self.inverse_propensities
+
+    def _get_propensities(self, data_matrix):
+        nr_items = data.shape[1]
+        return numpy.array([[1/nr_items for i in range(nr_items)]])
+
+
+class GlobalInversePropensity(InversePropensity):
+    """
+    Class to compute global propensities and serve them
+    """
+    def __init__(self, data_matrix):
+        self.inverse_propensities = 1/self._get_propensities(data_matrix)
+
+    def get(self, users):
+        return self.inverse_propensities
+
+    def _get_propensities(self, data_matrix):
+        item_count = data.sum(axis=0)
+        total = data.sum()
+        return item_count/total
+
+
+class UserInversePropensity(InversePropensity):
+    """
+    Class to compute propensities on the fly for a set of users.
+    """
+    def __init__(self, data_matrix):
+        self.data_matrix = data_matrix
+
+    def get(self, users):
+        # Compute the inverse propensities on the fly
+        propensities = self._get_propensities(users)
+        inverse_propensities = propensities.copy()
+        inverse_propensities.data = 1/propensities.data
+        return inverse_propensities
+
+    def _get_propensities(self, users):
+        row_sum = self.data[users].sum(axis=1)
+        propensities = scipy.sparse.csr_matrix(self.data[users] / row_sum)
+        return propensities
+
+
 class SNIPS_factory():
     def __init__(self, propensity_type):
         self.propensity_type = propensity_type
-        self.propensities = None
         self.inverse_propensities = None
-
-    def _fit_uniform(self, data):
-        nr_items = data.shape[1]
-        self.propensities = numpy.array([[1/nr_items for i in range(nr_items)]])
-        self.inverse_propensities = 1/self.propensities
-
-    def _fit_global(self, data):
-        item_count = data.sum(axis=0)
-        total = data.sum()
-        self.propensities = item_count/total
-        self.inverse_propensities = 1/self.propensities
-
-    def _fit_user(self, data):
-        row_sum = data.sum(axis=1)
-        self.propensities = scipy.sparse.csr_matrix(data / row_sum)
-        self.inverse_propensities = self.propensities.copy()
-        self.inverse_propensities.data = 1/self.propensities.data
 
     def fit(self, data):
         """
         Fit the propensities based on a sparse matrix with recommendation counts
         """
         if self.propensity_type == PropensityType.UNIFORM:
-            self._fit_uniform(data)
+            self.inverse_propensities = UniformInversePropensity(data)
         elif self.propensity_type == PropensityType.GLOBAL:
-            self._fit_global(data)
+            self.inverse_propensities = GlobalInversePropensity(data)
         elif self.propensity_type == PropensityType.USER:
-            self._fit_user(data)
+            self.inverse_propensities = UserInversePropensity(data)
         else:
             raise ValueError(f"Unknown propensity type {self.propensity_type}")
 
