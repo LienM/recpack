@@ -308,4 +308,4 @@ class SNIPS_factory():
             raise Exception(
                 "inverse_propensities should not be None, fit a propensity model before creating SNIPS metrics"
             )
-        return SNIPS(K, self.inverse_propensities, self.propensity_type)
+        return SNIPS(K, self.inverse_propensities)
