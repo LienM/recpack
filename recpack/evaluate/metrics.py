@@ -226,6 +226,7 @@ class SNIPS(Metric):
     def name(self):
         return f"SNIPS@{self.K}"
 
+IP_CAP = 10000
 
 class UniformInversePropensity():
     """
@@ -234,6 +235,7 @@ class UniformInversePropensity():
     """
     def __init__(self, data_matrix):
         self.inverse_propensities = 1/self._get_propensities(data_matrix)
+        self.inverse_propensities[self.inverse_propensities > IP_CAP] = IP_CAP
 
     def get(self, users):
         return self.inverse_propensities
@@ -249,6 +251,7 @@ class GlobalInversePropensity(InversePropensity):
     """
     def __init__(self, data_matrix):
         self.inverse_propensities = 1/self._get_propensities(data_matrix)
+        self.inverse_propensities[self.inverse_propensities > IP_CAP] = IP_CAP
 
     def get(self, users):
         return self.inverse_propensities
@@ -273,6 +276,9 @@ class UserInversePropensity(InversePropensity):
         propensities = self._get_propensities(users)
         inverse_propensities = propensities.copy()
         inverse_propensities.data = 1/propensities.data
+        # Cap the inverse propensity to sensible values,
+        # otherwise we will run into division by almost 0 issues.
+        inverse_propensities[inverse_propensities > IP_CAP] = IP_CAP
         return inverse_propensities
 
     def _get_propensities(self, users):
