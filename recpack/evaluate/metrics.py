@@ -256,7 +256,9 @@ class GlobalInversePropensity(InversePropensity):
     def _get_propensities(self, data_matrix):
         item_count = data_matrix.sum(axis=0)
         total = data_matrix.sum()
-        return item_count/total
+        propensities = item_count/total
+        propensities[propensities == numpy.inf] = 0
+        return propensities
 
 
 class UserInversePropensity(InversePropensity):
