@@ -15,6 +15,65 @@ def generate_data():
     return matrix
 
 
+def test_UniformInversePropensity():
+    data = generate_data()
+    p = metrics.UniformInversePropensity(data)
+    # Make sure the propensity computation is right
+    numpy.testing.assert_almost_equal(p._get_propensities(data).sum(axis=1), 1)
+
+    # Make sure the inverse propensities are right
+    numpy.testing.assert_almost_equal(p.get([0, 1]), data.shape[1])
+
+
+def test_GlobalInversePropensity():
+    data = generate_data()
+
+    p = metrics.GlobalInversePropensity(data)
+    # Make sure the propensity computation is right
+    numpy.testing.assert_almost_equal(p._get_propensities(data).sum(axis=1), 1)
+
+    # Make sure the inverse propensities are right
+    numpy.testing.assert_almost_equal(p.get([0, 1]), numpy.array([[8, 8, 8, 8/2, 8/3]]))
+
+
+def test_UserInversePropensity():
+    data = generate_data()
+    users = [0, 1]
+    p = metrics.UserInversePropensity(data)
+    # Make sure the propensity computation is right
+    numpy.testing.assert_almost_equal(p._get_propensities(users).sum(axis=1), 1)
+
+    # Make sure the inverse propensities are right
+    numpy.testing.assert_almost_equal(p.get(users).toarray(), numpy.array([[4, 0, 4, 0, 4/2], [0, 4, 0, 4/2, 4]]))
+
+
+@pytest.mark.parametrize(
+    "propensity_type, expected_class",
+    [
+        (metrics.PropensityType.UNIFORM, metrics.UniformInversePropensity),
+        (metrics.PropensityType.GLOBAL, metrics.GlobalInversePropensity),
+        (metrics.PropensityType.USER, metrics.UserInversePropensity),
+    ]
+)
+def test_SNIPS_factory(propensity_type, expected_class):
+    data = generate_data()
+    factory = metrics.SNIPS_factory(propensity_type)
+    factory.fit(data)
+
+    K = 2
+    metric = factory.create(K)
+    assert type(metric.inverse_propensities) == expected_class
+    assert metric.K == K
+
+    K_values = [1, 2, 3]
+    metric_dict = factory.create_multipe_SNIPS(K_values)
+    for K in K_values:
+        name = f'SNIPS@{K}'
+        assert name in metric_dict
+        assert type(metric_dict[name].inverse_propensities) == expected_class
+        assert metric_dict[name].K == K
+
+
 @pytest.mark.parametrize(
     "propensity_type, expected_score",
     [
@@ -30,9 +89,6 @@ def test_SNIPS(propensity_type, expected_score):
 
     data = generate_data()
     factory.fit(data)
-    # assert that the propensities add up to 1 (they are supposed to be percentages)
-    numpy.testing.assert_almost_equal(factory.propensities.sum(axis=1), 1)
-
     metric = factory.create(K)
 
     pred_users, pred_items, pred_values = [0, 0, 0, 1, 1, 1], [0, 2, 3, 1, 3, 4], [0.3, 0.2, 0.1, 0.23, 0.3, 0.5]
