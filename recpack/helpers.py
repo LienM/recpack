@@ -105,7 +105,7 @@ class DataPrep:
         self.item_id_mapping = {}
         self.user_id_mapping = {}
 
-    def get_dataframe(self, input_file, item_column_name, user_column_name):
+    def get_dataframe(self, input_file, item_column_name, user_column_name, deduplicate=True):
         """
         Take the raw input file, and turn it into a pandas dataframe
         """
@@ -114,15 +114,17 @@ class DataPrep:
 
         # Cleanup duplicates
         loaded_dataframe.reset_index(inplace=True)
-        data_dd = loaded_dataframe[[item_column_name, user_column_name]].drop_duplicates()
-        data_dd.reset_index(inplace=True)
-        dataframe = pd.merge(
-            data_dd, loaded_dataframe,
-            how='inner', on=['index', item_column_name, user_column_name]
-        )
+        if deduplicate:
+            data_dd = loaded_dataframe[[item_column_name, user_column_name]].drop_duplicates()
+            data_dd.reset_index(inplace=True)
+            dataframe = pd.merge(
+                data_dd, loaded_dataframe,
+                how='inner', on=['index', item_column_name, user_column_name]
+            )
 
-        del data_dd
-        return dataframe
+            del data_dd
+            return dataframe
+        return loaded_dataframe
 
     def update_id_mappings(self, dataframe, item_column_name, user_column_name):
         """
