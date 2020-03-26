@@ -211,7 +211,7 @@ class SNIPS(Metric):
             # And take min with self.K since it will be impossible to hit all of the items if there are more than K
             number_true_interactions = X_true[user].sum()
 
-            if number_true_interactions > 0:
+            if number_true_interactions > 0 and max_possible_hit_score > 0:
                 self.num_users += 1
                 self.score += (1/max_possible_hit_score) * hit_score
 
