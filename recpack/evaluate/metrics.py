@@ -1,5 +1,5 @@
 import numpy
-
+import scipy.sparse
 
 class Metric:
     pass
@@ -148,7 +148,7 @@ class MutexMetric:
         self.true_negatives = 0
         self.negatives = 0
 
-    def update(self, X_pred: np.matrix, X_true: scipy.sparse.csr_matrix, users: list) -> None:
+    def update(self, X_pred: numpy.matrix, X_true: scipy.sparse.csr_matrix, users: list) -> None:
 
         self.positives += X_pred.sum()
         self.negatives += (X_pred.shape[0] * X_pred.shape[1]) - X_pred.sum()
@@ -156,7 +156,7 @@ class MutexMetric:
         false_pos = scipy.sparse.csr_matrix(X_pred).multiply(X_true)
         self.false_positives += false_pos.sum()
 
-        negatives = np.ones(X_pred.shape) - X_pred
+        negatives = numpy.ones(X_pred.shape) - X_pred
         true_neg = scipy.sparse.csr_matrix(negatives).multiply(X_true)
         self.true_negatives += true_neg.sum()
 

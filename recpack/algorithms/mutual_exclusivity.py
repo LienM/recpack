@@ -1,4 +1,4 @@
-from recpack.algorithms.algorithm_base import TwoMatrixFitAlgorithm
+from .algorithm_base import TwoMatrixFitAlgorithm
 import scipy.sparse
 import numpy
 from snapy import MinHash, LSH
@@ -48,9 +48,9 @@ def pv_lift_over_pur_lif(pv_csr, pur_csr, min_sup=5):
     pv_cooc.eliminate_zeros()
 
     binary_pv_cooc = pv_cooc.copy()
-    binary_pv_cooc[binary_pv_cooc > 0] = 1
+    binary_pv_cooc.data[binary_pv_cooc.data > 0] = 1
     binary_pur_cooc = pur_cooc.copy()
-    binary_pur_cooc[binary_pur_cooc > 0] = 1
+    binary_pur_cooc.data[binary_pur_cooc.data > 0] = 1
 
     # Each pair that has been seen enough, is assumed to be purchased once.
     pur_cooc_lil = pur_cooc.tolil()
@@ -129,6 +129,7 @@ class LSHMutexPredictor(MuxPredictor):
         values[values > 0] = 1  # Binarize to make it easier for downstream use
         return values.T
 
+
 # FIXME: this can be reused for other filtering purposes, but it was easier to write this way :D 
 class MuxFilter:
     """
@@ -142,4 +143,4 @@ class MuxFilter:
         Invert the predict method from the mux predictor. If it predicts 1, this returns 0, and the other way around.
         """
         values = self.mux_predictor.predict(X)
-        return (numpy.ones(values.shape) - values).T
+        return (numpy.ones(values.shape) - values)
