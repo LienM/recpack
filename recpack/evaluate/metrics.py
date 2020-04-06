@@ -1,5 +1,5 @@
 import numpy
-
+import scipy.sparse
 
 class Metric:
     pass
@@ -132,3 +132,34 @@ class NDCGK(Metric):
             return 0
 
         return self.NDCG / self.num_users
+
+
+class MutexMetric:
+    """
+    Metric used to evaluate the mutex predictors
+
+    Computes false positives as predictor says it's mutex, but sample shows that the item predicted as mutex has been purchased in the evaluation data
+    Computes True negatives as items predicted as non mutex, which are also actually in the evaluation data.
+    """
+    def __init__(self):
+        self.false_positives = 0
+        self.positives = 0
+
+        self.true_negatives = 0
+        self.negatives = 0
+
+    def update(self, X_pred: numpy.matrix, X_true: scipy.sparse.csr_matrix, users: list) -> None:
+
+        self.positives += X_pred.sum()
+        self.negatives += (X_pred.shape[0] * X_pred.shape[1]) - X_pred.sum()
+
+        false_pos = scipy.sparse.csr_matrix(X_pred).multiply(X_true)
+        self.false_positives += false_pos.sum()
+
+        negatives = numpy.ones(X_pred.shape) - X_pred
+        true_neg = scipy.sparse.csr_matrix(negatives).multiply(X_true)
+        self.true_negatives += true_neg.sum()
+
+    @property
+    def value(self):
+        return (self.false_positives, self.positives, self.true_negatives, self.negatives)
