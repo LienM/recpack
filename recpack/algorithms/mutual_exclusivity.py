@@ -1,6 +1,7 @@
 from .algorithm_base import TwoMatrixFitAlgorithm
 import scipy.sparse
 import numpy
+import pandass
 from snapy import MinHash, LSH
 
 
@@ -74,6 +75,10 @@ class MuxPredictor(TwoMatrixFitAlgorithm):
     Predict if an item is mutex with the history of a user.
     mutex defined as: Based on the user history, they will not purchase this item in the future.
     Typically because of another item that makes it so this other item will not be purchased.
+
+    This base model fits a model based on view and consumption interaction matrices
+    TODO: This is currently unusable in the pipeline. If we want to use this one,
+    we should make it possible to use the base class in a pipeline.
     """
     def __init__(self, percentile=90):
         self.perc = percentile
@@ -96,20 +101,38 @@ class MuxPredictor(TwoMatrixFitAlgorithm):
         self.get_mux_model(mux_scores)
 
     def predict(self, X):
+        if self.mux_model is None:
+            raise RunTimeException("mux model has not been trained yet.")
         values = self.mux_model @ X.T
         values[values > 0] = 1  # Binarize to make it easier for downstream use
         return values.T
 
 
-class LSHMutexPredictor(MuxPredictor):
-    def __init__(self, min_jaccard=0.3, n_gram=3):
+class LSHMutexPredictor:
+    """
+    Mutex predicting model based on metadata only.
+    Model based on Local Sensitivity Hashing implemented in the SnaPy library.
+
+    TODO: We have no support in the pipeline for metadata based models.
+    TODO: The fit method takes a pandas dataframe as input, which could be the standard for metadata based model
+          Not sure though.
+
+    TODO: Currently only supports training on a single column of metadata,
+          extending this to a set of columns could improve the model
+
+    """
+    def __init__(self, shape, min_jaccard=0.3, n_gram=3, content_key='title', label_key='itemId'):
         self.mux_model = None
+
         self.n_gram = n_gram
         self.min_jaccard = min_jaccard
+        self.shape = shape
+        self.content_key = content_key
+        self.label_key = label_key
 
-    def train(self, df, shape, content_key='title', label_key='itemId'):
-        content = list(df[content_key])
-        labels = list(df[label_key])
+    def train(self, df: pandas.Dataframe):
+        content = list(df[self.content_key])
+        labels = list(df[self.label_key])
 
         minhash = MinHash(content, n_gram=3, n_gram_type='char', permutations=100, hash_bits=64, seed=42)
         lsh = LSH(minhash, labels, no_of_bands=50)
@@ -122,20 +145,31 @@ class LSHMutexPredictor(MuxPredictor):
             x_ids.extend([label for i in range(len(alternatives))])
             y_ids.extend(alternatives)
 
-        self.mux_model = scipy.sparse.csr_matrix((numpy.ones(len(x_ids)), (x_ids, y_ids)), shape=shape)
+        self.mux_model = scipy.sparse.csr_matrix((numpy.ones(len(x_ids)), (x_ids, y_ids)), shape=self.shape)
 
     def predict(self, X):
+        if self.mux_model is None:
+            raise RunTimeException("mux model has not been trained yet.")
         values = self.mux_model @ X.T
         values[values > 0] = 1  # Binarize to make it easier for downstream use
         return values.T
 
 
-# FIXME: this can be reused for other filtering purposes, but it was easier to write this way :D 
+# FIXME: this can be reused for other filtering purposes, but it was easier to write this way :D
 class MuxFilter:
     """
-    Special case with inverted predict method -> Predict 1 in case of non mutex, and 0 in case of mutex
+    Filter class, takes a mux predictor as build argument.
+    Subtracts the mux predictors score (assumed binary), from 1. Which makes it so mutex items have score 0,
+    and simple pointwise mutliplication with a set of recommendations will remove the mutex items.
+
+    TODO: No fit method, might be useful to change that,
+          and have this class call the fit method of the underlying predictor
+
+    TODO: No support in pipeline for filtering / reranking, will be needed to apply this in a standard way
+          Might be good to implement this Filter as a true reranker.
+          Takes as input for predict, history + recommendation matrix
     """
-    def __init__(self, mux_predictor: MuxPredictor):
+    def __init__(self, mux_predictor):
         self.mux_predictor = mux_predictor
 
     def predict(self, X):
