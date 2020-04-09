@@ -1,7 +1,7 @@
 from .algorithm_base import TwoMatrixFitAlgorithm
 import scipy.sparse
 import numpy
-import pandass
+import pandas
 from snapy import MinHash, LSH
 
 
@@ -149,7 +149,7 @@ class LSHMutexPredictor:
 
     def predict(self, X):
         if self.mux_model is None:
-            raise RunTimeException("mux model has not been trained yet.")
+            raise RuntimeError("mux model has not been trained yet.")
         values = self.mux_model @ X.T
         values[values > 0] = 1  # Binarize to make it easier for downstream use
         return values.T

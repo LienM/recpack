@@ -394,7 +394,7 @@ class SeparateDataForValidationAndTestSplit(TrainValidationSplitTwoDataInputs):
 
     @property
     def name(self):
-        return f"separate_data_for_validation_and_test_{val_perc}"
+        return f"separate_data_for_validation_and_test_{self.val_perc}"
 
     def split(self, data_1, data_2):
         """
