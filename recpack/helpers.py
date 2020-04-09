@@ -53,30 +53,6 @@ def create_data_M_from_pandas_df(df, item_ix, user_ix, timestamp_ix=None, shape=
     return recpack.DataM(values_sp_m, timestamps_sp_m)
 
 
-def load_data_from_gcs(bucket_name, dataset_name, experiment_name, filename):
-
-    data_path = f"gs://{bucket_name}/{dataset_name}/{experiment_name}/{filename}"
-
-    df = pd.read_csv(data_path)
-
-    return df
-
-
-def upload_data_to_gcs(bucket_name, dataset_name, experiment_name, filename, client=None):
-
-    if not client:
-        client = storage.Client()
-
-    bucket = client.get_bucket(bucket_name)
-
-    data_path = f"{dataset_name}/{experiment_name}/{filename}"
-
-    blob = bucket.blob(data_path)
-    blob.upload_from_filename(filename)
-
-    return
-
-
 def rescale_id_space(ids, id_mapping=None):
     """
     Map the given ids to indices,
