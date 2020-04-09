@@ -117,6 +117,7 @@ class StrongGeneralizationSplit(TrainValidationTestSplit):
     def name(self):
         return f"strong_generalization_tr_{self.tr_perc*100}_val_{(self.val_perc)*100}_te_{(self.te_perc)*100}"
 
+    # TODO: Implement more efficient version from notebook
     def split(self, data):
         """
         Splits a user-interaction matrix by randomly shuffling users,
@@ -393,7 +394,7 @@ class SeparateDataForValidationAndTestSplit(TrainValidationSplitTwoDataInputs):
 
     @property
     def name(self):
-        return f"separate_data_for_validation_and_test_{val_perc}"
+        return f"separate_data_for_validation_and_test_{self.val_perc}"
 
     def split(self, data_1, data_2):
         """

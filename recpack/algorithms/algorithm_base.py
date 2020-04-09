@@ -26,3 +26,9 @@ class Baseline:
 
     def predict(self, X, K):
         pass
+
+
+class TwoMatrixFitAlgorithm(Algorithm):
+    def fit(self, X_1, X_2):
+        B = None
+        return B

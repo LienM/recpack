@@ -2,15 +2,16 @@ from .evaluate import (
     FoldInPercentageEvaluator,
     LeavePOutCrossValidationEvaluator,
     TrainingInTestOutEvaluator,
-    TimedSplitEvaluator
+    TimedSplitEvaluator,
 )
-from .metrics import RecallK, NDCGK, MeanReciprocalRankK
+from .metrics import RecallK, NDCGK, MeanReciprocalRankK, MutexMetric
 
 EVALUATORS = {
     'FoldInPercentage': FoldInPercentageEvaluator,
     'LPOCV': LeavePOutCrossValidationEvaluator,
     'TrainingInTestOut': TrainingInTestOutEvaluator,
-    'TimedSplit': TimedSplitEvaluator
+    'TimedSplit': TimedSplitEvaluator,
+    'MutexMetric': MutexMetric
 }
 
 
