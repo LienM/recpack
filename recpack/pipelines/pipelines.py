@@ -1,6 +1,6 @@
 from collections import defaultdict
 from recpack.evaluate import RecallK, MeanReciprocalRankK, NDCGK
-from recpack.splits.splits import TrainValidationTestSplit, TrainValidationSplitTwoDataInputs
+from recpack.splits.splits import TrainValidationSplitTwoDataInputs
 
 
 class MetricRegistry:
@@ -29,6 +29,15 @@ class MetricRegistry:
 
     def __getitem__(self, key):
         return self.registry[key]
+
+    def register_from_factory(self, metric_factory, identifier, K_values):
+        for algo in self.algorithms:
+            for K in K_values:
+                self.register(metric_factory.create(K), algo.name, f"{identifier}@{K}")
+
+    def register(self, metric, algorithm, identifier):
+        print(f"registered {algorithm} - {identifier}")
+        self.registry[algorithm][identifier] = metric
 
     @property
     def metrics(self):
@@ -108,7 +117,7 @@ class Pipeline:
 
         self.evaluator.split(tr_data, val_data, te_data)
 
-        for _in, _out in self.evaluator:
+        for _in, _out, users in self.evaluator:
             for algo in self.algorithms:
 
                 metrics = self.metric_registry[algo.name]
@@ -116,7 +125,7 @@ class Pipeline:
 
                 for metric in metrics.values():
 
-                    metric.update(X_pred, _out)
+                    metric.update(X_pred, _out, users)
 
     def get(self):
         return self.metric_registry.metrics

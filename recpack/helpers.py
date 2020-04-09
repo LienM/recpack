@@ -77,6 +77,94 @@ def upload_data_to_gcs(bucket_name, dataset_name, experiment_name, filename, cli
     return
 
 
-def rescale_id_space(ids):
-    org_id_to_new_id = {val: ix for ix, val in enumerate(ids)}
-    return org_id_to_new_id
+def rescale_id_space(ids, id_mapping=None):
+    """
+    Map the given ids to indices,
+    if id_mapping is not None, use that as start, and add new values
+    """
+    counter = 0
+
+    if id_mapping is not None and len(id_mapping) > 0:
+        counter = max(id_mapping.values()) + 1
+    else:
+        id_mapping = {}
+    for val in ids:
+        if val not in id_mapping:
+            id_mapping[val] = counter
+            counter += 1
+
+    return id_mapping
+
+
+class DataPrep:
+    """
+    Class to take csv input file, and turn it into a DataM object.
+    With storage of mappings so multiple different sources can be combined.
+    """
+    def __init__(self):
+        self.item_id_mapping = {}
+        self.user_id_mapping = {}
+
+    def get_dataframe(self, input_file, item_column_name, user_column_name, deduplicate=True):
+        """
+        Take the raw input file, and turn it into a pandas dataframe
+        """
+        # Load file data
+        loaded_dataframe = pd.read_csv(input_file)
+
+        # Cleanup duplicates
+        loaded_dataframe.reset_index(inplace=True)
+        if deduplicate:
+            data_dd = loaded_dataframe[[item_column_name, user_column_name]].drop_duplicates()
+            data_dd.reset_index(inplace=True)
+            dataframe = pd.merge(
+                data_dd, loaded_dataframe,
+                how='inner', on=['index', item_column_name, user_column_name]
+            )
+
+            del data_dd
+            return dataframe
+        return loaded_dataframe
+
+    def update_id_mappings(self, dataframe, item_column_name, user_column_name):
+        """
+        Update the id mapping so we can combine multiple files
+        """
+
+        # Convert user and item ids into a continuous sequence to make
+        # training faster and use much less memory.
+        item_ids = list(dataframe[item_column_name].unique())
+        user_ids = list(dataframe[user_column_name].unique())
+
+        self.user_id_mapping = recpack.helpers.rescale_id_space(
+            user_ids, id_mapping=self.user_id_mapping
+        )
+        self.item_id_mapping = recpack.helpers.rescale_id_space(
+            item_ids, id_mapping=self.item_id_mapping
+        )
+
+    def get_data(self, dataframe, item_column_name, user_column_name, timestamp_column_name):
+
+        cleaned_item_column_name = 'iid'
+        cleaned_user_column_name = 'uid'
+
+        dataframe[cleaned_item_column_name] = dataframe[item_column_name].map(
+            lambda x: self.item_id_mapping[x]
+        )
+        dataframe[cleaned_user_column_name] = dataframe[user_column_name].map(
+            lambda x: self.user_id_mapping[x]
+        )
+        # To avoid confusion, and free up some memory delete the raw fields.
+        df = dataframe.drop([user_column_name, item_column_name], axis=1)
+
+        # Convert input data into internal data objects
+        data = recpack.helpers.create_data_M_from_pandas_df(
+            df,
+            cleaned_item_column_name, cleaned_user_column_name, timestamp_column_name,
+            shape=(
+                max(self.user_id_mapping.values()) + 1,
+                max(self.item_id_mapping.values()) + 1
+            )
+        )
+
+        return data
