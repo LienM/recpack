@@ -30,7 +30,17 @@ class MinUsersPerItem(Filter):
 
 
 class NMostPopular(Filter):
-    pass
+    def __init__(self, N, user_id, item_id, timestamp_id=None):
+        self.N = N
+
+        super().__init__(user_id, item_id, timestamp_id)
+
+    def apply(self, df):
+        cnt_users_per_item = df[self.item_id].value_counts(sort=True, ascending=False).reset_index()
+
+        items_of_interest = cnt_users_per_item[0:self.N, "index"].unique()
+
+        return df[df[self.item_id].isin(items_of_interest)]
 
 
 class EventsSince(Filter):
