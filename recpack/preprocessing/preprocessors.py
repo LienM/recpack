@@ -2,10 +2,10 @@ import pandas as pd
 import scipy.sparse
 
 import recpack.preprocessing.helpers as helpers
-from recpack.preprocessing.filtering import Filter
+from recpack.preprocessing.filters import Filter
 
 
-class DataframePreprocessor:
+class DataFramePreprocessor:
 
     def __init__(self, item_id, user_id, timestamp_id=None, dedupe=False):
         """
@@ -39,7 +39,7 @@ class DataframePreprocessor:
         """
         self.filter.append(_filter)
 
-    def process(self, df: pd.Dataframe) -> scipy.sparse.csr_matrix:
+    def process(self, df: pd.DataFrame) -> scipy.sparse.csr_matrix:
         if self.dedupe:
             df = df.drop_duplicates([self.user_id, self.item_id], keep="first")
 
@@ -54,8 +54,6 @@ class DataframePreprocessor:
         df[cleaned_user_id] = df[self.user_id].map(
             lambda x: self.user_id_mapping[x]
         )
-        # To avoid confusion, and free up some memory delete the raw fields.
-        df = df.drop([self.user_id, self.item_id], axis=1)
 
         # Convert input data into internal data objects
         data = helpers.create_data_M_from_pandas_df(
@@ -69,7 +67,7 @@ class DataframePreprocessor:
 
         return data
 
-    def update_id_mappings(self, df: pd.Dataframe):
+    def update_id_mappings(self, df: pd.DataFrame):
         """
         Update the id mapping so we can combine multiple files
         """

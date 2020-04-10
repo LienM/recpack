@@ -1,10 +1,11 @@
 import scipy.sparse
 import sklearn.decomposition
 
-from .algorithm_base import Algorithm
+from recpack.algorithms.user_item_interactions_algorithms import (
+    UserItemInteractionsAlgorithm,
+)
 
-
-class MF(Algorithm):
+class MF(UserItemInteractionsAlgorithm):
     def __init__(self, K=100):
         self.K = K
 

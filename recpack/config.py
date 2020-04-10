@@ -27,7 +27,7 @@ class PipelineConfig:
 
         for algo_c in self.config["algorithms"]:
             assert "type" in algo_c
-            assert algo_c["type"] in recpack.algorithms.ALGORITHMS
+            assert algo_c["type"] in recpack.algorithms.algorithm_registry.list()
 
     def get_algorithms(self):
         for algo_c in self.config["algorithms"]:
@@ -73,7 +73,7 @@ class ParameterGeneratorPipelineConfig(PipelineConfig):
 
         for algo_c in self.config["algorithms"]:
             assert "type" in algo_c
-            assert algo_c["type"] in recpack.algorithms.ALGORITHMS
+            assert algo_c["type"] in recpack.algorithms.algorithm_registry.list()
 
     def get_parameter_generator(self):
         return self.config["parameter_generator"]["type"], self.config["parameter_generator"].get("params", {})

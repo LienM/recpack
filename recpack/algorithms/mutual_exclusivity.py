@@ -4,6 +4,8 @@ import numpy
 import pandas
 from snapy import MinHash, LSH
 
+# TODO Refactor into multiple models that take as an input to __init__ the type of underlying algorithm to use. 
+
 
 def per_item_inverse_sparse_mat(sp_mat: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
     """
@@ -102,7 +104,7 @@ class MuxPredictor(TwoMatrixFitAlgorithm):
 
     def predict(self, X):
         if self.mux_model is None:
-            raise RunTimeException("mux model has not been trained yet.")
+            raise RuntimeError("mux model has not been trained yet.")
         values = self.mux_model @ X.T
         values[values > 0] = 1  # Binarize to make it easier for downstream use
         return values.T

@@ -27,6 +27,7 @@ def create_csr_matrix_from_pandas_df(df, item_ix, user_ix, shape=None):
 
 
 def create_temporal_csr_matrix_from_pandas_df(df, item_ix, user_ix, timestamp_ix, shape=None):
+    # TODO What to do with timestamp when event has occured more than once?
     column_ix = item_ix
     row_ix = user_ix
 

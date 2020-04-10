@@ -329,6 +329,7 @@ class SNIPS_factory:
 
 
 class MutexMetric:
+    # TODO Refactor into a Precision metric, a FP and a TN metric. 
     """
     Metric used to evaluate the mutex predictors
 

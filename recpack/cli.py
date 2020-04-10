@@ -111,7 +111,7 @@ def run_pipeline(
     data, data_2 = prep_data(input_file, input_file_2, item_column_name, user_column_name, timestamp_column_name)
 
     # resolve algorithms and their parameters from config, and create the objects
-    algorithms = [recpack.algorithms.get_algorithm(type)(**params) for type, params in config_obj.get_algorithms()]
+    algorithms = [recpack.algorithms.algorithm_registry.get(type)(**params) for type, params in config_obj.get_algorithms()]
 
     # Create splitter class
     s_type, s_params = config_obj.get_splitter()
@@ -165,7 +165,7 @@ def run_parameter_generator_pipeline(
     data, data_2 = prep_data(input_file, input_file_2, item_column_name, user_column_name, timestamp_column_name)
 
     # resolve algorithms and their parameters from config, and create the objects
-    algorithms = [recpack.algorithms.get_algorithm(type)(**params) for type, params in config_obj.get_algorithms()]
+    algorithms = [recpack.algorithms.algorithm_registry.get(type)(**params) for type, params in config_obj.get_algorithms()]
 
     # Create the parameter generator instance.
     p_type, p_params = config_obj.get_parameter_generator()

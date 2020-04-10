@@ -5,11 +5,12 @@ import scipy.sparse
 
 from sklearn.linear_model import SGDRegressor
 
-from .algorithm_base import Algorithm
+from recpack.algorithms.user_item_interactions_algorithms import (
+    UserItemInteractionsAlgorithm,
+)
 
 
-class EASE(Algorithm):
-
+class EASE(UserItemInteractionsAlgorithm):
     def __init__(self, l2=1e3, B=None):
         self.B = B
         self.l2 = l2
@@ -28,13 +29,15 @@ class EASE(Algorithm):
         # Eq. 14 B_scaled = B * diagM(w)
 
         # Compute P
-        P = np.linalg.inv(X.T @ X + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
+        P = np.linalg.inv(
+            X.T @ X + self.l2 * np.identity((X.shape[1]), dtype=np.float32)
+        )
         # Somehow Robin's local env seems to not want to make P an ndarray, and makes it a matrix
         if type(P) == np.matrix:
             P = P.A
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))
-        B[np.diag_indices(B.shape[0])] = .0
+        B[np.diag_indices(B.shape[0])] = 0.0
 
         if w is None:
             self.B = B
@@ -55,7 +58,7 @@ class EASE(Algorithm):
             raise Exception("Fit a model before trying to save it, dumbass.")
 
         if not filename:  # TODO Check if filename is valid
-            filename = './B_' + secrets.token_hex(10)
+            filename = "./B_" + secrets.token_hex(10)
 
         np.save(filename, self.B)
 
@@ -71,11 +74,19 @@ class EASE(Algorithm):
         return f"ease_lambda_{self.l2}"
 
 
-class SLIM(Algorithm):
+class SLIM(UserItemInteractionsAlgorithm):
     """ Implementation of the SLIM model.
     loosely based on https://github.com/Mendeley/mrec
     """
-    def __init__(self, l1_reg=0.0005, l2_reg=0.00005, fit_intercept=True, ignore_neg_weights=True, model='sgd'):
+
+    def __init__(
+        self,
+        l1_reg=0.0005,
+        l2_reg=0.00005,
+        fit_intercept=True,
+        ignore_neg_weights=True,
+        model="sgd",
+    ):
 
         self.similarity_matrix = None
 
@@ -89,14 +100,14 @@ class SLIM(Algorithm):
 
         # Construct internal model
         # ALLOWED MODELS:
-        ALLOWED_MODELS = ['sgd']
+        ALLOWED_MODELS = ["sgd"]
 
-        if model == 'sgd':
+        if model == "sgd":
             self.model = SGDRegressor(
-                penalty='elasticnet',
+                penalty="elasticnet",
                 fit_intercept=fit_intercept,
                 alpha=self.alpha,
-                l1_ratio=self.l1_ratio
+                l1_ratio=self.l1_ratio,
             )
 
         else:
@@ -140,7 +151,9 @@ class SLIM(Algorithm):
 
         # Construct similarity matrix.
         # Shape is determined by 2nd dimension of the shape of input matrix X
-        self.similarity_matrix = scipy.sparse.csr_matrix((data, (row, col)), shape=(X.shape[1], X.shape[1]))
+        self.similarity_matrix = scipy.sparse.csr_matrix(
+            (data, (row, col)), shape=(X.shape[1], X.shape[1])
+        )
 
     def predict(self, X):
         """Predict scores for each user, item pair

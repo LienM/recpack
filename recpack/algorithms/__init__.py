@@ -1,19 +1,39 @@
-from .linear_algorithms import EASE, SLIM
-from .true_baseline_algorithms import Popularity, Random
-from .nn_algorithms import ItemKNN
-from .matrix_factorization_algorithms import NMF, SVD
+from recpack.algorithms.algorithm_base import Algorithm
+from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import (
+    EASE,
+    SLIM,
+)
+from recpack.algorithms.true_baseline_algorithms import Popularity, Random
+from recpack.algorithms.user_item_interactions_algorithms.nn_algorithms import ItemKNN
+from recpack.algorithms.user_item_interactions_algorithms.matrix_factorization_algorithms import (
+    NMF,
+    SVD,
+)
 
 
-ALGORITHMS = {
-    'ease': EASE,
-    'random': Random,
-    'popularity': Popularity,
-    'itemKNN': ItemKNN,
-    'NMF': NMF,
-    'SVD': SVD,
-    'slim': SLIM,
-}
+class AlgorithmRegistry:
+
+    # TODO Resolve based on imports
+    ALGORITHMS = {
+        "ease": EASE,
+        "random": Random,
+        "popularity": Popularity,
+        "itemKNN": ItemKNN,
+        "NMF": NMF,
+        "SVD": SVD,
+        "slim": SLIM,
+    }
+
+    def get(cls, algorithm_name):
+        return cls.ALGORITHMS[algorithm_name]
+
+    def register(cls, algorithm_name, algorithm: Algorithm):
+        assert algorithm_name not in cls.ALGORITHMS
+
+        cls.ALGORITHMS[algorithm_name] = algorithm
+
+    def list(cls):
+        return cls.ALGORITHMS
 
 
-def get_algorithm(algorithm_name):
-    return ALGORITHMS[algorithm_name]
+algorithm_registry = AlgorithmRegistry()

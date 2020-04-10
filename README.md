@@ -45,13 +45,13 @@ Recpack provides a set of algorithms to use in pipelines.
 To get the list of all algorithms use:
 ```python
 import recpack.algorithms
-recpack.algorithms.ALGORITHMS
+recpack.algorithms.algorithm_registry.list()
 ```
 This will give you a list of algorithm you can use.
 
 To create an algorithm instance use:
 ```python
-algo = recpack.algorithms.get_algorithm('ease')()
+algo = recpack.algorithms.algorithm_registry.get('ease')()
 ```
 You can add parameters in the constructor. For information on which parameters can be used for which algorithm see the docs.
 
