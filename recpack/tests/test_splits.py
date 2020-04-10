@@ -1,5 +1,5 @@
 import recpack.splits
-import recpack.helpers
+import recpack.preprocessing.helpers as helpers
 import math
 import pandas as pd
 import pytest
@@ -12,7 +12,7 @@ def generate_data():
     input_dict = {'userId': [3, 2, 1, 0], 'movieId': [1, 0, 1, 0], 'timestamp': [15, 26, 29, 100]}
 
     df = pd.DataFrame.from_dict(input_dict)
-    data = recpack.helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
+    data = helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
     return data
 
 
@@ -444,7 +444,7 @@ def test_strong_generalization_timed_split(t, t_delta, t_alpha):
     input_dict = {'userId': [2, 1, 0, 0], 'movieId': [1, 0, 1, 0], 'timestamp': [15, 26, 10, 100]}
 
     df = pd.DataFrame.from_dict(input_dict)
-    data = recpack.helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
+    data = helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
 
     splitter = recpack.splits.StrongGeneralizationTimedSplit(t, t_delta=t_delta, t_alpha=t_alpha)
 

@@ -1,5 +1,5 @@
 import recpack
-import recpack.helpers
+import recpack.preprocessing.helpers as helpers
 import recpack.algorithms
 import recpack.evaluate
 import recpack.splits
@@ -10,6 +10,7 @@ import click
 import json
 import pandas as pd
 
+# TODO Refactor module based on preprocessing
 
 def prep_data(input_file, input_file_2, item_column_name, user_column_name, timestamp_column_name):
     """
@@ -50,8 +51,8 @@ def prep_data(input_file, input_file_2, item_column_name, user_column_name, time
         item_ids = set(list(dataframe[item_column_name].unique()) + list(dataframe_2[item_column_name].unique()))
         user_ids = set(list(dataframe[user_column_name].unique()) + list(dataframe_2[user_column_name].unique()))
 
-    item_id_mapping = recpack.helpers.rescale_id_space(item_ids)
-    user_id_mapping = recpack.helpers.rescale_id_space(user_ids)
+    item_id_mapping = helpers.rescale_id_space(item_ids)
+    user_id_mapping = helpers.rescale_id_space(user_ids)
 
     cleaned_item_column_name = 'iid'
     cleaned_user_column_name = 'uid'
@@ -71,13 +72,13 @@ def prep_data(input_file, input_file_2, item_column_name, user_column_name, time
         df_2 = dataframe_2.drop([user_column_name, item_column_name], axis=1)
 
     # Convert input data into internal data objects
-    data = recpack.helpers.create_data_M_from_pandas_df(
+    data = helpers.create_data_M_from_pandas_df(
         df, cleaned_item_column_name, cleaned_user_column_name, timestamp_column_name,
         shape=(len(user_ids), len(item_ids))
     )
     data_2 = None
     if df_2 is not None:
-        data_2 = recpack.helpers.create_data_M_from_pandas_df(
+        data_2 = helpers.create_data_M_from_pandas_df(
             df_2, cleaned_item_column_name, cleaned_user_column_name, timestamp_column_name,
             shape=(len(user_ids), len(item_ids))
         )
