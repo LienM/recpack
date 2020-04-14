@@ -9,9 +9,9 @@ import scipy.sparse
 
 class DataM:
 
-    item_id = 'iid'
-    user_id = 'uid'
-    timestamp_id = 'ts'
+    item_id = "iid"
+    user_id = "uid"
+    timestamp_id = "ts"
 
     def __init__(self, values, timestamps=None):
         self._values = values
@@ -22,7 +22,7 @@ class DataM:
         return self._values  # (user_1, item_1) -> 2
 
     @property
-    def timestamps(self) -> bidict.bidict:
+    def timestamps(self) -> pd.Series:
         if self._timestamps is None:
             raise AttributeError("timestamps is None, and should not be used")
         return self._timestamps  # (user_1, item_1) -> {1000, 1002}
@@ -41,7 +41,9 @@ class DataM:
     def _timestamp_comparator(self, func, inplace=False):
         c_timestamps = self.timestamps[func()]
 
-        c_values = self.__create_values(c_timestamps.reset_index(), self.item_id, self.user_id, self.values.shape)
+        c_values = self.__create_values(
+            c_timestamps.reset_index(), self.item_id, self.user_id, self.values.shape
+        )
 
         if not inplace:
             return DataM(c_values, c_timestamps)
@@ -78,7 +80,9 @@ class DataM:
 
         mask_values = np.ones(len(U))
 
-        mask = scipy.sparse.csr_matrix((mask_values, (U, I)), shape=self.values.shape)
+        mask = scipy.sparse.csr_matrix(
+            (mask_values, (U, I)), shape=self.values.shape, dtype=np.int32
+        )
 
         c_values = self.values.multiply(mask)
         c_values.eliminate_zeros()
@@ -99,7 +103,9 @@ class DataM:
     def binary_values(self):
         indices = self.indices
         # (user_1, item_1) -> 1
-        return scipy.sparse.csr_matrix(np.ones(len(indices)), indices, shape=self.shape)
+        return scipy.sparse.csr_matrix(
+            np.ones(len(indices)), indices, shape=self.shape, dtype=np.int32
+        )
 
     def copy(self):
         c_values = self._values.copy()
@@ -115,7 +121,13 @@ class DataM:
         sparse_matrix = DataM.__create_values(df, item_ix, user_ix, shape)
 
         if timestamp_ix:
-            df = df.rename(columns={item_ix: cls.item_id, user_ix: cls.user_id, timestamp_ix: cls.timestamp_id})
+            df = df.rename(
+                columns={
+                    item_ix: cls.item_id,
+                    user_ix: cls.user_id,
+                    timestamp_ix: cls.timestamp_id,
+                }
+            )
             timestamps = df.set_index([cls.user_id, cls.item_id])[cls.timestamp_id]
         else:
             timestamps = None
@@ -129,7 +141,11 @@ class DataM:
         # resulting in the actual counts being stored. Neat!
         values = np.ones(num_entries)
 
-        indices = zip(*df.loc[:, [user_ix, item_ix]].values)
+        indices = list(zip(*df.loc[:, [user_ix, item_ix]].values))
+
+        if indices == []:
+            indices = [[], []] # Empty zip does not evaluate right
+
         if shape is None:
             shape = df[user_ix].max() + 1, df[item_ix].max() + 1
         sparse_matrix = scipy.sparse.csr_matrix(
