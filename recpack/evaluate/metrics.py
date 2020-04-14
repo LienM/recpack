@@ -296,7 +296,7 @@ class UserInversePropensity(InversePropensity):
         return propensities
 
 
-class SNIPS_factory:
+class SNIPSFactory:
     def __init__(self, propensity_type):
         self.propensity_type = propensity_type
         self.inverse_propensities = None
