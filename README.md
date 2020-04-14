@@ -15,7 +15,7 @@ Data is expected to be loaded into a pandas df.
 Then helper functions can be used to clean it up and turn it into an internal representation.
 
 ```python
-import recpack.preprocessing.helpers
+from recpack.data_matrix import DataM
 import pandas as pd
 
 # Load data from CSV (assumes you have the data stored in the path provided)
@@ -37,7 +37,7 @@ dataframe['uid'] = dataframe['userId'].map(lambda x: user_id_mapping[x])
 # Drop the non continuous id columns (not really necessary, but frees up space)
 df = dataframe.drop(['userId', 'itemId'], axis=1)
 # Convert data into internal representation
-data = recpack.preprocessing.helpers.create_data_M_from_pandas_df(df, 'iid', 'uid', 'timestamp')
+data = DataM.create_from_dataframe(df, 'iid', 'uid', 'timestamp')
 ```
 
 ### Select algorithms
