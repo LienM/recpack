@@ -1,0 +1,143 @@
+from typing import List, Tuple, Union
+
+import pandas as pd
+import numpy as np
+
+import bidict
+import scipy.sparse
+
+
+class DataM:
+
+    item_id = 'iid'
+    user_id = 'uid'
+    timestamp_id = 'ts'
+
+    def __init__(self, values, timestamps=None):
+        self._values = values
+        self._timestamps = timestamps
+
+    @property
+    def values(self) -> scipy.sparse.csr_matrix:
+        return self._values  # (user_1, item_1) -> 2
+
+    @property
+    def timestamps(self) -> bidict.bidict:
+        if self._timestamps is None:
+            raise AttributeError("timestamps is None, and should not be used")
+        return self._timestamps  # (user_1, item_1) -> {1000, 1002}
+
+    @property
+    def indices(self) -> Tuple[List[int], List[int]]:
+        return self._values.nonzero()
+
+    @property
+    def shape(self) -> Tuple[int, int]:
+        if self._values is not None:
+            return self._values.shape
+        else:
+            return None
+
+    def _timestamp_comparator(self, func, inplace=False):
+        c_timestamps = self.timestamps[func()]
+
+        c_values = self.__create_values(c_timestamps.reset_index(), self.item_id, self.user_id, self.values.shape)
+
+        if not inplace:
+            return DataM(c_values, c_timestamps)
+        else:
+            self._timestamps = c_timestamps
+            self._values = c_values
+
+    def timestamps_gt(self, timestamp, inplace=False):
+        def func():
+            return self.timestamps > timestamp
+
+        return self._timestamp_comparator(func, inplace=inplace)
+
+    def timestamps_lt(self, timestamp, inplace=False):
+        def func():
+            return self.timestamps < timestamp
+
+        return self._timestamp_comparator(func, inplace=inplace)
+
+    def timestamps_gte(self, timestamp, inplace=False):
+        def func():
+            return self.timestamps >= timestamp
+
+        return self._timestamp_comparator(func, inplace=inplace)
+
+    def timestamps_lte(self, timestamp, inplace=False):
+        def func():
+            return self.timestamps <= timestamp
+
+        return self._timestamp_comparator(func, inplace=inplace)
+
+    def indices_in(self, u_i_lists, inplace=False):
+        U, I = u_i_lists
+
+        mask_values = np.ones(len(U))
+
+        mask = scipy.sparse.csr_matrix((mask_values, (U, I)), shape=self.values.shape)
+
+        c_values = self.values.multiply(mask)
+        c_values.eliminate_zeros()
+
+        if self.timestamps is None:
+            c_timestamps = None
+        else:
+            u_i_pairs = zip(*(u_i_lists))
+            c_timestamps = self.timestamps.loc[u_i_pairs]
+
+        if not inplace:
+            return DataM(c_values, c_timestamps)
+        else:
+            self._timestamps = c_timestamps
+            self._values = c_values
+
+    @property
+    def binary_values(self):
+        indices = self.indices
+        # (user_1, item_1) -> 1
+        return scipy.sparse.csr_matrix(np.ones(len(indices)), indices, shape=self.shape)
+
+    def copy(self):
+        c_values = self._values.copy()
+        c_timestamps = None if self._timestamps is None else self._timestamps.copy()
+
+        return DataM(c_values, c_timestamps)
+
+    @classmethod
+    def create_from_dataframe(
+        cls, df: pd.DataFrame, item_ix: str, user_ix: str, timestamp_ix=None, shape=None
+    ):
+
+        sparse_matrix = DataM.__create_values(df, item_ix, user_ix, shape)
+
+        if timestamp_ix:
+            df = df.rename(columns={item_ix: cls.item_id, user_ix: cls.user_id, timestamp_ix: cls.timestamp_id})
+            timestamps = df.set_index([cls.user_id, cls.item_id])[cls.timestamp_id]
+        else:
+            timestamps = None
+
+        return DataM(sparse_matrix, timestamps)
+
+    @classmethod
+    def __create_values(cls, df, item_ix, user_ix, shape):
+        num_entries = df.shape[0]
+        # Scipy sums up the entries when an index-pair occurs more than once,
+        # resulting in the actual counts being stored. Neat!
+        values = np.ones(num_entries)
+
+        indices = zip(*df.loc[:, [user_ix, item_ix]].values)
+        if shape is None:
+            shape = df[user_ix].max() + 1, df[item_ix].max() + 1
+        sparse_matrix = scipy.sparse.csr_matrix(
+            (values, indices), shape=shape, dtype=np.int32
+        )
+
+        return sparse_matrix
+
+
+class ShapeError(Exception):
+    pass
