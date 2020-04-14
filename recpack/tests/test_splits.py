@@ -317,3 +317,8 @@ def test_strong_generalization_timed_split(t, t_delta, t_alpha):
         assert (tr.timestamps >= t - t_alpha).all()
 
     assert train_users.intersection(test_users) == set()
+
+    assert (te.timestamps >= t).all()
+
+    if t_delta is not None:
+        assert (te.timestamps < t + t_delta).all()
