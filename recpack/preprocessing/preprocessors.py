@@ -2,6 +2,7 @@ import pandas as pd
 import scipy.sparse
 
 import recpack.preprocessing.helpers as helpers
+from recpack.data_matrix import DataM
 from recpack.preprocessing.filters import Filter
 
 
@@ -48,15 +49,15 @@ class DataFramePreprocessor:
         cleaned_item_id = 'iid'
         cleaned_user_id = 'uid'
 
-        df[cleaned_item_id] = df[self.item_id].map(
+        df.loc[:, cleaned_item_id] = df[self.item_id].map(
             lambda x: self.item_id_mapping[x]
         )
-        df[cleaned_user_id] = df[self.user_id].map(
+        df.loc[:, cleaned_user_id] = df[self.user_id].map(
             lambda x: self.user_id_mapping[x]
         )
 
         # Convert input data into internal data objects
-        data = helpers.create_data_M_from_pandas_df(
+        data = DataM.create_from_dataframe(
             df,
             cleaned_item_id, cleaned_user_id, self.timestamp_id,
             shape=(
