@@ -1,5 +1,5 @@
 import recpack.splits
-import recpack.preprocessing.helpers as helpers
+from recpack.data_matrix import DataM
 import recpack.evaluate
 import scipy.sparse
 import itertools
@@ -14,7 +14,7 @@ def generate_data():
     input_dict = {'userId': [1, 1, 1, 0, 0, 0], 'movieId': [1, 3, 4, 0, 2, 4], 'timestamp': [15, 26, 29, 10, 22, 34]}
 
     df = pd.DataFrame.from_dict(input_dict)
-    data = helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
+    data = DataM.create_from_dataframe(df, 'movieId', 'userId', 'timestamp')
     return data
 
 

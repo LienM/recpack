@@ -10,8 +10,8 @@ def csr_row_set_nz_to_val(csr, row, value=0):
     to the given value. Useful to set to 0 mostly.
     """
     if not isinstance(csr, scipy.sparse.csr_matrix):
-        raise ValueError('Matrix given must be of CSR format.')
-    csr.data[csr.indptr[row]:csr.indptr[row+1]] = value
+        raise ValueError("Matrix given must be of CSR format.")
+    csr.data[csr.indptr[row]: csr.indptr[row + 1]] = value
 
 
 class Evaluator:
@@ -23,7 +23,6 @@ class LeavePOutCrossValidationEvaluator(Evaluator):
 
     def __init__(self, p):
         self.p = p
-        self.sp_mat = sp_mat
 
 
 class FoldIterator:
@@ -31,6 +30,7 @@ class FoldIterator:
     Iterator to get results from a fold instance.
     Fold instance can be any of the Evaluator classes defined.
     """
+
     def __init__(self, fold_instance, batch_size=1):
         self._fi = fold_instance
         self._index = 0
@@ -40,7 +40,7 @@ class FoldIterator:
 
     def __next__(self):
         # While loop to make it possible to skip any cases where user has no items in in or out set.
-        while(True):
+        while True:
             # Yield multi line fold.
             if self._index < self._max_index:
                 start = self._index
@@ -49,8 +49,8 @@ class FoldIterator:
                 if end >= self._max_index:
                     end = self._max_index
 
-                fold_in = self._fi.sp_mat_in[start: end]
-                fold_out = self._fi.sp_mat_out[start: end]
+                fold_in = self._fi.sp_mat_in[start:end]
+                fold_out = self._fi.sp_mat_out[start:end]
 
                 # Filter out users with missing data in either in or out.
 
@@ -102,6 +102,7 @@ class FoldInPercentageEvaluator(Evaluator):
     :type data: `int`
 
     """
+
     def __init__(self, fold_in, seed=None, batch_size=1):
         self.fold_in = fold_in
 
@@ -252,31 +253,15 @@ class TimedSplitEvaluator(Evaluator):
         assert shape == val_data.shape
         assert shape == te_data.shape
 
-        U_in, I_in, V_in = [], [], []
-        U_out, I_out, V_out = [], [], []
-
         # Split test data into before t and after t
         # in will be before t
         # out will be after t.
 
-        nonzero_users = list(set(te_data.values.nonzero()[0]))
-        te_sp_mat = te_data.values
-        te_timestamps = te_data.timestamps
-        for user in nonzero_users:
-            # Add the in data
-            for item in te_timestamps[user].indices:
-                if te_timestamps[user, item] < self.t:
-                    U_in.append(user)
-                    I_in.append(item)
-                    V_in.append(te_sp_mat[user, item])
+        data_fold_in = te_data.timestamps_lt(self.t)
+        data_fold_out = te_data.timestamps_gte(self.t)
 
-                else:
-                    U_out.append(user)
-                    I_out.append(item)
-                    V_out.append(te_sp_mat[user, item])
+        self.sp_mat_in = data_fold_in.values
 
-        self.sp_mat_in = scipy.sparse.csr_matrix((V_in, (U_in, I_in)), shape=shape)
-
-        self.sp_mat_out = scipy.sparse.csr_matrix((V_out, (U_out, I_out)), shape=shape)
+        self.sp_mat_out = data_fold_out.values
 
         return self.sp_mat_in, self.sp_mat_out
