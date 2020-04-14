@@ -3,7 +3,6 @@ from typing import List, Tuple, Union
 import pandas as pd
 import numpy as np
 
-import bidict
 import scipy.sparse
 
 
