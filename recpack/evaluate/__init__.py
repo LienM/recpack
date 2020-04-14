@@ -1,17 +1,17 @@
-from .evaluate import (
+from recpack.evaluate.evaluators import (
     FoldInPercentageEvaluator,
     LeavePOutCrossValidationEvaluator,
     TrainingInTestOutEvaluator,
     TimedSplitEvaluator,
 )
-from .metrics import RecallK, NDCGK, MeanReciprocalRankK, MutexMetric
+# from recpack.evaluate.metrics import RecallK, NDCGK, MeanReciprocalRankK, MutexMetric
 
 EVALUATORS = {
     'FoldInPercentage': FoldInPercentageEvaluator,
     'LPOCV': LeavePOutCrossValidationEvaluator,
     'TrainingInTestOut': TrainingInTestOutEvaluator,
     'TimedSplit': TimedSplitEvaluator,
-    'MutexMetric': MutexMetric
+    # 'MutexMetric': MutexMetric
 }
 
 

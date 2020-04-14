@@ -1,5 +1,5 @@
 from collections import defaultdict
-from recpack.evaluate import RecallK, MeanReciprocalRankK, NDCGK
+from recpack.evaluate.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.splits.splits import TrainValidationSplitTwoDataInputs
 
 

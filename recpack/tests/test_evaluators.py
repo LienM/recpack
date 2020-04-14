@@ -94,7 +94,7 @@ def test_iterator(batch_size):
             ).tocsr()
 
         def __iter__(self):
-            return recpack.evaluate.evaluate.FoldIterator(self, self.batch_size)
+            return recpack.evaluate.evaluators.FoldIterator(self, self.batch_size)
 
     LEN = 10
     fold_i = FoldInstance(length=LEN, batch_size=batch_size)
