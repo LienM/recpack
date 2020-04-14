@@ -1,4 +1,5 @@
 import recpack
+from recpack.data_matrix import DataM
 import recpack.preprocessing.helpers as helpers
 import recpack.algorithms
 import recpack.evaluate
@@ -72,13 +73,13 @@ def prep_data(input_file, input_file_2, item_column_name, user_column_name, time
         df_2 = dataframe_2.drop([user_column_name, item_column_name], axis=1)
 
     # Convert input data into internal data objects
-    data = helpers.create_data_M_from_pandas_df(
+    data = DataM.create_from_dataframe(
         df, cleaned_item_column_name, cleaned_user_column_name, timestamp_column_name,
         shape=(len(user_ids), len(item_ids))
     )
     data_2 = None
     if df_2 is not None:
-        data_2 = helpers.create_data_M_from_pandas_df(
+        data_2 = DataM.create_from_dataframe(
             df_2, cleaned_item_column_name, cleaned_user_column_name, timestamp_column_name,
             shape=(len(user_ids), len(item_ids))
         )
