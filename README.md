@@ -98,10 +98,10 @@ These will be used further in the pipeline to train models, and evaluate the mod
 
 ```python
 import recpack.splits
-# Construct a splitter object which uses strong generalization to split the data into 
+# Construct a splitter object which uses strong generalization to split the data into
 # three data objects. Train will contain 50% of the users, validation 20% and test 30%
 # The seed parameter is useful for creating reproducible results.
-splitter = recpack.splits.StrongGeneralization(0.5, 0.2, seed=42)
+splitter = recpack.splits.StrongGeneralizationSplit(0.5, 0.2, seed=42)
 ```
 
 ### Selecting an evaluator
@@ -111,10 +111,10 @@ The input matrix will be passed as input to the predict method of the algorithm,
 ```python
 import recpack.evaluate
 # Construct a fold in evaluator.
-# this evaluator will take the test data, and for each user add 40% of their interactions 
+# this evaluator will take the test data, and for each user add 40% of their interactions
 # to the in_ matrix and 60% to the out_ matrix.
 # Seed again for reproducability.
-evalautor = recpack.evaluate.FoldInPercentage(0.4, seed=42)
+evaluator = recpack.evaluate.FoldInPercentageEvaluator(0.4, seed=42)
 ```
 
 ### Creating the pipeline

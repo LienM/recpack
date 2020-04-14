@@ -1,5 +1,5 @@
-import enum
 import numpy
+import itertools
 import scipy.sparse
 
 
@@ -88,7 +88,8 @@ class NDCGK(Metric):
 
         self.discount_template = 1.0 / numpy.log2(numpy.arange(2, K + 2))
 
-        self.IDCG = {K: self.discount_template[:K].sum()}
+        # Calculate IDCG values by creating a list of partial sums (the functional way)
+        self.IDCG_cache = [0] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y))
 
     def update(self, X_pred, X_true, users=None):
 
@@ -102,15 +103,12 @@ class NDCGK(Metric):
         items_sets = {u: set(X_true[u].nonzero()[1]) for u in range(X_true.shape[0])}
 
         for u in topK_items.keys():
-            M = len(items_sets[u])
-            if M < self.K:
-                IDCG = self.IDCG.get(M)
+            M = min(self.K, len(items_sets[u]))
+            if M == 0:
+                continue
 
-                if not IDCG:
-                    IDCG = self.discount_template[:M].sum()
-                    self.IDCG[M] = IDCG
-            else:
-                IDCG = self.IDCG[self.K]
+            # retrieve IDCG from cache
+            IDCG = self.IDCG_cache[M]
 
             # Compute DCG
             DCG = sum(
