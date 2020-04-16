@@ -4,6 +4,8 @@ import pandas as pd
 
 # TODO Integrate into CLI
 
+# TODO Improve interface so that arguments known to the Preprocessor don't have to be duplidated.
+
 
 class Filter(ABC):
 
