@@ -102,8 +102,10 @@ class DataM:
     def binary_values(self):
         indices = self.indices
         # (user_1, item_1) -> 1
+
+        values = np.ones(len(indices[0]))
         return scipy.sparse.csr_matrix(
-            np.ones(len(indices)), indices, shape=self.shape, dtype=np.int32
+            (values, indices), shape=self.shape, dtype=np.int32
         )
 
     def copy(self):
@@ -143,7 +145,7 @@ class DataM:
         indices = list(zip(*df.loc[:, [user_ix, item_ix]].values))
 
         if indices == []:
-            indices = [[], []] # Empty zip does not evaluate right
+            indices = [[], []]  # Empty zip does not evaluate right
 
         if shape is None:
             shape = df[user_ix].max() + 1, df[item_ix].max() + 1

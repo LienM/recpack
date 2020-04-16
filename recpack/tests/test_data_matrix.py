@@ -57,6 +57,20 @@ def test_values_w_dups(df_w_duplicate):
     ).all()
 
 
+def test_binary_values_w_dups(df_w_duplicate):
+    d_w_duplicate = DataM.create_from_dataframe(
+        df_w_duplicate, "item_id", "user_id", "timestamp"
+    )
+
+    binary_values = d_w_duplicate.binary_values
+
+    assert (
+        binary_values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+
+
 def test_timestamps_no_dups(df):
     d = DataM.create_from_dataframe(df, "item_id", "user_id", "timestamp")
 
