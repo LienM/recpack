@@ -38,7 +38,7 @@ class DataFramePreprocessor:
         :param _filter: The filter to be applied
         :type _filter: Filter
         """
-        self.filter.append(_filter)
+        self.filters.append(_filter)
 
     def process(self, df: pd.DataFrame) -> scipy.sparse.csr_matrix:
         if self.dedupe:
@@ -65,6 +65,7 @@ class DataFramePreprocessor:
                 max(self.item_id_mapping.values()) + 1
             )
         )
+        #TODO Apply filters
 
         return data
 
