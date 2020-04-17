@@ -1,3 +1,4 @@
+from recpack.splitters.splitter_base import FoldIterator
 
 
 class Scenario:
@@ -19,3 +20,7 @@ class Scenario:
     @property
     def test_data(self):
         return (self.test_data_in, self.test_data_out)
+
+    @property
+    def test_iterator(self):
+        return FoldIterator(self.test_data_in, self.test_data_out)
