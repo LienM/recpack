@@ -1,3 +1,5 @@
+from typing import List
+
 import pandas as pd
 import scipy.sparse
 
@@ -32,7 +34,7 @@ class DataFramePreprocessor:
 
     def add_filter(self, _filter: Filter):
         """
-        Add a preprocessing filter to be applied before transforming to a DataM object. 
+        Add a preprocessing filter to be applied before transforming to a DataM object.
         Filters are applied in order, different orderings can lead to different results!
 
         :param _filter: The filter to be applied
@@ -40,34 +42,48 @@ class DataFramePreprocessor:
         """
         self.filters.append(_filter)
 
-    def process(self, df: pd.DataFrame) -> scipy.sparse.csr_matrix:
-        if self.dedupe:
-            df = df.drop_duplicates([self.user_id, self.item_id], keep="first")
+    def process(self, *args: pd.DataFrame) -> List[scipy.sparse.csr_matrix]:
+        """
+        Process all DataFrames passed as arguments.
+        If your pipeline requires more than one DataFrame,
+        pass all of them to a single call of process to guarantee
+        that their dimensions will match.
 
-        self.update_id_mappings(df)
+        :return: A list of sparse matrices in the order they were passed as arguments. 
+        :rtype: List[scipy.sparse.csr_matrix]
+        """
+        for df in args:
+            if self.dedupe:
+                df.drop_duplicates([self.user_id, self.item_id], keep="first", inplace=True)
+
+            self.update_id_mappings(df)
 
         cleaned_item_id = 'iid'
         cleaned_user_id = 'uid'
 
-        df.loc[:, cleaned_item_id] = df[self.item_id].map(
-            lambda x: self.item_id_mapping[x]
-        )
-        df.loc[:, cleaned_user_id] = df[self.user_id].map(
-            lambda x: self.user_id_mapping[x]
-        )
+        data_ms = []
 
-        # Convert input data into internal data objects
-        data = DataM.create_from_dataframe(
-            df,
-            cleaned_item_id, cleaned_user_id, self.timestamp_id,
-            shape=(
-                max(self.user_id_mapping.values()) + 1,
-                max(self.item_id_mapping.values()) + 1
+        for df in args:
+            df.loc[:, cleaned_item_id] = df[self.item_id].map(
+                lambda x: self.item_id_mapping[x]
             )
-        )
-        #TODO Apply filters
+            df.loc[:, cleaned_user_id] = df[self.user_id].map(
+                lambda x: self.user_id_mapping[x]
+            )
 
-        return data
+            # Convert input data into internal data objects
+            data_m = DataM.create_from_dataframe(
+                df,
+                cleaned_item_id, cleaned_user_id, self.timestamp_id,
+                shape=(
+                    max(self.user_id_mapping.values()) + 1,
+                    max(self.item_id_mapping.values()) + 1
+                )
+            )
+
+            data_ms.append(data_m)
+
+        return data_ms
 
     def update_id_mappings(self, df: pd.DataFrame):
         """
