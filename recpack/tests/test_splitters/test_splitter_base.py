@@ -13,13 +13,18 @@ min_t = 0
 max_t = 100
 
 
-def check_values_timestamps_match(indices, timestamps):
+def check_values_timestamps_match(data):
+    indices = list(zip(*data.values.nonzero()))
+    timestamps = data.timestamps
+
     pairs = timestamps.index
     for index_pair in indices:
         assert index_pair in pairs
 
     for index_pair in pairs:
         assert index_pair in indices
+
+    assert data.values.sum() == data.timestamps.shape[0]
 
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
@@ -32,13 +37,8 @@ def test_strong_generalization_splitter(data_m, in_perc):
 
     assert np.isclose(real_perc, in_perc, atol=splitter.error_margin)
 
-    tr_pairs = list(zip(*tr.values.nonzero()))
-    check_values_timestamps_match(tr_pairs, tr.timestamps)
-
-    te_pairs = list(zip(*te.values.nonzero()))
-    check_values_timestamps_match(te_pairs, te.timestamps)
-
-    assert tr.values.nnz == tr.timestamps.shape[0]
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
 
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
@@ -51,90 +51,124 @@ def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
 
     assert np.isclose(real_perc, in_perc, atol=splitter.error_margin)
 
-    tr_pairs = list(zip(*tr.values.nonzero()))
-    check_values_timestamps_match(tr_pairs, tr.timestamps)
-
-    te_pairs = list(zip(*te.values.nonzero()))
-    check_values_timestamps_match(te_pairs, te.timestamps)
-
-    assert tr.values.sum() == tr.timestamps.shape[0]
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
 
 
-# @pytest.mark.parametrize("t", [20, 15])
-# def test_timestamp_splitter_no_limit(data_m, t):
-#     splitter = splitters.TimestampSplitter(t)
+@pytest.mark.parametrize("t", [20, 15])
+def test_timestamp_splitter_no_limit(data_m, t):
+    splitter = splitters.TimestampSplitter(t)
 
-#     tr, te = splitter.split(data_m)
+    tr, te = splitter.split(data_m)
 
-#     assert (tr.timestamps < t).all()
-#     assert (te.timestamps >= t).all()
+    assert (tr.timestamps < t).all()
+    assert (te.timestamps >= t).all()
 
-#     tr_pairs = zip(*tr.values.nonzero())
-#     check_values_timestamps_match(tr_pairs, tr.timestamps)
-
-#     te_pairs = zip(*te.values.nonzero())
-#     check_values_timestamps_match(te_pairs, te.timestamps)
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
 
 
-# @pytest.mark.parametrize("t, t_delta", [(20, 10), (20, 3)])
-# def test_timestamp_splitter_windowed_t_delta(data_m, t, t_delta):
-#     splitter = splitters.TimestampSplitter(t, t_delta=t_delta)
+@pytest.mark.parametrize("t", [20, 15])
+def test_timestamp_splitter_no_limit_w_dups(data_m_w_dups, t):
+    splitter = splitters.TimestampSplitter(t)
 
-#     tr, te = splitter.split(data_m)
+    tr, te = splitter.split(data_m_w_dups)
 
-#     assert (tr.timestamps < t).all()
+    assert (tr.timestamps < t).all()
+    assert (te.timestamps >= t).all()
 
-#     assert (te.timestamps <= t + t_delta).all()
-#     assert (te.timestamps > t).all()
-
-#     tr_pairs = zip(*tr.values.nonzero())
-#     check_values_timestamps_match(tr_pairs, tr.timestamps)
-
-#     te_pairs = zip(*te.values.nonzero())
-#     check_values_timestamps_match(te_pairs, te.timestamps)
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
 
 
-# @pytest.mark.parametrize("t, t_alpha", [(20, 10), (20, 3)])
-# def test_timestamp_splitter_windowed_alpha(data_m, t, t_alpha):
-#     splitter = splitters.TimestampSplitter(t, t_alpha=t_alpha)
+@pytest.mark.parametrize("t, t_delta", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_t_delta(data_m, t, t_delta):
+    splitter = splitters.TimestampSplitter(t, t_delta=t_delta)
 
-#     tr, te = splitter.split(data_m)
+    tr, te = splitter.split(data_m)
 
-#     assert (tr.timestamps < t).all()
-#     assert (tr.timestamps >= t - t_alpha).all()
+    assert (tr.timestamps < t).all()
 
-#     assert (te.timestamps > t).all()
+    assert (te.timestamps <= t + t_delta).all()
+    assert (te.timestamps >= t).all()
 
-
-# # def test_user_splitter(data_m):
-
-
-# #     splitter = splitters.UserSplitter([0, 1], [2, 3])
-# #     tr, te = splitter.split(data_m)
-
-# #     # Check values splits
-# #     assert (
-# #         tr.values.toarray()
-# #         == np.array([[1.0, 0.0], [0.0, 1.0], [0.0, 0.0], [0.0, 0.0]])
-# #     ).all()
-
-# #     assert (
-# #         te.values.toarray()
-# #         == np.array([[0.0, 0.0], [0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-# #     ).all()
-
-# #     # Check timestamp splits.
-# #     tr_pairs = zip(*tr.values.nonzero())
-# #     check_values_timestamps_match(tr_pairs, tr.timestamps)
-
-# #     te_pairs = zip(*te.values.nonzero())
-# #     check_values_timestamps_match(te_pairs, te.timestamps)
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
 
 
-# def test_user_splitter_no_full_split(data_m):
-#     splitter = splitter = splitters.UserSplitter([0, 1], [3])
-#     with pytest.raises(AssertionError):
-#         tr, te = splitter.split(data_m)
+@pytest.mark.parametrize("t, t_delta", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_t_delta_w_dups(data_m_w_dups, t, t_delta):
+    splitter = splitters.TimestampSplitter(t, t_delta=t_delta)
+
+    tr, te = splitter.split(data_m_w_dups)
+
+    assert (tr.timestamps < t).all()
+
+    assert (te.timestamps <= t + t_delta).all()
+    assert (te.timestamps >= t).all()
+
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
+
+
+@pytest.mark.parametrize("t, t_alpha", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_alpha(data_m, t, t_alpha):
+    splitter = splitters.TimestampSplitter(t, t_alpha=t_alpha)
+
+    tr, te = splitter.split(data_m)
+
+    assert (tr.timestamps < t).all()
+    assert (tr.timestamps >= t - t_alpha).all()
+
+    assert (te.timestamps >= t).all()
+
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
+
+
+@pytest.mark.parametrize("t, t_alpha", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_alpha_w_dups(data_m_w_dups, t, t_alpha):
+    splitter = splitters.TimestampSplitter(t, t_alpha=t_alpha)
+
+    tr, te = splitter.split(data_m_w_dups)
+
+    assert (tr.timestamps < t).all()
+    assert (tr.timestamps >= t - t_alpha).all()
+
+    assert (te.timestamps >= t).all()
+
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
+
+
+def test_user_splitter(data_m):
+
+    users = list(range(0, data_m.shape[0]))
+
+    np.random.shuffle(users)
+
+    ix = data_m.shape[0] // 2
+
+    tr_u_in = users[:ix]
+    te_u_in = users[ix:]
+
+    splitter = splitters.UserSplitter(tr_u_in, te_u_in)
+    tr, te = splitter.split(data_m)
+
+    tr_U, _ = tr.values.nonzero()
+    te_U, _ = te.values.nonzero()
+
+    assert not set(tr_U).difference(users[:ix])
+    assert not set(te_U).difference(users[ix:])
+
+    check_values_timestamps_match(tr)
+    check_values_timestamps_match(te)
+
+
+def test_user_splitter_no_full_split(data_m):
+    splitter = splitter = splitters.UserSplitter([0, 1], [3])
+    with pytest.raises(AssertionError):
+        tr, te = splitter.split(data_m)
 
 
 # @pytest.mark.parametrize("tr_perc", [0.75, 0.5, 0.45])

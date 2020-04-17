@@ -1,7 +1,6 @@
 from recpack.data_matrix import DataM
 import pandas as pd
 import pytest
-import scipy.sparse
 import numpy as np
 
 
