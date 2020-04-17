@@ -1,5 +1,3 @@
-from collections import defaultdict
-from itertools import groupby
 from typing import Tuple
 
 import numpy as np
@@ -14,7 +12,7 @@ def csr_row_set_nz_to_val(csr, row, value=0):
     """
     if not isinstance(csr, scipy.sparse.csr_matrix):
         raise ValueError("Matrix given must be of CSR format.")
-    csr.data[csr.indptr[row]: csr.indptr[row + 1]] = value
+    csr.data[csr.indptr[row] : csr.indptr[row + 1]] = value
 
 
 def shuffle_arrays(arrays, set_seed=-1):
@@ -117,33 +115,33 @@ class StrongGeneralizationSplitter(Splitter):
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
         sp_mat = data.values
-        nonzero_users = list(set(sp_mat.nonzero()[0]))
+
+        nr_users = sp_mat.shape[0]
+
+        users = list(range(0, nr_users))
 
         # Seed to make testing possible
         if self.seed is not None:
             np.random.seed(self.seed)
 
-        np.random.shuffle(nonzero_users)
+        for _ in range(0, 5):
+            # Try five times
+            np.random.shuffle(users)
 
-        nr_users = len(nonzero_users)
-        tr_cut = int(np.floor(nr_users * self.in_perc))
+            tr_cut = int(np.floor(nr_users * self.in_perc))
 
-        users_in = nonzero_users[:tr_cut]
-        users_out = nonzero_users[tr_cut:]
+            users_in = users[:tr_cut]
+            users_out = users[tr_cut:]
 
-        total_interactions = sp_mat.nnz
-        data_in_cnt = sp_mat[users_in, :].nnz
+            total_interactions = sp_mat.nnz
+            data_in_cnt = sp_mat[users_in, :].nnz
 
-        within_margin = np.isclose(
-            data_in_cnt / total_interactions, self.in_perc, atol=self.error_margin
-        )
+            real_perc = data_in_cnt / total_interactions
 
-        if not within_margin:
-            print("Crap. Do something")
+            within_margin = np.isclose(real_perc, self.in_perc, atol=self.error_margin)
 
-        # TODO Take error margin into account
-        # row_cnt = 0
-        # row_cnts = sp_mat.sum(axis=1).A.T[0]
+            if within_margin:
+                continue
 
         u_splitter = UserSplitter(users_in, users_out)
 
@@ -159,7 +157,6 @@ class InteractionSplitter(Splitter):
 
 
 class PercentageInteractionSplitter(Splitter):
-
     def __init__(self, in_perc, seed=None):
         self.in_perc = in_perc
 
@@ -171,7 +168,6 @@ class PercentageInteractionSplitter(Splitter):
         Returns 2 sparse matrices in and out
         """
 
-        # easiest if we extract sparse value matrix from test, since that is the only part of the data we will use.
         sp_mat = data.values
 
         users = sp_mat.shape[0]
@@ -179,8 +175,10 @@ class PercentageInteractionSplitter(Splitter):
         tr_u, tr_i = [], []
         te_u, te_i = [], []
 
-        for u in users:
+        for u in range(0, users):
             _, user_history = sp_mat[u, :].nonzero()
+
+            # print(user_history)
 
             rstate = np.random.RandomState(self.seed)
             rstate.shuffle(user_history)
@@ -188,10 +186,13 @@ class PercentageInteractionSplitter(Splitter):
             cut = int(np.floor(hist_len * self.in_perc))
 
             tr_i.extend(user_history[:cut])
-            tr_u.extend(len(user_history[:cut]))
+            tr_u.extend([u] * len(user_history[:cut]))
 
             te_i.extend(user_history[cut:])
-            te_u.extend(len(user_history[cut:]))
+            te_u.extend([u] * len(user_history[cut:]))
+
+        # print("Training Users", tr_u)
+        # print("Training Items", tr_i)
 
         tr_data = data.indices_in((tr_u, tr_i))
         te_data = data.indices_in((te_u, te_i))
