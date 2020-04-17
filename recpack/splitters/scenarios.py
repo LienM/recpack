@@ -24,7 +24,7 @@ class StrongGeneralizationTimed(Scenario):
         self.test_data_in, self.test_data_out = self.timestamp_spl.split(te_data)
 
 
-class StrongGeneralizationTimedOutOfDomain(Scenario):
+class TimedOutOfDomainPredictAndEvaluate(Scenario):
     # TODO Make this more standard.
 
     def __init__(self, perc_users_in, t, t_alpha=None, t_delta=None):
@@ -34,8 +34,26 @@ class StrongGeneralizationTimedOutOfDomain(Scenario):
         self.t_delta = t_delta
         self.t_alpha = t_alpha
 
+        self.timestamp_spl = splitters.TimestampSplitter(t, t_delta, t_alpha)
+
     def split(self, data, data_2):
-        pass
-    
+        self.training_data, _ = self.timestamp_spl(data)
+        self.test_data_in, self.test_data_out = self.timestamp_spl(data_2)
 
 
+class StrongGeneralizationTimedOutOfDomainEvaluate(Scenario):
+    # TODO Make this more standard.
+
+    def __init__(self, perc_users_in, t, t_alpha=None, t_delta=None):
+        super().__init__()
+        self.perc_users_in = perc_users_in
+        self.t = t
+        self.t_delta = t_delta
+        self.t_alpha = t_alpha
+
+        self.timestamp_spl = splitters.TimestampSplitter(t, t_delta, t_alpha)
+
+    def split(self, data, data_2):
+        self.training_data, _ = self.timestamp_spl(data)
+        _, self.test_data_out = self.timestamp_spl(data_2)
+        self.test_data_in = self.training_data
