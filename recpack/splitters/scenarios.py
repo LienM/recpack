@@ -1,4 +1,4 @@
-from recpack.splitters.scenario_base import Scenario 
+from recpack.splitters.scenario_base import Scenario
 import recpack.splitters.splitter_base as splitters
 
 
@@ -27,9 +27,8 @@ class StrongGeneralizationTimed(Scenario):
 class TimedOutOfDomainPredictAndEvaluate(Scenario):
     # TODO Make this more standard.
 
-    def __init__(self, perc_users_in, t, t_alpha=None, t_delta=None):
+    def __init__(self, t, t_alpha=None, t_delta=None):
         super().__init__()
-        self.perc_users_in = perc_users_in
         self.t = t
         self.t_delta = t_delta
         self.t_alpha = t_alpha
@@ -41,12 +40,11 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
         self.test_data_in, self.test_data_out = self.timestamp_spl(data_2)
 
 
-class StrongGeneralizationTimedOutOfDomainEvaluate(Scenario):
+class TrainInTimedOutOfDomainEvaluate(Scenario):
     # TODO Make this more standard.
 
-    def __init__(self, perc_users_in, t, t_alpha=None, t_delta=None):
+    def __init__(self, t, t_alpha=None, t_delta=None):
         super().__init__()
-        self.perc_users_in = perc_users_in
         self.t = t
         self.t_delta = t_delta
         self.t_alpha = t_alpha
