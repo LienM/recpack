@@ -178,21 +178,16 @@ class PercentageInteractionSplitter(Splitter):
         for u in range(0, users):
             _, user_history = sp_mat[u, :].nonzero()
 
-            # print(user_history)
-
             rstate = np.random.RandomState(self.seed)
             rstate.shuffle(user_history)
             hist_len = len(user_history)
-            cut = int(np.floor(hist_len * self.in_perc))
+            cut = int(np.ceil(hist_len * self.in_perc))
 
             tr_i.extend(user_history[:cut])
             tr_u.extend([u] * len(user_history[:cut]))
 
             te_i.extend(user_history[cut:])
             te_u.extend([u] * len(user_history[cut:]))
-
-        # print("Training Users", tr_u)
-        # print("Training Items", tr_i)
 
         tr_data = data.indices_in((tr_u, tr_i))
         te_data = data.indices_in((te_u, te_i))

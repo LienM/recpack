@@ -171,23 +171,24 @@ def test_user_splitter_no_full_split(data_m):
         tr, te = splitter.split(data_m)
 
 
-# @pytest.mark.parametrize("tr_perc", [0.75, 0.5, 0.45])
-# def test_weak_generalization(data_m, tr_perc):
-#     num_interactions = len(data_m.values.nonzero()[0])
+@pytest.mark.parametrize("tr_perc", [0.75, 0.5, 0.45])
+def test_perc_interaction_splitter(data_m, tr_perc):
+    num_interactions = len(data_m.values.nonzero()[0])
 
-#     num_tr_interactions = math.ceil(num_interactions * tr_perc)
-#     num_te_interactions = num_interactions - num_tr_interactions
+    history_length = data_m.values.sum(1)
 
-#     splitter = splitters.PercentageInteractionSplitter(tr_perc, seed=42)
-#     tr, te = splitter.split(data_m)
+    num_tr_interactions = np.ceil(history_length * tr_perc).sum()
 
-#     print(tr.values.toarray())
+    num_te_interactions = num_interactions - num_tr_interactions
 
-#     assert len(tr.values.nonzero()[0]) == num_tr_interactions
-#     assert len(te.values.nonzero()[0]) == num_te_interactions
+    splitter = splitters.PercentageInteractionSplitter(tr_perc, seed=42)
+    tr, te = splitter.split(data_m)
 
-#     assert tr.timestamps.shape[0] == num_tr_interactions
-#     assert te.timestamps.shape[0] == num_te_interactions
+    assert len(tr.values.nonzero()[0]) == num_tr_interactions
+    assert len(te.values.nonzero()[0]) == num_te_interactions
+
+    assert tr.timestamps.shape[0] == num_tr_interactions
+    assert te.timestamps.shape[0] == num_te_interactions
 
 
 # @pytest.mark.parametrize("val_perc", [0.0, 0.25, 0.5, 1.0])
@@ -270,72 +271,6 @@ def test_user_splitter_no_full_split(data_m):
 
 #     if t_delta is not None:
 #         assert (te.timestamps < t + t_delta).all()
-
-
-
-# def generate_data():
-#     # TODO move this test input to a conftest file as a fixture
-#     input_dict = {'userId': [1, 1, 1, 0, 0, 0], 'movieId': [1, 3, 4, 0, 2, 4], 'timestamp': [15, 26, 29, 10, 22, 34]}
-
-#     df = pd.DataFrame.from_dict(input_dict)
-#     data = DataM.create_from_dataframe(df, 'movieId', 'userId', 'timestamp')
-#     return data
-
-
-# def test_fold_in_evaluator():
-#     data = generate_data()
-
-#     splitter = recpack.splits.TimedSplit(20, None)
-#     evaluator = recpack.evaluate.FoldInPercentageEvaluator(0.5, seed=42)
-
-#     tr, val, te = splitter.split(data)
-#     in_, out_ = evaluator.split(tr, val, te)
-
-#     assert (in_.toarray() == np.array([
-#         [0., 0., 0., 0., 1.],
-#         [0., 0., 0., 1., 0.]
-#     ])).all()
-#     assert (out_.toarray() == np.array([
-#         [0., 0., 1., 0., 0.],
-#         [0., 0., 0., 0., 1.]
-#     ])).all()
-
-
-# def test_train_in_test_out_evaluator():
-#     data = generate_data()
-
-#     splitter = recpack.splits.TimedSplit(20, None)
-#     evaluator = recpack.evaluate.TrainingInTestOutEvaluator()
-
-#     tr, val, te = splitter.split(data)
-#     in_, out_ = evaluator.split(tr, val, te)
-
-#     assert (in_.toarray() == np.array([
-#         [1., 0., 0., 0., 0.],
-#         [0., 1., 0., 0., 0.]
-#     ])).all()
-#     assert (out_.toarray() == np.array([
-#         [0., 0., 1., 0., 1.],
-#         [0., 0., 0., 1., 1.]
-#     ])).all()
-
-
-# def test_timed_test_split():
-#     data = generate_data()
-#     splitter = recpack.splits.TimedSplit(20, None)
-#     evaluator = recpack.evaluate.TimedSplitEvaluator(30)
-
-#     tr, val, te = splitter.split(data)
-#     in_, out_ = evaluator.split(tr, val, te)
-
-#     assert (in_.toarray() == np.array([
-#         [0., 0., 1., 0., 0.],
-#         [0., 0., 0., 1., 1.]
-#     ])).all()
-#     assert (out_.toarray() == np.array([
-#         [0., 0., 0., 0., 1.],
-#         [0., 0., 0., 0., 0.]
-#     ])).all()
 
 
 # @pytest.mark.parametrize(
