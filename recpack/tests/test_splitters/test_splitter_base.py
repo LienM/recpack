@@ -5,13 +5,6 @@ import pandas as pd
 import pytest
 import numpy as np
 
-num_users = 250
-num_items = 100
-num_interactions = 500
-
-min_t = 0
-max_t = 100
-
 
 def check_values_timestamps_match(data):
     indices = list(zip(*data.values.nonzero()))
@@ -191,121 +184,24 @@ def test_perc_interaction_splitter(data_m, tr_perc):
     assert te.timestamps.shape[0] == num_te_interactions
 
 
-# @pytest.mark.parametrize("val_perc", [0.0, 0.25, 0.5, 1.0])
-# def test_separate_data_for_validation_and_test(df, val_perc):
-#     num_interactions = len(df.values.nonzero()[0])
-#     num_evaluation_interactions = len(df.values.nonzero()[0])
+@pytest.mark.parametrize(
+    "batch_size",
+    [
+        1,
+        2,
+        3
+    ]
+)
+def test_fold_iterator(data_m, batch_size):
+    splitter = splitters.PercentageInteractionSplitter(0.7, seed=42)
 
-#     num_tr_interactions = num_interactions
-#     num_val_interactions = math.ceil(num_evaluation_interactions * val_perc)
-#     num_te_interactions = num_evaluation_interactions - num_val_interactions
+    data_m_in, data_m_out = splitter.split(data_m)
 
-#     splitter = recpack.splits.SeparateDataForValidationAndTestSplit(val_perc, seed=42)
-#     tr, val, te = splitter.split(df, df)
+    fold_iterator = splitters.FoldIterator(data_m_in, data_m_out, batch_size=batch_size)
 
-#     assert len(tr.values.nonzero()[0]) == num_tr_interactions
-#     assert len(val.values.nonzero()[0]) == num_val_interactions
-#     assert len(te.values.nonzero()[0]) == num_te_interactions
+    for fold_in, fold_out, users in fold_iterator:
+        assert fold_in.nnz > 0
+        assert fold_out.nnz > 0
 
-#     assert tr.timestamps.shape[0] == num_tr_interactions
-#     assert val.timestamps.shape[0] == num_val_interactions
-#     assert te.timestamps.shape[0] == num_te_interactions
-
-
-# @pytest.mark.parametrize(
-#     "t, t_delta, t_alpha",
-#     [(20, None, None), (20, 10, None), (20, None, 10), (20, 10, 10)],
-# )
-# def test_separate_data_for_validation_and_test_timed_split(df, t, t_delta, t_alpha):
-
-#     splitter = recpack.splits.SeparateDataForValidationAndTestTimedSplit(t, t_delta)
-#     tr, val, te = splitter.split(df, df)
-
-#     assert (tr.timestamps < t).all()
-
-#     if t_alpha is not None:
-#         assert (tr.timestamps >= t - t_alpha).all()
-
-#     assert (te.timestamps >= t).all()
-
-#     if t_delta is not None:
-#         assert (te.timestamps < t + t_delta).all()
-
-#     # Assert validation is empty
-#     assert val.values.nnz == 0
-
-
-# @pytest.mark.parametrize(
-#     "t, t_delta, t_alpha",
-#     [(20, None, None), (20, 10, None), (20, None, 10), (20, 10, 10),],
-# )
-# def test_strong_generalization_timed_split(t, t_delta, t_alpha):
-#     input_dict = {
-#         "userId": [2, 1, 0, 0],
-#         "movieId": [1, 0, 1, 0],
-#         "timestamp": [15, 26, 10, 100],
-#     }
-
-#     df = pd.DataFrame.from_dict(input_dict)
-#     data = DataM.create_from_dataframe(df, "movieId", "userId", "timestamp")
-
-#     splitter = recpack.splits.StrongGeneralizationTimedSplit(
-#         t, t_delta=t_delta, t_alpha=t_alpha
-#     )
-
-#     tr, val, te = splitter.split(data)
-
-#     assert val.values.nnz == 0
-
-#     train_users = set(tr.timestamps.index.get_level_values(0))
-#     test_users = set(te.timestamps.index.get_level_values(0))
-
-#     assert (tr.timestamps < t).all()
-
-#     if t_alpha is not None:
-#         assert (tr.timestamps >= t - t_alpha).all()
-
-#     assert train_users.intersection(test_users) == set()
-
-#     assert (te.timestamps >= t).all()
-
-#     if t_delta is not None:
-#         assert (te.timestamps < t + t_delta).all()
-
-
-# @pytest.mark.parametrize(
-#     "batch_size",
-#     [
-#         1,
-#         2,
-#         3
-#     ]
-# )
-# def test_iterator(batch_size):
-#     class FoldInstance():
-#         def __init__(self, length=10, batch_size=1):
-#             self.len = length
-#             self.batch_size = batch_size
-#             assert self.len % 2 == 0
-#             self.sp_mat_in = scipy.sparse.diags([1 for i in range(self.len)]).tocsr()
-#             self.sp_mat_out = scipy.sparse.diags(
-#                 list(itertools.chain.from_iterable([[1, 0] for i in range(int(self.len / 2))]))
-#             ).tocsr()
-
-#         def __iter__(self):
-#             return recpack.evaluate.evaluators.FoldIterator(self, self.batch_size)
-
-#     LEN = 10
-#     fold_i = FoldInstance(length=LEN, batch_size=batch_size)
-#     row_counts = []
-#     for in_, out_, users in fold_i:
-#         assert in_.nnz > 0
-#         assert out_.nnz > 0
-
-#         assert len(users) == in_.shape[0]
-#         assert len(users) == out_.shape[0]
-
-#         row_counts.append(in_.shape[0])
-
-#     # Because of how the out matrix is build, half of the rows should be skipped
-#     assert sum(row_counts) == (LEN / 2)
+        assert len(users) == fold_in.shape[0]
+        assert len(users) == fold_out.shape[0]

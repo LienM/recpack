@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Tuple
 
 import numpy as np
@@ -12,29 +13,14 @@ def csr_row_set_nz_to_val(csr, row, value=0):
     """
     if not isinstance(csr, scipy.sparse.csr_matrix):
         raise ValueError("Matrix given must be of CSR format.")
-    csr.data[csr.indptr[row] : csr.indptr[row + 1]] = value
+    csr.data[csr.indptr[row]: csr.indptr[row + 1]] = value
 
 
-def shuffle_arrays(arrays, set_seed=-1):
-    """Shuffles arrays in-place, in the same order, along axis=0
-
-    Parameters:
-    -----------
-    arrays : List of NumPy arrays.
-    set_seed : Seed value if int >= 0, else seed is random.
-    """
-    assert all(len(arr) == len(arrays[0]) for arr in arrays)
-    seed = np.random.randint(0, 2 ** (32 - 1) - 1) if set_seed < 0 else set_seed
-
-    for arr in arrays:
-        rstate = np.random.RandomState(seed)
-        rstate.shuffle(arr)
-
-
-class Splitter:
+class Splitter(ABC):
     def __init__(self):
         pass
 
+    @abstractmethod
     def split(self, data):
         pass
 
@@ -157,6 +143,7 @@ class InteractionSplitter(Splitter):
 
 
 class PercentageInteractionSplitter(Splitter):
+    # TODO Add documentation
     def __init__(self, in_perc, seed=None):
         self.in_perc = in_perc
 
@@ -248,13 +235,16 @@ class TimestampSplitter(Splitter):
 
 
 class FoldIterator:
-    def __init__(self, sp_mat_in, sp_mat_out, batch_size=1000):
-        self.sp_mat_in = sp_mat_in
-        self.sp_mat_out = sp_mat_out
+    def __init__(self, data_m_in, data_m_out, batch_size=1000):
+        self.data_m_in = data_m_in
+        self.data_m_out = data_m_out
         self._index = 0
-        self._max_index = sp_mat_in.shape[0]
+        self._max_index = data_m_in.shape[0]
         self.batch_size = batch_size
         assert self.batch_size > 0  # Avoid inf loops
+
+        self.sp_mat_in = self.data_m_in.values
+        self.sp_mat_out = self.data_m_out.values
 
     def __iter__(self):
         return self
