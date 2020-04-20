@@ -1,5 +1,5 @@
 from recpack.splitters.scenario_base import Scenario
-import recpack.splitters.splitter_base as splitters
+import recpack.splitters.splitter_base as splitter_base
 
 
 class StrongGeneralizationTimed(Scenario):
@@ -12,8 +12,8 @@ class StrongGeneralizationTimed(Scenario):
         self.t_delta = t_delta
         self.t_alpha = t_alpha
 
-        self.timestamp_spl = splitters.TimestampSplitter(t, t_delta, t_alpha)
-        self.strong_gen = splitters.StrongGeneralizationSplitter(perc_users_in)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_in)
 
     def split(self, data, data_2):
         # Split across user dimension
@@ -33,7 +33,7 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
         self.t_delta = t_delta
         self.t_alpha = t_alpha
 
-        self.timestamp_spl = splitters.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
     def split(self, data, data_2):
         self.training_data, _ = self.timestamp_spl(data)
@@ -49,7 +49,7 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
         self.t_delta = t_delta
         self.t_alpha = t_alpha
 
-        self.timestamp_spl = splitters.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
     def split(self, data, data_2):
         self.training_data, _ = self.timestamp_spl(data)
