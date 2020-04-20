@@ -1,0 +1,49 @@
+import pandas as pd
+
+import recpack.preprocessing.filters as filters
+
+
+def test_min_users_per_item_filter(dataframe):
+
+    df = dataframe
+
+    myfilter = filters.MinUsersPerItem(3, "uid", "iid", "timestamp")
+    filtered_df = myfilter.apply(df)
+
+    filtered_iids = filtered_df["iid"].unique()
+
+    assert 0 in filtered_iids
+    assert 1 in filtered_iids
+    assert 2 in filtered_iids
+    assert 3 not in filtered_iids
+    assert 4 not in filtered_iids
+
+
+def test_min_items_per_user_filter(dataframe):
+    df = dataframe
+
+    myfilter = filters.MinItemsPerUser(3, "uid", "iid", "timestamp")
+    filtered_df = myfilter.apply(df)
+
+    filtered_uids = filtered_df["uid"].unique()
+
+    assert 0 in filtered_uids
+    assert 1 in filtered_uids
+    assert 2 in filtered_uids
+    assert 3 not in filtered_uids
+
+
+def test_nmost_popular(dataframe):
+
+    df = dataframe
+
+    myfilter = filters.NMostPopular(3, "uid", "iid", "timestamp")
+    filtered_df = myfilter.apply(df)
+
+    filtered_iids = filtered_df["iid"].unique()
+
+    assert 0 in filtered_iids
+    assert 1 in filtered_iids
+    assert 2 in filtered_iids
+    assert 3 not in filtered_iids
+    assert 4 not in filtered_iids

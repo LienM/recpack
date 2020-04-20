@@ -11,14 +11,12 @@ setup(
         "numpy",
         "scipy",
         "sklearn",
-        "google-cloud-storage==1.23.0",
         "pandas",
         "pytest",
         "pytest-cov",
-        "gcsfs==0.6.0",
         "PyYaml",
         "snapy",
-        "mmh3"
+        "mmh3",
     ],
     entry_points={
         "console_scripts": [

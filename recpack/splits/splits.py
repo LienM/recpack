@@ -15,18 +15,6 @@ class TrainValidationTestSplit:
         return None
 
 
-def slice_data(data, indices):
-    """
-    Helper function to get a new data object with the matrices in data to only contain values at 'indices'
-    """
-    mask_values = numpy.ones(len(indices[0]))
-    mask = scipy.sparse.csr_matrix((mask_values, indices), shape=data.shape)
-
-    new_data = data.copy()
-    new_data.apply_mask(mask)
-    return new_data
-
-
 class PredefinedUserSplit(TrainValidationTestSplit):
     """
     Use this class if you want to split your data exactly as it was defined.
@@ -86,9 +74,9 @@ class PredefinedUserSplit(TrainValidationTestSplit):
             te_i.extend(u_nzi)
             te_u.extend(u)
 
-        tr_data = slice_data(data, (tr_u, tr_i))
-        val_data = slice_data(data, (val_u, val_i))
-        te_data = slice_data(data, (te_u, te_i))
+        tr_data = data.indices_in((tr_u, tr_i))
+        val_data = data.indices_in((val_u, val_i))
+        te_data = data.indices_in((te_u, te_i))
 
         return tr_data, val_data, te_data
 
@@ -129,9 +117,6 @@ class StrongGeneralizationSplit(TrainValidationTestSplit):
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
-
-        shape = data.shape
-
         sp_mat = data.values
         nonzero_users = list(set(sp_mat.nonzero()[0]))
 
@@ -169,9 +154,9 @@ class StrongGeneralizationSplit(TrainValidationTestSplit):
                 te_i.extend(u_nzi)
                 te_u.extend(u)
 
-        tr_data = slice_data(data, (tr_u, tr_i))
-        val_data = slice_data(data, (val_u, val_i))
-        te_data = slice_data(data, (te_u, te_i))
+        tr_data = data.indices_in((tr_u, tr_i))
+        val_data = data.indices_in((val_u, val_i))
+        te_data = data.indices_in((te_u, te_i))
 
         return tr_data, val_data, te_data
 
@@ -199,8 +184,6 @@ class WeakGeneralizationSplit(TrainValidationTestSplit):
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
-
-        shape = data.shape
 
         sp_mat = data.values
         indices = sp_mat.nonzero()
@@ -234,9 +217,9 @@ class WeakGeneralizationSplit(TrainValidationTestSplit):
         te_u = indices[0][interaction_indices[te_start:te_end]]
         te_i = indices[1][interaction_indices[te_start:te_end]]
 
-        tr_data = slice_data(data, (tr_u, tr_i))
-        val_data = slice_data(data, (val_u, val_i))
-        te_data = slice_data(data, (te_u, te_i))
+        tr_data = data.indices_in((tr_u, tr_i))
+        val_data = data.indices_in((val_u, val_i))
+        te_data = data.indices_in((te_u, te_i))
 
         return tr_data, val_data, te_data
 
@@ -274,25 +257,25 @@ class TimedSplit(TrainValidationTestSplit):
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
-        # Holds indices where timestamp < t
-        tr_u, tr_i = [], []
-        # Get indices where timestamp >= t and timestamp < t + t_delta
-        te_u, te_i = [], []
+        #TODO Validate if the intervals are correctly applied.
+
+        if self.t_alpha is None:
+            # Holds indices where timestamp < t
+            tr_data = data.timestamps_lt(self.t)
+        else:
+            # Holds indices in interval: t-t_alpha =< timestamp < t
+            tr_data = data.timestamps_lt(self.t).timestamps_gte(self.t - self.t_alpha)
+
+        if self.t_delta is None:
+            # Holds indices where timestamp >= t
+            te_data = data.timestamps_gte(self.t)
+        else:
+            # Get indices where timestamp >= t and timestamp < t + t_delta
+            te_data = data.timestamps_gte(self.t).timestamps_lt(self.t + self.t_delta)
+
         # val indices will be empty, this splitter does not support a validation data slice.
         val_u, val_i = [], []
-
-        for u, i, timestamp in zip(*scipy.sparse.find(data.timestamps)):
-            if timestamp < self.t and ((self.t_alpha is None) or (timestamp >= self.t - self.t_alpha)):
-                tr_u.append(u)
-                tr_i.append(i)
-
-            elif timestamp > self.t and ((self.t_delta is None) or (timestamp < (self.t + self.t_delta))):
-                te_u.append(u)
-                te_i.append(i)
-
-        tr_data = slice_data(data, (tr_u, tr_i))
-        val_data = slice_data(data, (val_u, val_i))
-        te_data = slice_data(data, (te_u, te_i))
+        val_data = data.indices_in((val_u, val_i))
 
         return tr_data, val_data, te_data
 
@@ -303,7 +286,7 @@ class StrongGeneralizationTimedSplit(TrainValidationTestSplit):
         do not occur in the training dataset.
         Test users are users with events in the interval [t, t+t_delta)
         The test data will be all data for these test users
-        Training data will be all data in interval [t, t_alpha) except data for the test users.
+        Training data will be all data in interval [t-t_alpha, t) except data for the test users.
 
         :param t: epoch timestamp to split on
         :type t: int
@@ -332,31 +315,30 @@ class StrongGeneralizationTimedSplit(TrainValidationTestSplit):
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
+        if self.t_alpha is None:
+            # Holds indices where timestamp < t
+            tr_data_tmp = data.timestamps_lt(self.t)
+        else:
+            # Holds indices in interval: t-t_alpha =< timestamp < t
+            tr_data_tmp = data.timestamps_lt(self.t).timestamps_gte(self.t - self.t_alpha)
 
-        # Holds indices of training data
-        tr_u, tr_i = [], []
-        # Holds indices of test data
-        te_u, te_i = [], []
-        # val indices will be empty, this splitter does not support a validation data slice.
+        if self.t_delta is None:
+            # Holds indices where timestamp >= t
+            te_data = data.timestamps_gte(self.t)
+        else:
+            # Get indices where timestamp >= t and timestamp < t + t_delta
+            te_data = data.timestamps_gte(self.t).timestamps_lt(self.t + self.t_delta)
+
+        te_U, _ = te_data.indices
+
+        test_users = set(te_U)
+
+        tr_u_i_pairs = filter(lambda x: x[0] not in test_users, zip(*tr_data_tmp.indices))
+
+        tr_data = data.indices_in(zip(*tr_u_i_pairs))
+
         val_u, val_i = [], []
-
-        # Get the users who have data in the [t, t+t_delta) interval
-        test_users = set()
-        for u, i, timestamp in zip(*scipy.sparse.find(data.timestamps)):
-            if timestamp > self.t and ((self.t_delta is None) or (timestamp < (self.t + self.t_delta))):
-                test_users.add(u)
-
-        for u, i, timestamp in zip(*scipy.sparse.find(data.timestamps)):
-            if u in test_users:
-                te_u.append(u)
-                te_i.append(i)
-            elif timestamp < self.t and ((self.t_alpha is None) or (timestamp >= self.t - self.t_alpha)):
-                tr_u.append(u)
-                tr_i.append(i)
-
-        tr_data = slice_data(data, (tr_u, tr_i))
-        val_data = slice_data(data, (val_u, val_i))
-        te_data = slice_data(data, (te_u, te_i))
+        val_data = data.indices_in((val_u, val_i))
 
         return tr_data, val_data, te_data
 

@@ -5,8 +5,7 @@ class Algorithm:
         return None
 
     def fit(self, X):
-        B = None
-        return B
+        pass
 
     def predict(self, X):
         pass
@@ -21,8 +20,7 @@ class Algorithm:
 class Baseline:
 
     def fit(self, X):
-        B = None
-        return B
+        pass
 
     def predict(self, X, K):
         pass
@@ -30,5 +28,4 @@ class Baseline:
 
 class TwoMatrixFitAlgorithm(Algorithm):
     def fit(self, X_1, X_2):
-        B = None
-        return B
+        pass

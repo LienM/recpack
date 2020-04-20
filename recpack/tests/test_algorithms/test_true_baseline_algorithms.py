@@ -33,8 +33,12 @@ def generate_in_out():
             i_in.extend(items_in)
             i_out.extend(items_out)
 
-        in_ = scipy.sparse.csr_matrix((numpy.ones(len(u_in)), (u_in, i_in)), shape=(i, 10))
-        out_ = scipy.sparse.csr_matrix((numpy.ones(len(u_out)), (u_out, i_out)), shape=(i, 10))
+        in_ = scipy.sparse.csr_matrix(
+            (numpy.ones(len(u_in)), (u_in, i_in)), shape=(i, 10)
+        )
+        out_ = scipy.sparse.csr_matrix(
+            (numpy.ones(len(u_out)), (u_out, i_out)), shape=(i, 10)
+        )
 
         yield in_, out_
 
@@ -44,13 +48,11 @@ def test_random():
 
     seed = 42
     K = 5
-    algo = recpack.algorithms.get_algorithm("random")(K=K, seed=42)
+    algo = recpack.algorithms.algorithm_registry.get("random")(K=K, seed=42)
     algo.fit(train_data)
 
     for out_, in_ in generate_in_out():
         result = algo.predict(in_)
-        print(result.nonzero())
-        print(result[0])
         assert len(result.nonzero()[1]) == result.shape[0] * K
         # TODO: What else to test?
 
@@ -61,7 +63,7 @@ def test_popularity():
     values = [1] * 10
     train_data = scipy.sparse.csr_matrix((values, (user_i, item_i)))
     K = 5
-    algo = recpack.algorithms.get_algorithm("popularity")(K=2)
+    algo = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
 
     algo.fit(train_data)
 

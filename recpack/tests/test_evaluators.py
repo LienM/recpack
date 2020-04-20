@@ -1,5 +1,5 @@
 import recpack.splits
-import recpack.helpers
+from recpack.data_matrix import DataM
 import recpack.evaluate
 import scipy.sparse
 import itertools
@@ -14,7 +14,7 @@ def generate_data():
     input_dict = {'userId': [1, 1, 1, 0, 0, 0], 'movieId': [1, 3, 4, 0, 2, 4], 'timestamp': [15, 26, 29, 10, 22, 34]}
 
     df = pd.DataFrame.from_dict(input_dict)
-    data = recpack.helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
+    data = DataM.create_from_dataframe(df, 'movieId', 'userId', 'timestamp')
     return data
 
 
@@ -94,7 +94,7 @@ def test_iterator(batch_size):
             ).tocsr()
 
         def __iter__(self):
-            return recpack.evaluate.evaluate.FoldIterator(self, self.batch_size)
+            return recpack.evaluate.evaluators.FoldIterator(self, self.batch_size)
 
     LEN = 10
     fold_i = FoldInstance(length=LEN, batch_size=batch_size)

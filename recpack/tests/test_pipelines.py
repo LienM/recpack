@@ -1,5 +1,5 @@
 import recpack
-import recpack.helpers
+from recpack.data_matrix import DataM
 import recpack.splits
 import recpack.evaluate
 import recpack.pipelines
@@ -13,7 +13,7 @@ def generate_data():
     input_dict = {'userId': [1, 1, 1, 0, 0, 0], 'movieId': [1, 3, 4, 0, 2, 4], 'timestamp': [15, 26, 29, 10, 22, 34]}
 
     df = pd.DataFrame.from_dict(input_dict)
-    data = recpack.helpers.create_data_M_from_pandas_df(df, 'movieId', 'userId', 'timestamp')
+    data = DataM.create_from_dataframe(df, 'movieId', 'userId', 'timestamp')
     return data
 
 
@@ -21,7 +21,7 @@ def test_pipeline():
     data = generate_data()
     splitter = recpack.splits.TimedSplit(20, None)
     evaluator = recpack.evaluate.TrainingInTestOutEvaluator()
-    algo = recpack.algorithms.get_algorithm('popularity')(K=2)
+    algo = recpack.algorithms.algorithm_registry.get('popularity')(K=2)
 
     p = recpack.pipelines.Pipeline(splitter, [algo], evaluator, ['NDCG', 'Recall'], [2])
     p.run(data)
@@ -37,7 +37,7 @@ def test_pipeline_2_data_obj():
     data_2 = generate_data()
     splitter = recpack.splits.SeparateDataForValidationAndTestSplit(0.0, seed=42)
     evaluator = recpack.evaluate.TrainingInTestOutEvaluator()
-    algo = recpack.algorithms.get_algorithm('popularity')(K=2)
+    algo = recpack.algorithms.algorithm_registry.get('popularity')(K=2)
 
     p = recpack.pipelines.Pipeline(splitter, [algo], evaluator, ['NDCG', 'Recall'], [2])
     with pytest.raises(AssertionError):
@@ -61,7 +61,7 @@ def test_parameter_generator_pipeline():
     NUM_SLICES = 3
     splitter = recpack.splits.TimedSplit
     evaluator = recpack.evaluate.TrainingInTestOutEvaluator
-    algo = recpack.algorithms.get_algorithm('popularity')(K=2)
+    algo = recpack.algorithms.algorithm_registry.get('popularity')(K=2)
     parameter_generator = recpack.pipelines.TemporalSWParameterGenerator(10, 10, NUM_SLICES)
     p = recpack.pipelines.ParameterGeneratorPipeline(
         parameter_generator, splitter, [algo], evaluator, ['NDCG', 'Recall'], [2]

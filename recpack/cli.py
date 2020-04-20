@@ -1,5 +1,6 @@
 import recpack
-import recpack.helpers
+from recpack.data_matrix import DataM
+import recpack.preprocessing.helpers as helpers
 import recpack.algorithms
 import recpack.evaluate
 import recpack.splits
@@ -10,6 +11,7 @@ import click
 import json
 import pandas as pd
 
+# TODO Refactor module based on preprocessing
 
 def prep_data(input_file, input_file_2, item_column_name, user_column_name, timestamp_column_name):
     """
@@ -50,8 +52,8 @@ def prep_data(input_file, input_file_2, item_column_name, user_column_name, time
         item_ids = set(list(dataframe[item_column_name].unique()) + list(dataframe_2[item_column_name].unique()))
         user_ids = set(list(dataframe[user_column_name].unique()) + list(dataframe_2[user_column_name].unique()))
 
-    item_id_mapping = recpack.helpers.rescale_id_space(item_ids)
-    user_id_mapping = recpack.helpers.rescale_id_space(user_ids)
+    item_id_mapping = helpers.rescale_id_space(item_ids)
+    user_id_mapping = helpers.rescale_id_space(user_ids)
 
     cleaned_item_column_name = 'iid'
     cleaned_user_column_name = 'uid'
@@ -71,13 +73,13 @@ def prep_data(input_file, input_file_2, item_column_name, user_column_name, time
         df_2 = dataframe_2.drop([user_column_name, item_column_name], axis=1)
 
     # Convert input data into internal data objects
-    data = recpack.helpers.create_data_M_from_pandas_df(
+    data = DataM.create_from_dataframe(
         df, cleaned_item_column_name, cleaned_user_column_name, timestamp_column_name,
         shape=(len(user_ids), len(item_ids))
     )
     data_2 = None
     if df_2 is not None:
-        data_2 = recpack.helpers.create_data_M_from_pandas_df(
+        data_2 = DataM.create_from_dataframe(
             df_2, cleaned_item_column_name, cleaned_user_column_name, timestamp_column_name,
             shape=(len(user_ids), len(item_ids))
         )
@@ -110,7 +112,7 @@ def run_pipeline(
     data, data_2 = prep_data(input_file, input_file_2, item_column_name, user_column_name, timestamp_column_name)
 
     # resolve algorithms and their parameters from config, and create the objects
-    algorithms = [recpack.algorithms.get_algorithm(type)(**params) for type, params in config_obj.get_algorithms()]
+    algorithms = [recpack.algorithms.algorithm_registry.get(type)(**params) for type, params in config_obj.get_algorithms()]
 
     # Create splitter class
     s_type, s_params = config_obj.get_splitter()
@@ -164,7 +166,7 @@ def run_parameter_generator_pipeline(
     data, data_2 = prep_data(input_file, input_file_2, item_column_name, user_column_name, timestamp_column_name)
 
     # resolve algorithms and their parameters from config, and create the objects
-    algorithms = [recpack.algorithms.get_algorithm(type)(**params) for type, params in config_obj.get_algorithms()]
+    algorithms = [recpack.algorithms.algorithm_registry.get(type)(**params) for type, params in config_obj.get_algorithms()]
 
     # Create the parameter generator instance.
     p_type, p_params = config_obj.get_parameter_generator()

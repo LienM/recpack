@@ -1,6 +1,4 @@
 import recpack.evaluate.metrics as metrics
-import recpack.helpers
-import pandas as pd
 import numpy
 import scipy.sparse
 
@@ -57,7 +55,7 @@ def test_UserInversePropensity():
 )
 def test_SNIPS_factory(propensity_type, expected_class):
     data = generate_data()
-    factory = metrics.SNIPS_factory(propensity_type)
+    factory = metrics.SNIPSFactory(propensity_type)
     factory.fit(data)
 
     K = 2
@@ -85,7 +83,7 @@ def test_SNIPS_factory(propensity_type, expected_class):
 def test_SNIPS(propensity_type, expected_score):
     K = 2
     # Test uniform propensities
-    factory = metrics.SNIPS_factory(propensity_type)
+    factory = metrics.SNIPSFactory(propensity_type)
 
     data = generate_data()
     factory.fit(data)

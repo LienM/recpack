@@ -5,11 +5,12 @@ import scipy
 from scipy.sparse import diags
 from sklearn.metrics.pairwise import cosine_similarity
 
+from recpack.algorithms.user_item_interactions_algorithms import (
+    UserItemInteractionsAlgorithm,
+)
 
-from .algorithm_base import Algorithm
 
-
-class ItemKNN(Algorithm):
+class ItemKNN(UserItemInteractionsAlgorithm):
 
     def __init__(self, K=200):
         """Construct an ItemKNN model. Before use make sure to fit the model.
@@ -60,7 +61,7 @@ class SharedAccount(ItemKNN):
         raise NotImplementedError("Under construction, the gnomes are working on it.")
 
 
-class NotItemKNN(Algorithm):
+class NotItemKNN(UserItemInteractionsAlgorithm):
     """
     TODO: Figure out what this code is actually implementing. It is not cosine similarity
     It does seem to work fine though.

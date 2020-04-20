@@ -15,7 +15,7 @@ Data is expected to be loaded into a pandas df.
 Then helper functions can be used to clean it up and turn it into an internal representation.
 
 ```python
-import recpack.helpers
+from recpack.data_matrix import DataM
 import pandas as pd
 
 # Load data from CSV (assumes you have the data stored in the path provided)
@@ -28,8 +28,8 @@ dataframe = pd.read_csv(
 # Which makes training faster and avoids unneeded 0 rows or collumns
 item_ids = list(dataframe['movieId'].unique())
 user_ids = list(dataframe['userId'].unique())
-item_id_mapping = recpack.helpers.rescale_id_space(item_ids)
-user_id_mapping = recpack.helpers.rescale_id_space(user_ids)
+item_id_mapping = recpack.preprocessing.helpers.rescale_id_space(item_ids)
+user_id_mapping = recpack.preprocessing.helpers.rescale_id_space(user_ids)
 
 dataframe['iid'] = dataframe['movieId'].map(lambda x: item_id_mapping[x])
 dataframe['uid'] = dataframe['userId'].map(lambda x: user_id_mapping[x])
@@ -37,7 +37,7 @@ dataframe['uid'] = dataframe['userId'].map(lambda x: user_id_mapping[x])
 # Drop the non continuous id columns (not really necessary, but frees up space)
 df = dataframe.drop(['userId', 'itemId'], axis=1)
 # Convert data into internal representation
-data = recpack.helpers.create_data_M_from_pandas_df(df, 'iid', 'uid', 'timestamp')
+data = DataM.create_from_dataframe(df, 'iid', 'uid', 'timestamp')
 ```
 
 ### Select algorithms
@@ -45,13 +45,13 @@ Recpack provides a set of algorithms to use in pipelines.
 To get the list of all algorithms use:
 ```python
 import recpack.algorithms
-recpack.algorithms.ALGORITHMS
+recpack.algorithms.algorithm_registry.list()
 ```
 This will give you a list of algorithm you can use.
 
 To create an algorithm instance use:
 ```python
-algo = recpack.algorithms.get_algorithm('ease')()
+algo = recpack.algorithms.algorithm_registry.get('ease')()
 ```
 You can add parameters in the constructor. For information on which parameters can be used for which algorithm see the docs.
 
@@ -98,10 +98,10 @@ These will be used further in the pipeline to train models, and evaluate the mod
 
 ```python
 import recpack.splits
-# Construct a splitter object which uses strong generalization to split the data into 
+# Construct a splitter object which uses strong generalization to split the data into
 # three data objects. Train will contain 50% of the users, validation 20% and test 30%
 # The seed parameter is useful for creating reproducible results.
-splitter = recpack.splits.StrongGeneralization(0.5, 0.2, seed=42)
+splitter = recpack.splits.StrongGeneralizationSplit(0.5, 0.2, seed=42)
 ```
 
 ### Selecting an evaluator
@@ -111,10 +111,10 @@ The input matrix will be passed as input to the predict method of the algorithm,
 ```python
 import recpack.evaluate
 # Construct a fold in evaluator.
-# this evaluator will take the test data, and for each user add 40% of their interactions 
+# this evaluator will take the test data, and for each user add 40% of their interactions
 # to the in_ matrix and 60% to the out_ matrix.
 # Seed again for reproducability.
-evalautor = recpack.evaluate.FoldInPercentage(0.4, seed=42)
+evaluator = recpack.evaluate.FoldInPercentageEvaluator(0.4, seed=42)
 ```
 
 ### Creating the pipeline
