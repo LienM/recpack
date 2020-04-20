@@ -53,8 +53,6 @@ def test_random():
 
     for out_, in_ in generate_in_out():
         result = algo.predict(in_)
-        # print(result.nonzero())
-        # print(result[0])
         assert len(result.nonzero()[1]) == result.shape[0] * K
         # TODO: What else to test?
 
