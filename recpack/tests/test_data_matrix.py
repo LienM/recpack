@@ -15,9 +15,9 @@ def df():
 @pytest.fixture(scope="function")
 def df_w_duplicate():
     data = {
-        "timestamp": [3, 2, 1, 1, 4],
-        "item_id": [1, 1, 2, 3, 1],
-        "user_id": [0, 1, 1, 2, 1],
+        "timestamp": [3, 2, 4, 1, 1],
+        "item_id": [1, 1, 1, 2, 3],
+        "user_id": [0, 1, 1, 1, 2],
     }
     df = pd.DataFrame.from_dict(data)
 
@@ -69,7 +69,6 @@ def test_binary_values_w_dups(df_w_duplicate):
     ).all()
 
 
-
 def test_timestamps_no_dups(df):
     d = DataM.create_from_dataframe(df, "item_id", "user_id", "timestamp")
 
@@ -79,7 +78,7 @@ def test_timestamps_no_dups(df):
 def test_timestamps_w_dups(df_w_duplicate):
     d = DataM.create_from_dataframe(df_w_duplicate, "item_id", "user_id", "timestamp")
 
-    assert (d.timestamps.values == np.array([3, 2, 1, 1, 4])).all()
+    assert (d.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
 
 
 def test_timestamps_gt_w_dups(df_w_duplicate):
@@ -126,5 +125,3 @@ def test_indices_in(df):
         filtered_df.values.toarray()
         == np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]], dtype=np.int32)
     ).all()
-
-

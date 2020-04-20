@@ -129,7 +129,7 @@ class DataM:
                     timestamp_ix: cls.timestamp_id,
                 }
             )
-            timestamps = df.set_index([cls.user_id, cls.item_id])[cls.timestamp_id]
+            timestamps = df.set_index([cls.user_id, cls.item_id])[cls.timestamp_id].sort_index()
         else:
             timestamps = None
 
