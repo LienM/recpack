@@ -2,6 +2,7 @@ from recpack.splitters.scenario_base import Scenario
 import recpack.splitters.splitter_base as splitter_base
 from recpack.utils import get_logger
 
+
 class StrongGeneralizationTimed(Scenario):
     # TODO Make this more standard.
 
