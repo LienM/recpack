@@ -37,8 +37,8 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
     def split(self, data, data_2):
-        self.training_data, _ = self.timestamp_spl(data)
-        self.test_data_in, self.test_data_out = self.timestamp_spl(data_2)
+        self.training_data, _ = self.timestamp_spl.split(data)
+        self.test_data_in, self.test_data_out = self.timestamp_spl.split(data_2)
 
 
 class TrainInTimedOutOfDomainEvaluate(Scenario):
@@ -53,6 +53,6 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
     def split(self, data, data_2):
-        self.training_data, _ = self.timestamp_spl(data)
-        _, self.test_data_out = self.timestamp_spl(data_2)
+        self.training_data, _ = self.timestamp_spl.split(data)
+        _, self.test_data_out = self.timestamp_spl.split(data_2)
         self.test_data_in = self.training_data
