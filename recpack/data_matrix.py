@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 import pandas as pd
 import numpy as np
@@ -87,6 +87,37 @@ class DataM:
             return self.timestamps <= timestamp
 
         return self._timestamp_comparator(func, inplace=inplace)
+
+    def users_in(self, U, inplace=False):
+        self.logger.debug("Performing users_in comparison")
+
+        mask_values = np.ones(len(U))
+        I = np.zeros(len(U))
+
+        mask = scipy.sparse.csr_matrix(
+            (mask_values, (U, I)), shape=(self.values.shape[0], 1), dtype=np.int32
+        )
+
+        print(self.values.nonzero())
+
+        c_values = self.values.multiply(mask)
+        c_values.eliminate_zeros()
+
+        print(c_values.nonzero())
+
+        self.logger.debug("Users_in comparison done")
+
+        if self.timestamps is None:
+            c_timestamps = None
+        else:
+            u_i_pairs = zip(*c_values.nonzero())
+            c_timestamps = self.timestamps.loc[u_i_pairs]
+
+        if not inplace:
+            return DataM(c_values, c_timestamps)
+        else:
+            self._timestamps = c_timestamps
+            self._values = c_values
 
     def indices_in(self, u_i_lists, inplace=False):
         self.logger.debug("Performing indices_in comparison")

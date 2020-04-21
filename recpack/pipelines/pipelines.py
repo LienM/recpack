@@ -2,7 +2,6 @@ from collections import defaultdict
 
 from recpack.evaluate.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.splits.splits import TrainValidationSplitTwoDataInputs
-from recpack.splitters.scenarios import *
 from recpack.utils import get_logger
 
 

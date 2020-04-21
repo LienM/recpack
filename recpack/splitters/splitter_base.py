@@ -51,18 +51,12 @@ class UserSplitter(Splitter):
         """
 
         shape = data.shape
-        sp_mat = data.values
 
         # We require a full data split.
         assert shape[0] == (len(self.users_in) + len(self.users_out))
 
-        U, I = sp_mat.nonzero()
-
-        tr_u, tr_i = zip(*filter(lambda x: x[0] in self.users_in, zip(U, I)))
-        te_u, te_i = zip(*filter(lambda x: x[0] in self.users_out, zip(U, I)))
-
-        tr_data = data.indices_in((tr_u, tr_i))
-        te_data = data.indices_in((te_u, te_i))
+        tr_data = data.users_in(self.users_in)
+        te_data = data.users_in(self.users_out)
 
         self.logger.debug(f"{self.name} - Split successful")
 
