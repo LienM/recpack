@@ -1,7 +1,9 @@
 from collections import defaultdict
+
 from recpack.evaluate.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.splits.splits import TrainValidationSplitTwoDataInputs
 from recpack.splitters.scenarios import *
+from recpack.utils import get_logger
 
 
 class MetricRegistry:
@@ -17,6 +19,7 @@ class MetricRegistry:
         self.metric_names = metric_names
 
         self.algorithms = algorithms
+        self.logger = get_logger()
 
         for algo in algorithms:
             for m in self.metric_names:
@@ -26,6 +29,7 @@ class MetricRegistry:
     def _create(self, algorithm_name, metric_name, K):
         metric = self.METRICS[metric_name](K)
         self.registry[algorithm_name][f"{metric_name}_K_{K}"] = metric
+        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         return
 
     def __getitem__(self, key):
@@ -36,9 +40,9 @@ class MetricRegistry:
             for K in K_values:
                 self.register(metric_factory.create(K), algo.name, f"{identifier}@{K}")
 
-    def register(self, metric, algorithm, identifier):
-        print(f"registered {algorithm} - {identifier}")
-        self.registry[algorithm][identifier] = metric
+    def register(self, metric, algorithm_name, metric_name):
+        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        self.registry[algorithm_name][metric_name] = metric
 
     @property
     def metrics(self):

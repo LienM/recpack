@@ -5,6 +5,7 @@ import numpy as np
 import scipy.sparse
 
 from recpack.data_matrix import DataM
+from recpack.utils import get_logger
 
 
 def csr_row_set_nz_to_val(csr, row, value=0):
@@ -18,7 +19,7 @@ def csr_row_set_nz_to_val(csr, row, value=0):
 
 class Splitter(ABC):
     def __init__(self):
-        pass
+        self.logger = get_logger()
 
     @abstractmethod
     def split(self, data):
@@ -31,6 +32,7 @@ class Splitter(ABC):
 
 class UserSplitter(Splitter):
     def __init__(self, users_in, users_out):
+        super().__init__()
         self.users_in = users_in
         self.users_out = users_out
 
@@ -62,6 +64,8 @@ class UserSplitter(Splitter):
         tr_data = data.indices_in((tr_u, tr_i))
         te_data = data.indices_in((te_u, te_i))
 
+        self.logger.debug(f"{self.name} - Split successful")
+
         return tr_data, te_data
 
 
@@ -80,6 +84,7 @@ class StrongGeneralizationSplitter(Splitter):
     """
 
     def __init__(self, in_perc=0.7, seed=None, error_margin=0.01):
+        super().__init__()
         self.in_perc = in_perc
         self.out_perc = 1 - in_perc
         self.seed = seed
@@ -110,7 +115,7 @@ class StrongGeneralizationSplitter(Splitter):
         if self.seed is not None:
             np.random.seed(self.seed)
 
-        for _ in range(0, 5):
+        for i in range(0, 5):
             # Try five times
             np.random.shuffle(users)
 
@@ -127,9 +132,14 @@ class StrongGeneralizationSplitter(Splitter):
             within_margin = np.isclose(real_perc, self.in_perc, atol=self.error_margin)
 
             if within_margin:
+                self.logger.debug(f"{self.name} - Iteration {i} - Within margin")
                 continue
+            else:
+                self.logger.debug(f"{self.name} - Iteration {i} - Not within margin")
 
         u_splitter = UserSplitter(users_in, users_out)
+
+        self.logger.debug(f"{self.name} - Split successful")
 
         return u_splitter.split(data)
 
@@ -145,6 +155,7 @@ class InteractionSplitter(Splitter):
 class PercentageInteractionSplitter(Splitter):
     # TODO Add documentation
     def __init__(self, in_perc, seed=None):
+        super().__init__()
         self.in_perc = in_perc
 
         self.seed = seed if seed else 12345
@@ -176,8 +187,13 @@ class PercentageInteractionSplitter(Splitter):
             te_i.extend(user_history[cut:])
             te_u.extend([u] * len(user_history[cut:]))
 
+            if u % 1000 == 0:
+                self.logger.debug(f"{self.name} - Batch of 1000 users completed")
+
         tr_data = data.indices_in((tr_u, tr_i))
         te_data = data.indices_in((te_u, te_i))
+
+        self.logger.debug(f"{self.name} - Split successful")
 
         return tr_data, te_data
 
@@ -198,13 +214,20 @@ class TimestampSplitter(Splitter):
     """
 
     def __init__(self, t, t_delta=None, t_alpha=None):
+        super().__init__()
         self.t = t
         self.t_delta = t_delta
         self.t_alpha = t_alpha
 
     @property
     def name(self):
-        return f"timed_split_t{self.t}_t_delta_{self.t_delta}_t_alpha_{self.t_alpha}"
+        base_name = f"timed_split_t{self.t}"
+        if self.t_delta:
+            base_name += f"_t_delta_{self.t_delta}"
+        if self.t_alpha:
+            base_name += f"_t_alpha_{self.t_alpha}"
+
+        return base_name
 
     def split(self, data: DataM) -> Tuple[DataM, DataM]:
         """
@@ -231,6 +254,8 @@ class TimestampSplitter(Splitter):
             # Get indices where timestamp >= t and timestamp < t + t_delta
             te_data = data.timestamps_gte(self.t).timestamps_lt(self.t + self.t_delta)
 
+        self.logger.debug(f"{self.name} - Split successful")
+
         return tr_data, te_data
 
 
@@ -245,6 +270,8 @@ class FoldIterator:
 
         self.sp_mat_in = self.data_m_in.values
         self.sp_mat_out = self.data_m_out.values
+
+        self.logger = get_logger()
 
     def __iter__(self):
         return self
@@ -292,6 +319,8 @@ class FoldIterator:
                 # Get a list of users we return as recommendations
                 users = np.array([i for i in range(start, end)])
                 users = list(set(users) - set(users[rows_to_delete]))
+
+                self.logger.debug(f"Yielded a new fold of {self.batch_size}")
 
                 return fold_in, fold_out, users
             raise StopIteration

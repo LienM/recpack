@@ -2,13 +2,23 @@ import numpy
 import itertools
 import scipy.sparse
 
+from recpack.utils import get_logger
+
 
 class Metric:
-    pass
+
+    def __init__(self):
+        super().__init__()
+        self.logger = get_logger()
+
+    @property
+    def name(self):
+        return ""
 
 
 class RecallK(Metric):
     def __init__(self, K):
+        super().__init__()
         self.K = K
         self.recall = 0
         self.num_users = 0
@@ -35,7 +45,13 @@ class RecallK(Metric):
             )
             self.num_users += 1
 
+        self.logger.debug(f"Metric {self.name} updated")
+
         return
+
+    @property
+    def name(self):
+        return f"Recall_{self.K}"
 
     @property
     def value(self):
@@ -47,6 +63,7 @@ class RecallK(Metric):
 
 class MeanReciprocalRankK(Metric):
     def __init__(self, K):
+        super().__init__()
         self.K = K
         self.rr = 0
         self.num_users = 0
@@ -70,6 +87,8 @@ class MeanReciprocalRankK(Metric):
 
             self.num_users += 1
 
+        self.logger.debug(f"Metric {self.name} updated")
+
         return
 
     @property
@@ -79,9 +98,14 @@ class MeanReciprocalRankK(Metric):
 
         return self.rr / self.num_users
 
+    @property
+    def name(self):
+        return f"MRR_{self.K}"
+
 
 class NDCGK(Metric):
     def __init__(self, K):
+        super().__init__()
         self.K = K
         self.NDCG = 0
         self.num_users = 0
@@ -119,7 +143,13 @@ class NDCGK(Metric):
             self.num_users += 1
             self.NDCG += DCG / IDCG
 
+        self.logger.debug(f"Metric {self.name} updated")
+
         return
+
+    @property
+    def name(self):
+        return f"NDCG_{self.K}"
 
     @property
     def value(self):
