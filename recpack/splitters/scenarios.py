@@ -3,6 +3,20 @@ import recpack.splitters.splitter_base as splitter_base
 from recpack.utils import get_logger
 
 
+class StrongGeneralization(Scenario):
+    def __init__(self, perc_users_in):
+        super().__init__()
+        self.perc_users_in = perc_users_in
+
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_in)
+        self.interaction_split = splitter_base.InteractionSplitter()
+
+    def split(self, data):
+        self.training_data, te_data = self.strong_gen.split(data)
+
+        self.test_data_in, self.test_data_out = self.interaction_split.split(te_data)
+
+
 class StrongGeneralizationTimed(Scenario):
     # TODO Make this more standard.
 
