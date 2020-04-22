@@ -98,12 +98,8 @@ class DataM:
             (mask_values, (U, I)), shape=(self.values.shape[0], 1), dtype=np.int32
         )
 
-        print(self.values.nonzero())
-
         c_values = self.values.multiply(mask)
         c_values.eliminate_zeros()
-
-        print(c_values.nonzero())
 
         self.logger.debug("Users_in comparison done")
 
