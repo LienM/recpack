@@ -15,6 +15,14 @@ class Metric:
     def name(self):
         return ""
 
+    def get_topK_item_sets(self, X_pred):
+        topK_item_sets = {
+            u: set(best_items_row[-self.K:])
+            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
+        }
+
+        return topK_item_sets
+
 
 class RecallK(Metric):
     def __init__(self, K):
@@ -28,17 +36,16 @@ class RecallK(Metric):
         # Get indices of top K items per user
 
         # Per user get a set of the topK predicted items
-        topK_items_sets = {
-            u: set(best_items_row[-self.K:])
-            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
-        }
+        topK_item_sets = self.get_topK_item_sets(X_pred)
 
         # Per user get a set of interacted items.
         items_sets = {u: set(X_true[u].nonzero()[1]) for u in range(X_true.shape[0])}
 
-        for u in topK_items_sets.keys():
-            recommended_items = topK_items_sets[u]
+        for u in topK_item_sets.keys():
+            recommended_items = topK_item_sets[u]
             true_items = items_sets[u]
+
+            print(true_items)
 
             self.recall += len(recommended_items.intersection(true_items)) / min(
                 self.K, len(true_items)
@@ -70,17 +77,12 @@ class MeanReciprocalRankK(Metric):
 
     def update(self, X_pred, X_true, users=None):
         # Per user get a sorted list of the topK predicted items
-        topK_items = {
-            u: best_items_row[-self.K:][
-                numpy.argsort(X_pred[u][best_items_row[-self.K:]])
-            ][::-1]
-            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
-        }
+        topK_item_sets = self.get_topK_item_sets(X_pred)
 
         items_sets = {u: set(X_true[u].nonzero()[1]) for u in range(X_true.shape[0])}
 
-        for u in topK_items.keys():
-            for ix, item in enumerate(topK_items[u]):
+        for u in topK_item_sets.keys():
+            for ix, item in enumerate(topK_item_sets[u]):
                 if item in items_sets[u]:
                     self.rr += 1 / (ix + 1)
                     break
@@ -117,16 +119,11 @@ class NDCGK(Metric):
 
     def update(self, X_pred, X_true, users=None):
 
-        topK_items = {
-            u: best_items_row[-self.K:][
-                numpy.argsort(X_pred[u][best_items_row[-self.K:]])
-            ][::-1]
-            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
-        }
+        topK_item_sets = self.get_topK_item_sets(X_pred)
 
         items_sets = {u: set(X_true[u].nonzero()[1]) for u in range(X_true.shape[0])}
 
-        for u in topK_items.keys():
+        for u in topK_item_sets.keys():
             M = min(self.K, len(items_sets[u]))
             if M == 0:
                 continue
@@ -137,7 +134,7 @@ class NDCGK(Metric):
             # Compute DCG
             DCG = sum(
                 (self.discount_template[rank] * (item in items_sets[u]))
-                for rank, item in enumerate(topK_items[u])
+                for rank, item in enumerate(topK_item_sets[u])
             )
 
             self.num_users += 1

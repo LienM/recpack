@@ -51,10 +51,7 @@ class SNIPS(Metric):
             )
 
         # Top K mask on the X_pred
-        topK_item_sets = {
-            u: set(best_items_row[-self.K:])
-            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
-        }
+        topK_item_sets = self.get_topK_item_sets(X_pred)
 
         user_indices, item_indices = zip(
             *[(u, i) for u in topK_item_sets for i in topK_item_sets[u]]
