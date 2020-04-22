@@ -72,6 +72,12 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
 
 
 class TrainInTimedOutOfDomainEvaluate(Scenario):
+    """
+    Class to split two input datatypes for training and testing.
+    train_data = data_1 & timestamp < t
+    test_in = train_data
+    test_out = data_2 & timestamp > t
+    """
     # TODO Make this more standard.
 
     def __init__(self, t, t_alpha=None, t_delta=None):
