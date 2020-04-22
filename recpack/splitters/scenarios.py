@@ -46,6 +46,16 @@ class StrongGeneralizationTimed(Scenario):
 
 
 class TimedOutOfDomainPredictAndEvaluate(Scenario):
+    """
+    Class to split data from 2 input datatypes, one of the data types will be used as training data,
+    the other one will be used as test data.
+    An example use case is training a model on pageviews,
+    and evaluating with purchases as test_in, test_out and split on time
+
+    training_data = data_1 & timestamp < t
+    test_data_in = data_2 & timestamp < t
+    test_data_out = data_2 & timestamp > t
+    """
     # TODO Make this more standard.
 
     def __init__(self, t, t_alpha=None, t_delta=None):
