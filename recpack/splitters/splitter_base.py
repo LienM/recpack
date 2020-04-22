@@ -8,15 +8,6 @@ from recpack.data_matrix import DataM
 from recpack.utils import get_logger
 
 
-def csr_row_set_nz_to_val(csr, row, value=0):
-    """Set all nonzero elements (elements currently in the sparsity pattern)
-    to the given value. Useful to set to 0 mostly.
-    """
-    if not isinstance(csr, scipy.sparse.csr_matrix):
-        raise ValueError("Matrix given must be of CSR format.")
-    csr.data[csr.indptr[row]: csr.indptr[row + 1]] = value
-
-
 class Splitter(ABC):
     def __init__(self):
         self.logger = get_logger()
@@ -253,68 +244,99 @@ class TimestampSplitter(Splitter):
         return tr_data, te_data
 
 
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
+
+def csr_row_set_nz_to_val(csr, row, value=0):
+    """Set all nonzero elements (elements currently in the sparsity pattern)
+    to the given value. Useful to set to 0 mostly.
+    """
+    if not isinstance(csr, scipy.sparse.csr_matrix):
+        raise ValueError("Matrix given must be of CSR format.")
+    csr.data[csr.indptr[row]: csr.indptr[row + 1]] = value
+
+
 class FoldIterator:
     def __init__(self, data_m_in, data_m_out, batch_size=1000):
         self.data_m_in = data_m_in
         self.data_m_out = data_m_out
-        self._index = 0
-        self._max_index = data_m_in.shape[0]
+        # self._index = 0
+        # self._max_index = data_m_in.shape[0]
         self.batch_size = batch_size
         assert self.batch_size > 0  # Avoid inf loops
 
-        self.sp_mat_in = self.data_m_in.values
-        self.sp_mat_out = self.data_m_out.values
+        # self.sp_mat_in = self.data_m_in.values
+        # self.sp_mat_out = self.data_m_out.values
+
+        self.data_m_in.eliminate_timestamps()
+        self.data_m_out.eliminate_timestamps()
+
+        # Make sure that user has data in both history and predicted values
+        self.users = list(set(self.data_m_in.indices[0]).intersection(self.data_m_out.indices[0]))
 
         self.logger = get_logger()
 
     def __iter__(self):
+        self.batch_generator = batch(self.users, self.batch_size)
         return self
 
     def __next__(self):
-        # While loop to make it possible to skip any cases where user has no items in in or out set.
-        while True:
-            # Yield multi line fold.
-            if self._index < self._max_index:
-                start = self._index
-                end = self._index + self.batch_size
-                # make sure we don't go out of range
-                if end >= self._max_index:
-                    end = self._max_index
+        user_batch = next(self.batch_generator)
 
-                fold_in = self.sp_mat_in[start:end]
-                fold_out = self.sp_mat_out[start:end]
+        fold_in = self.data_m_in.users_in(user_batch).values
+        fold_out = self.data_m_out.users_in(user_batch).values
 
-                # Filter out users with missing data in either in or out.
+        return fold_in, fold_out
 
-                # Get row sum for both in and out
-                in_sum = fold_in.sum(1)
-                out_sum = fold_out.sum(1)
-                # Rows with sum == 0 are rows that should be removed in both in and out.
-                rows_to_delete = []
-                for i in range(len(in_sum)):
-                    if in_sum[i, 0] == 0 or out_sum[i, 0] == 0:
-                        rows_to_delete.append(i)
-                # Set 0 values for rows to delete
-                if len(rows_to_delete) > 0:
-                    for r_to_del in rows_to_delete:
-                        csr_row_set_nz_to_val(fold_in, r_to_del, value=0)
-                        csr_row_set_nz_to_val(fold_out, r_to_del, value=0)
-                    fold_in.eliminate_zeros()
-                    fold_out.eliminate_zeros()
-                    # Remove rows with 0 values
-                    fold_in = fold_in[fold_in.getnnz(1) > 0]
-                    fold_out = fold_out[fold_out.getnnz(1) > 0]
-                # If no matrix is left over, continue to next batch without returning.
-                if fold_in.nnz == 0:
-                    self._index = end
-                    continue
 
-                self._index = end
-                # Get a list of users we return as recommendations
-                users = np.array([i for i in range(start, end)])
-                users = list(set(users) - set(users[rows_to_delete]))
+    # def __next__(self):
+    #     # While loop to make it possible to skip any cases where user has no items in in or out set.
+    #     while True:
+    #         # Yield multi line fold.
+    #         if self._index < self._max_index:
+    #             start = self._index
+    #             end = self._index + self.batch_size
+    #             # make sure we don't go out of range
+    #             if end >= self._max_index:
+    #                 end = self._max_index
 
-                self.logger.debug(f"Yielded a new fold of {self.batch_size}")
+    #             fold_in = self.sp_mat_in[start:end]
+    #             fold_out = self.sp_mat_out[start:end]
 
-                return fold_in, fold_out, users
-            raise StopIteration
+    #             # Filter out users with missing data in either in or out.
+
+    #             # Get row sum for both in and out
+    #             in_sum = fold_in.sum(1)
+    #             out_sum = fold_out.sum(1)
+    #             # Rows with sum == 0 are rows that should be removed in both in and out.
+    #             rows_to_delete = []
+    #             for i in range(len(in_sum)):
+    #                 if in_sum[i, 0] == 0 or out_sum[i, 0] == 0:
+    #                     rows_to_delete.append(i)
+    #             # Set 0 values for rows to delete
+    #             if len(rows_to_delete) > 0:
+    #                 for r_to_del in rows_to_delete:
+    #                     csr_row_set_nz_to_val(fold_in, r_to_del, value=0)
+    #                     csr_row_set_nz_to_val(fold_out, r_to_del, value=0)
+    #                 fold_in.eliminate_zeros()
+    #                 fold_out.eliminate_zeros()
+    #                 # Remove rows with 0 values
+    #                 fold_in = fold_in[fold_in.getnnz(1) > 0]
+    #                 fold_out = fold_out[fold_out.getnnz(1) > 0]
+    #             # If no matrix is left over, continue to next batch without returning.
+    #             if fold_in.nnz == 0:
+    #                 self._index = end
+    #                 continue
+
+    #             self._index = end
+    #             # Get a list of users we return as recommendations
+    #             users = np.array([i for i in range(start, end)])
+    #             users = list(set(users) - set(users[rows_to_delete]))
+
+    #             self.logger.debug(f"Yielded a new fold of {self.batch_size}")
+
+    #             return fold_in, fold_out, users
+    #         raise StopIteration

@@ -22,7 +22,9 @@ def check_values_timestamps_match(data):
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
 def test_strong_generalization_splitter(data_m, in_perc):
-    splitter = splitter_base.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
+    splitter = splitter_base.StrongGeneralizationSplitter(
+        in_perc, seed=42, error_margin=0.10
+    )
 
     tr, te = splitter.split(data_m)
 
@@ -36,7 +38,9 @@ def test_strong_generalization_splitter(data_m, in_perc):
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
 def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
-    splitter = splitter_base.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
+    splitter = splitter_base.StrongGeneralizationSplitter(
+        in_perc, seed=42, error_margin=0.10
+    )
 
     tr, te = splitter.split(data_m_w_dups)
 
@@ -184,24 +188,42 @@ def test_perc_interaction_splitter(data_m, tr_perc):
     assert te.timestamps.shape[0] == num_te_interactions
 
 
-@pytest.mark.parametrize(
-    "batch_size",
-    [
-        1,
-        2,
-        3
-    ]
-)
-def test_fold_iterator(data_m, batch_size):
+@pytest.mark.parametrize("batch_size", [1, 2, 3])
+def test_fold_iterator_correctness(data_m, batch_size):
     splitter = splitter_base.PercentageInteractionSplitter(0.7, seed=42)
 
     data_m_in, data_m_out = splitter.split(data_m)
 
-    fold_iterator = splitter_base.FoldIterator(data_m_in, data_m_out, batch_size=batch_size)
+    fold_iterator = splitter_base.FoldIterator(
+        data_m_in, data_m_out, batch_size=batch_size
+    )
 
-    for fold_in, fold_out, users in fold_iterator:
+    for fold_in, fold_out in fold_iterator:
         assert fold_in.nnz > 0
         assert fold_out.nnz > 0
 
-        assert len(users) == fold_in.shape[0]
-        assert len(users) == fold_out.shape[0]
+        assert data_m_in.shape == fold_in.shape
+        assert data_m_out.shape == fold_out.shape
+
+
+@pytest.mark.parametrize("batch_size", [1, 2, 3])
+def test_fold_iterator_completeness(data_m, batch_size):
+
+    fold_iterator = splitter_base.FoldIterator(data_m, data_m, batch_size=batch_size)
+
+    nonzero_users = set(data_m.indices[0])
+
+    all_batches = set()
+
+    for fold_in, fold_out in fold_iterator:
+        assert (fold_in != fold_out).nnz == 0
+
+        users_in_batch = set(fold_in.nonzero()[0])
+
+        all_batches = all_batches.union(users_in_batch)
+
+        assert len(users_in_batch) == batch_size or (
+            len(users_in_batch) == len(nonzero_users) % batch_size
+        )
+
+    assert len(all_batches) == len(nonzero_users)
