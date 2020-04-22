@@ -5,6 +5,7 @@ from recpack.algorithms.user_item_interactions_algorithms import (
     UserItemInteractionsAlgorithm,
 )
 
+
 class MF(UserItemInteractionsAlgorithm):
     def __init__(self, K=100):
         self.K = K
