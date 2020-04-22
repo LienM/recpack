@@ -1,6 +1,8 @@
 from collections import defaultdict
+
 from recpack.evaluate.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.splits.splits import TrainValidationSplitTwoDataInputs
+from recpack.utils import get_logger
 
 
 class MetricRegistry:
@@ -16,6 +18,7 @@ class MetricRegistry:
         self.metric_names = metric_names
 
         self.algorithms = algorithms
+        self.logger = get_logger()
 
         for algo in algorithms:
             for m in self.metric_names:
@@ -25,6 +28,7 @@ class MetricRegistry:
     def _create(self, algorithm_name, metric_name, K):
         metric = self.METRICS[metric_name](K)
         self.registry[algorithm_name][f"{metric_name}_K_{K}"] = metric
+        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         return
 
     def __getitem__(self, key):
@@ -35,9 +39,9 @@ class MetricRegistry:
             for K in K_values:
                 self.register(metric_factory.create(K), algo.name, f"{identifier}@{K}")
 
-    def register(self, metric, algorithm, identifier):
-        print(f"registered {algorithm} - {identifier}")
-        self.registry[algorithm][identifier] = metric
+    def register(self, metric, algorithm_name, metric_name):
+        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        self.registry[algorithm_name][metric_name] = metric
 
     @property
     def metrics(self):
@@ -54,6 +58,71 @@ class MetricRegistry:
             for k in self.registry[key]:
                 results[key][k] = self.registry[key][k].num_users
         return results
+
+
+class ScenarioPipeline:
+
+    def __init__(self, scenario, algorithms, metric_names, K_values):
+        """
+        Performs all steps in order and holds on to results.
+
+        :param scenario: Splitter object which will split input data into train, validation and test data
+        :type scenario: `recpack.splitters.Scenario`
+
+        :param algorithms: List of algorithms to evaluate in this pipeline
+        :type algorithms: `list(recpack.algorithms.Model)`
+
+        :param metric_names: The names of metrics to compute in this pipeline.
+                            Allowed values are: `NDCG`, `Recall` and `MRR`
+        :type metric_names: `list(string)`
+
+        :param K_values: The K values for each of the metrics
+        :type K_values: `list(int)`
+        """
+        self.scenario = scenario
+        self.algorithms = algorithms
+
+        self.metric_names = metric_names
+        self.K_values = K_values
+        self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
+
+    def run(self, data, data_2=None):
+        """
+        Run the pipeline with the input data.
+        This will use the different components in the pipeline to:
+        1. Split data into train, validation, test
+        2. Train models
+        3. Split test data into in and out
+        4. Evaluate models
+        5. Store metrics
+
+        :param data: The first data object to use. This data will be used in the splitters.
+        :type data: `recpack.DataM`
+        :param data_2: Additional data.
+                       If the splitter expects a second data object to generate the train, validation and test,
+                       you should use this one to give it that information.
+        :type data_2: `recpack.DataM`
+        """
+        self.scenario.split(data, data_2)
+
+        for algo in self.algorithms:
+            # Only pass the sparse training interaction matrix to algo
+            algo.fit(self.scenario.training_data.binary_values)
+
+        for _in, _out, users in self.scenario.test_iterator:
+            for algo in self.algorithms:
+
+                metrics = self.metric_registry[algo.name]
+                X_pred = algo.predict(_in)
+
+                for metric in metrics.values():
+                    metric.update(X_pred, _out, users)
+
+    def get(self):
+        return self.metric_registry.metrics
+
+    def get_number_of_users_evaluated(self):
+        return self.metric_registry.number_of_users_evaluated
 
 
 class Pipeline:
