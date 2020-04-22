@@ -18,6 +18,12 @@ class StrongGeneralization(Scenario):
 
 
 class StrongGeneralizationTimed(Scenario):
+    """
+    Split data in strong generalization fashion, also splitting on timestamp.
+    training_data = user in set of sampled test users + event time < t
+    test_data_in = user not in the set of test users + event_time < t
+    test_data_out = user not in the set of test users + event_time > t
+    """
     # TODO Make this more standard.
 
     def __init__(self, perc_users_in, t, t_delta=None, t_alpha=None):
