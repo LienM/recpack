@@ -9,7 +9,6 @@ from recpack.preprocessing.filters import Filter
 
 
 class DataFramePreprocessor:
-
     def __init__(self, item_id, user_id, timestamp_id=None, dedupe=False):
         """
         Class to preprocess a Pandas Dataframe and turn it into a DataM object.
@@ -42,6 +41,29 @@ class DataFramePreprocessor:
         """
         self.filters.append(_filter)
 
+    def map_users(self, df):
+        if not self.user_id_mapping:
+            raise RuntimeError(
+                "User ID Mapping should be fit before attempting to map users"
+            )
+
+        return df[self.user_id].map(lambda x: self.user_id_mapping.get(x))
+
+    def map_items(self, df):
+        if not self.item_id_mapping:
+            raise RuntimeError(
+                "Item ID Mapping should be fit before attempting to map items"
+            )
+
+        return df[self.item_id].map(lambda x: self.item_id_mapping.get(x))
+
+    @property
+    def shape(self):
+        return (
+            max(self.user_id_mapping.values()) + 1,
+            max(self.item_id_mapping.values()) + 1,
+        )
+
     def process(self, *args: pd.DataFrame) -> List[scipy.sparse.csr_matrix]:
         """
         Process all DataFrames passed as arguments.
@@ -54,31 +76,28 @@ class DataFramePreprocessor:
         """
         for df in args:
             if self.dedupe:
-                df.drop_duplicates([self.user_id, self.item_id], keep="first", inplace=True)
+                df.drop_duplicates(
+                    [self.user_id, self.item_id], keep="first", inplace=True
+                )
 
             self.update_id_mappings(df)
 
-        cleaned_item_id = 'iid'
-        cleaned_user_id = 'uid'
+        cleaned_item_id = "iid"
+        cleaned_user_id = "uid"
 
         data_ms = []
 
         for df in args:
-            df.loc[:, cleaned_item_id] = df[self.item_id].map(
-                lambda x: self.item_id_mapping[x]
-            )
-            df.loc[:, cleaned_user_id] = df[self.user_id].map(
-                lambda x: self.user_id_mapping[x]
-            )
+            df.loc[:, cleaned_item_id] = self.map_items(df)
+            df.loc[:, cleaned_user_id] = self.map_users(df)
 
             # Convert input data into internal data objects
             data_m = DataM.create_from_dataframe(
                 df,
-                cleaned_item_id, cleaned_user_id, self.timestamp_id,
-                shape=(
-                    max(self.user_id_mapping.values()) + 1,
-                    max(self.item_id_mapping.values()) + 1
-                )
+                cleaned_item_id,
+                cleaned_user_id,
+                self.timestamp_id,
+                shape=self.shape,
             )
 
             data_ms.append(data_m)
