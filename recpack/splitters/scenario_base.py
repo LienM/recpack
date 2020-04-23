@@ -4,6 +4,7 @@ from typing import Tuple
 from recpack.splitters.splitter_base import FoldIterator
 from recpack.data_matrix import DataM
 
+
 class Scenario(ABC):
 
     def __init__(self):
@@ -21,7 +22,7 @@ class Scenario(ABC):
         self.test_data_out = None
 
     @abstractmethod
-    def split(self, data: DataM, data_2: DataM):
+    def split(self, *data_ms: DataM):
         """
         Method to be implemented in all classes that inherit
         from Scenario. Used to create the required data objects.

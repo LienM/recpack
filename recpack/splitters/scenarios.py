@@ -13,8 +13,21 @@ class StrongGeneralization(Scenario):
 
     def split(self, data):
         self.training_data, te_data = self.strong_gen.split(data)
-
         self.test_data_in, self.test_data_out = self.interaction_split.split(te_data)
+
+
+class TrainingInTestOutTimed(Scenario):
+
+    def __init__(self, t, t_delta=None, t_alpha=None):
+        self.t = t
+        self.t_delta = t_delta
+        self.t_alpha = t_alpha
+
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+
+    def split(self, data):
+        self.training_data, self.test_data_out = self.timestamp_spl.split(data)
+        self.test_data_in = self.training_data
 
 
 class StrongGeneralizationTimed(Scenario):
