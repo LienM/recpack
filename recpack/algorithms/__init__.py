@@ -24,14 +24,17 @@ class AlgorithmRegistry:
         "slim": SLIM,
     }
 
+    @classmethod
     def get(cls, algorithm_name):
         return cls.ALGORITHMS[algorithm_name]
 
+    @classmethod
     def register(cls, algorithm_name, algorithm: Algorithm):
         assert algorithm_name not in cls.ALGORITHMS
 
         cls.ALGORITHMS[algorithm_name] = algorithm
 
+    @classmethod
     def list(cls):
         return cls.ALGORITHMS
 

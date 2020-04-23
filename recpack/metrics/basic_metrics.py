@@ -29,11 +29,12 @@ class MetricK(Metric):
     def get_topK_item_sets(self, X_pred: scipy.sparse.csr_matrix):
         # Get nonzero users
         nonzero_users = list(set(X_pred.nonzero()[0]))
+        user_mapping = {e: u for e, u in enumerate(nonzero_users)}
 
         X = X_pred[nonzero_users, :].toarray()
 
         topK_item_sets = {
-            u: set(best_items_row[-self.K:])
+            user_mapping[u]: set(best_items_row[-self.K:])
             for u, best_items_row in enumerate(numpy.argpartition(X, -self.K))
         }
 

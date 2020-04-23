@@ -39,7 +39,7 @@ class SNIPS(MetricK):
         self.inverse_propensities = inverse_propensities
 
     def update(
-        self, X_pred: numpy.matrix, X_true: scipy.sparse.csr_matrix, users: list
+        self, X_pred: numpy.matrix, X_true: scipy.sparse.csr_matrix
     ) -> None:
         """
         Update the internal metrics given a set of recommendations and actual events.
@@ -50,9 +50,10 @@ class SNIPS(MetricK):
                 "inverse_propensities should not be None, fit a propensity model before using the SNIPS metric"
             )
 
+        users = set(X_pred.nonzero()[0]).union(set(X_true.nonzero()[0]))
+
         # Top K mask on the X_pred
         topK_item_sets = self.get_topK_item_sets(X_pred)
-
         user_indices, item_indices = zip(
             *[(u, i) for u in topK_item_sets for i in topK_item_sets[u]]
         )
@@ -67,14 +68,16 @@ class SNIPS(MetricK):
         # binarize the prediction matrix
         x_pred_top_k[x_pred_top_k > 0] = 1
 
-        ip = self.inverse_propensities.get(users)
+        # Sort the list of users to avoid weird issues with expected input
+        ip = self.inverse_propensities.get(sorted(list(users)))
+        index_map = {x: e for e, x in enumerate(sorted(list(users)))}
 
         X_pred_as_propensity = x_pred_top_k.multiply(ip).tocsr()
         X_true_as_propensity = X_true.multiply(ip).tocsr()
 
         X_hit_inverse_propensities = X_pred_as_propensity.multiply(X_true)
 
-        for user in range(X_pred.shape[0]):
+        for user in users:
             # Compute the hit score as the sum of propensities of hit items.
             # (0 contribution to the score if the item is not in X_true)
             hit_score = X_hit_inverse_propensities[user].sum()
@@ -163,7 +166,9 @@ class UserInversePropensity(InversePropensity):
 
     def _get_propensities(self, users):
         row_sum = self.data_matrix[users].sum(axis=1)
-        propensities = scipy.sparse.csr_matrix(self.data_matrix[users] / row_sum)
+        user_mask = numpy.zeros((self.data_matrix.shape[0], 1))
+        user_mask[users, 0] = 1
+        propensities = scipy.sparse.csr_matrix(self.data_matrix.multiply(user_mask) / row_sum)
         return propensities
 
 
