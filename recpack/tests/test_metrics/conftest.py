@@ -42,3 +42,14 @@ def X_true():
     )
 
     return true_data
+
+
+@pytest.fixture(scope="function")
+def X_true_simplified():
+    true_users, true_items = [0, 2], [2, 3]
+
+    true_data = scipy.sparse.csr_matrix(
+        ([1 for i in range(len(true_users))], (true_users, true_items)), shape=(10, 5)
+    )
+
+    return true_data
