@@ -1,3 +1,6 @@
+import scipy.sparse
+
+
 class Algorithm:
 
     @property
@@ -7,7 +10,7 @@ class Algorithm:
     def fit(self, X):
         pass
 
-    def predict(self, X):
+    def predict(self, X: scipy.sparse.csr_matrix):
         pass
 
     def save(self, filename):
@@ -23,9 +26,4 @@ class Baseline:
         pass
 
     def predict(self, X, K):
-        pass
-
-
-class TwoMatrixFitAlgorithm(Algorithm):
-    def fit(self, X_1, X_2):
         pass
