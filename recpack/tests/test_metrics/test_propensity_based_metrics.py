@@ -1,6 +1,8 @@
-import recpack.metrics as metrics
 import numpy
 import pytest
+import scipy.sparse
+
+import recpack.metrics as metrics
 
 
 def test_UniformInversePropensity(data):
@@ -69,29 +71,15 @@ def test_SNIPS_factory(data, propensity_type, expected_class):
         (metrics.PropensityType.USER, (2 / 3)),
     ],
 )
-def test_SNIPS(propensity_type, expected_score):
+def test_SNIPS(data, X_pred, X_true, propensity_type, expected_score):
     K = 2
     # Test uniform propensities
     factory = metrics.SNIPSFactory(propensity_type)
 
-    data = generate_data()
     factory.fit(data)
     metric = factory.create(K)
 
-    pred_users, pred_items, pred_values = (
-        [0, 0, 0, 1, 1, 1],
-        [0, 2, 3, 1, 3, 4],
-        [0.3, 0.2, 0.1, 0.23, 0.3, 0.5],
-    )
-    true_users, true_items = [0, 0, 1, 1, 1], [0, 2, 0, 1, 3]
-    pred = scipy.sparse.csr_matrix(
-        (pred_values, (pred_users, pred_items)), shape=(2, 5)
-    )
-    true_data = scipy.sparse.csr_matrix(
-        ([1 for i in range(len(true_users))], (true_users, true_items)), shape=(2, 5)
-    )
-
-    metric.update(pred, true_data)
+    metric.update(X_pred, X_true)
     assert metric.num_users == 2
     numpy.testing.assert_almost_equal(metric.value, expected_score)
 
@@ -104,73 +92,28 @@ def test_SNIPS(propensity_type, expected_score):
         (metrics.PropensityType.USER, (2 / 3), 1),
     ],
 )
-def test_SNIPS_w_batch_size(propensity_type, expected_score, batch_size):
+def test_SNIPS_w_batch_size(data, X_pred, X_true, propensity_type, expected_score, batch_size):
     K = 2
     # Test uniform propensities
     factory = metrics.SNIPSFactory(propensity_type)
 
-    data = generate_data()
     factory.fit(data)
     metric = factory.create(K)
 
-    pred_users, pred_items, pred_values = (
-        [0, 0, 0, 1, 1, 1],
-        [0, 2, 3, 1, 3, 4],
-        [0.3, 0.2, 0.1, 0.23, 0.3, 0.5],
-    )
-    true_users, true_items = [0, 0, 1, 1, 1], [0, 2, 0, 1, 3]
-    pred = scipy.sparse.csr_matrix(
-        (pred_values, (pred_users, pred_items)), shape=(2, 5)
-    )
-    true_data = scipy.sparse.csr_matrix(
-        ([1 for i in range(len(true_users))], (true_users, true_items)), shape=(2, 5)
-    )
-
-    max_user = pred.shape[0]
+    max_user = X_pred.shape[0]
     u_c = 0
-    print("prediction")
-    print(pred.toarray())
-    print("true_data")
-    print(true_data.toarray())
+
     while u_c < max_user:
-        u_end = min(u_c+batch_size, max_user)
+        u_end = min(u_c + batch_size, max_user)
         users = list(range(u_c, u_end))
 
-        mask = numpy.zeros((true_data.shape[0], 1))
+        mask = numpy.zeros((X_true.shape[0], 1))
         mask[users, 0] = 1
-        print(mask)
 
-        local_pred = pred.multiply(mask).tocsr()
-        print("local_pred")
-        print(local_pred.toarray())
-        local_true = true_data.multiply(mask).tocsr()
-        print("local_true")
-        print(local_true.toarray())
+        local_pred = X_pred.multiply(mask).tocsr()
+        local_true = X_true.multiply(mask).tocsr()
         metric.update(local_pred, local_true)
         u_c = u_end
 
     assert metric.num_users == 2
     numpy.testing.assert_almost_equal(metric.value, expected_score)
-
-
-def test_recall():
-    K = 2
-    metric = metrics.RecallK(K)
-
-    pred_users, pred_items, pred_values = (
-        [0, 0, 0, 2, 2, 2],
-        [0, 2, 3, 1, 3, 4],
-        [0.3, 0.2, 0.1, 0.23, 0.3, 0.5],
-    )
-    true_users, true_items = [0, 0, 2, 2, 2], [0, 2, 0, 1, 3]
-    pred = scipy.sparse.csr_matrix(
-        (pred_values, (pred_users, pred_items)), shape=(10, 5)
-    )
-    true_data = scipy.sparse.csr_matrix(
-        ([1 for i in range(len(true_users))], (true_users, true_items)), shape=(10, 5)
-    )
-
-    metric.update(pred, true_data)
-
-    assert metric.num_users == 2
-    assert metric.value == 0.75
