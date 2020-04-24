@@ -93,6 +93,10 @@ class FilterDurableGoods(RetailAlgorithm):
 
         return self.rec_algo.predict(consumable_X)
 
+    @property
+    def name(self):
+        return f"{self.rec_algo.name}_filter_durable"
+
 
 class DiscountDurableGoods(RetailAlgorithm):
     def __init__(
@@ -126,3 +130,7 @@ class DiscountDurableGoods(RetailAlgorithm):
         return self.rec_algo.predict(
             consumable_X
         ) - self.discount_value * self.rec_algo.predict(durable_X)
+
+    @property
+    def name(self):
+        return f"{self.rec_algo.name}_discount_durable_{self.discount}"
