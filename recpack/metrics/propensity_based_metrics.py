@@ -148,10 +148,6 @@ class UserInversePropensity(InversePropensity):
     def get(self, users):
         # Compute the inverse propensities on the fly
         propensities = self._get_propensities(users)
-        print("propensities")
-        print(propensities.toarray())
-        print(propensities.nnz)
-        print(propensities.data)
         inverse_propensities = propensities.copy()
         inverse_propensities.data = 1 / propensities.data
         # Cap the inverse propensity to sensible values,
