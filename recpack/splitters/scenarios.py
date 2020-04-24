@@ -49,7 +49,7 @@ class StrongGeneralizationTimed(Scenario):
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
         self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_in)
 
-    def split(self, data, data_2):
+    def split(self, data):
         # Split across user dimension
         tr_data, te_data = self.strong_gen.split(data)
         # Make sure only interactions before t are used for training
