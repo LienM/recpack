@@ -8,7 +8,7 @@ import recpack.splitters.scenarios as scenarios
 def test_strong_generalization_timed_split(data_m, perc_users_in, t):
 
     scenario = scenarios.StrongGeneralizationTimed(perc_users_in, t)
-    scenario.split(data_m, data_m)
+    scenario.split(data_m)
 
     tr = scenario.training_data
     te_data_in, te_data_out = scenario.test_data
