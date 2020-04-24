@@ -62,7 +62,6 @@ def test_popularity():
     user_i = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
     values = [1] * 10
     train_data = scipy.sparse.csr_matrix((values, (user_i, item_i)))
-    K = 5
     algo = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
 
     algo.fit(train_data)
@@ -70,8 +69,9 @@ def test_popularity():
     _in = scipy.sparse.csr_matrix(([1, 1], ([0, 1], [1, 1])), shape=(5, 5))
     prediction = algo.predict(_in)
 
-    assert (prediction[0] == prediction[1]).all()
-    assert prediction[0][4] != 0
-    assert prediction[0][3] != 0
-    assert prediction[0][4] > prediction[0][3]
-    assert (prediction[0][:3] == numpy.array([0, 0, 0])).all()
+
+    assert (prediction[0] != prediction[1]).nnz == 0
+    assert prediction[0, 4] != 0
+    assert prediction[0, 3] != 0
+    assert prediction[0, 4] > prediction[0, 3]
+    assert (prediction[0, :3].toarray() == numpy.array([0, 0, 0])).all()

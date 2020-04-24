@@ -3,6 +3,7 @@ import math
 import numpy as np
 import scipy
 from scipy.sparse import diags
+import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
 
 from recpack.algorithms.user_item_interactions_algorithms import (
@@ -39,13 +40,17 @@ class ItemKNN(UserItemInteractionsAlgorithm):
         mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))))
         self.item_cosine_similarities = self.item_cosine_similarities.multiply(mask)
 
-    def predict(self, X):
+    def predict(self, X: scipy.sparse.csr_matrix):
         # Use total sum of similarities
         # TODO: Use average?
         if self.item_cosine_similarities is None:
             raise Exception("Fit a model before trying to predict with it.")
         scores = X @ self.item_cosine_similarities
-        return scores.toarray()
+
+        if not isinstance(scores, scipy.sparse.csr_matrix):
+            scores = scipy.sparse.csr_matrix(scores)
+
+        return scores
 
     @property
     def name(self):
@@ -103,7 +108,11 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
         if self.item_cosine_similarities is None:
             raise Exception("Fit a model before trying to predict with it.")
         scores = X @ self.item_cosine_similarities
-        return scores.toarray()
+
+        if not isinstance(scores, scipy.sparse.csr_matrix):
+            scores = scipy.sparse.csr_matrix(scores)
+
+        return scores
 
     @property
     def name(self):

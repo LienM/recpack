@@ -6,7 +6,7 @@ import logging
 def get_logger():
     logger = logging.getLogger("recpack")
 
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)

@@ -6,7 +6,6 @@ from recpack.utils import get_logger
 
 
 class Metric:
-
     def __init__(self):
         super().__init__()
         self.logger = get_logger()
@@ -16,29 +15,54 @@ class Metric:
         return ""
 
 
-class RecallK(Metric):
+class MetricK(Metric):
     def __init__(self, K):
         super().__init__()
         self.K = K
+
+    @property
+    def name(self):
+        return ""
+
+    def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
+        # Get nonzero users
+        nonzero_users = list(set(X_pred.nonzero()[0]))
+        X = X_pred[nonzero_users, :].toarray()
+
+        items = numpy.argpartition(X, -self.K)[:, -self.K :]
+
+        U, I, V = [], [], []
+
+        for ix, user in enumerate(nonzero_users):
+            U.extend([user] * self.K)
+            I.extend(items[ix])
+            V.extend(X[ix, items[ix]])
+
+        X_pred_top_K = scipy.sparse.csr_matrix(
+            (V, (U, I)), dtype=X_pred.dtype, shape=X_pred.shape
+        )
+
+        return X_pred_top_K
+
+
+class RecallK(MetricK):
+    def __init__(self, K):
+        super().__init__(K)
         self.recall = 0
         self.num_users = 0
 
-    def update(self, X_pred, X_true, users=None):
+    def update(self, X_pred, X_true):
         # resolve top K items per user
         # Get indices of top K items per user
 
         # Per user get a set of the topK predicted items
-        topK_items_sets = {
-            u: set(best_items_row[-self.K:])
-            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
-        }
+        X_pred_top_K = self.get_topK(X_pred)
 
-        # Per user get a set of interacted items.
-        items_sets = {u: set(X_true[u].nonzero()[1]) for u in range(X_true.shape[0])}
+        nonzero_users = list(set(X_pred.nonzero()[0]))
 
-        for u in topK_items_sets.keys():
-            recommended_items = topK_items_sets[u]
-            true_items = items_sets[u]
+        for u in nonzero_users:
+            recommended_items = set(X_pred_top_K[u, :].nonzero()[1])
+            true_items = set(X_true[u, :].nonzero()[1])
 
             self.recall += len(recommended_items.intersection(true_items)) / min(
                 self.K, len(true_items)
@@ -61,27 +85,31 @@ class RecallK(Metric):
         return self.recall / self.num_users
 
 
-class MeanReciprocalRankK(Metric):
+class MeanReciprocalRankK(MetricK):
     def __init__(self, K):
-        super().__init__()
-        self.K = K
+        """
+        The MeanReciprocalRank metric reports the first rank at which the prediction
+        matches one of the true items for that user.
+        """
+        super().__init__(K)
         self.rr = 0
         self.num_users = 0
 
-    def update(self, X_pred, X_true, users=None):
+    def update(self, X_pred, X_true):
         # Per user get a sorted list of the topK predicted items
-        topK_items = {
-            u: best_items_row[-self.K:][
-                numpy.argsort(X_pred[u][best_items_row[-self.K:]])
-            ][::-1]
-            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
-        }
+        X_pred_top_K = self.get_topK(X_pred)
 
-        items_sets = {u: set(X_true[u].nonzero()[1]) for u in range(X_true.shape[0])}
+        nonzero_users = list(set(X_pred.nonzero()[0]))
 
-        for u in topK_items.keys():
-            for ix, item in enumerate(topK_items[u]):
-                if item in items_sets[u]:
+        for u in nonzero_users:
+            true_items = set(X_true[u, :].nonzero()[1])
+            recommended_items = X_pred_top_K[u, :].nonzero()[1]
+            item_scores = X_pred_top_K[u, recommended_items].toarray()[0]
+
+            arr_indices = numpy.argsort(item_scores)
+
+            for ix, item in enumerate(reversed(recommended_items[arr_indices])):
+                if item in true_items:
                     self.rr += 1 / (ix + 1)
                     break
 
@@ -103,42 +131,49 @@ class MeanReciprocalRankK(Metric):
         return f"MRR_{self.K}"
 
 
-class NDCGK(Metric):
+class NDCGK(MetricK):
     def __init__(self, K):
-        super().__init__()
-        self.K = K
+        super().__init__(K)
         self.NDCG = 0
         self.num_users = 0
 
         self.discount_template = 1.0 / numpy.log2(numpy.arange(2, K + 2))
 
         # Calculate IDCG values by creating a list of partial sums (the functional way)
-        self.IDCG_cache = [0] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y))
+        self.IDCG_cache = [0] + list(
+            itertools.accumulate(self.discount_template, lambda x, y: x + y)
+        )
 
-    def update(self, X_pred, X_true, users=None):
+    def update(self, X_pred, X_true):
 
-        topK_items = {
-            u: best_items_row[-self.K:][
-                numpy.argsort(X_pred[u][best_items_row[-self.K:]])
-            ][::-1]
-            for u, best_items_row in enumerate(numpy.argpartition(X_pred, -self.K))
-        }
+        X_pred_top_K = self.get_topK(X_pred)
 
-        items_sets = {u: set(X_true[u].nonzero()[1]) for u in range(X_true.shape[0])}
+        nonzero_users = list(set(X_pred.nonzero()[0]))
 
-        for u in topK_items.keys():
-            M = min(self.K, len(items_sets[u]))
+        for u in nonzero_users:
+            true_items = set(X_true[u, :].nonzero()[1])
+            recommended_items = X_pred_top_K[u, :].nonzero()[1]
+            item_scores = X_pred_top_K[u, recommended_items].toarray()[0]
+
+            arr_indices = numpy.argsort(item_scores)
+
+            M = min(self.K, len(true_items))
             if M == 0:
                 continue
 
-            # retrieve IDCG from cache
+            # Score of optimal ordering for M true items.
             IDCG = self.IDCG_cache[M]
 
             # Compute DCG
             DCG = sum(
-                (self.discount_template[rank] * (item in items_sets[u]))
-                for rank, item in enumerate(topK_items[u])
+                (
+                    self.discount_template[rank] * (item in true_items)
+                    for rank, item in enumerate(
+                        reversed(recommended_items[arr_indices])
+                    )
+                )
             )
+
 
             self.num_users += 1
             self.NDCG += DCG / IDCG
@@ -160,13 +195,12 @@ class NDCGK(Metric):
 
 
 class Coverage(Metric):
-
     def __init__(self):
         pass
 
 
 class MutexMetric:
-    # TODO Refactor into a Precision metric, a FP and a TN metric. 
+    # TODO Refactor into a Precision metric, a FP and a TN metric.
     """
     Metric used to evaluate the mutex predictors
 

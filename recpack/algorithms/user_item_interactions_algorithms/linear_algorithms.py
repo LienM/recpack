@@ -67,7 +67,12 @@ class EASE(UserItemInteractionsAlgorithm):
     def predict(self, X):
         if self.B is None:
             raise Exception("Fit a model before trying to predict with it.")
-        return X @ self.B
+        scores = X @ self.B
+
+        if not isinstance(scores, scipy.sparse.csr_matrix):
+            scores = scipy.sparse.csr_matrix(scores)
+
+        return scores
 
     @property
     def name(self):
@@ -168,7 +173,11 @@ class SLIM(UserItemInteractionsAlgorithm):
             raise Exception("Fit a model before trying to predict with it.")
         # TODO, this looks exactly the same as NN's recommendation -> refactor into a similarity based class.
         scores = X @ self.similarity_matrix
-        return scores.toarray()
+
+        if not isinstance(scores, scipy.sparse.csr_matrix):
+            scores = scipy.sparse.csr_matrix(scores)
+
+        return scores
 
     @property
     def name(self):

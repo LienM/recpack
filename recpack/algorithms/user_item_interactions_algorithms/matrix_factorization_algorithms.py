@@ -21,6 +21,10 @@ class MF(UserItemInteractionsAlgorithm):
 
         # TODO again the same similarity approach
         scores = X @ self.similarity_matrix
+
+        if not isinstance(scores, scipy.sparse.csr_matrix):
+            scores = scipy.sparse.csr_matrix(scores)
+
         return scores
 
     @property
