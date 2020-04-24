@@ -79,12 +79,6 @@ def test_SNIPS_factory(data, propensity_type, expected_class):
 def test_SNIPS(data, X_pred, X_true, propensity_type, expected_score):
     K = 2
 
-    print("data")
-    print(data.toarray())
-    print("X_pred")
-    print(X_pred.toarray())
-    print("X_true")
-    print(X_true.toarray())
 
     # Test uniform propensities
     factory = metrics.SNIPSFactory(propensity_type)
