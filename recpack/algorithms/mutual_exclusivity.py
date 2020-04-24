@@ -106,7 +106,7 @@ class MuxPredictor(TwoMatrixFitAlgorithm):
         if self.mux_model is None:
             raise RuntimeError("mux model has not been trained yet.")
         values = self.mux_model @ X.T
-        values[values > 0] = 1  # Binarize to make it easier for downstream use
+        # values[values > 0] = 1  # Binarize to make it easier for downstream use
         return values.T
 
 
@@ -122,6 +122,7 @@ class LSHMutexPredictor:
     TODO: Currently only supports training on a single column of metadata,
           extending this to a set of columns could improve the model
 
+    If you want to work on a combination of data fields: combine the fields in a string field to be used by this class.
     """
     def __init__(self, shape, min_jaccard=0.3, n_gram=3, content_key='title', label_key='itemId'):
         self.mux_model = None
@@ -132,7 +133,7 @@ class LSHMutexPredictor:
         self.content_key = content_key
         self.label_key = label_key
 
-    def train(self, df: pandas.Dataframe):
+    def fit(self, df: pandas.DataFrame):
         content = list(df[self.content_key])
         labels = list(df[self.label_key])
 
@@ -142,19 +143,17 @@ class LSHMutexPredictor:
         # Construct a scipy sparse Mutex prediction model
         x_ids = []
         y_ids = []
-        for label in labels:
-            alternatives = lsh.query(label, min_jaccard=self.min_jaccard)
-            x_ids.extend([label for i in range(len(alternatives))])
-            y_ids.extend(alternatives)
+        values = []
+        x_ids, y_ids, values = [i for i in zip(*lsh.edge_list(min_jaccard=self.min_jaccard, jaccard_weighted=True))]
 
-        self.mux_model = scipy.sparse.csr_matrix((numpy.ones(len(x_ids)), (x_ids, y_ids)), shape=self.shape)
+        self.mux_model = scipy.sparse.csr_matrix((values, (x_ids, y_ids)), shape=self.shape)
 
     def predict(self, X):
         if self.mux_model is None:
             raise RuntimeError("mux model has not been trained yet.")
         values = self.mux_model @ X.T
         values[values > 0] = 1  # Binarize to make it easier for downstream use
-        return values.T
+        return values.T.tocsr()
 
 
 # FIXME: this can be reused for other filtering purposes, but it was easier to write this way :D
