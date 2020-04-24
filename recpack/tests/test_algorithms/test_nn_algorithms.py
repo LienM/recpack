@@ -30,8 +30,6 @@ def test_item_knn():
     _in = scipy.sparse.csr_matrix(([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
     result = algo.predict(_in)
 
-    print(result)
-
     numpy.testing.assert_almost_equal(result.toarray(), expected_similarities)
 
     # Make sure similarities are added correctly.
