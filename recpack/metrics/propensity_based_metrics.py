@@ -54,14 +54,12 @@ class SNIPS(MetricK):
 
         # get top K recommendations
         x_pred_top_k = self.get_topK(X_pred)
-        print(x_pred_top_k.toarray())
 
         # binarize the prediction matrix
         x_pred_top_k[x_pred_top_k > 0] = 1
 
         # Sort the list of users to avoid weird issues with expected input
         ip = self.inverse_propensities.get(sorted(list(users)))
-        index_map = {x: e for e, x in enumerate(sorted(list(users)))}
 
         X_pred_as_propensity = x_pred_top_k.multiply(ip).tocsr()
         X_true_as_propensity = X_true.multiply(ip).tocsr()
