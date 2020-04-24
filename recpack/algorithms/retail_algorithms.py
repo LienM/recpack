@@ -42,8 +42,6 @@ class ProductLabeler:
 
         new_X[nonzero_users, :] = X[nonzero_users, :] - durable[nonzero_users, :]
 
-        new_X.eliminate_zeros()
-
         return new_X
 
 
