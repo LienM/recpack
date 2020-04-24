@@ -52,19 +52,10 @@ class SNIPS(MetricK):
 
         users = set(X_pred.nonzero()[0]).union(set(X_true.nonzero()[0]))
 
-        # Top K mask on the X_pred
-        topK_item_sets = self.get_topK_item_sets(X_pred)
-        user_indices, item_indices = zip(
-            *[(u, i) for u in topK_item_sets for i in topK_item_sets[u]]
-        )
-        values = [1 for i in range(len(user_indices))]
-        topK_mask = scipy.sparse.csr_matrix(
-            (values, (user_indices, item_indices)), shape=X_pred.shape
-        )
+        # get top K recommendations
+        x_pred_top_k = self.get_topK(X_pred)
+        print(x_pred_top_k.toarray())
 
-        x_pred_top_k = scipy.sparse.csr_matrix(X_pred, shape=X_pred.shape).multiply(
-            topK_mask
-        )
         # binarize the prediction matrix
         x_pred_top_k[x_pred_top_k > 0] = 1
 
@@ -157,6 +148,10 @@ class UserInversePropensity(InversePropensity):
     def get(self, users):
         # Compute the inverse propensities on the fly
         propensities = self._get_propensities(users)
+        print("propensities")
+        print(propensities.toarray())
+        print(propensities.nnz)
+        print(propensities.data)
         inverse_propensities = propensities.copy()
         inverse_propensities.data = 1 / propensities.data
         # Cap the inverse propensity to sensible values,
@@ -168,7 +163,13 @@ class UserInversePropensity(InversePropensity):
         row_sum = self.data_matrix[users].sum(axis=1)
         user_mask = numpy.zeros((self.data_matrix.shape[0], 1))
         user_mask[users, 0] = 1
-        propensities = scipy.sparse.csr_matrix(self.data_matrix.multiply(user_mask) / row_sum)
+        dm_selected_users = self.data_matrix.multiply(user_mask)
+        # After removing potentially non zero values by mult with 0, we need to remove them
+        dm_selected_users.eliminate_zeros()
+
+        propensities = dm_selected_users.tocsr()
+        propensities[users] = scipy.sparse.csr_matrix(propensities[users] / row_sum)
+
         return propensities
 
 

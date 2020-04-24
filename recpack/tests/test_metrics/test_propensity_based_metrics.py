@@ -26,14 +26,19 @@ def test_GlobalInversePropensity(data):
 
 
 def test_UserInversePropensity(data):
-    users = [0, 1]
+    users = [0, 2]
     p = metrics.UserInversePropensity(data)
     # Make sure the propensity computation is right
-    numpy.testing.assert_almost_equal(p._get_propensities(users).sum(axis=1), 1)
+    numpy.testing.assert_almost_equal(p._get_propensities(users).sum(axis=1)[users], 1)
 
+    expected_values = [4, 0, 4, 0, 4 / 2, 0, 4, 0, 4 / 2, 4]
+    expected_users = [0, 0, 0, 0, 0, 2, 2, 2, 2, 2]
+    expected_items = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
+
+    expected_mat = scipy.sparse.csr_matrix((expected_values, (expected_users, expected_items)), shape=(10, 5))
     # Make sure the inverse propensities are right
     numpy.testing.assert_almost_equal(
-        p.get(users).toarray(), numpy.array([[4, 0, 4, 0, 4 / 2], [0, 4, 0, 4 / 2, 4]])
+        p.get(users).toarray(), expected_mat.toarray()
     )
 
 
@@ -73,6 +78,14 @@ def test_SNIPS_factory(data, propensity_type, expected_class):
 )
 def test_SNIPS(data, X_pred, X_true, propensity_type, expected_score):
     K = 2
+
+    print("data")
+    print(data.toarray())
+    print("X_pred")
+    print(X_pred.toarray())
+    print("X_true")
+    print(X_true.toarray())
+
     # Test uniform propensities
     factory = metrics.SNIPSFactory(propensity_type)
 
@@ -93,6 +106,13 @@ def test_SNIPS(data, X_pred, X_true, propensity_type, expected_score):
     ],
 )
 def test_SNIPS_w_batch_size(data, X_pred, X_true, propensity_type, expected_score, batch_size):
+    print("data")
+    print(data.toarray())
+    print("X_pred")
+    print(X_pred.toarray())
+    print("X_true")
+    print(X_true.toarray())
+
     K = 2
     # Test uniform propensities
     factory = metrics.SNIPSFactory(propensity_type)
@@ -111,8 +131,14 @@ def test_SNIPS_w_batch_size(data, X_pred, X_true, propensity_type, expected_scor
         mask[users, 0] = 1
 
         local_pred = X_pred.multiply(mask).tocsr()
+        local_pred.eliminate_zeros()
         local_true = X_true.multiply(mask).tocsr()
-        metric.update(local_pred, local_true)
+
+        print("local_pred")
+        print(local_pred.toarray())
+        print(local_pred.nnz)
+        if local_pred.nnz > 0:
+            metric.update(local_pred, local_true)
         u_c = u_end
 
     assert metric.num_users == 2
