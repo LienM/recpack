@@ -174,7 +174,6 @@ class NDCGK(MetricK):
                 )
             )
 
-            print(DCG)
             print(IDCG)
 
             self.num_users += 1
