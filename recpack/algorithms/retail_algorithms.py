@@ -60,7 +60,7 @@ class RetailAlgorithm(Algorithm):
         """
         pass
 
-    def fit_classifier(self, purchases, labels):
+    def fit_classifier(self, labels, purchases):
         pass
 
     def predict(self, X):
@@ -80,13 +80,13 @@ class FilterDurableGoods(RetailAlgorithm):
         :param X: [description]
         :type X: [type]
         """
-        self.rec_algo.fit(X)
-
         if not self.goods_classifier.is_fit:
             raise RuntimeError("Goods Classifier should have been fit")
 
-    def fit_classifier(self, purchases, labels):
-        self.goods_classifier.fit(purchases, labels)
+        self.rec_algo.fit(X)
+
+    def fit_classifier(self, labels, purchases):
+        self.goods_classifier.fit(labels, purchases)
 
     def predict(self, X):
         consumable_X = self.goods_classifier.get_consumable(X)
@@ -101,6 +101,9 @@ class DiscountDurableGoods(RetailAlgorithm):
         self.rec_algo = rec_algo
         self.goods_classifier = goods_classifier
         self.discount_value = discount
+
+    def fit_classifier(self, labels, purchases):
+        self.goods_classifier.fit(labels, purchases)
 
     def fit(self, X):
         """
