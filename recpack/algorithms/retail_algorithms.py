@@ -133,4 +133,4 @@ class DiscountDurableGoods(RetailAlgorithm):
 
     @property
     def name(self):
-        return f"{self.rec_algo.name}_discount_durable_{self.discount}"
+        return f"{self.rec_algo.name}_discount_durable_{self.discount_value}"
