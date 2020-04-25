@@ -65,7 +65,7 @@ def test_discount_durable_goods(pageviews, purchases, labels):
 
     base_algo = true_baseline_algorithms.Popularity(1)
 
-    true_algo = retail_algorithms.DiscountDurableGoods(base_algo, pl, discount=0.5)
+    true_algo = retail_algorithms.DiscountDurableGoods(base_algo, pl, discount_value=0.5, K=1)
 
     true_algo.fit(pageviews)
 

@@ -1,7 +1,7 @@
 from typing import Union
 
 import numpy as np
-import scipy.sparse as sp
+import scipy.sparse
 
 from recpack.algorithms.algorithm_base import Algorithm
 
@@ -100,11 +100,11 @@ class FilterDurableGoods(RetailAlgorithm):
 
 class DiscountDurableGoods(RetailAlgorithm):
     def __init__(
-        self, rec_algo, goods_classifier, discount=1 / 3
-    ):
+        self, rec_algo, goods_classifier, discount_value=1 / 3, K=10):
         self.rec_algo = rec_algo
         self.goods_classifier = goods_classifier
-        self.discount_value = discount
+        self.discount_value = discount_value
+        self.K = K
 
     def fit_classifier(self, labels, purchases):
         self.goods_classifier.fit(labels, purchases)
@@ -127,9 +127,33 @@ class DiscountDurableGoods(RetailAlgorithm):
         consumable_X = self.goods_classifier.get_consumable(X)
         durable_X = self.goods_classifier.get_durable(X)
 
+        durable_recos = self.rec_algo.predict(durable_X)
+
+        topK_durable_recos = self.get_topK(durable_recos)
+
         return self.rec_algo.predict(
             consumable_X
-        ) - self.discount_value * self.rec_algo.predict(durable_X)
+        ) - self.discount_value * topK_durable_recos
+
+    def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
+        # Get nonzero users
+        nonzero_users = list(set(X_pred.nonzero()[0]))
+        X = X_pred[nonzero_users, :].toarray()
+
+        items = np.argpartition(X, -self.K)[:, -self.K:]
+
+        U, I, V = [], [], []
+
+        for ix, user in enumerate(nonzero_users):
+            U.extend([user] * self.K)
+            I.extend(items[ix])
+            V.extend(X[ix, items[ix]])
+
+        X_pred_top_K = scipy.sparse.csr_matrix(
+            (V, (U, I)), dtype=X_pred.dtype, shape=X_pred.shape
+        )
+
+        return X_pred_top_K
 
     @property
     def name(self):
