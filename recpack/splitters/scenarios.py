@@ -4,12 +4,13 @@ from recpack.utils import get_logger
 
 
 class StrongGeneralization(Scenario):
-    def __init__(self, perc_users_in):
+    def __init__(self, perc_users_train, perc_interractions_in):
         super().__init__()
-        self.perc_users_in = perc_users_in
+        self.perc_users_train = perc_users_train
+        self.perc_interractions_in = perc_interractions_in
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_in)
-        self.interaction_split = splitter_base.InteractionSplitter()
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_train)
+        self.interaction_split = splitter_base.PercentageInteractionSplitter(perc_interractions_in)
 
     def split(self, data):
         self.training_data, te_data = self.strong_gen.split(data)
