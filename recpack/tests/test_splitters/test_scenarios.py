@@ -52,10 +52,10 @@ def test_timed_out_of_domain_evaluate(data_m, t):
     assert (tr.values.nonzero()[1] == te_data_in.values.nonzero()[1]).all()
 
 
-@pytest.mark.parametrize("perc_users_train, perc_interractions_in", [(0.7, 0.5), (0, 0.5), (0.3, 0)])
-def test_strong_generalization_timed_split(data_m, perc_users_train, perc_interractions_in):
+@pytest.mark.parametrize("perc_users_train, perc_interactions_in", [(0.7, 0.5), (0, 0.5), (0.3, 0)])
+def test_strong_generalization_timed_split(data_m, perc_users_train, perc_interactions_in):
 
-    scenario = scenarios.StrongGeneralization(perc_users_train, perc_interractions_in)
+    scenario = scenarios.StrongGeneralization(perc_users_train, perc_interactions_in)
     scenario.split(data_m)
 
     tr = scenario.training_data
@@ -79,4 +79,4 @@ def test_strong_generalization_timed_split(data_m, perc_users_train, perc_interr
 
     # Higher volatility, so not as bad to miss
     diff_allowed = 0.2
-    assert abs(len(te_in_interactions) / (len(te_in_interactions) + len(te_out_interactions)) - perc_interractions_in) < diff_allowed
+    assert abs(len(te_in_interactions) / (len(te_in_interactions) + len(te_out_interactions)) - perc_interactions_in) < diff_allowed
