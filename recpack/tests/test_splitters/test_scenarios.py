@@ -53,7 +53,7 @@ def test_timed_out_of_domain_evaluate(data_m, t):
 
 
 @pytest.mark.parametrize("perc_users_train, perc_interactions_in", [(0.7, 0.5), (0, 0.5), (0.3, 0)])
-def test_strong_generalization_timed_split(data_m, perc_users_train, perc_interactions_in):
+def test_strong_generalization_split(data_m, perc_users_train, perc_interactions_in):
 
     scenario = scenarios.StrongGeneralization(perc_users_train, perc_interactions_in)
     scenario.split(data_m)
