@@ -49,10 +49,12 @@ class Popularity(Algorithm):
     def __init__(self, K=200):
         self.sorted_scores = None
         self.K = K
+        self.max = None
 
     def fit(self, X):
         items = list(X.nonzero()[1])
-        self.sorted_scores = Counter(items).most_common()
+        sorted_scores = Counter(items).most_common()
+        self.sorted_scores = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
 
     def predict(self, X):
         """For each user predict the K most popular items"""
@@ -67,9 +69,7 @@ class Popularity(Algorithm):
             I.extend(items)
             V.extend(values)
 
-        score_matrix = scipy.sparse.csr_matrix(
-            (V, (U, I)), shape=X.shape
-        )
+        score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
         return score_matrix
 
     @property
