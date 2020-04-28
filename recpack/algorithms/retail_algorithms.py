@@ -13,15 +13,15 @@ class ProductLabeler:
         ProductLabeler labels the purchase history with durable or consumable.
         """
         self.is_fit = False
-        self.user_discount = None
+        self.labels = None
 
-    def fit(self, labels, purchases):
+    def fit(self, labels):
         """
         Fit the ProductLabeler so that if an item is both durable
         and it occurs in the user's purchase history,
         it is labeled 1, otherwise zero.
         """
-        self.user_discount = purchases.multiply(labels)
+        self.labels = labels
         self.is_fit = True
 
     def get_durable(self, X):
@@ -29,13 +29,13 @@ class ProductLabeler:
         Return only the part of X that is durable
         and occured in the user's purchase history.
         """
-        return X.multiply(self.user_discount)
+        return X.multiply(self.labels)
 
     def get_consumable(self, X):
         """
         Return only the part of X that is not both durable and occured in the user's purchase history.
         """
-        durable = X.multiply(self.user_discount)
+        durable = X.multiply(self.labels)
 
         new_X = X.copy()
 
@@ -46,21 +46,21 @@ class ProductLabeler:
         return new_X
 
 
-class GlobalProductLabeler:
+class PurchaseHistoryDurableFilter:
     def __init__(self):
         """
         ProductLabeler labels the purchase history with durable or consumable.
         """
         self.is_fit = False
-        self.user_discount = None
+        self.user_labels = None
 
-    def fit(self, labels):
+    def fit(self, labels, purchases):
         """
         Fit the ProductLabeler so that if an item is both durable
         and it occurs in the user's purchase history,
         it is labeled 1, otherwise zero.
         """
-        self.user_discount = labels
+        self.user_labels = purchases.multiply(labels)
         self.is_fit = True
 
     def get_durable(self, X):
@@ -68,13 +68,13 @@ class GlobalProductLabeler:
         Return only the part of X that is durable
         and occured in the user's purchase history.
         """
-        return X.multiply(self.user_discount)
+        return X.multiply(self.user_labels)
 
     def get_consumable(self, X):
         """
         Return only the part of X that is not both durable and occured in the user's purchase history.
         """
-        durable = X.multiply(self.user_discount)
+        durable = X.multiply(self.user_labels)
 
         new_X = X.copy()
 
@@ -266,29 +266,19 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
 
         # Get the items the user has either purchased but are consumable or items that are durable,
         # but the user has not yet purchased
-        consumable_X = self.user_goods_classifier.get_consumable(X)
-
         durable_X = self.user_goods_classifier.get_durable(X)
+        
+        reco_scores = self.rec_algo.predict(X)
 
-        durable_recos = self.rec_algo.predict(durable_X)
-        # discount the durable neighbours in the top K
-        durable_recos_discounted = durable_recos - self.discount_value * self.goods_classifier.get_durable(self.get_topK(durable_recos))
+        # For each nonzero item in durable_X get the score for that item, and discount it from the user's that have seen that item.
+        for i in set(durable_X.nonzero()[1]):
+            m = scipy.sparse.csr_matrix(([1], ([0], [i])), shape=(1, X.shape[1]))
+            # Discount the items the durable neighbours
+            pred = self.rec_algo.predict(durable_X.multiply(m))
 
-        print("durable_recos:")
-        print(durable_recos.toarray())
-        print("durable_recos_discounted")
-        print(durable_recos_discounted.toarray())
-        print("topk_durable_recos")
-        print(self.get_topK(durable_recos).toarray())
-        print("durable from topK")
-        print(self.goods_classifier.get_durable(self.get_topK(durable_recos)))
-        print("durable_items")
-        print(self.goods_classifier.get_durable(scipy.sparse.dia_matrix(5).tocsr()))
+            reco_scores -= self.discount_value * self.goods_classifier.get_durable(self.get_topK(pred))
 
-
-        return self.rec_algo.predict(
-            consumable_X
-        ) + durable_recos_discounted
+        return reco_scores
 
     @property
     def name(self):
