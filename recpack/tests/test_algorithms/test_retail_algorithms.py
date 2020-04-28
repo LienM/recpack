@@ -134,15 +134,13 @@ def test_discount_durable_goods(pageviews, purchases, labels):
 
 def test_discount_durable_neighbours_goods(pageviews, purchases, labels_more_durable_items):
     pl = retail_algorithms.GlobalProductLabeler()
-    pl.fit(labels_more_durable_items)
 
     pl_user = retail_algorithms.ProductLabeler()
-    pl_user.fit(labels_more_durable_items, purchases)
-
 
     base_algo = true_baseline_algorithms.Popularity(1)
 
     true_algo = retail_algorithms.DiscountDurableNeighboursOfDurableItems(base_algo, pl, pl_user, discount_value=1, K=1)
+    true_algo.fit_classifier(labels_more_durable_items, purchases)
 
     true_algo.fit(pageviews)
 
