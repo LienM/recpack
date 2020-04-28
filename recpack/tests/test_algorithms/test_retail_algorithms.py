@@ -57,10 +57,11 @@ def test_global_product_labeler(labels_more_durable_items):
 
 def test_global_product_labeler_durable(pageviews, purchases, labels):
     """
-    User 0 has purchased item 0,
-    User 1 has purched item 4.
-    Item 0 is durable, item 4 is not.
-    each row is supposed to have a 1 for item 0, and a 0 otherwise
+    User 0 has seen item 0,
+    User 1 has not seen item 0.
+    Item 0 is durable.
+    expect user 0 to have 0 in durable, and user 1 to have 0 not in durable
+
     """
     pl = retail_algorithms.GlobalProductLabeler()
     pl.fit(labels)
@@ -74,10 +75,8 @@ def test_global_product_labeler_durable(pageviews, purchases, labels):
 
 def test_global_product_labeler_consumable(pageviews, purchases, labels):
     """
-    User 0 has purchased item 0,
-    User 1 has purched item 4.
-    Item 0 is durable, item 4 is not.
-    each row is supposed to look the same: 0 for item 0 and 1's for the rest
+    There are 5 interactions between users and non durable items
+    Expect the consumable matrix to contain all of these interactions
     """
 
     pl = retail_algorithms.GlobalProductLabeler()
