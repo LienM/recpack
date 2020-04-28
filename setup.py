@@ -17,6 +17,7 @@ setup(
         "PyYaml",
         "snapy",
         "mmh3",
+        "dataclasses",
     ],
     entry_points={
         "console_scripts": [
