@@ -34,3 +34,10 @@ def labels():
     labels = sp.csr_matrix(([1], ([0], [0])), shape=(1, 5))
 
     return labels
+
+
+@pytest.fixture(scope="function")
+def labels_more_durable_items():
+    labels = sp.csr_matrix(([1, 1], ([0, 0], [0, 3])), shape=(1, 5))
+
+    return labels

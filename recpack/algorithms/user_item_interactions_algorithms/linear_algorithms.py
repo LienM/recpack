@@ -69,7 +69,6 @@ class EASE(UserItemInteractionsAlgorithm):
         scores = X @ self.B
 
         if not isinstance(scores, scipy.sparse.csr_matrix):
-            print("oops")
             scores = scipy.sparse.csr_matrix(scores)
 
         return scores
