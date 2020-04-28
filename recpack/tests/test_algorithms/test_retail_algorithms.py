@@ -143,13 +143,10 @@ def test_discount_durable_neighbours_goods(pageviews, purchases, labels_more_dur
 
     res = true_algo.predict(purchases)
 
-    print(res)
-
     # Purchase was discounted  so -1
     assert len(res[0].nonzero()[1]) == 0
     numpy.testing.assert_almost_equal(res[0, 3], 0)
 
     # Recommend item 3 (most viewed)
     assert res[2, 3] != 0
-    print(res[2].nonzero()[1])
     assert len(res[2].nonzero()[1]) == 1
