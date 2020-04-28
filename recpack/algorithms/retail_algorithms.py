@@ -234,6 +234,10 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
         self.discount_value = discount_value
         self.K = K
 
+    def fit_classifier(self, labels, purchases):
+        self.goods_classifier.fit(labels)
+        self.user_goods_classifier.fit(labels, purchases)
+
     def fit(self, X):
         """
         Fit the underlying recommendation algorithm.
