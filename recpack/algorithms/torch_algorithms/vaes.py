@@ -274,13 +274,13 @@ class MultiVAETorch(nn.Module):
         # Use PyTorch Distributions for this.
         self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
 
-        self.p_bin_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
+        self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
 
         self.layers = nn.ModuleList(
             self.q_in_hid_layer,
             self.q_hid_bn_layer,
-            self.p_bin_hid_layer,
+            self.p_bn_hid_layer,
             self.p_hid_out_layer
         )
 
@@ -305,7 +305,7 @@ class MultiVAETorch(nn.Module):
         return mu, logvar
 
     def decode(self, z):
-        h = self.p_bin_hid_layer(z)
+        h = self.p_bn_hid_layer(z)
         h = self.tanh(h)
 
         h = self.p_hid_out_layer(h)
