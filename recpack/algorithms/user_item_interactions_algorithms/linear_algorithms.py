@@ -40,13 +40,12 @@ class EASE(UserItemInteractionsAlgorithm):
         B[np.diag_indices(B.shape[0])] = 0.0
 
         if w is None:
-            self.B = B
-            return B
+            self.B = scipy.sparse.csr_matrix(B)
         else:
             B_scaled = B @ np.diag(w)
-            self.B = B_scaled
+            self.B = scipy.sparse.csr_matrix(B_scaled)
 
-            return B_scaled
+        return 
 
     def load(self, filename):
         self.B = np.load(filename)

@@ -69,7 +69,6 @@ def test_popularity():
     _in = scipy.sparse.csr_matrix(([1, 1], ([0, 1], [1, 1])), shape=(5, 5))
     prediction = algo.predict(_in)
 
-
     assert (prediction[0] != prediction[1]).nnz == 0
     assert prediction[0, 4] != 0
     assert prediction[0, 3] != 0

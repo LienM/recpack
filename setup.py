@@ -16,7 +16,8 @@ setup(
         "snapy==1.0.2",
         "mmh3==2.5.1",
         "torch==1.5.0",
-        "torchtest==0.5"
+        "torchtest==0.5",
+        "dataclasses",
     ]
     + ["pytest==5.4.1", "pytest-cov==2.8.1"],
     entry_points={

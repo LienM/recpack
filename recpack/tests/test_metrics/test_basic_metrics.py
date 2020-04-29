@@ -12,7 +12,7 @@ def test_recall(X_pred, X_true):
     metric.update(X_pred, X_true)
 
     assert metric.num_users == 2
-    assert metric.value == 0.75
+    numpy.testing.assert_almost_equal(metric.value, 0.75)
 
 
 def test_mrr(X_pred, X_true):
@@ -22,7 +22,7 @@ def test_mrr(X_pred, X_true):
     metric.update(X_pred, X_true)
 
     assert metric.num_users == 2
-    assert metric.value == 0.75
+    numpy.testing.assert_almost_equal(metric.value, 0.75)
 
 
 def test_ndcg(X_pred, X_true_simplified):
@@ -40,4 +40,4 @@ def test_ndcg(X_pred, X_true_simplified):
     ) / 2  # 2 users
 
     assert metric.num_users == 2
-    assert metric.value == expected_value
+    numpy.testing.assert_almost_equal(metric.value, expected_value)
