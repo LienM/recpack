@@ -6,7 +6,7 @@ from snapy import MinHash, LSH
 class LSHModel:
     """
     Model based on metadata only.
-    Item similarity is defined by the jacard index of the strings,
+    Item similarity is defined by the jaccard index of the strings,
     this efficiently computed using local sensitivity hasing.
 
     Local Sensitivity Hashing implemented in the SnaPy library.
