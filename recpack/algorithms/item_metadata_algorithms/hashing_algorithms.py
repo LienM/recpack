@@ -17,15 +17,17 @@ class LSHModel:
 
     If you want to work on a combination of data fields: combine the fields in a string field to be used by this class.
     """
-    def __init__(self, data, min_jaccard=0.3, n_gram=3, content_key='title', item_key='itemId'):
+    def __init__(self, data, shape=None, min_jaccard=0.3, n_gram=3, content_key='title', item_key='itemId'):
         self.lsh_model = None
         self.data = data
 
         self.n_gram = n_gram
         self.min_jaccard = min_jaccard
-
-        num_items = data[item_key].nunique()
-        self.shape = (num_items, num_items)
+        
+        self.shape = shape
+        if shape is None:
+            num_items = data[item_key].nunique()
+            self.shape = (num_items, num_items)
 
         self.content_key = content_key
         self.item_key = item_key
