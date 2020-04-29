@@ -1,7 +1,12 @@
 import scipy.sparse
+from recpack.utils import get_logger
 
 
 class Algorithm:
+
+    def __init__(self):
+        super().__init__()
+        self.logger = get_logger()
 
     @property
     def name(self):
@@ -17,13 +22,4 @@ class Algorithm:
         pass
 
     def load(self, filename):
-        pass
-
-
-class Baseline:
-
-    def fit(self, X):
-        pass
-
-    def predict(self, X, K):
         pass
