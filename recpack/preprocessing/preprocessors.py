@@ -120,3 +120,7 @@ class DataFramePreprocessor:
         self.item_id_mapping = helpers.rescale_id_space(
             item_ids, id_mapping=self.item_id_mapping
         )
+
+    def apply_item_id_mapping(self, df: pd.DataFrame):
+        cleaned_item_id = "iid"
+        df.loc[:, cleaned_item_id] = self.map_items(df)

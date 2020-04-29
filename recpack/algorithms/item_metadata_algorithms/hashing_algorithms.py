@@ -36,8 +36,9 @@ class LSHModel:
         if self.trained:
             return
 
-        content = list(df[self.content_key])
-        labels = list(df[self.item_key])
+        df_filter_empty = df[df[self.content_key].str.len() >= self.n_gram]
+        content = list(df_filter_empty[self.content_key])
+        labels = list(df_filter_empty[self.item_key])
 
         minhash = MinHash(content, n_gram=self.n_gram, n_gram_type='char', permutations=100, hash_bits=64)
         lsh = LSH(minhash, labels, no_of_bands=50)
