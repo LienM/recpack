@@ -107,7 +107,7 @@ class MultVAE(Algorithm):
         """
         return (
             self.max_beta
-            if self.steps > self.anneal_steps
+            if self.steps >= self.anneal_steps
             else self.steps / self.anneal_steps
         )
 
@@ -118,6 +118,8 @@ class MultVAE(Algorithm):
             dim_bottleneck_layer=self.dim_bottleneck_layer,
             dropout=self.dropout,
         ).to(self.device)
+
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
     def fit(self, train_data: csr_matrix, val_in: csr_matrix, val_out: csr_matrix):
         """
@@ -133,8 +135,6 @@ class MultVAE(Algorithm):
         # if torch.cuda.device_count() > 1:
         #     self.model = torch.nn.DataParallel(self.model)
         #     multi_gpu = True
-
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
 
         train_users = list(set(train_data.nonzero()[0]))
         val_users = list(set(val_in.nonzero()[0]))
@@ -156,11 +156,9 @@ class MultVAE(Algorithm):
 
             # Clear gradients
             self.optimizer.zero_grad()
-            # Get value for parameter Beta
-            beta = self._get_beta(self.steps)
 
             X_pred, mu, logvar = self.model(X)
-            loss = self.criterion(X_pred, mu, logvar, X, anneal=beta)
+            loss = self.criterion(X_pred, mu, logvar, X, anneal=self._beta)
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
@@ -182,12 +180,10 @@ class MultVAE(Algorithm):
             for batch_idx, user_batch in enumerate(batch(users, self.batch_size)):
                 val_X = naive_sparse2tensor(val_in[user_batch, :]).to(self.device)
                 # Get value for parameter Beta
-                beta = self._get_beta(self.steps)
 
                 val_X_pred, mu, logvar = self.model(val_X)
-                loss = self.criterion(val_X_pred, val_X, mu, logvar, beta)
+                loss = self.criterion(val_X_pred, mu, logvar, val_X, anneal=self._beta)
                 val_loss += loss.item()
-                self.optimizer.step()
 
                 val_X_pred_cpu = csr_matrix(val_X_pred.cpu())
                 val_X_true = val_out[user_batch, :]
@@ -199,10 +195,10 @@ class MultVAE(Algorithm):
         )
 
         if self.stopping_criterion.is_best:
-            self.logger("Model improved. Storing better model.")
+            self.logger.info("Model improved. Storing better model.")
             self.save()
 
-        self.stopping_criterion.refresh()
+        self.stopping_criterion.reset()
 
     def load(self, value):
         # TODO Give better names

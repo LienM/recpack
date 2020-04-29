@@ -1,5 +1,7 @@
 import pytest
 
+import numpy as np
+import scipy.sparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,11 +25,36 @@ from recpack.tests.test_algorithms.torch_test_helpers import assert_vars_change
 
 INPUT_SIZE = 1000
 
-torch.manual_seed(400)
 
-inputs = Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
-targets = Variable(torch.randint(0, 1, (INPUT_SIZE,))).long()
-batch = [inputs, targets]
+@pytest.fixture(scope="function")
+def inputs():
+    torch.manual_seed(400)
+    return Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
+
+
+@pytest.fixture(scope="function")
+def targets():
+    torch.manual_seed(400)
+    return Variable(torch.randint(0, 2, (INPUT_SIZE,))).long()
+
+
+@pytest.fixture(scope="function")
+def larger_matrix():
+    num_interactions = 2000
+    num_users = 500
+    num_items = 500
+
+    pv_users, pv_items, pv_values = (
+        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        [1] * num_interactions,
+    )
+
+    pv = scipy.sparse.csr_matrix(
+        (pv_values, (pv_users, pv_items)), shape=(num_users, num_items)
+    )
+
+    return pv
 
 
 @pytest.fixture(scope="function")
@@ -40,58 +67,65 @@ def mult_vae():
         dim_bottleneck_layer=200,
         dim_hidden_layer=600,
         max_beta=0.2,
-        anneal_steps=2,
+        anneal_steps=20,
         dropout=0.5,
     )
 
 
-def test_training_epoch():
-    pass
+def assert_changed(params_before, params_after, device):
+    # check if variables have changed
+    for (_, p0), (_, p1) in zip(params_before, params_after):
+        assert not torch.equal(p0.to(device), p1.to(device))
 
 
-def test_evaluation_epoch():
-    pass
+def assert_same(params_before, params_after, device):
+    # check if variables have changed
+    for (_, p0), (_, p1) in zip(params_before, params_after):
+        assert torch.equal(p0.to(device), p1.to(device))
 
 
-def test_multi_vae_forward():
+def test_training_epoch(mult_vae, larger_matrix):
+    mult_vae._init_model(larger_matrix.shape[1])
+
+    users = list(set(larger_matrix.nonzero()[1]))
+    params = [np for np in mult_vae.model.named_parameters() if np[1].requires_grad]
+
+    # take a copy
+    params_before = [(name, p.clone()) for (name, p) in params]
+
+    # run a training step
+    mult_vae._train_epoch(larger_matrix, users)
+
+    device = mult_vae.device
+
+    assert_changed(params_before, params, device)
+
+
+def test_evaluation_epoch(mult_vae, larger_matrix):
+    mult_vae._init_model(larger_matrix.shape[1])
+
+    users = list(set(larger_matrix.nonzero()[1]))
+    params = [np for np in mult_vae.model.named_parameters() if np[1].requires_grad]
+
+    # take a copy
+    params_before = [(name, p.clone()) for (name, p) in params]
+
+    # TODO Mock mult_vae.save
+
+    # run a training step
+    mult_vae._evaluate(larger_matrix, larger_matrix, users)
+
+    device = mult_vae.device
+
+    assert_same(params_before, params, device)
+
+
+def test_multi_vae_forward(inputs, targets):
+    batch = [inputs, targets]
+
     model = MultiVAETorch(dim_input_layer=INPUT_SIZE)
     # do they change after a training step?
     #  let's run a train step and see
-    parameters = model.named_parameters()
-
-    vars_to_change = [
-        (param_name, param)
-        for param_name, param in parameters
-        if param_name not in ("p_bn_hid_layer.weight", "p_bn_hid_layer.bias", "p_hid_out_layer.weight", "p_hid_out_layer.bias")
-    ]
-
     assert_vars_change(
-        model,
-        vae_loss_function,
-        torch.optim.Adam(model.parameters()),
-        batch,
-        "cpu",
-        params=vars_to_change,
-    )
-
-
-def test_multi_vae_backup_forward():
-    model = MultiVAE([200, 600, INPUT_SIZE])
-    # do they change after a training step?
-    #  let's run a train step and see
-    parameters = model.named_parameters()
-
-    vars_to_change = [
-        (param_name, param)
-        for param_name, param in parameters
-        if param_name not in ("p_layers.0.weight", "p_layers.0.bias", "p_layers.1.weight", "p_layers.1.bias")
-    ]
-
-    assert_vars_change(
-        model,
-        vae_loss_function,
-        torch.optim.Adam(model.parameters()),
-        batch,
-        "cpu",
-        params=vars_to_change,
+        model, vae_loss_function, torch.optim.Adam(model.parameters()), batch, "cpu"
     )
