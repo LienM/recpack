@@ -81,7 +81,7 @@ class MultVAE(Algorithm):
         super().__init__()
         self.max_epochs = max_epochs
         self.seed = seed
-        torch.manual_seed(seed)
+        # torch.manual_seed(seed)
         self.learning_rate = learning_rate
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
@@ -112,9 +112,12 @@ class MultVAE(Algorithm):
         )
 
     def _init_model(self, dim_input_layer: int):
-        self.model = MultiVAETorch(dim_input_layer, self.dim_hidden_layer, self.dim_bottleneck_layer).to(
-            self.device
-        )
+        self.model = MultiVAETorch(
+            dim_input_layer,
+            dim_hidden_layer=self.dim_hidden_layer,
+            dim_bottleneck_layer=self.dim_bottleneck_layer,
+            dropout=self.dropout,
+        ).to(self.device)
 
     def fit(self, train_data: csr_matrix, val_in: csr_matrix, val_out: csr_matrix):
         """
@@ -277,12 +280,14 @@ class MultiVAETorch(nn.Module):
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
 
-        self.layers = nn.ModuleList([
-            self.q_in_hid_layer,
-            self.q_hid_bn_layer,
-            self.p_bn_hid_layer,
-            self.p_hid_out_layer
-        ])
+        self.layers = nn.ModuleList(
+            [
+                self.q_in_hid_layer,
+                self.q_hid_bn_layer,
+                self.p_bn_hid_layer,
+                self.p_hid_out_layer,
+            ]
+        )
 
         self.drop = nn.Dropout(p=dropout, inplace=False)
         self._init_weights()
@@ -290,7 +295,8 @@ class MultiVAETorch(nn.Module):
     def forward(self, x):
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
-        return self.decode(z), mu, logvar
+        x_recon = self.decode(z)
+        return x_recon, mu, logvar
 
     def encode(self, x):
         h = F.normalize(x)
