@@ -29,5 +29,5 @@ def test_lsh_model(metadata, min_jaccard, n_gram):
     )
 
     prediction = algo.predict(test_mat)
-    assert prediction[0,1] == prediction[1,0]
+    assert prediction[0,3] == prediction[3,0]
 
