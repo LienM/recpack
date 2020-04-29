@@ -1,5 +1,5 @@
 import scipy.sparse as sp
-
+import pandas as pd
 import pytest
 
 
@@ -41,3 +41,13 @@ def labels_more_durable_items():
     labels = sp.csr_matrix(([1, 1], ([0, 0], [0, 3])), shape=(1, 5))
 
     return labels
+
+@pytest.fixture(scope="function")
+def metadata():
+    data_dict = {
+        "title": ["item_1", "item_2", "stukje", "Rosemary", "Pepper"],
+        "item_id": [0,1,2,3,4],
+    }
+
+    return pd.DataFrame.from_dict(data_dict)
+    
