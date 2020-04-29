@@ -157,7 +157,7 @@ class MultVAE(Algorithm):
             beta = self._get_beta(self.steps)
 
             X_pred, mu, logvar = self.model(X)
-            loss = self.criterion(X_pred, X, mu, logvar, beta)
+            loss = self.criterion(X_pred, mu, logvar, X, anneal=beta)
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
@@ -277,14 +277,14 @@ class MultiVAETorch(nn.Module):
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
 
-        self.layers = nn.ModuleList(
+        self.layers = nn.ModuleList([
             self.q_in_hid_layer,
             self.q_hid_bn_layer,
             self.p_bn_hid_layer,
             self.p_hid_out_layer
-        )
+        ])
 
-        self.drop = nn.Dropout(dropout, p=dropout, inplace=False)
+        self.drop = nn.Dropout(p=dropout, inplace=False)
         self._init_weights()
 
     def forward(self, x):
@@ -298,6 +298,8 @@ class MultiVAETorch(nn.Module):
 
         h = self.q_in_hid_layer(h)
         h = self.tanh(h)
+
+        h = self.q_hid_bn_layer(h)
 
         # TODO This is a terrible hack. Do something about it.
         mu = h[:, :self.dim_bottleneck_layer]
@@ -328,7 +330,7 @@ class MultiVAETorch(nn.Module):
             )  # TODO This should be truncated normal
 
 
-def vae_loss_function(recon_x, x, mu, logvar, anneal=1.0):
+def vae_loss_function(recon_x, mu, logvar, x, anneal=1.0):
     BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
     KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
 
