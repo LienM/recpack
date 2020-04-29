@@ -45,7 +45,7 @@ def labels_more_durable_items():
 @pytest.fixture(scope="function")
 def metadata():
     data_dict = {
-        "title": ["item_1", "Rosemary", "stukje", "item_2", "Pepper"],
+        "title": ["item_1", "Rosemary", "", "item_2", "Pepper"],
         "item_id": [0,1,2,3,4],
     }
 
