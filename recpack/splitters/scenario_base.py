@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
 
+import recpack.splitters.splitter_base as splitter_base
 from recpack.splitters.splitter_base import FoldIterator
 from recpack.data_matrix import DataM
 
@@ -20,6 +21,8 @@ class Scenario(ABC):
         self.validation_data_out = None
         self.test_data_in = None
         self.test_data_out = None
+
+        self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.5)
 
     @abstractmethod
     def split(self, *data_ms: DataM):
