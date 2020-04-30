@@ -3,6 +3,7 @@ from collections import defaultdict
 from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.utils import get_logger
 from recpack.data_matrix import DataM
+from recpack.algorithms.torch_algorithms.vaes import MultVAE
 
 
 class MetricRegistry:
@@ -108,7 +109,10 @@ class Pipeline:
         for algo in self.algorithms:
             # Only pass the sparse training interaction matrix to algo
             if not algo.is_fit:
-                algo.fit(self.scenario.training_data.binary_values)
+                if isinstance(algo, MultVAE):
+                    algo.fit(self.scenario.training_data.binary_values, *self.validation_data)
+                else:
+                    algo.fit(self.scenario.training_data.binary_values)
 
         for _in, _out in self.scenario.test_iterator:
             for algo in self.algorithms:
