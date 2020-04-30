@@ -110,7 +110,7 @@ class Pipeline:
             # Only pass the sparse training interaction matrix to algo
             if not algo.is_fit:
                 if isinstance(algo, MultVAE):
-                    algo.fit(self.scenario.training_data.binary_values, *self.validation_data)
+                    algo.fit(self.scenario.training_data.binary_values, self.scenario.validation_data[0].binary_values, self.scenario.validation_data[1].binary_values)
                 else:
                     algo.fit(self.scenario.training_data.binary_values)
 
