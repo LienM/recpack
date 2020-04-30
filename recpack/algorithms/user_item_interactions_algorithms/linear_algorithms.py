@@ -12,6 +12,7 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 class EASE(UserItemInteractionsAlgorithm):
     def __init__(self, l2=1e3, B=None):
+        super().__init__()
         self.B = B
         self.l2 = l2
 
@@ -44,6 +45,8 @@ class EASE(UserItemInteractionsAlgorithm):
         else:
             B_scaled = B @ np.diag(w)
             self.B = scipy.sparse.csr_matrix(B_scaled)
+
+        self._is_fit = True
 
         return 
 
@@ -91,7 +94,7 @@ class SLIM(UserItemInteractionsAlgorithm):
         ignore_neg_weights=True,
         model="sgd",
     ):
-
+        super().__init__()
         self.similarity_matrix = None
 
         self.l1_reg = l1_reg
@@ -158,6 +161,8 @@ class SLIM(UserItemInteractionsAlgorithm):
         self.similarity_matrix = scipy.sparse.csr_matrix(
             (data, (row, col)), shape=(X.shape[1], X.shape[1])
         )
+
+        self._is_fit = True
 
     def predict(self, X):
         """Predict scores for each user, item pair

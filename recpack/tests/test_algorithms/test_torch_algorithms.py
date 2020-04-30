@@ -1,5 +1,7 @@
-import pytest
 
+from unittest.mock import MagicMock
+
+import pytest
 import numpy as np
 import scipy.sparse
 import torch
@@ -11,11 +13,6 @@ from recpack.algorithms.torch_algorithms.vaes import (
     MultiVAETorch,
     MultVAE,
     vae_loss_function,
-)
-
-from recpack.algorithms.torch_algorithms.vaes_backup import (
-    MultiVAE,
-    loss_function,
 )
 
 from recpack.tests.test_algorithms.torch_test_helpers import assert_vars_change
@@ -59,7 +56,7 @@ def larger_matrix():
 
 @pytest.fixture(scope="function")
 def mult_vae():
-    return MultVAE(
+    mult = MultVAE(
         batch_size=500,
         max_epochs=2,
         seed=42,
@@ -70,6 +67,10 @@ def mult_vae():
         anneal_steps=20,
         dropout=0.5,
     )
+
+    mult.save = MagicMock(return_value=True)
+
+    return mult
 
 
 def assert_changed(params_before, params_after, device):

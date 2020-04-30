@@ -8,8 +8,8 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 class MF(UserItemInteractionsAlgorithm):
     def __init__(self, K=100):
+        super().__init__()
         self.K = K
-
         self.similarity_matrix = None
 
     def fit(self, X):
@@ -47,6 +47,8 @@ class NMF(MF):
         # Compute an item to item similarity matrix by self multiplying the latent factors.
         self.similarity_matrix = H.T @ H
 
+        self._is_fit = True
+
     @property
     def name(self):
         return f"NMF_K_{self.K}"
@@ -64,6 +66,8 @@ class SVD(MF):
         V = model.components_
         sigma = scipy.sparse.diags(model.singular_values_)
         self.similarity_matrix = V.T @ sigma @ V
+
+        self._is_fit = True
 
     @property
     def name(self):

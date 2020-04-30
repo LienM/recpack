@@ -9,6 +9,7 @@ from .algorithm_base import Algorithm
 
 class Random(Algorithm):
     def __init__(self, K=200, seed=None):
+        super().__init__()
         self.items = None
         self.K = K
         self.seed = seed
@@ -47,6 +48,7 @@ class Random(Algorithm):
 
 class Popularity(Algorithm):
     def __init__(self, K=200):
+        super().__init__()
         self.sorted_scores = None
         self.K = K
         self.max = None

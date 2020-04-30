@@ -107,7 +107,8 @@ class Pipeline:
 
         for algo in self.algorithms:
             # Only pass the sparse training interaction matrix to algo
-            algo.fit(self.scenario.training_data.binary_values)
+            if not algo.is_fit:
+                algo.fit(self.scenario.training_data.binary_values)
 
         for _in, _out in self.scenario.test_iterator:
             for algo in self.algorithms:

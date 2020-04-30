@@ -16,6 +16,7 @@ class ItemKNN(UserItemInteractionsAlgorithm):
     def __init__(self, K=200):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item."""
+        super().__init__()
         self.K = K
         self.item_cosine_similarities = None
 
@@ -39,6 +40,8 @@ class ItemKNN(UserItemInteractionsAlgorithm):
         # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
         mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))))
         self.item_cosine_similarities = self.item_cosine_similarities.multiply(mask)
+
+        self._is_fit = True
 
     def predict(self, X: scipy.sparse.csr_matrix):
         # Use total sum of similarities
@@ -75,6 +78,7 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
     def __init__(self, K=200):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item."""
+        super().__init__()
         self.K = K
         self.item_cosine_similarities = None
 
@@ -101,6 +105,8 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
         # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
         mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))))
         self.item_cosine_similarities = self.item_cosine_similarities.multiply(mask)
+
+        self._is_fit = True
 
     def predict(self, X):
         # Use total sum of similarities
