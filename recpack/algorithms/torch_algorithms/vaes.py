@@ -1,5 +1,5 @@
 import time
-from functools import partial
+from typing import List
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -58,6 +58,7 @@ class MultVAE(Algorithm):
         """
         MultVAE Algorithm as first discussed in
         'Variational Autoencoders for Collaborative Filtering', D. Liang et al. @ KDD2018
+        Default values were taken from the paper. 
 
         :param batch_size: Batch size for SGD, defaults to 500
         :type batch_size: int, optional
@@ -81,7 +82,7 @@ class MultVAE(Algorithm):
         super().__init__()
         self.max_epochs = max_epochs
         self.seed = seed
-        # torch.manual_seed(seed)
+        torch.manual_seed(seed)
         self.learning_rate = learning_rate
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
@@ -103,7 +104,9 @@ class MultVAE(Algorithm):
     @property
     def _beta(self):
         """
-        Parameter beta is slowly annealed from 0 to self.max_beta over self.anneal_steps.
+        As discussed in the paper, Beta is a regularization parameter that controls
+        the importance of the KL-divergence term.
+        It is slowly annealed from 0 to self.max_beta over self.anneal_steps.
         """
         return (
             self.max_beta
@@ -112,6 +115,12 @@ class MultVAE(Algorithm):
         )
 
     def _init_model(self, dim_input_layer: int):
+        """
+        Initialize Torch model and optimizer.
+
+        :param dim_input_layer: Dimension of the input layer (corresponds to number of items)
+        :type dim_input_layer: int
+        """
         self.model = MultiVAETorch(
             dim_input_layer,
             dim_hidden_layer=self.dim_hidden_layer,
@@ -126,8 +135,14 @@ class MultVAE(Algorithm):
         Perform self.max_epoch training iterations over the complete training dataset.
         After each epoch, reports value of self.stopping_criterion and stores
         the model if it is better than the last.
-        """
 
+        :param train_data: Training data (UxI)
+        :type train_data: csr_matrix
+        :param val_in: Validation data used as history (UxI)
+        :type val_in: csr_matrix
+        :param val_out: Validation data we will try to predict (UxI)
+        :type val_out: csr_matrix
+        """
         self._init_model(train_data.shape[1])
 
         # TODO Investigate Multi-GPU
@@ -143,7 +158,18 @@ class MultVAE(Algorithm):
             self._train_epoch(train_data, train_users)
             self._evaluate(val_in, val_out, val_users)
 
-    def _train_epoch(self, train_data, users):
+        self._is_fit = True
+
+    def _train_epoch(self, train_data: csr_matrix, users: List[int]):
+        """
+        Perform one training epoch.
+        Data is processed in batches of self.batch_size users.
+
+        :param train_data: Training data (UxI)
+        :type train_data: [type]
+        :param users: List of all users in the training dataset.
+        :type users: List[int]
+        """
         start_time = time.time()
         train_loss = 0.0
         # Set to training
@@ -171,7 +197,7 @@ class MultVAE(Algorithm):
             f"Processed one batch in {end_time-start_time} s. Training Loss = {train_loss}"
         )
 
-    def _evaluate(self, val_in, val_out, users):
+    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix, users: List[int]):
         val_loss = 0.0
         # Set to evaluation
         self.model.eval()

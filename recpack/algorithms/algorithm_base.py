@@ -7,6 +7,7 @@ class Algorithm:
     def __init__(self):
         super().__init__()
         self.logger = get_logger()
+        self._is_fit = False
 
     @property
     def name(self):
@@ -23,3 +24,7 @@ class Algorithm:
 
     def load(self, filename):
         pass
+
+    @property
+    def is_fit(self):
+        return self._is_fit
