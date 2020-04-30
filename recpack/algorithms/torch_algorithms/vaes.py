@@ -158,6 +158,9 @@ class MultVAE(Algorithm):
             self._train_epoch(train_data, train_users)
             self._evaluate(val_in, val_out, val_users)
 
+        # Load best model, not necessarily last model
+        self.load(self.stopping_criterion.best_value)
+
         self._is_fit = True
 
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
