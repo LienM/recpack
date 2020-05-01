@@ -30,6 +30,8 @@ class StoppingCriterion(NDCGK):
         """
         Reset the metric
         """
+        if self.is_best:
+            self.best_value = self.value
         self.NDCG = 0
         self.num_users = 0
 
