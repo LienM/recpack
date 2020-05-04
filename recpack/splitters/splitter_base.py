@@ -4,6 +4,8 @@ from typing import Tuple
 import numpy as np
 import scipy.sparse
 
+from tqdm import tqdm
+
 from recpack.data_matrix import DataM
 from recpack.utils import get_logger
 
@@ -158,7 +160,7 @@ class PercentageInteractionSplitter(Splitter):
         tr_u, tr_i = [], []
         te_u, te_i = [], []
 
-        for u in range(0, users):
+        for u in tqdm(range(0, users), desc="split user ratings"):
             _, user_history = sp_mat[u, :].nonzero()
 
             rstate = np.random.RandomState(self.seed)
@@ -171,9 +173,6 @@ class PercentageInteractionSplitter(Splitter):
 
             te_i.extend(user_history[cut:])
             te_u.extend([u] * len(user_history[cut:]))
-
-            if u % 1000 == 0:
-                self.logger.debug(f"{self.name} - Batch of 1000 users completed")
 
         tr_data = data.indices_in((tr_u, tr_i))
         te_data = data.indices_in((te_u, te_i))
@@ -260,7 +259,7 @@ def csr_row_set_nz_to_val(csr, row, value=0):
 
 
 class FoldIterator:
-    def __init__(self, data_m_in, data_m_out, batch_size=1000):
+    def __init__(self, data_m_in, data_m_out, batch_size=10000):
         self.data_m_in = data_m_in
         self.data_m_out = data_m_out
         # self._index = 0
