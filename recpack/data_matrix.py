@@ -134,7 +134,7 @@ class DataM:
 
         self.logger.debug("Indices_in comparison done")
 
-        if self.timestamps is None:
+        if self._timestamps is None:
             c_timestamps = None
         else:
             u_i_pairs = zip(*(u_i_lists))
