@@ -15,7 +15,7 @@ setup(
         "PyYAML==5.3.1",
         "snapy==1.0.2",
         "mmh3==2.5.1",
-        "torch==1.5.0",
+        "torch==1.4.0",
         "torchtest==0.5",
         "dataclasses",
     ]
