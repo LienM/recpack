@@ -3,6 +3,7 @@ from collections import defaultdict
 from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.utils import get_logger
 from recpack.data_matrix import DataM
+import recpack.experiment as experiment
 
 
 class MetricRegistry:
@@ -107,6 +108,7 @@ class Pipeline:
 
         for algo in self.algorithms:
             # Only pass the sparse training interaction matrix to algo
+            ec = experiment.fork_root_experiment(algo.name)
             algo.fit(self.scenario.training_data.binary_values)
 
         for _in, _out in self.scenario.test_iterator:
@@ -117,6 +119,12 @@ class Pipeline:
 
                 for metric in metrics.values():
                     metric.update(X_pred, _out)
+
+        metrics = self.metric_registry.metrics
+        for algo in self.algorithms:
+            experiment.set_experiment(algo.name)
+            for metric, value in metrics[algo.name].items():
+                experiment.log_result(metric, value)
 
     def get(self):
         return self.metric_registry.metrics
