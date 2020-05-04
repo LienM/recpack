@@ -10,6 +10,8 @@ from recpack.algorithms.user_item_interactions_algorithms.matrix_factorization_a
     SVD,
 )
 
+from recpack.algorithms.torch_algorithms.vaes import MultVAE
+
 
 class AlgorithmRegistry:
 
@@ -22,6 +24,7 @@ class AlgorithmRegistry:
         "NMF": NMF,
         "SVD": SVD,
         "slim": SLIM,
+        "mult_vae": MultVAE
     }
 
     @classmethod

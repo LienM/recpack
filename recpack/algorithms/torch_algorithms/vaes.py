@@ -30,6 +30,9 @@ class StoppingCriterion(NDCGK):
         """
         Reset the metric
         """
+        # TODO Set these in an initialize method for the metric
+        # so that Stopping Criterion can call that to reset the metric
+        # Then stopping criterion can inherit from metric. BOOM!
         if self.is_best:
             self.best_value = self.value
         self.NDCG = 0
@@ -60,7 +63,7 @@ class MultVAE(Algorithm):
         """
         MultVAE Algorithm as first discussed in
         'Variational Autoencoders for Collaborative Filtering', D. Liang et al. @ KDD2018
-        Default values were taken from the paper. 
+        Default values were taken from the paper.
 
         :param batch_size: Batch size for SGD, defaults to 500
         :type batch_size: int, optional
@@ -243,7 +246,20 @@ class MultVAE(Algorithm):
             torch.save(self.model, f)
 
     def predict(self, X):
-        X_pred, _, _ = self.model(X)
+        users = list(set(X.nonzero()[0]))
+
+        tensorX = naive_sparse2tensor(X[users, :]).to(self.device)
+
+        tensorX_pred, _, _ = self.model(tensorX)
+
+        # [[0, 1, 2], [3, 4, 5]] -> [0, 1, 2, 3, 4, 5]
+        V = tensorX_pred.flatten().detach().numpy()  # Flattens row-major.
+        # -> [1, 2] -> 1, 1, 1, 2, 2, 2 (2 users x 3 items)
+        U = np.repeat(users, X.shape[1])
+        # -> [1, 2, 3] -> 1, 2, 3, 1, 2, 3 (2 users x 3 items)
+        I = list(range(0, X.shape[1])) * len(users)
+
+        X_pred = csr_matrix((V, (U, I)), shape=X.shape)
 
         return X_pred
 
@@ -254,25 +270,6 @@ class MultVAE(Algorithm):
 
 def naive_sparse2tensor(data):
     return torch.FloatTensor(data.toarray())
-
-
-def sparse2torch_sparse(data):
-    """
-    Convert scipy sparse matrix to torch sparse tensor with L2 Normalization
-    This is much faster than naive use of torch.FloatTensor(data.toarray())
-    https://discuss.pytorch.org/t/sparse-tensor-use-cases/22047/2
-    """
-    samples = data.shape[0]
-    features = data.shape[1]
-    coo_data = data.tocoo()
-    indices = torch.LongTensor([coo_data.row, coo_data.col])
-    row_norms_inv = 1 / np.sqrt(data.sum(1))
-    row2val = {i: row_norms_inv[i].item() for i in range(samples)}
-    values = np.array([row2val[r] for r in coo_data.row])
-    t = torch.sparse.FloatTensor(
-        indices, torch.from_numpy(values).float(), [samples, features]
-    )
-    return t
 
 
 class MultiVAETorch(nn.Module):
@@ -335,8 +332,8 @@ class MultiVAETorch(nn.Module):
         h = self.q_hid_bn_layer(h)
 
         # TODO This is a terrible hack. Do something about it.
-        mu = h[:, :self.dim_bottleneck_layer]
-        logvar = h[:, self.dim_bottleneck_layer:]
+        mu = h[:, : self.dim_bottleneck_layer]
+        logvar = h[:, self.dim_bottleneck_layer :]
         return mu, logvar
 
     def decode(self, z):

@@ -39,6 +39,8 @@ def larger_matrix():
     num_users = 500
     num_items = 500
 
+    np.random.seed(400)
+
     pv_users, pv_items, pv_values = (
         [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
         [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
@@ -46,7 +48,7 @@ def larger_matrix():
     )
 
     pv = scipy.sparse.csr_matrix(
-        (pv_values, (pv_users, pv_items)), shape=(num_users, num_items)
+        (pv_values, (pv_users, pv_items)), shape=(num_users + 200, num_items)
     )
 
     return pv
@@ -139,6 +141,16 @@ def test_evaluation_epoch(mult_vae, larger_matrix):
     device = mult_vae.device
 
     assert_same(params_before, params, device)
+
+
+def test_predict(mult_vae, larger_matrix):
+    mult_vae._init_model(larger_matrix.shape[1])
+
+    X_pred = mult_vae.predict(larger_matrix)
+
+    assert isinstance(X_pred, scipy.sparse.csr_matrix)
+
+    assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
 
 
 def test_multi_vae_forward(inputs, targets):
