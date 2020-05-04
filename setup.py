@@ -17,6 +17,7 @@ setup(
         "PyYaml",
         "snapy",
         "mmh3",
+        "tqdm",
         "dataclasses",
     ],
     entry_points={
