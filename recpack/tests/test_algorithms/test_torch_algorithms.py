@@ -1,12 +1,12 @@
 
 from unittest.mock import MagicMock
+from typing import Callable
 
 import pytest
 import numpy as np
 import scipy.sparse
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
 
 from recpack.algorithms.torch_algorithms.vaes import (
@@ -14,8 +14,6 @@ from recpack.algorithms.torch_algorithms.vaes import (
     MultVAE,
     vae_loss_function,
 )
-
-from recpack.tests.test_algorithms.torch_test_helpers import assert_vars_change
 
 # Inspiration for these tests came from:
 # https://medium.com/@keeper6928/how-to-unit-test-machine-learning-code-57cf6fd81765
@@ -85,6 +83,28 @@ def assert_same(params_before, params_after, device):
         assert torch.equal(p0.to(device), p1.to(device))
 
 
+def _training_step(model: nn.Module, loss_fn: Callable, optim: torch.optim.Optimizer, inputs: Variable, targets: Variable, device: torch.device):
+
+    # put model in train mode
+    model.train()
+    model.to(device)
+
+    #  run one forward + backward step
+    # clear gradient
+    optim.zero_grad()
+    # move data to device
+    inputs = inputs.to(device)
+    targets = targets.to(device)
+    # forward
+    likelihood = model(inputs)
+    # calc loss
+    loss = loss_fn(*likelihood, targets)
+    # backward
+    loss.backward()
+    # optimization step
+    optim.step()
+
+
 def test_training_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix.shape[1])
 
@@ -122,11 +142,17 @@ def test_evaluation_epoch(mult_vae, larger_matrix):
 
 
 def test_multi_vae_forward(inputs, targets):
-    batch = [inputs, targets]
+    mult_vae = MultiVAETorch(dim_input_layer=INPUT_SIZE)
 
-    model = MultiVAETorch(dim_input_layer=INPUT_SIZE)
+    params = [np for np in mult_vae.named_parameters() if np[1].requires_grad]
+
+    # take a copy
+    params_before = [(name, p.clone()) for (name, p) in params]
+
+    device = torch.device("cpu")
+
+    _training_step(mult_vae, vae_loss_function, torch.optim.Adam(mult_vae.parameters()), inputs, targets, device)
     # do they change after a training step?
     #  let's run a train step and see
-    assert_vars_change(
-        model, vae_loss_function, torch.optim.Adam(model.parameters()), batch, "cpu"
-    )
+
+    assert_changed(params_before, params, device)
