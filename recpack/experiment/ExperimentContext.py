@@ -31,6 +31,10 @@ class ExperimentContext(object):
         else:
             return self._name
 
+    @name.setter
+    def name(self, value):
+        self._name = value
+
     @property
     def output_path(self):
         return self._output_path

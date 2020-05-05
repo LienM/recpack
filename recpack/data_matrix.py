@@ -153,6 +153,11 @@ class DataM:
             yield uid, history
 
     @property
+    def active_user_count(self):
+        cols, _ = self.indices
+        return len(set(cols))
+
+    @property
     def binary_values(self):
         indices = self.indices
         # (user_1, item_1) -> 1

@@ -4,7 +4,7 @@ from recpack.experiment.ExperimentContext import ExperimentContext
 
 rootEC = ExperimentContext("")          # root ec
 currentEC = rootEC
-ECMap = {"_root": rootEC}               # rootEC encoded as _root
+ECMap = dict()
 
 
 def ECRequired(f):
@@ -28,6 +28,15 @@ def log_result(name, value):
 @ECRequired
 def log_file(name, path):
     return currentEC.log_file(name, path)
+
+
+@ECRequired
+def set_name(name):
+    if currentEC.name:
+        raise RuntimeError("Experiment already labeled")
+    assert name not in ECMap
+    currentEC.name = name
+    ECMap[name] = currentEC
 
 
 def new_experiment(name):

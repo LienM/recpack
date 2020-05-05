@@ -20,9 +20,12 @@ class MetricK(Metric):
         super().__init__()
         self.K = K
 
+    def __str__(self):
+        return self.name
+
     @property
     def name(self):
-        return ""
+        return self.__class__.__name__
 
     def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
         # Get nonzero users

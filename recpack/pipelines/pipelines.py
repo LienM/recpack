@@ -5,6 +5,8 @@ from recpack.utils import get_logger
 from recpack.data_matrix import DataM
 import recpack.experiment as experiment
 
+from tqdm.auto import tqdm
+
 
 class MetricRegistry:
     """
@@ -119,14 +121,20 @@ class Pipeline:
             get_logger().debug(f"Training algo {algo.name}")
             algo.fit(self.scenario.training_data.binary_values)
 
-        for _in, _out in self.scenario.test_iterator:
+        for _in, _out in tqdm(self.scenario.test_iterator):
+            get_logger().debug(f"start evaluation batch")
             for algo in self.algorithms:
-
                 metrics = self.metric_registry[algo.name]
+
+                get_logger().debug(f"predicting batch with algo {algo.name}")
                 X_pred = algo.predict(_in)
+                get_logger().debug(f"finished predicting batch with algo {algo.name}")
 
                 for metric in metrics.values():
                     metric.update(X_pred, _out)
+                    get_logger().debug(f"metric {metric.name} current value: {metric.value}")
+
+            get_logger().debug(f"end evaluation batch")
 
         metrics = self.metric_registry.metrics
         for algo in self.algorithms:

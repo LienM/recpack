@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
+import math
 
 import numpy as np
 import scipy.sparse
@@ -156,7 +157,7 @@ class PercentageInteractionSplitter(Splitter):
         tr_u, tr_i = [], []
         te_u, te_i = [], []
 
-        for u, user_history in tqdm(data.iter_user_history(), desc="split user ratings"):
+        for u, user_history in tqdm(data.iter_user_history(), total=data.active_user_count, desc="split user ratings"):
             rstate = np.random.RandomState(self.seed + u)
 
             rstate.shuffle(user_history)
@@ -285,6 +286,8 @@ class FoldIterator:
 
         return fold_in, fold_out
 
+    def __len__(self):
+        return math.ceil(len(self.users) / self.batch_size)
 
     # def __next__(self):
     #     # While loop to make it possible to skip any cases where user has no items in in or out set.
