@@ -10,6 +10,10 @@ RESULTS_FILENAME = "results.csv"
 
 
 class ExperimentContext(object):
+    """
+    Provides a context for the currently running experiment. This allows for global parameter and result logging.
+    See also __init__.py of this package.
+    """
     def __init__(self, name, parent=None):
         self._name = name
         self.parent = parent

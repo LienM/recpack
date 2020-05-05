@@ -4,6 +4,7 @@ import numpy as np
 import scipy.sparse
 
 from sklearn.linear_model import SGDRegressor
+from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.user_item_interactions_algorithms import (
     UserItemInteractionsAlgorithm,
@@ -52,8 +53,7 @@ class EASE(UserItemInteractionsAlgorithm):
         return self.B_
 
     def save(self, filename=None):
-        if self.B_ is None:
-            raise ValueError("Fit a model before trying to save it, dumbass.")
+        check_is_fitted(self)
 
         if not filename:  # TODO Check if filename is valid
             filename = "./B_" + secrets.token_hex(10)
@@ -63,8 +63,8 @@ class EASE(UserItemInteractionsAlgorithm):
         return filename
 
     def predict(self, X):
-        if self.B_ is None:
-            raise ValueError("Fit a model before trying to predict with it.")
+        check_is_fitted(self)
+
         scores = X @ self.B_
 
         if not isinstance(scores, scipy.sparse.csr_matrix):
@@ -90,9 +90,6 @@ class SLIM(UserItemInteractionsAlgorithm):
         ignore_neg_weights=True,
         model="sgd",
     ):
-
-        self.similarity_matrix = None
-
         self.l1_reg = l1_reg
         self.l2_reg = l2_reg
         # Translate regression parameters into the expected sgd parameters
@@ -154,9 +151,10 @@ class SLIM(UserItemInteractionsAlgorithm):
 
         # Construct similarity matrix.
         # Shape is determined by 2nd dimension of the shape of input matrix X
-        self.similarity_matrix = scipy.sparse.csr_matrix(
+        self.similarity_matrix_ = scipy.sparse.csr_matrix(
             (data, (row, col)), shape=(X.shape[1], X.shape[1])
         )
+        return self
 
     def predict(self, X):
         """Predict scores for each user, item pair
@@ -167,10 +165,10 @@ class SLIM(UserItemInteractionsAlgorithm):
 
         No history is actually filtered.
         """
-        if self.similarity_matrix is None:
-            raise Exception("Fit a model before trying to predict with it.")
+        check_is_fitted(self)
+
         # TODO, this looks exactly the same as NN's recommendation -> refactor into a similarity based class.
-        scores = X @ self.similarity_matrix
+        scores = X @ self.similarity_matrix_
 
         if not isinstance(scores, scipy.sparse.csr_matrix):
             scores = scipy.sparse.csr_matrix(scores)

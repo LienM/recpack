@@ -1,3 +1,5 @@
+""" Globally accessible experiment context. Through these functions, parameters and results can be logged.
+They will be stored at the end of the program (atexit). """
 
 from recpack.experiment.ExperimentContext import ExperimentContext
 
@@ -39,15 +41,6 @@ def set_name(name):
     ECMap[name] = currentEC
 
 
-def new_experiment(name):
-    global currentEC
-    assert name not in ECMap
-    ec = ExperimentContext(name)
-    ECMap[name] = ec
-    currentEC = ec
-    return ec
-
-
 def _fork_experiment(name, to_fork_ec):
     global currentEC
     ec = ExperimentContext(name, to_fork_ec)
@@ -56,6 +49,7 @@ def _fork_experiment(name, to_fork_ec):
 
 
 def fork_experiment(name, above=0):
+    """ Fork the current experiment or follow its parent `above` times. """
     global currentEC
     to_fork_ec = currentEC
     for i in range(above):
@@ -66,10 +60,12 @@ def fork_experiment(name, above=0):
 
 
 def fork_root_experiment(name):
+    """ Make a direct fork of the root experiment. """
     return _fork_experiment(name, rootEC)
 
 
 def set_experiment(name):
+    """ Switch to a different experiment by name. """
     global currentEC
     currentEC = ECMap[name]
     return currentEC
