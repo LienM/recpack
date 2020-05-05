@@ -1,4 +1,5 @@
 from typing import List, Tuple
+import itertools
 
 import pandas as pd
 import numpy as np
@@ -145,6 +146,11 @@ class DataM:
         else:
             self._timestamps = c_timestamps
             self._values = c_values
+
+    def iter_user_history(self):
+        for uid, history in itertools.groupby(zip(*self.indices), key=lambda x: x[0]):
+            history = list(list(zip(*history))[1])
+            yield uid, history
 
     @property
     def binary_values(self):

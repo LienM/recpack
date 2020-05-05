@@ -153,16 +153,10 @@ class PercentageInteractionSplitter(Splitter):
         Returns 2 sparse matrices in and out
         """
 
-        sp_mat = data.values
-
-        users = sp_mat.shape[0]
-
         tr_u, tr_i = [], []
         te_u, te_i = [], []
 
-        for u in tqdm(range(0, users), desc="split user ratings"):
-            _, user_history = sp_mat[u, :].nonzero()
-
+        for u, user_history in tqdm(data.iter_user_history(), desc="split user ratings"):
             rstate = np.random.RandomState(self.seed)
             rstate.shuffle(user_history)
             hist_len = len(user_history)
