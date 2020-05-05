@@ -4,7 +4,7 @@ from typing import Tuple
 import numpy as np
 import scipy.sparse
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from recpack.data_matrix import DataM
 from recpack.utils import get_logger
@@ -120,7 +120,7 @@ class StrongGeneralizationSplitter(Splitter):
 
             if within_margin:
                 self.logger.debug(f"{self.name} - Iteration {i} - Within margin")
-                continue
+                break
             else:
                 self.logger.debug(f"{self.name} - Iteration {i} - Not within margin")
 
@@ -254,7 +254,7 @@ def csr_row_set_nz_to_val(csr, row, value=0):
 
 
 class FoldIterator:
-    def __init__(self, data_m_in, data_m_out, batch_size=10000):
+    def __init__(self, data_m_in, data_m_out, batch_size=1000):
         self.data_m_in = data_m_in
         self.data_m_out = data_m_out
         # self._index = 0

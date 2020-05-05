@@ -115,6 +115,8 @@ class Pipeline:
             above = 1
             for param, value in algo.get_params().items():
                 experiment.log_param(param, value)
+
+            get_logger().debug(f"Training algo {algo.name}")
             algo.fit(self.scenario.training_data.binary_values)
 
         for _in, _out in self.scenario.test_iterator:

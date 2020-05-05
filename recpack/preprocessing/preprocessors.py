@@ -6,6 +6,10 @@ import scipy.sparse
 import recpack.preprocessing.helpers as helpers
 from recpack.data_matrix import DataM
 from recpack.preprocessing.filters import Filter
+from recpack.utils import get_logger
+
+from tqdm.auto import tqdm
+tqdm.pandas()
 
 
 class DataFramePreprocessor:
@@ -42,20 +46,22 @@ class DataFramePreprocessor:
         self.filters.append(_filter)
 
     def map_users(self, df):
+        get_logger().debug("Map users")
         if not self.user_id_mapping:
             raise RuntimeError(
                 "User ID Mapping should be fit before attempting to map users"
             )
 
-        return df[self.user_id].map(lambda x: self.user_id_mapping.get(x))
+        return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def map_items(self, df):
+        get_logger().debug("Map items")
         if not self.item_id_mapping:
             raise RuntimeError(
                 "Item ID Mapping should be fit before attempting to map items"
             )
 
-        return df[self.item_id].map(lambda x: self.item_id_mapping.get(x))
+        return df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
 
     @property
     def shape(self):
@@ -64,7 +70,7 @@ class DataFramePreprocessor:
             max(self.item_id_mapping.values()) + 1,
         )
 
-    def process(self, *args: pd.DataFrame) -> List[scipy.sparse.csr_matrix]:
+    def process(self, *dfs: pd.DataFrame) -> List[scipy.sparse.csr_matrix]:
         """
         Process all DataFrames passed as arguments.
         If your pipeline requires more than one DataFrame,
@@ -74,11 +80,22 @@ class DataFramePreprocessor:
         :return: A list of sparse matrices in the order they were passed as arguments. 
         :rtype: List[scipy.sparse.csr_matrix]
         """
-        for df in args:
+        dfs = list(dfs)
+        for index, df in enumerate(dfs):
+            get_logger().debug(f"Processing df {index}")
+            get_logger().debug(f"ratings before preprocess: {len(df.index)}")
             if self.dedupe:
                 df.drop_duplicates(
                     [self.user_id, self.item_id], keep="first", inplace=True
                 )
+                get_logger().debug(f"ratings after dedupe: {len(df.index)}")
+
+            for filter in self.filters:
+                get_logger().debug(f"applying filter: {filter}")
+                df = filter.apply(df)
+                get_logger().debug(f"ratings after filter: {len(df.index)}")
+
+            dfs[index] = df
 
             self.update_id_mappings(df)
 
@@ -87,7 +104,7 @@ class DataFramePreprocessor:
 
         data_ms = []
 
-        for df in args:
+        for df in dfs:
             df.loc[:, cleaned_item_id] = self.map_items(df)
             df.loc[:, cleaned_user_id] = self.map_users(df)
 

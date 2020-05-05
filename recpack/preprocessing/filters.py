@@ -24,6 +24,12 @@ class Filter(ABC):
         """
         pass
 
+    def __str__(self):
+        attrs = self.__dict__.copy()
+        for k in ["user_id", "item_id", "timestamp_id"]:
+            del attrs[k]
+        return f"{self.__class__.__name__}({', '.join((f'{k}={v}' for k, v in attrs.items()))})"
+
 
 class MinUsersPerItem(Filter):
 
