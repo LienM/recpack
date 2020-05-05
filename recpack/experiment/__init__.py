@@ -39,6 +39,13 @@ def new_experiment(name):
     return ec
 
 
+def _fork_experiment(name, to_fork_ec):
+    global currentEC
+    ec = ExperimentContext(name, to_fork_ec)
+    ECMap[name] = ec
+    currentEC = ec
+
+
 def fork_experiment(name, above=0):
     global currentEC
     to_fork_ec = currentEC
@@ -46,14 +53,11 @@ def fork_experiment(name, above=0):
         if not to_fork_ec.parent:
             raise RuntimeError(f"Can't go {above} levels higher from current experiment.")
         to_fork_ec = to_fork_ec.parent
-    ec = ExperimentContext(name, to_fork_ec)
-    ECMap[name] = ec
-    currentEC = ec
-    return ec
+    return _fork_experiment(name, to_fork_ec)
 
 
 def fork_root_experiment(name):
-    return fork_experiment(name, to_fork="_root")
+    return _fork_experiment(name, rootEC)
 
 
 def set_experiment(name):

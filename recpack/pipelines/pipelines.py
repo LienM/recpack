@@ -111,8 +111,10 @@ class Pipeline:
 
         for algo in self.algorithms:
             # Only pass the sparse training interaction matrix to algo
-            ec = experiment.fork_experiment(algo.name, above)
+            experiment.fork_experiment(algo.name, above)
             above = 1
+            for param, value in algo.get_params():
+                experiment.log_param(param, value)
             algo.fit(self.scenario.training_data.binary_values)
 
         for _in, _out in self.scenario.test_iterator:

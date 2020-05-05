@@ -11,11 +11,10 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 
 class EASE(UserItemInteractionsAlgorithm):
-    def __init__(self, l2=1e3, B=None):
-        self.B = B
+    def __init__(self, l2=1e3):
         self.l2 = l2
 
-    def fit(self, X, w=None):
+    def fit(self, X, y=None, w=None):
         """Compute the closed form solution and then rescale using diagM(w)"""
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
@@ -40,33 +39,33 @@ class EASE(UserItemInteractionsAlgorithm):
         B[np.diag_indices(B.shape[0])] = 0.0
 
         if w is None:
-            self.B = scipy.sparse.csr_matrix(B)
+            self.B_ = scipy.sparse.csr_matrix(B)
         else:
             B_scaled = B @ np.diag(w)
-            self.B = scipy.sparse.csr_matrix(B_scaled)
+            self.B_ = scipy.sparse.csr_matrix(B_scaled)
 
-        return 
+        return self
 
     def load(self, filename):
-        self.B = np.load(filename)
+        self.B_ = np.load(filename)
 
-        return self.B
+        return self.B_
 
     def save(self, filename=None):
-        if self.B is None:
-            raise Exception("Fit a model before trying to save it, dumbass.")
+        if self.B_ is None:
+            raise ValueError("Fit a model before trying to save it, dumbass.")
 
         if not filename:  # TODO Check if filename is valid
             filename = "./B_" + secrets.token_hex(10)
 
-        np.save(filename, self.B)
+        np.save(filename, self.B_)
 
         return filename
 
     def predict(self, X):
-        if self.B is None:
-            raise Exception("Fit a model before trying to predict with it.")
-        scores = X @ self.B
+        if self.B_ is None:
+            raise ValueError("Fit a model before trying to predict with it.")
+        scores = X @ self.B_
 
         if not isinstance(scores, scipy.sparse.csr_matrix):
             scores = scipy.sparse.csr_matrix(scores)
