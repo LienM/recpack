@@ -157,7 +157,8 @@ class PercentageInteractionSplitter(Splitter):
         te_u, te_i = [], []
 
         for u, user_history in tqdm(data.iter_user_history(), desc="split user ratings"):
-            rstate = np.random.RandomState(self.seed)
+            rstate = np.random.RandomState(self.seed + u)
+
             rstate.shuffle(user_history)
             hist_len = len(user_history)
             cut = int(np.ceil(hist_len * self.in_perc))
