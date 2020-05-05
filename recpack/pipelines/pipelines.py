@@ -113,7 +113,7 @@ class Pipeline:
             # Only pass the sparse training interaction matrix to algo
             experiment.fork_experiment(algo.name, above)
             above = 1
-            for param, value in algo.get_params():
+            for param, value in algo.get_params().items():
                 experiment.log_param(param, value)
             algo.fit(self.scenario.training_data.binary_values)
 
