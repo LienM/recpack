@@ -6,10 +6,11 @@ import numpy.random
 import random
 from .algorithm_base import Algorithm
 
+from sklearn.utils.validation import check_is_fitted
+
 
 class Random(Algorithm):
     def __init__(self, K=200, seed=None):
-        self.items = None
         self.K = K
         self.seed = seed
 
@@ -18,13 +19,16 @@ class Random(Algorithm):
             random.seed(self.seed)
 
     def fit(self, X):
-        self.items = list(set(X.nonzero()[1]))
+        self.items_ = list(set(X.nonzero()[1]))
+        return self
 
     def predict(self, X: scipy.sparse.csr_matrix):
         """Predict K random scores for items per row in X
 
         Returns numpy array of the same shape as X, with non zero scores for K items per row.
         """
+        check_is_fitted(self)
+
         # For each user choose random K items, and generate a score for these items
         # Then create a matrix with the scores on the right indices
         U = X.nonzero()[0]
@@ -32,7 +36,7 @@ class Random(Algorithm):
         score_list = [
             (u, i, random.random())
             for u in set(U)
-            for i in np.random.choice(self.items, size=self.K, replace=False)
+            for i in np.random.choice(self.items_, size=self.K, replace=False)
         ]
         user_idxs, item_idxs, scores = list(zip(*score_list))
         score_matrix = scipy.sparse.csr_matrix(
@@ -47,18 +51,19 @@ class Random(Algorithm):
 
 class Popularity(Algorithm):
     def __init__(self, K=200):
-        self.sorted_scores = None
         self.K = K
-        self.max = None
 
     def fit(self, X):
         items = list(X.nonzero()[1])
         sorted_scores = Counter(items).most_common()
-        self.sorted_scores = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
+        self.sorted_scores_ = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
+        return self
 
     def predict(self, X):
         """For each user predict the K most popular items"""
-        items, values = zip(*self.sorted_scores[: self.K])
+        check_is_fitted(self)
+
+        items, values = zip(*self.sorted_scores_[: self.K])
 
         users = set(X.nonzero()[0])
 

@@ -4,6 +4,7 @@ import numpy as np
 import scipy.sparse
 
 from sklearn.linear_model import SGDRegressor
+from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.user_item_interactions_algorithms import (
     UserItemInteractionsAlgorithm,
@@ -11,11 +12,10 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 
 class EASE(UserItemInteractionsAlgorithm):
-    def __init__(self, l2=1e3, B=None):
-        self.B = B
+    def __init__(self, l2=1e3):
         self.l2 = l2
 
-    def fit(self, X, w=None):
+    def fit(self, X, y=None, w=None):
         """Compute the closed form solution and then rescale using diagM(w)"""
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
@@ -40,33 +40,32 @@ class EASE(UserItemInteractionsAlgorithm):
         B[np.diag_indices(B.shape[0])] = 0.0
 
         if w is None:
-            self.B = scipy.sparse.csr_matrix(B)
+            self.B_ = scipy.sparse.csr_matrix(B)
         else:
             B_scaled = B @ np.diag(w)
-            self.B = scipy.sparse.csr_matrix(B_scaled)
+            self.B_ = scipy.sparse.csr_matrix(B_scaled)
 
-        return 
+        return self
 
     def load(self, filename):
-        self.B = np.load(filename)
+        self.B_ = np.load(filename)
 
-        return self.B
+        return self.B_
 
     def save(self, filename=None):
-        if self.B is None:
-            raise Exception("Fit a model before trying to save it, dumbass.")
+        check_is_fitted(self)
 
         if not filename:  # TODO Check if filename is valid
             filename = "./B_" + secrets.token_hex(10)
 
-        np.save(filename, self.B)
+        np.save(filename, self.B_)
 
         return filename
 
     def predict(self, X):
-        if self.B is None:
-            raise Exception("Fit a model before trying to predict with it.")
-        scores = X @ self.B
+        check_is_fitted(self)
+
+        scores = X @ self.B_
 
         if not isinstance(scores, scipy.sparse.csr_matrix):
             scores = scipy.sparse.csr_matrix(scores)
@@ -91,9 +90,6 @@ class SLIM(UserItemInteractionsAlgorithm):
         ignore_neg_weights=True,
         model="sgd",
     ):
-
-        self.similarity_matrix = None
-
         self.l1_reg = l1_reg
         self.l2_reg = l2_reg
         # Translate regression parameters into the expected sgd parameters
@@ -155,9 +151,10 @@ class SLIM(UserItemInteractionsAlgorithm):
 
         # Construct similarity matrix.
         # Shape is determined by 2nd dimension of the shape of input matrix X
-        self.similarity_matrix = scipy.sparse.csr_matrix(
+        self.similarity_matrix_ = scipy.sparse.csr_matrix(
             (data, (row, col)), shape=(X.shape[1], X.shape[1])
         )
+        return self
 
     def predict(self, X):
         """Predict scores for each user, item pair
@@ -168,10 +165,10 @@ class SLIM(UserItemInteractionsAlgorithm):
 
         No history is actually filtered.
         """
-        if self.similarity_matrix is None:
-            raise Exception("Fit a model before trying to predict with it.")
+        check_is_fitted(self)
+
         # TODO, this looks exactly the same as NN's recommendation -> refactor into a similarity based class.
-        scores = X @ self.similarity_matrix
+        scores = X @ self.similarity_matrix_
 
         if not isinstance(scores, scipy.sparse.csr_matrix):
             scores = scipy.sparse.csr_matrix(scores)

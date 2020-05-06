@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
+import math
 
 import numpy as np
 import scipy.sparse
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from recpack.data_matrix import DataM
 from recpack.utils import get_logger
@@ -120,7 +121,7 @@ class StrongGeneralizationSplitter(Splitter):
 
             if within_margin:
                 self.logger.debug(f"{self.name} - Iteration {i} - Within margin")
-                continue
+                break
             else:
                 self.logger.debug(f"{self.name} - Iteration {i} - Not within margin")
 
@@ -153,17 +154,12 @@ class PercentageInteractionSplitter(Splitter):
         Returns 2 sparse matrices in and out
         """
 
-        sp_mat = data.values
-
-        users = sp_mat.shape[0]
-
         tr_u, tr_i = [], []
         te_u, te_i = [], []
 
-        for u in tqdm(range(0, users), desc="split user ratings"):
-            _, user_history = sp_mat[u, :].nonzero()
-
+        for u, user_history in tqdm(data.user_history, desc="split user ratings"):
             rstate = np.random.RandomState(self.seed + u)
+
             rstate.shuffle(user_history)
             hist_len = len(user_history)
             cut = int(np.ceil(hist_len * self.in_perc))
@@ -259,7 +255,7 @@ def csr_row_set_nz_to_val(csr, row, value=0):
 
 
 class FoldIterator:
-    def __init__(self, data_m_in, data_m_out, batch_size=10000):
+    def __init__(self, data_m_in, data_m_out, batch_size=1000):
         self.data_m_in = data_m_in
         self.data_m_out = data_m_out
         # self._index = 0
@@ -290,6 +286,8 @@ class FoldIterator:
 
         return fold_in, fold_out
 
+    def __len__(self):
+        return math.ceil(len(self.users) / self.batch_size)
 
     # def __next__(self):
     #     # While loop to make it possible to skip any cases where user has no items in in or out set.

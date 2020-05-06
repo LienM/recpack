@@ -1,11 +1,10 @@
 from typing import List, Tuple
-
 import pandas as pd
 import numpy as np
 
 import scipy.sparse
 
-from recpack.utils import get_logger
+from recpack.utils import get_logger, groupby2
 
 
 class DataM:
@@ -145,6 +144,15 @@ class DataM:
         else:
             self._timestamps = c_timestamps
             self._values = c_values
+
+    @property
+    def user_history(self):
+        return groupby2(*self.indices)
+
+    @property
+    def active_user_count(self):
+        U, _ = self.indices
+        return len(set(U))
 
     @property
     def binary_values(self):

@@ -1,7 +1,8 @@
 import scipy.sparse
+from sklearn.base import BaseEstimator
 
 
-class Algorithm:
+class Algorithm(BaseEstimator):
 
     @property
     def name(self):

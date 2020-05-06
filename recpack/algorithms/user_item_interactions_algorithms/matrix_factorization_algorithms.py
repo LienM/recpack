@@ -1,6 +1,8 @@
 import scipy.sparse
 import sklearn.decomposition
 
+from sklearn.utils.validation import check_is_fitted
+
 from recpack.algorithms.user_item_interactions_algorithms import (
     UserItemInteractionsAlgorithm,
 )
@@ -10,17 +12,16 @@ class MF(UserItemInteractionsAlgorithm):
     def __init__(self, K=100):
         self.K = K
 
-        self.similarity_matrix = None
+        # self.similarity_matrix_ = None
 
     def fit(self, X):
         pass
 
     def predict(self, X):
-        if self.similarity_matrix is None:
-            raise Exception("Fit a model before trying to predict with it.")
+        check_is_fitted(self)
 
         # TODO again the same similarity approach
-        scores = X @ self.similarity_matrix
+        scores = X @ self.similarity_matrix_
 
         if not isinstance(scores, scipy.sparse.csr_matrix):
             scores = scipy.sparse.csr_matrix(scores)
@@ -45,7 +46,8 @@ class NMF(MF):
         H = model.components_
 
         # Compute an item to item similarity matrix by self multiplying the latent factors.
-        self.similarity_matrix = H.T @ H
+        self.similarity_matrix_ = H.T @ H
+        return self
 
     @property
     def name(self):
@@ -63,7 +65,8 @@ class SVD(MF):
         # Item similarity can then be computed as V.T * Sigma * V
         V = model.components_
         sigma = scipy.sparse.diags(model.singular_values_)
-        self.similarity_matrix = V.T @ sigma @ V
+        self.similarity_matrix_ = V.T @ sigma @ V
+        return self
 
     @property
     def name(self):
