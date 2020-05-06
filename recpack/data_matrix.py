@@ -151,8 +151,8 @@ class DataM:
 
     @property
     def active_user_count(self):
-        cols, _ = self.indices
-        return len(set(cols))
+        U, _ = self.indices
+        return len(set(U))
 
     @property
     def binary_values(self):
