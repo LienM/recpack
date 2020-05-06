@@ -1,5 +1,6 @@
 import sys
 import logging.config
+from collections import defaultdict
 import logging
 
 logger = logging.getLogger("recpack")
@@ -15,3 +16,11 @@ if not logger.handlers:
 
 def get_logger():
     return logger
+
+
+def groupby2(keys, values):
+    """ A group by of separate lists where order doesn't matter. """
+    multidict = defaultdict(list)
+    for k, v in zip(keys, values):
+        multidict[k].append(v)
+    return multidict.items()

@@ -1,12 +1,10 @@
 from typing import List, Tuple
-import itertools
-
 import pandas as pd
 import numpy as np
 
 import scipy.sparse
 
-from recpack.utils import get_logger
+from recpack.utils import get_logger, groupby2
 
 
 class DataM:
@@ -147,10 +145,9 @@ class DataM:
             self._timestamps = c_timestamps
             self._values = c_values
 
-    def iter_user_history(self):
-        for uid, history in itertools.groupby(zip(*self.indices), key=lambda x: x[0]):
-            history = list(list(zip(*history))[1])
-            yield uid, history
+    @property
+    def user_history(self):
+        return groupby2(*self.indices)
 
     @property
     def active_user_count(self):
