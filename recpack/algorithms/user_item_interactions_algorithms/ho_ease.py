@@ -110,6 +110,6 @@ def extend_with_itemsets(Y, itemsets):
 
 
 def compute_itemsets(Y, minsup, amount):
-    return miner.calculateItemsets(Y, minsup=minsup, amount=amount)
+    return miner.calculate_itemsets(Y, minsup=minsup, amount=amount)
 
 
