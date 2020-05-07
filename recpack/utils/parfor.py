@@ -49,7 +49,7 @@ def parfor(iterator, parallel=True, n_jobs=-1, **kwargs):
             # could replace manually doing this with backend=sequential
             data = list()
             for args in iterator:
-                data.append(body(*toTuple(args)))
+                data.append(body(*to_tuple(args)))
                 
         return data
     
