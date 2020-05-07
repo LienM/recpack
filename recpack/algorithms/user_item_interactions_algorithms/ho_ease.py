@@ -12,42 +12,53 @@ from recpack.utils import miner
 
 
 class HOEASE(EASE):
-    def __init__(self, l2=500, minfreq=0.1, amt_itemsets=300):
+    def __init__(self, l2=500, min_freq=0.1, amt_itemsets=300):
         super().__init__(l2)
-        self.minfreq = minfreq
+        self.min_freq = min_freq
         self.amt_itemsets = amt_itemsets
 
-    def fit(self, Y, w=None):
-        """ Compute the closed form solution of HO-EASE. """
+    def fit(self, X: scipy.sparse.csr_matrix, w=None):
+        """
+        Compute the solution for HO-EASE in closed-form.
+
+        :param X: User-item interaction matrix, expected binary.
+        :type X: scipy.sparse.csr_matrix
+        :param w: Weights to apply to the items, defaults to None
+        :type w: [type], optional
+        :raises RuntimeError: [description]
+        :return: self
+        :rtype: type
+        """
         if w:
             raise RuntimeError("Weights are not supported in HO-EASE")
 
         monitor = Monitor("HO-EASE")
 
-        Y = scipy.sparse.csr_matrix(Y)
+        # Y != X (We try to complete Y based on X, as in the paper by Harald Steck.)
+        Y = X.copy()
 
         monitor.update("Compute Itemsets")
-        itemsets = compute_itemsets(Y, self.minfreq * Y.shape[1], self.amt_itemsets)
+        itemsets = compute_itemsets(X, self.min_freq * Y.shape[1], self.amt_itemsets)
 
         monitor.update("Add Itemsets")
-        itemsetIndex = Y.shape[1]
-        X = extend_with_itemsets(Y, itemsets)
+        itemset_index = Y.shape[1]
+        X_ext = extend_with_itemsets(X, itemsets)
 
         monitor.update("Calculate G")
-        G = X.T @ X + self.l2 * np.identity(X.shape[1])
+        G = X_ext.T @ X_ext + self.l2 * np.identity(X.shape[1])
 
         monitor.update("Invert G")
         P = np.linalg.inv(G)
         del G       # free memory
 
         monitor.update("Calculate  Brr")
-        B_rr = P @ (X.T @ Y).todense()
+        B_rr = P @ (X_ext.T @ Y).todense()
 
         # calculate lagrangian multipliers
         monitor.update("Calculate Lagr. Mult. (prepr.)")
 
         # first do one pass over itemsets to find indices
-        Item_indices = {j: [j] for j in range(B_rr.shape[1])}
+        item_indices = {j: [j] for j in range(B_rr.shape[1])}
         for i, itemset in enumerate(itemsets):
             for j in itemset:
                 item_indices[j].append(i + itemset_index)
@@ -74,12 +85,11 @@ class HOEASE(EASE):
 
         return self
 
-    def predict(self, Y):
+    def predict(self, X: scipy.sparse.csr_matrix):
         check_is_fitted(self)
 
-        Y = scipy.sparse.csr_matrix(Y)
-        X = extend_with_itemsets(Y, self.itemsets_)
-        return super().predict(X)
+        X_ext = extend_with_itemsets(X, self.itemsets_)
+        return super().predict(X_ext)
 
     @property
     def name(self):
@@ -111,5 +121,3 @@ def extend_with_itemsets(Y, itemsets):
 
 def compute_itemsets(Y, minsup, amount):
     return miner.calculate_itemsets(Y, minsup=minsup, amount=amount)
-
-
