@@ -3,9 +3,12 @@ import secrets
 import numpy as np
 import scipy.sparse
 
+from tqdm.auto import tqdm
+
 from sklearn.linear_model import SGDRegressor
 from sklearn.utils.validation import check_is_fitted
 
+from recpack.utils.monitor import Monitor
 from recpack.algorithms.user_item_interactions_algorithms import (
     UserItemInteractionsAlgorithm,
 )
@@ -91,6 +94,98 @@ class EASE_XY(EASE):
         self.B_ = B_rr - P @ D
 
         return self
+
+
+# TODO: rename to multimodal EASE? Uses different interaction types to train model
+class DurabEASE(UserItemInteractionsAlgorithm):
+    def __init__(self, l2v=300, l2p=100):
+        self.l2v = l2v
+        self.l2p = l2p
+
+    def fit(self, X, y=None):
+        if y is None:
+            raise ValueError(f"Y required for {self.__class__.__name__}")
+
+        # commented out because we assume X is views and purchases already hstacked
+        # if X.shape[1] != y.shape[1]:
+        #     raise ValueError("X and y should have the same amount of items.")
+
+        # Idea 1
+        # learn B1: V -> P (or V -> V?)
+        # learn B2: P -> V - P (does not need zero diagonal)
+        # B1 encodes similarity
+        # B2 encodes alternatives that are not bought together
+        # predict: V @ B1 - alpha * P @ B2
+
+        # Idea 2
+        # could also optimize B1 first and then: B2 = argmin || P - (V @ B1 - P @ B2)  || + lambda_2 * || B2 ||
+
+        # Idea 3
+        # Idea 2, but use ALS method to optimize further (train B1 then B2 then B1 again, ...)
+        # This is a more efficient approximation of Idea 4
+        # (matrix inv of IxI instead of 2Ix2I is much less expensive, which compensates for iterative optimization)
+
+        # Idea 4
+        # stack V and P horizontally and B1 and B2 vertically. This can be optimized in closed form.
+        monitor = Monitor("DurabEASE")
+
+        monitor.update("Merge interactions")
+        # X_ext = scipy.sparse.hstack((X, y), format="csr")
+        # Assume X and y already stacked (this facilitates the splitting)
+        X_ext = X
+
+        monitor.update("Calculate G")
+        # creates diagonal matrix with first half of diagonal elements l2v and second half l2p
+        reg = np.diag([self.l2v] * X.shape[1] + [self.l2p] * y.shape[1])
+        G = X_ext.T @ X_ext + reg
+
+        monitor.update("Invert G")
+        P = np.linalg.inv(G)
+        del G       # free memory
+
+        monitor.update("Calculate  Brr")
+        B_rr = P @ (X_ext.T @ y).todense()
+
+        # calculate lagrangian multipliers
+        monitor.update("Calculate Lagr. Mult. (prepr.)")
+
+        # first do one pass over itemsets to find indices
+        item_indices = {j: [j, j + X.shape[1]] for j in range(B_rr.shape[1])}
+
+        monitor.update("Calculate Lagr. Mult. (invert)")
+        # then calculate multipliers
+        LM = np.zeros(B_rr.shape)
+        for j in tqdm(range(LM.shape[1])):
+            S = item_indices[j]
+
+            P_ss = P[np.ix_(S, S)]
+            B_rr_sj = B_rr[S, j]
+
+            # pinv to account for numerical errors
+            LM_sj = np.linalg.pinv(P_ss) @ B_rr_sj
+
+            LM[S, j] = np.squeeze(LM_sj)
+
+        monitor.update("Calculate  B")
+        B = B_rr - P @ LM
+
+        self.B_ = scipy.sparse.csr_matrix(B)
+        return self
+
+    def predict(self, X: scipy.sparse.csr_matrix):
+        # X should be hstack of X and y
+        check_is_fitted(self)
+
+        scores = X @ self.B_
+
+        if not isinstance(scores, scipy.sparse.csr_matrix):
+            scores = scipy.sparse.csr_matrix(scores)
+
+        return scores
+
+    @property
+    def name(self):
+        return f"durabease"
 
 
 class SLIM(UserItemInteractionsAlgorithm):
