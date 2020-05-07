@@ -3,7 +3,7 @@ import time
 from joblib import Parallel, delayed
 
 
-def toTuple(el):
+def to_tuple(el):
     if type(el) == tuple:
         return el
     else:
