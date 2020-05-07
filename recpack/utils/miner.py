@@ -43,7 +43,7 @@ def eclat(tidmap, prefix=[], minsup=1, size=3):
     return output
 
 
-def processItemsets(tidmap, itemsets):
+def process_itemsets(tidmap, itemsets):
     output = defaultdict(int)
 
     for itemset in tqdm(itemsets):
