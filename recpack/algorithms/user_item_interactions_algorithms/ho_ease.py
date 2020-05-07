@@ -20,6 +20,8 @@ class HOEASE(EASE):
     def fit(self, X: scipy.sparse.csr_matrix, w=None):
         """
         Compute the solution for HO-EASE in closed-form.
+        We follow the sklearn notation where X is the training data.
+        In the derivation Y corresponds to X and X corresponds to X_ext.
 
         :param X: User-item interaction matrix, expected binary.
         :type X: scipy.sparse.csr_matrix
@@ -35,24 +37,24 @@ class HOEASE(EASE):
         monitor = Monitor("HO-EASE")
 
         # Y != X (We try to complete Y based on X, as in the paper by Harald Steck.)
-        Y = X.copy()
+        # Y = X.copy()
 
         monitor.update("Compute Itemsets")
-        itemsets = compute_itemsets(X, self.min_freq * Y.shape[1], self.amt_itemsets)
+        itemsets = compute_itemsets(X, self.min_freq * X.shape[1], self.amt_itemsets)
 
         monitor.update("Add Itemsets")
-        itemset_index = Y.shape[1]
+        itemset_index = X.shape[1]
         X_ext = extend_with_itemsets(X, itemsets)
 
         monitor.update("Calculate G")
-        G = X_ext.T @ X_ext + self.l2 * np.identity(X.shape[1])
+        G = X_ext.T @ X_ext + self.l2 * np.identity(X_ext.shape[1])
 
         monitor.update("Invert G")
         P = np.linalg.inv(G)
         del G       # free memory
 
         monitor.update("Calculate  Brr")
-        B_rr = P @ (X_ext.T @ Y).todense()
+        B_rr = P @ (X_ext.T @ X).todense()
 
         # calculate lagrangian multipliers
         monitor.update("Calculate Lagr. Mult. (prepr.)")
