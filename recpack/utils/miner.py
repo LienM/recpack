@@ -79,7 +79,7 @@ def calculate_itemsets(X, minsup=2, amount=None):
     print("Amount of itemsets:", len(itemsets))
 
     monitor.update("Calculate influence")
-    itemsets = processItemsets(tidmap, itemsets)
+    itemsets = process_itemsets(tidmap, itemsets)
 
     monitor.update("Sort and trim")
     ordered = sorted(itemsets, key=lambda x: x[1], reverse=True)
