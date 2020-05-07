@@ -88,7 +88,7 @@ class EASE_XY(EASE):
         B_rr = P @ (X.T @ Y).todense()
 
         D = np.identity(X.shape[1]) @ np.diag(np.diag(B_rr) / np.diag(P))
-        self.B_ = B_rr - P @ D
+        self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
 
         return self
 
