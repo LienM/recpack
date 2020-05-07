@@ -37,7 +37,7 @@ def eclat(tidmap, prefix=[], minsup=1, size=3):
 
             suffix[other] = newtids
 
-        newItemsets = eclat(suffix, prefix + [item], minsup=minsup, size=size-1)
+        new_itemsets = eclat(suffix, prefix + [item], minsup=minsup, size=size-1)
         output.extend(new_itemsets)
 
     return output
