@@ -64,7 +64,7 @@ def processItemsets(tidmap, itemsets):
     return list(output.items())
 
 
-def calculateItemsets(X, minsup=2, amount=None):
+def calculate_itemsets(X, minsup=2, amount=None):
     monitor = Monitor("Itemsets")
 
     monitor.update("tidmap")
