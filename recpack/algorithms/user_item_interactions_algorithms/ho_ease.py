@@ -50,7 +50,7 @@ class HOEASE(EASE):
         Item_indices = {j: [j] for j in range(B_rr.shape[1])}
         for i, itemset in enumerate(itemsets):
             for j in itemset:
-                ItemIndices[j].append(i + itemsetIndex)
+                item_indices[j].append(i + itemset_index)
 
         monitor.update("Calculate Lagr. Mult. (invert)")
         # then calculate multipliers
