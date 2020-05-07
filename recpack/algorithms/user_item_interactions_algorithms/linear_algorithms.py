@@ -88,10 +88,10 @@ class EASE_XY(EASE):
         G = X.T @ X + self.l2 * np.identity(X.shape[1])
 
         P = np.linalg.inv(G)
-        B_rr = P @ X.T @ y
+        B_rr = P @ (X.T @ y).todense()
 
         D = np.identity(X.shape[1]) @ np.diag(np.diag(B_rr) / np.diag(P))
-        self.B_ = B_rr - P @ D
+        self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
 
         return self
 
