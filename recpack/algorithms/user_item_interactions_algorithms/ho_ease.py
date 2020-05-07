@@ -47,7 +47,7 @@ class HOEASE(EASE):
         monitor.update("Calculate Lagr. Mult. (prepr.)")
 
         # first do one pass over itemsets to find indices
-        ItemIndices = {j: [j] for j in range(B_rr.shape[1])}
+        Item_indices = {j: [j] for j in range(B_rr.shape[1])}
         for i, itemset in enumerate(itemsets):
             for j in itemset:
                 ItemIndices[j].append(i + itemsetIndex)
