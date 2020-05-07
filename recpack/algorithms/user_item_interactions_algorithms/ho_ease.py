@@ -56,7 +56,7 @@ class HOEASE(EASE):
         # then calculate multipliers
         LM = np.zeros(B_rr.shape)
         for j in tqdm(range(LM.shape[1])):
-            S = ItemIndices[j]
+            S = item_indices[j]
 
             P_ss = P[np.ix_(S, S)]
             B_rr_sj = B_rr[S, j]
