@@ -70,7 +70,7 @@ class DataFramePreprocessor:
             max(self.item_id_mapping.values()) + 1,
         )
 
-    def process(self, *dfs: pd.DataFrame) -> List[scipy.sparse.csr_matrix]:
+    def process(self, *dfs: pd.DataFrame) -> List[DataM]:
         """
         Process all DataFrames passed as arguments.
         If your pipeline requires more than one DataFrame,

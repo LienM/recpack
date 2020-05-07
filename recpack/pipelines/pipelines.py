@@ -4,6 +4,7 @@ from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.utils import get_logger
 from recpack.data_matrix import DataM
 import recpack.experiment as experiment
+from recpack.splitters.splitter_base import FoldIterator
 
 from tqdm.auto import tqdm
 
@@ -65,12 +66,9 @@ class MetricRegistry:
 
 class Pipeline:
 
-    def __init__(self, scenario, algorithms, metric_names, K_values):
+    def __init__(self, algorithms, metric_names, K_values):
         """
         Performs all steps in order and holds on to results.
-
-        :param scenario: Splitter object which will split input data into train, validation and test data
-        :type scenario: `recpack.splitters.Scenario`
 
         :param algorithms: List of algorithms to evaluate in this pipeline
         :type algorithms: `list(recpack.algorithms.Model)`
@@ -82,14 +80,13 @@ class Pipeline:
         :param K_values: The K values for each of the metrics
         :type K_values: `list(int)`
         """
-        self.scenario = scenario
         self.algorithms = algorithms
 
         self.metric_names = metric_names
         self.K_values = K_values
         self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
 
-    def run(self, *data_ms: DataM):
+    def run(self, train_X, test_data_in, test_data_out, train_y=None, batch_size=10000):
         """
         Run the pipeline with the input data.
         This will use the different components in the pipeline to:
@@ -106,10 +103,12 @@ class Pipeline:
                        you should use this one to give it that information.
         :type data_2: `recpack.DataM`
         """
-        self.scenario.split(*data_ms)
-
         # first experiment forks current one, following ones for parent of current
         above = 0
+
+        X = train_X.binary_values
+        if train_y:
+            y = train_y.binary_values
 
         for algo in self.algorithms:
             # Only pass the sparse training interaction matrix to algo
@@ -119,9 +118,12 @@ class Pipeline:
                 experiment.log_param(param, value)
 
             get_logger().debug(f"Training algo {algo.name}")
-            algo.fit(self.scenario.training_data.binary_values)
+            if train_y:
+                algo.fit(X, y)
+            else:
+                algo.fit(X)
 
-        for _in, _out in tqdm(self.scenario.test_iterator):
+        for _in, _out in tqdm(FoldIterator(test_data_in, test_data_out, batch_size=batch_size)):
             get_logger().debug(f"start evaluation batch")
             for algo in self.algorithms:
                 metrics = self.metric_registry[algo.name]

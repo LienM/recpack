@@ -82,18 +82,22 @@ class EASE(UserItemInteractionsAlgorithm):
 
 class EASE_XY(EASE):
     """ Variation of EASE where we encode Y from X (no autoencoder). """
-    def fit(self, X, Y=None):
-        if not Y:
+    def fit(self, X, y=None):
+        if y is None:
             raise RuntimeError("Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY.")
         G = X.T @ X + self.l2 * np.identity(X.shape[1])
 
         P = np.linalg.inv(G)
-        B_rr = P @ X.T @ Y
+        B_rr = P @ X.T @ y
 
         D = np.identity(X.shape[1]) @ np.diag(np.diag(B_rr) / np.diag(P))
         self.B_ = B_rr - P @ D
 
         return self
+
+    @property
+    def name(self):
+        return f"EASE_XY_lambda{self.l2}"
 
 
 # TODO: rename to multimodal EASE? Uses different interaction types to train model
@@ -105,10 +109,8 @@ class DurabEASE(UserItemInteractionsAlgorithm):
     def fit(self, X, y=None):
         if y is None:
             raise ValueError(f"Y required for {self.__class__.__name__}")
-
-        # commented out because we assume X is views and purchases already hstacked
-        # if X.shape[1] != y.shape[1]:
-        #     raise ValueError("X and y should have the same amount of items.")
+        if X.shape[1] != y.shape[1]:
+            raise ValueError("X and y should have the same amount of items.")
 
         # Idea 1
         # learn B1: V -> P (or V -> V?)
@@ -130,9 +132,7 @@ class DurabEASE(UserItemInteractionsAlgorithm):
         monitor = Monitor("DurabEASE")
 
         monitor.update("Merge interactions")
-        # X_ext = scipy.sparse.hstack((X, y), format="csr")
-        # Assume X and y already stacked (this facilitates the splitting)
-        X_ext = X
+        X_ext = scipy.sparse.hstack((X, y), format="csr")
 
         monitor.update("Calculate G")
         # creates diagonal matrix with first half of diagonal elements l2v and second half l2p
