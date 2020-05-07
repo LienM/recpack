@@ -15,7 +15,7 @@ class EASE(UserItemInteractionsAlgorithm):
     def __init__(self, l2=1e3):
         self.l2 = l2
 
-    def fit(self, X, y=None, w=None):
+    def fit(self, X, w=None):
         """Compute the closed form solution and then rescale using diagM(w)"""
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
@@ -75,6 +75,22 @@ class EASE(UserItemInteractionsAlgorithm):
     @property
     def name(self):
         return f"ease_lambda_{self.l2}"
+
+
+class EASE_XY(EASE):
+    """ Variation of EASE where we encode Y from X (no autoencoder). """
+    def fit(self, X, Y=None):
+        if not Y:
+            raise RuntimeError("Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY.")
+        G = X.T @ X + self.l2 * np.identity(X.shape[1])
+
+        P = np.linalg.inv(G)
+        B_rr = P @ X.T @ Y
+
+        D = np.identity(X.shape[1]) @ np.diag(np.diag(B_rr) / np.diag(P))
+        self.B_ = B_rr - P @ D
+
+        return self
 
 
 class SLIM(UserItemInteractionsAlgorithm):
