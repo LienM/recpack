@@ -106,4 +106,4 @@ def test_hoease():
     numpy.testing.assert_almost_equal(result[2, 0], 1, decimal=1)
     numpy.testing.assert_almost_equal(result[0, 2], 1, decimal=1)
 
-    print("itemsets", algo.itemsets_)
+    assert len(algo.itemsets_) == 1
