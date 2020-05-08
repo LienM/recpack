@@ -185,7 +185,7 @@ class DurabEASE(UserItemInteractionsAlgorithm):
 
     @property
     def name(self):
-        return f"durabease"
+        return f"durabease_l2v_{self.l2v}_lvp_{self.l2p}"
 
 
 class SLIM(UserItemInteractionsAlgorithm):
