@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import scipy.sparse
+import numpy as np
 
 from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
 from recpack.utils import get_logger
@@ -128,7 +129,11 @@ class Pipeline(object):
                 get_logger().debug(f"predicting batch with algo {algo.identifier}")
                 X_pred = algo.predict(_in, user_ids=user_ids)
                 if scipy.sparse.issparse(X_pred):
+                    # to dense format
                     X_pred = X_pred.toarray()
+                else:
+                    # ensure ndarray instead of matrix
+                    X_pred = np.asarray(X_pred)
                 get_logger().debug(f"finished predicting batch with algo {algo.identifier}")
 
                 for metric in metrics.values():
