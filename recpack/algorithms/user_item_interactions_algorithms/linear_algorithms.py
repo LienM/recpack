@@ -75,9 +75,9 @@ class EASE(UserItemInteractionsAlgorithm):
 
         return scores
 
-    @property
-    def name(self):
-        return f"ease_lambda_{self.l2}"
+    # @property
+    # def name(self):
+    #     return f"ease_lambda_{self.l2}"
 
 
 class EASE_XY(EASE):
@@ -95,9 +95,9 @@ class EASE_XY(EASE):
 
         return self
 
-    @property
-    def name(self):
-        return f"EASE_XY_lambda{self.l2}"
+    # @property
+    # def name(self):
+    #     return f"EASE_XY_lambda{self.l2}"
 
 
 # TODO: rename to multimodal EASE? Uses different interaction types to train model
@@ -183,9 +183,9 @@ class DurabEASE(UserItemInteractionsAlgorithm):
 
         return scores
 
-    @property
-    def name(self):
-        return f"durabease_l2v_{self.l2v}_lvp_{self.l2p}"
+    # @property
+    # def name(self):
+    #     return f"durabease_l2v_{self.l2v}_lvp_{self.l2p}"
 
 
 class SLIM(UserItemInteractionsAlgorithm):
@@ -286,6 +286,6 @@ class SLIM(UserItemInteractionsAlgorithm):
 
         return scores
 
-    @property
-    def name(self):
-        return f"slim_l1_{self.l1_reg}_l2_{self.l2_reg}_{self.model}"
+    # @property
+    # def name(self):
+    #     return f"slim_l1_{self.l1_reg}_l2_{self.l2_reg}_{self.model}"

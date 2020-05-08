@@ -28,9 +28,9 @@ class MF(UserItemInteractionsAlgorithm):
 
         return scores
 
-    @property
-    def name(self):
-        return f"MF_K_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"MF_K_{self.K}"
 
 
 class NMF(MF):
@@ -49,9 +49,9 @@ class NMF(MF):
         self.similarity_matrix_ = H.T @ H
         return self
 
-    @property
-    def name(self):
-        return f"NMF_K_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"NMF_K_{self.K}"
 
 
 class SVD(MF):
@@ -68,6 +68,6 @@ class SVD(MF):
         self.similarity_matrix_ = V.T @ sigma @ V
         return self
 
-    @property
-    def name(self):
-        return f"SVD_K_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"SVD_K_{self.K}"

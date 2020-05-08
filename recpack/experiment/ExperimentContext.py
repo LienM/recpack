@@ -4,9 +4,12 @@ import csv
 import logging
 import atexit
 
+
 BASE_OUTPUT_DIR = "output/"
 PARAMS_FILENAME = "params.csv"
 RESULTS_FILENAME = "results.csv"
+
+WANDB_ENABLED = False
 
 
 class ExperimentContext(object):
@@ -40,6 +43,17 @@ class ExperimentContext(object):
         self._name = value
 
     @property
+    def root(self):
+        root = self
+        while root.parent:
+            root = root.parent
+        return root
+
+    @property
+    def root_name(self):
+        return self.root.name
+
+    @property
     def output_path(self):
         return self._output_path
 
@@ -70,14 +84,29 @@ class ExperimentContext(object):
         return ret
 
     def save(self):
+        # local
         for filepath, data in [(self.params_path, self.params), (self.results_path, self.results)]:
             with open(filepath, 'w') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=data.keys())
                 writer.writeheader()
                 writer.writerow(data)
 
+        # files
         for name, path in self.files.items():
             os.symlink(path, os.path.join(self.output_path, name))
+
+        # wanddb
+        if WANDB_ENABLED:
+            import wandb
+            project = self.root_name
+            if len(project) == 0:
+                project = "uncategorized"
+            run = wandb.init(project=project, name=self.name[len(self.root_name)+1:], reinit=True)
+            with run:
+                for param, value in self.params.items():
+                    run.config.__setattr__(param, value)
+
+                run.log(self.results)
 
     def log_param(self, name, value):
         if name in self._params:

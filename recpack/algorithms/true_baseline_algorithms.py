@@ -44,9 +44,9 @@ class Random(Algorithm):
         )
         return score_matrix
 
-    @property
-    def name(self):
-        return f"random_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"random_{self.K}"
 
 
 class Popularity(Algorithm):
@@ -77,6 +77,6 @@ class Popularity(Algorithm):
         score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
         return score_matrix
 
-    @property
-    def name(self):
-        return f"popularity_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"popularity_{self.K}"

@@ -1,7 +1,7 @@
 """ Globally accessible experiment context. Through these functions, parameters and results can be logged.
 They will be stored at the end of the program (atexit). """
 
-from recpack.experiment.ExperimentContext import ExperimentContext
+from recpack.experiment.ExperimentContext import ExperimentContext, WANDB_ENABLED
 
 
 rootEC = ExperimentContext("")          # root ec
@@ -32,13 +32,15 @@ def log_file(name, path):
     return currentEC.log_file(name, path)
 
 
-@ECRequired
-def set_name(name):
-    if currentEC.name:
+def init(name, wandb=False):
+    global WANDB_ENABLED
+    if rootEC.name:
         raise RuntimeError("Experiment already labeled")
     assert name not in ECMap
-    currentEC.name = name
-    ECMap[name] = currentEC
+    rootEC.name = name
+    ECMap[name] = rootEC
+    if wandb:
+        WANDB_ENABLED = True
 
 
 def _fork_experiment(name, to_fork_ec):

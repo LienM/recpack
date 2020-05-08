@@ -27,7 +27,7 @@ class MetricRegistry:
         for algo in algorithms:
             for m in self.metric_names:
                 for K in K_values:
-                    self._create(algo.name, m, K)
+                    self._create(algo.identifier, m, K)
 
     def _create(self, algorithm_name, metric_name, K):
         metric = self.METRICS[metric_name](K)
@@ -41,7 +41,7 @@ class MetricRegistry:
     def register_from_factory(self, metric_factory, identifier, K_values):
         for algo in self.algorithms:
             for K in K_values:
-                self.register(metric_factory.create(K), algo.name, f"{identifier}@{K}")
+                self.register(metric_factory.create(K), algo.identifier, f"{identifier}@{K}")
 
     def register(self, metric, algorithm_name, metric_name):
         self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
@@ -111,7 +111,7 @@ class Pipeline(object):
 
     def train(self, X, y=None):
         for algo in self.algorithms:
-            get_logger().debug(f"Training algo {algo.name}")
+            get_logger().debug(f"Training algo {algo.identifier}")
             if y:
                 algo.fit(X, y)
             else:
@@ -121,11 +121,11 @@ class Pipeline(object):
         for _in, _out in tqdm(FoldIterator(data_in, data_out, batch_size=batch_size)):
             get_logger().debug(f"start evaluation batch")
             for algo in self.algorithms:
-                metrics = self.metric_registry[algo.name]
+                metrics = self.metric_registry[algo.identifier]
 
-                get_logger().debug(f"predicting batch with algo {algo.name}")
+                get_logger().debug(f"predicting batch with algo {algo.identifier}")
                 X_pred = algo.predict(_in)
-                get_logger().debug(f"finished predicting batch with algo {algo.name}")
+                get_logger().debug(f"finished predicting batch with algo {algo.identifier}")
 
                 for metric in metrics.values():
                     metric.update(X_pred, _out)
@@ -153,13 +153,13 @@ class LoggingPipeline(Pipeline):
 
         for algo in self.algorithms:
             # Only pass the sparse training interaction matrix to algo
-            experiment.fork_experiment(algo.name, above)
+            experiment.fork_experiment(algo.identifier, above)
             above = 1
             experiment.log_param("algorithm", algo.name)
             for param, value in algo.get_params().items():
                 experiment.log_param(param, value)
 
-            get_logger().debug(f"Training algo {algo.name}")
+            get_logger().debug(f"Training algo {algo.identifier}")
             if y:
                 algo.fit(X, y)
             else:
@@ -171,6 +171,6 @@ class LoggingPipeline(Pipeline):
         # log results
         metrics = self.metric_registry.metrics
         for algo in self.algorithms:
-            experiment.set_experiment(algo.name)
-            for metric, value in metrics[algo.name].items():
+            experiment.set_experiment(algo.identifier)
+            for metric, value in metrics[algo.identifier].items():
                 experiment.log_result(metric, value)

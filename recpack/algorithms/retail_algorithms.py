@@ -154,9 +154,9 @@ class FilterDurableGoods(RetailAlgorithm):
 
         return self.rec_algo.predict(consumable_X)
 
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_filter_durable"
+    # @property
+    # def name(self):
+    #     return f"{self.rec_algo.name}_filter_durable"
 
 
 class DiscountDurableGoods(RetailAlgorithm):
@@ -199,9 +199,9 @@ class DiscountDurableGoods(RetailAlgorithm):
     def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
         return get_topK(X_pred, self.K)
 
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_discount_durable_{self.discount_value}"
+    # @property
+    # def name(self):
+    #     return f"{self.rec_algo.name}_discount_durable"
 
 
 class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
@@ -284,9 +284,9 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
 
         return reco_scores
 
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_discount_durable_neighbours_{self.discount_value}_@_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"{self.rec_algo.name}_discount_durable_neighbours_{self.discount_value}_@_{self.K}"
 
 
 class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
@@ -374,6 +374,6 @@ class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
 
         return reco_scores
 
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_discount_{self.alternatives_algo.name}_alternatives_{self.discount_value}_@{self.K}"
+    # @property
+    # def name(self):
+    #     return f"{self.rec_algo.name}_discount_{self.alternatives_algo.name}"

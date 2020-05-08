@@ -52,9 +52,9 @@ class ItemKNN(UserItemInteractionsAlgorithm):
 
         return scores
 
-    @property
-    def name(self):
-        return f"item_knn_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"item_knn_{self.K}"
 
 
 class SharedAccount(ItemKNN):
@@ -113,6 +113,6 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
 
         return scores
 
-    @property
-    def name(self):
-        return f"item_knn_{self.K}"
+    # @property
+    # def name(self):
+    #     return f"item_knn_{self.K}"
