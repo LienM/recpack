@@ -1,7 +1,7 @@
 """ Globally accessible experiment context. Through these functions, parameters and results can be logged.
 They will be stored at the end of the program (atexit). """
 
-from recpack.experiment.ExperimentContext import ExperimentContext, WANDB_ENABLED
+from recpack.experiment.ExperimentContext import ExperimentContext
 
 
 rootEC = ExperimentContext("")          # root ec
@@ -40,7 +40,7 @@ def init(name, wandb=False):
     rootEC.name = name
     ECMap[name] = rootEC
     if wandb:
-        WANDB_ENABLED = True
+        ExperimentContext.enable_wandb()
 
 
 def _fork_experiment(name, to_fork_ec):

@@ -4,12 +4,14 @@ import csv
 import logging
 import atexit
 
+try:
+    import wandb
+except ImportError:
+    pass
 
 BASE_OUTPUT_DIR = "output/"
 PARAMS_FILENAME = "params.csv"
 RESULTS_FILENAME = "results.csv"
-
-WANDB_ENABLED = False
 
 
 class ExperimentContext(object):
@@ -30,6 +32,12 @@ class ExperimentContext(object):
         if name:
             os.makedirs(self.output_path)
             atexit.register(self.save)
+
+    WANDB_ENABLED = False
+
+    @staticmethod
+    def enable_wandb():
+        ExperimentContext.WANDB_ENABLED = True
 
     @property
     def name(self):
@@ -96,8 +104,7 @@ class ExperimentContext(object):
             os.symlink(path, os.path.join(self.output_path, name))
 
         # wanddb
-        if WANDB_ENABLED:
-            import wandb
+        if ExperimentContext.WANDB_ENABLED:
             project = self.root_name
             if len(project) == 0:
                 project = "uncategorized"
