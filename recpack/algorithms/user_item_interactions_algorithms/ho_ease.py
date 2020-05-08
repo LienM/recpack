@@ -82,12 +82,12 @@ class HOEASE(EASE):
         monitor.update("Calculate  B")
         B = B_rr - P @ LM
 
-        self.B_ = scipy.sparse.csr_matrix(B)
+        self.B_ = B
         self.itemsets_ = itemsets
 
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         check_is_fitted(self)
 
         X_ext = extend_with_itemsets(X, self.itemsets_)

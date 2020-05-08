@@ -31,7 +31,7 @@ def X_pred():
         (pred_values, (pred_users, pred_items)), shape=(10, 5)
     )
 
-    return pred
+    return pred.toarray()
 
 
 @pytest.fixture(scope="function")

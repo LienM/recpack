@@ -279,12 +279,14 @@ class FoldIterator:
         return self
 
     def __next__(self):
-        user_batch = next(self.batch_generator)
+        user_batch = np.array(next(self.batch_generator))
 
-        fold_in = self.data_m_in.users_in(user_batch).values
-        fold_out = self.data_m_out.users_in(user_batch).values
+        # fold_in = self.data_m_in.users_in(user_batch).values
+        # fold_out = self.data_m_out.users_in(user_batch).values
+        fold_in = self.data_m_in.values[user_batch,:]
+        fold_out = self.data_m_out.values[user_batch,:]
 
-        return fold_in, fold_out
+        return fold_in, fold_out, user_batch
 
     def __len__(self):
         return math.ceil(len(self.users) / self.batch_size)

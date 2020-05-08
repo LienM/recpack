@@ -124,7 +124,7 @@ class RetailAlgorithm(Algorithm):
     def fit_classifier(self, labels, purchases):
         pass
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         pass
 
 
@@ -149,7 +149,7 @@ class FilterDurableGoods(RetailAlgorithm):
     def fit_classifier(self, labels, purchases):
         self.goods_classifier.fit(labels, purchases)
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         consumable_X = self.goods_classifier.get_consumable(X)
 
         return self.rec_algo.predict(consumable_X)
@@ -183,7 +183,7 @@ class DiscountDurableGoods(RetailAlgorithm):
 
         self.rec_algo.fit(X)
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
 
         consumable_X = self.goods_classifier.get_consumable(X)
         durable_X = self.goods_classifier.get_durable(X)
@@ -258,7 +258,7 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
 
         self.rec_algo.fit(X)
  
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         """
         Predict scores given X the user interaction matrix.
 
@@ -348,7 +348,7 @@ class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
         self.rec_algo.fit(X)
         self.alternatives_algo.fit(X)
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         """
         Predict scores given X the user interaction matrix.
 

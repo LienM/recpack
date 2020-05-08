@@ -10,7 +10,7 @@ def test_fold_iterator_and_metrics(data_m):
 
     nonzero_users = set(data_m.indices[0])
 
-    for fold_in, fold_out in fold_iterator:
+    for fold_in, fold_out, user_ids in fold_iterator:
         # Score should be 1 because fold_in == fold_out
         # metric.update(fold_in, fold_out)
         pass

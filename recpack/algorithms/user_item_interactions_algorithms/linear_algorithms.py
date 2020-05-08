@@ -43,10 +43,10 @@ class EASE(UserItemInteractionsAlgorithm):
         B[np.diag_indices(B.shape[0])] = 0.0
 
         if w is None:
-            self.B_ = scipy.sparse.csr_matrix(B)
+            self.B_ = B
         else:
             B_scaled = B @ np.diag(w)
-            self.B_ = scipy.sparse.csr_matrix(B_scaled)
+            self.B_ = B_scaled
 
         return self
 
@@ -65,7 +65,7 @@ class EASE(UserItemInteractionsAlgorithm):
 
         return filename
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         check_is_fitted(self)
 
         scores = X @ self.B_
@@ -91,7 +91,7 @@ class EASE_XY(EASE):
         B_rr = P @ (X.T @ y).todense()
 
         D = np.identity(X.shape[1]) @ np.diag(np.diag(B_rr) / np.diag(P))
-        self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
+        self.B_ = B_rr - P @ D
 
         return self
 
@@ -169,10 +169,10 @@ class DurabEASE(UserItemInteractionsAlgorithm):
         monitor.update("Calculate  B")
         B = B_rr - P @ LM
 
-        self.B_ = scipy.sparse.csr_matrix(B)
+        self.B_ = B
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         # X should be hstack of X and y
         check_is_fitted(self)
 
@@ -267,7 +267,7 @@ class SLIM(UserItemInteractionsAlgorithm):
         )
         return self
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         """Predict scores for each user, item pair
         X is a user item interaction matrix in sparse represenation size m' x n
         Where n needs to be the same as the n in fit, but m' can be anything.

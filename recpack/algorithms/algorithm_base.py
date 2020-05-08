@@ -1,4 +1,5 @@
 import scipy.sparse
+import numpy as np
 from sklearn.base import BaseEstimator
 
 
@@ -19,7 +20,7 @@ class Algorithm(BaseEstimator):
     def fit(self, X):
         pass
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids: np.array = None):
         pass
 
     def save(self, filename):

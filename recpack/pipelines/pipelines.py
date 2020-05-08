@@ -118,13 +118,13 @@ class Pipeline(object):
                 algo.fit(X)
 
     def eval(self, data_in, data_out, batch_size):
-        for _in, _out in tqdm(FoldIterator(data_in, data_out, batch_size=batch_size)):
+        for _in, _out, user_ids in tqdm(FoldIterator(data_in, data_out, batch_size=batch_size)):
             get_logger().debug(f"start evaluation batch")
             for algo in self.algorithms:
                 metrics = self.metric_registry[algo.identifier]
 
                 get_logger().debug(f"predicting batch with algo {algo.identifier}")
-                X_pred = algo.predict(_in)
+                X_pred = algo.predict(_in, user_ids=user_ids).toarray()
                 get_logger().debug(f"finished predicting batch with algo {algo.identifier}")
 
                 for metric in metrics.values():

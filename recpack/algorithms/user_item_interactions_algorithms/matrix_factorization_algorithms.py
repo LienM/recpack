@@ -17,7 +17,7 @@ class MF(UserItemInteractionsAlgorithm):
     def fit(self, X):
         pass
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         check_is_fitted(self)
 
         # TODO again the same similarity approach

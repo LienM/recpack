@@ -198,12 +198,9 @@ def test_fold_iterator_correctness(data_m, batch_size):
         data_m_in, data_m_out, batch_size=batch_size
     )
 
-    for fold_in, fold_out in fold_iterator:
+    for fold_in, fold_out, user_ids in fold_iterator:
         assert fold_in.nnz > 0
         assert fold_out.nnz > 0
-
-        assert data_m_in.shape == fold_in.shape
-        assert data_m_out.shape == fold_out.shape
 
 
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
@@ -212,18 +209,17 @@ def test_fold_iterator_completeness(data_m, batch_size):
     fold_iterator = splitter_base.FoldIterator(data_m, data_m, batch_size=batch_size)
 
     nonzero_users = set(data_m.indices[0])
+    users = len(nonzero_users)
 
     all_batches = set()
 
-    for fold_in, fold_out in fold_iterator:
+    for fold_in, fold_out, user_ids in fold_iterator:
         assert (fold_in != fold_out).nnz == 0
 
-        users_in_batch = set(fold_in.nonzero()[0])
+        amt_users_in_batch = fold_in.shape[0]
 
-        all_batches = all_batches.union(users_in_batch)
+        all_batches = all_batches.union(user_ids)
 
-        assert len(users_in_batch) == batch_size or (
-            len(users_in_batch) == len(nonzero_users) % batch_size
-        )
+        assert amt_users_in_batch == batch_size or amt_users_in_batch == (users % batch_size)
 
-    assert len(all_batches) == len(nonzero_users)
+    assert len(all_batches) == users

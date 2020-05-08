@@ -41,7 +41,7 @@ class ItemKNN(UserItemInteractionsAlgorithm):
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         # Use total sum of similarities
         check_is_fitted(self)
         # TODO: Use average?
@@ -62,7 +62,7 @@ class SharedAccount(ItemKNN):
     def __init__(self, K):
         super().__init__(K)
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         raise NotImplementedError("Under construction, the gnomes are working on it.")
 
 
@@ -102,7 +102,7 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         # Use total sum of similarities
         # TODO: Use average?
         check_is_fitted(self)

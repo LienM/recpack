@@ -118,11 +118,10 @@ def test_SNIPS_w_batch_size(data, X_pred, X_true, propensity_type, expected_scor
         mask = numpy.zeros((X_true.shape[0], 1))
         mask[users, 0] = 1
 
-        local_pred = X_pred.multiply(mask).tocsr()
-        local_pred.eliminate_zeros()
+        local_pred = X_pred * mask
         local_true = X_true.multiply(mask).tocsr()
 
-        if local_pred.nnz > 0:
+        if numpy.count_nonzero(local_pred) > 0:
             metric.update(local_pred, local_true)
         u_c = u_end
 
