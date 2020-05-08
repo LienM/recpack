@@ -48,6 +48,10 @@ class RecallK(MetricK):
         # Per user get a set of the topK predicted items
         X_pred_top_K = self.get_topK(X_pred)
 
+        # nonzero_users = list(set(X_pred.nonzero()[0]))
+        # in old code, we iterate over users with nonzero predictions,
+        # which means that when an algorithm predicted all zeros, we ignored the user
+
         for u in range(X_pred.shape[0]):
             recommended_items = set(X_pred_top_K[u, :])
             true_items = set(X_true[u, :].nonzero()[1])
