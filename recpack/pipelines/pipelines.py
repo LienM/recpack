@@ -114,7 +114,7 @@ class Pipeline(object):
     def train(self, X, y=None):
         for algo in self.algorithms:
             get_logger().debug(f"Training algo {algo.identifier}")
-            if y:
+            if y is not None:
                 algo.fit(X, y)
             else:
                 algo.fit(X)

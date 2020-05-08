@@ -169,7 +169,6 @@ class NDCGK(MetricK):
                 )
             )
 
-
             self.num_users += 1
             self.NDCG += DCG / IDCG
 
