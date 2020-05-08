@@ -26,6 +26,6 @@ def test_pipeline():
     p.run(*scenario.split(data))
 
     metrics = p.get()
-    assert algo.name in metrics
-    assert "NDCG_K_2" in metrics[algo.name]
-    assert "Recall_K_2" in metrics[algo.name]
+    assert algo.identifier in metrics
+    assert "NDCG_K_2" in metrics[algo.identifier]
+    assert "Recall_K_2" in metrics[algo.identifier]
