@@ -15,48 +15,18 @@ class Scenario(ABC):
         folds for evaluation where a fold of the user's history is
         used to predict another fold.
         """
-        self.training_data = None
-        self.validation_data_in = None
-        self.validation_data_out = None
-        self.test_data_in = None
-        self.test_data_out = None
 
     @abstractmethod
     def split(self, *data_ms: DataM):
         """
         Method to be implemented in all classes that inherit
         from Scenario. Used to create the required data objects.
-        Assumes no more than two data matrices will be used in any
-        given Scenario.
+        Returns them as follows:
+        train, test_in, test_out
+        or when separate labels for training are provided by the scenario:
+        train_X, train_y, test_in, test_out
 
-        :param data: First data object.
-        :type data: DataM
-        :param data_2: Second data object.
-        :type data_2: DataM
+        :param data_ms: List of datasets
+        :type data: List[DataM]
         """
         pass
-
-    @property
-    def validation_data(self) -> Tuple[DataM, DataM]:
-        """
-        Returns validation data.
-
-        :return: Validation data matrices as DataM in, DataM out.
-        :rtype: Tuple[DataM, DataM]
-        """
-        return (self.validation_data_in, self.validation_data_out)
-
-    @property
-    def test_data(self) -> Tuple[DataM, DataM]:
-        """
-        Returns test data.
-
-        :return: Test data matrices as DataM in, DataM out.
-        :rtype: Tuple[DataM, DataM]
-        """
-        return (self.test_data_in, self.test_data_out)
-
-    @property
-    def test_iterator(self) -> FoldIterator:
-        # TODO Fix/Make sure this works
-        return FoldIterator(self.test_data_in, self.test_data_out)

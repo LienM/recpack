@@ -8,10 +8,7 @@ import recpack.splitters.scenarios as scenarios
 def test_strong_generalization_timed_split(data_m, perc_users_in, t):
 
     scenario = scenarios.StrongGeneralizationTimed(perc_users_in, t)
-    scenario.split(data_m)
-
-    tr = scenario.training_data
-    te_data_in, te_data_out = scenario.test_data
+    tr, te_data_in, te_data_out = scenario.split(data_m)
 
     assert not set(tr.indices[0]).intersection(te_data_in.indices[0])
     assert not set(tr.indices[0]).intersection(te_data_out.indices[0])
@@ -25,10 +22,7 @@ def test_strong_generalization_timed_split(data_m, perc_users_in, t):
 def test_timed_out_of_domain_split(data_m, t):
 
     scenario = scenarios.TimedOutOfDomainPredictAndEvaluate(t)
-    scenario.split(data_m, data_m)
-
-    tr = scenario.training_data
-    te_data_in, te_data_out = scenario.test_data
+    tr, te_data_in, te_data_out = scenario.split(data_m, data_m)
 
     assert (tr.timestamps < t).all()
     assert (te_data_in.timestamps < t).all()
@@ -39,10 +33,7 @@ def test_timed_out_of_domain_split(data_m, t):
 def test_timed_out_of_domain_evaluate(data_m, t):
 
     scenario = scenarios.TrainInTimedOutOfDomainEvaluate(t)
-    scenario.split(data_m, data_m)
-
-    tr = scenario.training_data
-    te_data_in, te_data_out = scenario.test_data
+    tr, te_data_in, te_data_out = scenario.split(data_m, data_m)
 
     assert (tr.timestamps < t).all()
     assert (te_data_in.timestamps < t).all()
@@ -56,10 +47,7 @@ def test_timed_out_of_domain_evaluate(data_m, t):
 def test_strong_generalization_split(data_m, perc_users_train, perc_interactions_in):
 
     scenario = scenarios.StrongGeneralization(perc_users_train, perc_interactions_in)
-    scenario.split(data_m)
-
-    tr = scenario.training_data
-    te_data_in, te_data_out = scenario.test_data
+    tr, te_data_in, te_data_out =  scenario.split(data_m)
 
     assert not set(tr.indices[0]).intersection(te_data_in.indices[0])
     assert not set(tr.indices[0]).intersection(te_data_out.indices[0])

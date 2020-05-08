@@ -13,8 +13,9 @@ class StrongGeneralization(Scenario):
         self.interaction_split = splitter_base.PercentageInteractionSplitter(perc_interactions_in)
 
     def split(self, data):
-        self.training_data, te_data = self.strong_gen.split(data)
-        self.test_data_in, self.test_data_out = self.interaction_split.split(te_data)
+        training_data, te_data = self.strong_gen.split(data)
+        test_data_in, test_data_out = self.interaction_split.split(te_data)
+        return training_data, test_data_in, test_data_out
 
 
 class TrainingInTestOutTimed(Scenario):
@@ -27,8 +28,10 @@ class TrainingInTestOutTimed(Scenario):
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
     def split(self, data):
-        self.training_data, self.test_data_out = self.timestamp_spl.split(data)
-        self.test_data_in = self.training_data
+        training_data, test_data_out = self.timestamp_spl.split(data)
+        test_data_in = training_data
+        return training_data, test_data_in, test_data_out
+
 
 
 class StrongGeneralizationTimed(Scenario):
@@ -54,9 +57,10 @@ class StrongGeneralizationTimed(Scenario):
         # Split across user dimension
         tr_data, te_data = self.strong_gen.split(data)
         # Make sure only interactions before t are used for training
-        self.training_data, _ = self.timestamp_spl.split(tr_data)
+        training_data, _ = self.timestamp_spl.split(tr_data)
 
-        self.test_data_in, self.test_data_out = self.timestamp_spl.split(te_data)
+        test_data_in, test_data_out = self.timestamp_spl.split(te_data)
+        return training_data, test_data_in, test_data_out
 
 
 class TimedOutOfDomainPredictAndEvaluate(Scenario):
@@ -81,8 +85,9 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
     def split(self, data, data_2):
-        self.training_data, _ = self.timestamp_spl.split(data)
-        self.test_data_in, self.test_data_out = self.timestamp_spl.split(data_2)
+        training_data, _ = self.timestamp_spl.split(data)
+        test_data_in, test_data_out = self.timestamp_spl.split(data_2)
+        return training_data, test_data_in, test_data_out
 
 
 class TrainInTimedOutOfDomainEvaluate(Scenario):
@@ -103,6 +108,20 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
     def split(self, data, data_2):
-        self.training_data, _ = self.timestamp_spl.split(data)
-        _, self.test_data_out = self.timestamp_spl.split(data_2)
-        self.test_data_in = self.training_data
+        training_data, _ = self.timestamp_spl.split(data)
+        _, test_data_out = self.timestamp_spl.split(data_2)
+        return training_data, training_data, test_data_out
+
+
+# TODO: could swap inheritance and make TrainInTimedOutOfDomainEvaluate filter out the training_y.
+class TrainInTimedOutOfDomainWithLabelsEvaluate(TrainInTimedOutOfDomainEvaluate):
+    """
+    Same as TrainInTimedOutOfDomainEvaluate but with historical data_2 as labels.
+    """
+    def __init__(self, t, t_alpha=None, t_delta=None):
+        super().__init__(t, t_alpha, t_delta)
+
+    def split(self, data, data_2):
+        training_X, _ = self.timestamp_spl.split(data)
+        training_y, test_y = self.timestamp_spl.split(data_2)
+        return training_X, training_y, training_X, test_y

@@ -1,4 +1,4 @@
-from recpack.pipelines.pipelines import Pipeline, LoggingPipeline, LegacyPipeline
+from recpack.pipelines.pipelines import Pipeline, LoggingPipeline
 from recpack.pipelines.parameter_generators import ParameterGenerator, TemporalSWParameterGenerator, SplitterGridSearchGenerator
 
 PARAMETER_GENERATORS = {

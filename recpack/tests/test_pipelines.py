@@ -22,8 +22,8 @@ def test_pipeline():
     scenario = scenarios.TrainingInTestOutTimed(20)
     algo = recpack.algorithms.algorithm_registry.get('popularity')(K=2)
 
-    p = recpack.pipelines.Pipeline(scenario, [algo], ['NDCG', 'Recall'], [2])
-    p.run(data)
+    p = recpack.pipelines.Pipeline([algo], ['NDCG', 'Recall'], [2])
+    p.run(*scenario.split(data))
 
     metrics = p.get()
     assert algo.name in metrics
