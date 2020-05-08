@@ -70,9 +70,6 @@ class EASE(UserItemInteractionsAlgorithm):
 
         scores = X @ self.B_
 
-        if not isinstance(scores, scipy.sparse.csr_matrix):
-            scores = scipy.sparse.csr_matrix(scores)
-
         return scores
 
     # @property
@@ -174,18 +171,7 @@ class DurabEASE(UserItemInteractionsAlgorithm):
 
     def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         # X should be hstack of X and y
-        check_is_fitted(self)
-
-        scores = X @ self.B_
-
-        if not isinstance(scores, scipy.sparse.csr_matrix):
-            scores = scipy.sparse.csr_matrix(scores)
-
-        return scores
-
-    # @property
-    # def name(self):
-    #     return f"durabease_l2v_{self.l2v}_lvp_{self.l2p}"
+        return super().predict(X, user_ids=user_ids)
 
 
 class SLIM(UserItemInteractionsAlgorithm):
