@@ -31,26 +31,8 @@ class MetricK(Metric):
         return self.__class__.__name__
 
     def get_topK(self, X_pred: np.ndarray) -> scipy.sparse.csr_matrix:
-        # Get nonzero users
-        # nonzero_users = list(set(X_pred.nonzero()[0]))
-        # X = X_pred[nonzero_users, :].toarray()
-        X = X_pred
-
-        items = np.argpartition(X, -self.K)[:, -self.K:]
+        items = np.argpartition(X_pred, -self.K)[:, -self.K:]
         return items
-
-        # U, I, V = [], [], []
-        #
-        # for ix, user in enumerate(nonzero_users):
-        #     U.extend([user] * self.K)
-        #     I.extend(items[ix])
-        #     V.extend(X[ix, items[ix]])
-        #
-        # X_pred_top_K = scipy.sparse.csr_matrix(
-        #     (V, (U, I)), dtype=X_pred.dtype, shape=X_pred.shape
-        # )
-        #
-        # return X_pred_top_K
 
 
 class RecallK(MetricK):
@@ -158,8 +140,6 @@ class NDCGK(MetricK):
     def update(self, X_pred, X_true):
 
         X_pred_top_K = self.get_topK(X_pred)
-
-        nonzero_users = list(set(X_pred.nonzero()[0]))
 
         for u in range(X_pred.shape[0]):
             true_items = set(X_true[u, :].nonzero()[1])
