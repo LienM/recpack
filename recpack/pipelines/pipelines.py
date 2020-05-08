@@ -164,7 +164,7 @@ class LoggingPipeline(Pipeline):
                 experiment.log_param(param, value)
 
             get_logger().debug(f"Training algo {algo.identifier}")
-            if y:
+            if y is not None:
                 algo.fit(X, y)
             else:
                 algo.fit(X)
