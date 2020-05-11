@@ -171,7 +171,11 @@ class DurabEASE(UserItemInteractionsAlgorithm):
 
     def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         # X should be hstack of X and y
-        return super().predict(X, user_ids=user_ids)
+        check_is_fitted(self)
+
+        scores = X @ self.B_
+
+        return scores
 
 
 class SLIM(UserItemInteractionsAlgorithm):
