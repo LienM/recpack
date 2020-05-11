@@ -1,3 +1,4 @@
+from typing import List
 from abc import ABC, abstractmethod
 
 import pandas as pd
@@ -13,6 +14,12 @@ class Filter(ABC):
         self.user_id = user_id
         self.item_id = item_id
         self.timestamp_id = timestamp_id
+
+    def apply_all(self, *dfs: pd.DataFrame) -> List[pd.DataFrame]:
+        ret = list()
+        for df in dfs:
+            ret.append(self.apply(df))
+        return ret
 
     @abstractmethod
     def apply(self, df: pd.DataFrame) -> pd.DataFrame:

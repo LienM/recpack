@@ -83,20 +83,27 @@ class DataFramePreprocessor:
         dfs = list(dfs)
         for index, df in enumerate(dfs):
             get_logger().debug(f"Processing df {index}")
-            get_logger().debug(f"ratings before preprocess: {len(df.index)}")
+            get_logger().debug(f"\tratings before preprocess: {len(df.index)}")
+            get_logger().debug(f"\titems before preprocess: {df[self.item_id].nunique()}")
+            get_logger().debug(f"\tusers before preprocess: {df[self.user_id].nunique()}")
             if self.dedupe:
                 df.drop_duplicates(
                     [self.user_id, self.item_id], keep="first", inplace=True
                 )
-                get_logger().debug(f"ratings after dedupe: {len(df.index)}")
+                get_logger().debug(f"\tratings after dedupe: {len(df.index)}")
+                get_logger().debug(f"\titems after dedupe: {df[self.item_id].nunique()}")
+                get_logger().debug(f"\tusers after dedupe: {df[self.user_id].nunique()}")
 
-            for filter in self.filters:
-                get_logger().debug(f"applying filter: {filter}")
-                df = filter.apply(df)
-                get_logger().debug(f"ratings after filter: {len(df.index)}")
+        for filter in self.filters:
+            get_logger().debug(f"applying filter: {filter}")
+            dfs = filter.apply_all(*dfs)
+            for index, df in enumerate(dfs):
+                get_logger().debug(f"df {index}")
+                get_logger().debug(f"\tratings after filter: {len(df.index)}")
+                get_logger().debug(f"\titems after filter: {df[self.item_id].nunique()}")
+                get_logger().debug(f"\tusers after filter: {df[self.user_id].nunique()}")
 
-            dfs[index] = df
-
+        for index, df in enumerate(dfs):
             self.update_id_mappings(df)
 
         cleaned_item_id = "iid"
