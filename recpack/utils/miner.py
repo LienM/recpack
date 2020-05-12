@@ -6,6 +6,7 @@ import itertools
 from tqdm.auto import tqdm
 
 from recpack.utils.monitor import Monitor
+from recpack.utils import logger
 
 
 def eclat(tidmap, prefix=[], minsup=1, size=3):
@@ -76,7 +77,7 @@ def calculate_itemsets(X, minsup=2, amount=None):
     monitor.update("eclat")
     itemsets = eclat(tidmap, minsup=minsup, size=3)
 
-    print("Amount of itemsets:", len(itemsets))
+    logger.debug("Amount of itemsets:", len(itemsets))
 
     monitor.update("Calculate influence")
     itemsets = process_itemsets(tidmap, itemsets)
