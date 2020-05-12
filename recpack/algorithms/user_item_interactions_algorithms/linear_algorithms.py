@@ -92,9 +92,34 @@ class EASE_XY(EASE):
 
         return self
 
-    # @property
-    # def name(self):
-    #     return f"EASE_XY_lambda{self.l2}"
+
+class EASE_VP(UserItemInteractionsAlgorithm):
+    """ Variation of EASE for views and purchases. """
+    def __init__(self, l2v=300, l2p=100):
+        self.l2v = l2v
+        self.l2p = l2p
+
+    def fit(self, X, y=None):
+        # X are views, y are purchases
+        if y is None:
+            raise RuntimeError("Train regular EASE (with X=Y) using the EASE algorithm.")
+
+        Bv = EASE(l2=self.l2v).fit(X).B_
+
+        VminP = X - y
+        Bp = EASE_XY(l2=self.l2p).fit(y, VminP).B_
+
+        self.B_ = np.vstack((Bv, -Bp))
+
+        return self
+
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
+        # X should be hstack of X and y
+        check_is_fitted(self)
+
+        scores = X @ self.B_
+
+        return scores
 
 
 # TODO: rename to multimodal EASE? Uses different interaction types to train model

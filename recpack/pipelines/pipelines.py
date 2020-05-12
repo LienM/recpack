@@ -179,7 +179,9 @@ class LoggingPipeline(Pipeline):
 
         # log results
         metrics = self.metric_registry.metrics
+        users_evaluated = self.metric_registry.number_of_users_evaluated
         for algo in self.algorithms:
             experiment.set_experiment(algo.identifier)
             for metric, value in metrics[algo.identifier].items():
                 experiment.log_result(metric, value)
+                experiment.log_result(f'{metric}_users_evaluated', users_evaluated[algo.identifier][metric])
