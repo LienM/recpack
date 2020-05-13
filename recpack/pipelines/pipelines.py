@@ -2,7 +2,6 @@ from collections import defaultdict
 from typing import Tuple, Union
 
 import scipy.sparse
-import numpy as np
 
 from tqdm.auto import tqdm
 
@@ -11,7 +10,6 @@ from recpack.utils import logger
 from recpack.data_matrix import DataM
 import recpack.experiment as experiment
 from recpack.splitters.splitter_base import FoldIterator
-from recpack.algorithms.torch_algorithms.vaes import MultVAE
 
 
 class MetricRegistry:
