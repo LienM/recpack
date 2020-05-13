@@ -100,6 +100,12 @@ def test_SNIPS(data, X_pred, X_true, propensity_type, expected_score):
     ],
 )
 def test_SNIPS_w_batch_size(data, X_pred, X_true, propensity_type, expected_score, batch_size):
+    print("data")
+    print(data.toarray())
+    print("X_pred")
+    print(X_pred.toarray())
+    print("X_true")
+    print(X_true.toarray())
 
     K = 2
     # Test uniform propensities
@@ -118,10 +124,14 @@ def test_SNIPS_w_batch_size(data, X_pred, X_true, propensity_type, expected_scor
         mask = numpy.zeros((X_true.shape[0], 1))
         mask[users, 0] = 1
 
-        local_pred = X_pred * mask
+        local_pred = X_pred.multiply(mask).tocsr()
+        local_pred.eliminate_zeros()
         local_true = X_true.multiply(mask).tocsr()
 
-        if numpy.count_nonzero(local_pred) > 0:
+        print("local_pred")
+        print(local_pred.toarray())
+        print(local_pred.nnz)
+        if local_pred.nnz > 0:
             metric.update(local_pred, local_true)
         u_c = u_end
 

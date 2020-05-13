@@ -8,12 +8,12 @@ import scipy.sparse
 from tqdm.auto import tqdm
 
 from recpack.data_matrix import DataM
-from recpack.utils import get_logger
+from recpack.utils import logger
 
 
 class Splitter(ABC):
     def __init__(self):
-        self.logger = get_logger()
+        pass
 
     @abstractmethod
     def split(self, data):
@@ -52,7 +52,7 @@ class UserSplitter(Splitter):
         tr_data = data.users_in(self.users_in)
         te_data = data.users_in(self.users_out)
 
-        self.logger.debug(f"{self.name} - Split successful")
+        logger.debug(f"{self.name} - Split successful")
 
         return tr_data, te_data
 
@@ -120,14 +120,14 @@ class StrongGeneralizationSplitter(Splitter):
             within_margin = np.isclose(real_perc, self.in_perc, atol=self.error_margin)
 
             if within_margin:
-                self.logger.debug(f"{self.name} - Iteration {i} - Within margin")
+                logger.debug(f"{self.name} - Iteration {i} - Within margin")
                 break
             else:
-                self.logger.debug(f"{self.name} - Iteration {i} - Not within margin")
+                logger.debug(f"{self.name} - Iteration {i} - Not within margin")
 
         u_splitter = UserSplitter(users_in, users_out)
 
-        self.logger.debug(f"{self.name} - Split successful")
+        logger.debug(f"{self.name} - Split successful")
 
         return u_splitter.split(data)
 
@@ -173,7 +173,7 @@ class PercentageInteractionSplitter(Splitter):
         tr_data = data.indices_in((tr_u, tr_i))
         te_data = data.indices_in((te_u, te_i))
 
-        self.logger.debug(f"{self.name} - Split successful")
+        logger.debug(f"{self.name} - Split successful")
 
         return tr_data, te_data
 
@@ -234,7 +234,7 @@ class TimestampSplitter(Splitter):
             # Get indices where timestamp >= t and timestamp < t + t_delta
             te_data = data.timestamps_gte(self.t).timestamps_lt(self.t + self.t_delta)
 
-        self.logger.debug(f"{self.name} - Split successful")
+        logger.debug(f"{self.name} - Split successful")
 
         return tr_data, te_data
 
@@ -258,21 +258,14 @@ class FoldIterator:
     def __init__(self, data_m_in, data_m_out, batch_size=1000):
         self.data_m_in = data_m_in
         self.data_m_out = data_m_out
-        # self._index = 0
-        # self._max_index = data_m_in.shape[0]
         self.batch_size = batch_size
         assert self.batch_size > 0  # Avoid inf loops
-
-        # self.sp_mat_in = self.data_m_in.values
-        # self.sp_mat_out = self.data_m_out.values
 
         self.data_m_in.eliminate_timestamps()
         self.data_m_out.eliminate_timestamps()
 
         # Make sure that user has data in both history and predicted values
         self.users = list(set(self.data_m_in.indices[0]).intersection(self.data_m_out.indices[0]))
-
-        self.logger = get_logger()
 
     def __iter__(self):
         self.batch_generator = batch(self.users, self.batch_size)
@@ -283,59 +276,10 @@ class FoldIterator:
 
         # fold_in = self.data_m_in.users_in(user_batch).values
         # fold_out = self.data_m_out.users_in(user_batch).values
-        fold_in = self.data_m_in.values[user_batch,:]
-        fold_out = self.data_m_out.values[user_batch,:]
+        fold_in = self.data_m_in.values[user_batch, :]
+        fold_out = self.data_m_out.values[user_batch, :]
 
         return fold_in, fold_out, user_batch
 
     def __len__(self):
         return math.ceil(len(self.users) / self.batch_size)
-
-    # def __next__(self):
-    #     # While loop to make it possible to skip any cases where user has no items in in or out set.
-    #     while True:
-    #         # Yield multi line fold.
-    #         if self._index < self._max_index:
-    #             start = self._index
-    #             end = self._index + self.batch_size
-    #             # make sure we don't go out of range
-    #             if end >= self._max_index:
-    #                 end = self._max_index
-
-    #             fold_in = self.sp_mat_in[start:end]
-    #             fold_out = self.sp_mat_out[start:end]
-
-    #             # Filter out users with missing data in either in or out.
-
-    #             # Get row sum for both in and out
-    #             in_sum = fold_in.sum(1)
-    #             out_sum = fold_out.sum(1)
-    #             # Rows with sum == 0 are rows that should be removed in both in and out.
-    #             rows_to_delete = []
-    #             for i in range(len(in_sum)):
-    #                 if in_sum[i, 0] == 0 or out_sum[i, 0] == 0:
-    #                     rows_to_delete.append(i)
-    #             # Set 0 values for rows to delete
-    #             if len(rows_to_delete) > 0:
-    #                 for r_to_del in rows_to_delete:
-    #                     csr_row_set_nz_to_val(fold_in, r_to_del, value=0)
-    #                     csr_row_set_nz_to_val(fold_out, r_to_del, value=0)
-    #                 fold_in.eliminate_zeros()
-    #                 fold_out.eliminate_zeros()
-    #                 # Remove rows with 0 values
-    #                 fold_in = fold_in[fold_in.getnnz(1) > 0]
-    #                 fold_out = fold_out[fold_out.getnnz(1) > 0]
-    #             # If no matrix is left over, continue to next batch without returning.
-    #             if fold_in.nnz == 0:
-    #                 self._index = end
-    #                 continue
-
-    #             self._index = end
-    #             # Get a list of users we return as recommendations
-    #             users = np.array([i for i in range(start, end)])
-    #             users = list(set(users) - set(users[rows_to_delete]))
-
-    #             self.logger.debug(f"Yielded a new fold of {self.batch_size}")
-
-    #             return fold_in, fold_out, users
-    #         raise StopIteration

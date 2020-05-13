@@ -1,4 +1,4 @@
-import numpy as np
+import numpy
 import itertools
 import scipy.sparse
 
@@ -10,9 +10,6 @@ class Metric:
         super().__init__()
         self.logger = get_logger()
 
-    def update(self, X_pred: np.ndarray, X_true: scipy.sparse.csr_matrix):
-        pass
-
     @property
     def name(self):
         return ""
@@ -23,16 +20,29 @@ class MetricK(Metric):
         super().__init__()
         self.K = K
 
-    def __str__(self):
-        return self.name
-
     @property
     def name(self):
-        return self.__class__.__name__
+        return ""
 
-    def get_topK(self, X_pred: np.ndarray) -> scipy.sparse.csr_matrix:
-        items = np.argpartition(X_pred, -self.K)[:, -self.K:]
-        return items
+    def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
+        # Get nonzero users
+        nonzero_users = list(set(X_pred.nonzero()[0]))
+        X = X_pred[nonzero_users, :].toarray()
+
+        items = numpy.argpartition(X, -self.K)[:, -self.K :]
+
+        U, I, V = [], [], []
+
+        for ix, user in enumerate(nonzero_users):
+            U.extend([user] * self.K)
+            I.extend(items[ix])
+            V.extend(X[ix, items[ix]])
+
+        X_pred_top_K = scipy.sparse.csr_matrix(
+            (V, (U, I)), dtype=X_pred.dtype, shape=X_pred.shape
+        )
+
+        return X_pred_top_K
 
 
 class RecallK(MetricK):
@@ -48,16 +58,11 @@ class RecallK(MetricK):
         # Per user get a set of the topK predicted items
         X_pred_top_K = self.get_topK(X_pred)
 
-        # nonzero_users = list(set(X_pred.nonzero()[0]))
-        # in old code, we iterate over users with nonzero predictions,
-        # which means that when an algorithm predicted all zeros, we ignored the user
+        nonzero_users = list(set(X_pred.nonzero()[0]))
 
-        for u in range(X_pred.shape[0]):
-            recommended_items = set(X_pred_top_K[u, :])
+        for u in nonzero_users:
+            recommended_items = set(X_pred_top_K[u, :].nonzero()[1])
             true_items = set(X_true[u, :].nonzero()[1])
-
-            if len(true_items) == 0:
-                continue
 
             self.recall += len(recommended_items.intersection(true_items)) / min(
                 self.K, len(true_items)
@@ -94,16 +99,14 @@ class MeanReciprocalRankK(MetricK):
         # Per user get a sorted list of the topK predicted items
         X_pred_top_K = self.get_topK(X_pred)
 
-        for u in range(X_pred.shape[0]):
+        nonzero_users = list(set(X_pred.nonzero()[0]))
+
+        for u in nonzero_users:
             true_items = set(X_true[u, :].nonzero()[1])
+            recommended_items = X_pred_top_K[u, :].nonzero()[1]
+            item_scores = X_pred_top_K[u, recommended_items].toarray()[0]
 
-            if len(true_items) == 0:
-                continue
-
-            recommended_items = X_pred_top_K[u, :]
-            item_scores = X_pred[u, recommended_items]
-
-            arr_indices = np.argsort(item_scores)
+            arr_indices = numpy.argsort(item_scores)
 
             for ix, item in enumerate(reversed(recommended_items[arr_indices])):
                 if item in true_items:
@@ -134,7 +137,7 @@ class NDCGK(MetricK):
         self.NDCG = 0
         self.num_users = 0
 
-        self.discount_template = 1.0 / np.log2(np.arange(2, K + 2))
+        self.discount_template = 1.0 / numpy.log2(numpy.arange(2, K + 2))
 
         # Calculate IDCG values by creating a list of partial sums (the functional way)
         self.IDCG_cache = [0] + list(
@@ -145,12 +148,14 @@ class NDCGK(MetricK):
 
         X_pred_top_K = self.get_topK(X_pred)
 
-        for u in range(X_pred.shape[0]):
-            true_items = set(X_true[u, :].nonzero()[1])
-            recommended_items = X_pred_top_K[u, :]
-            item_scores = X_pred[u, recommended_items]
+        nonzero_users = list(set(X_pred.nonzero()[0]))
 
-            arr_indices = np.argsort(item_scores)
+        for u in nonzero_users:
+            true_items = set(X_true[u, :].nonzero()[1])
+            recommended_items = X_pred_top_K[u, :].nonzero()[1]
+            item_scores = X_pred_top_K[u, recommended_items].toarray()[0]
+
+            arr_indices = numpy.argsort(item_scores)
 
             M = min(self.K, len(true_items))
             if M == 0:
@@ -168,6 +173,7 @@ class NDCGK(MetricK):
                     )
                 )
             )
+
 
             self.num_users += 1
             self.NDCG += DCG / IDCG
@@ -210,7 +216,7 @@ class MutexMetric:
         self.negatives = 0
 
     def update(
-        self, X_pred: np.matrix, X_true: scipy.sparse.csr_matrix, users: list
+        self, X_pred: numpy.matrix, X_true: scipy.sparse.csr_matrix, users: list
     ) -> None:
 
         self.positives += X_pred.sum()
@@ -219,7 +225,7 @@ class MutexMetric:
         false_pos = scipy.sparse.csr_matrix(X_pred).multiply(X_true)
         self.false_positives += false_pos.sum()
 
-        negatives = np.ones(X_pred.shape) - X_pred
+        negatives = numpy.ones(X_pred.shape) - X_pred
         true_neg = scipy.sparse.csr_matrix(negatives).multiply(X_true)
         self.true_negatives += true_neg.sum()
 

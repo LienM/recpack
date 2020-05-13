@@ -3,6 +3,8 @@ import numpy
 import pandas
 from snapy import MinHash, LSH
 
+# TODO Implement BaseEstimator interface.
+
 class LSHModel:
     """
     Model based on metadata only.

@@ -11,6 +11,8 @@ from sklearn.utils.validation import check_is_fitted
 
 class Random(Algorithm):
     def __init__(self, K=200, seed=None):
+        super().__init__()
+        self.items = None
         self.K = K
         self.seed = seed
 
@@ -44,13 +46,10 @@ class Random(Algorithm):
         )
         return score_matrix
 
-    # @property
-    # def name(self):
-    #     return f"random_{self.K}"
-
 
 class Popularity(Algorithm):
     def __init__(self, K=200):
+        super().__init__()
         self.K = K
 
     def fit(self, X):
@@ -76,7 +75,3 @@ class Popularity(Algorithm):
 
         score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
         return score_matrix
-
-    # @property
-    # def name(self):
-    #     return f"popularity_{self.K}"

@@ -17,7 +17,6 @@ class DataM:
         self._values = values
         self._timestamps = timestamps
 
-
     @property
     def values(self) -> scipy.sparse.csr_matrix:
         return self._values  # (user_1, item_1) -> 2

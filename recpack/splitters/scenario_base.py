@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Tuple, Union
 
-from recpack.splitters.splitter_base import FoldIterator
+import recpack.splitters.splitter_base as splitter_base
 from recpack.data_matrix import DataM
 
 
 class Scenario(ABC):
-
-    def __init__(self):
+    def __init__(self, validation=False):
         """
         Base class for defining an evaluation "Scenario",
         i.e. a set of steps that splits data into training,
@@ -15,6 +14,9 @@ class Scenario(ABC):
         folds for evaluation where a fold of the user's history is
         used to predict another fold.
         """
+        self.validation = validation
+        if validation:
+            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.5)
 
     @abstractmethod
     def split(self, *data_ms: DataM):
@@ -30,3 +32,41 @@ class Scenario(ABC):
         :type data: List[DataM]
         """
         pass
+
+    @property
+    def training_data(self) -> Tuple[DataM, DataM]:
+        return (
+            (self.train_X, self.train_y)
+            if hasattr(self, "train_y")
+            else self.train_X
+        )
+
+    @property
+    def validation_data(self) -> Union[Tuple[DataM, DataM], None]:
+        """
+        Returns validation data.
+
+        :return: Validation data matrices as DataM in, DataM out.
+        :rtype: Tuple[DataM, DataM]
+        """
+        return (self.validation_data_in, self.validation_data_out) if self.validation_data_in else None
+
+    @property
+    def test_data(self) -> Tuple[DataM, DataM]:
+        """
+        Returns test data.
+
+        :return: Test data matrices as DataM in, DataM out.
+        :rtype: Tuple[DataM, DataM]
+        """
+        return (self.test_data_in, self.test_data_out)
+
+    def validate(self):
+        # TODO Test presency of train_y
+        assert hasattr(self, "train_X") and self.train_X is not None
+        if self.validation:
+            assert hasattr(self, "validation_data_in") and self.validation_data_in is not None
+            assert hasattr(self, "validation_data_out") and self.validation_data_out is not None
+
+        assert hasattr(self, "test_data_in") and self.test_data_in is not None
+        assert hasattr(self, "test_data_out") and self.test_data_out is not None

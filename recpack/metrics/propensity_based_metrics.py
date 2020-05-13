@@ -1,5 +1,5 @@
 import enum
-import numpy as np
+import numpy
 import scipy.sparse
 
 from recpack.metrics.basic_metrics import MetricK
@@ -39,7 +39,7 @@ class SNIPS(MetricK):
         self.inverse_propensities = inverse_propensities
 
     def update(
-        self, X_pred: np.ndarray, X_true: scipy.sparse.csr_matrix
+        self, X_pred: numpy.matrix, X_true: scipy.sparse.csr_matrix
     ) -> None:
         """
         Update the internal metrics given a set of recommendations and actual events.
@@ -54,18 +54,16 @@ class SNIPS(MetricK):
 
         # get top K recommendations
         x_pred_top_k = self.get_topK(X_pred)
+        print(x_pred_top_k.toarray())
 
         # binarize the prediction matrix
-        # x_pred_top_k[x_pred_top_k > 0] = 1
-
-        hits = scipy.sparse.csr_matrix(X_pred.shape)
-        hits[:, x_pred_top_k] = 1
-
+        x_pred_top_k[x_pred_top_k > 0] = 1
 
         # Sort the list of users to avoid weird issues with expected input
         ip = self.inverse_propensities.get(sorted(list(users)))
+        index_map = {x: e for e, x in enumerate(sorted(list(users)))}
 
-        X_pred_as_propensity = hits.multiply(ip).tocsr()
+        X_pred_as_propensity = x_pred_top_k.multiply(ip).tocsr()
         X_true_as_propensity = X_true.multiply(ip).tocsr()
 
         X_hit_inverse_propensities = X_pred_as_propensity.multiply(X_true)
@@ -116,7 +114,7 @@ class UniformInversePropensity:
 
     def _get_propensities(self, data_matrix):
         nr_items = data_matrix.shape[1]
-        return np.array([[1 / nr_items for i in range(nr_items)]])
+        return numpy.array([[1 / nr_items for i in range(nr_items)]])
 
 
 class GlobalInversePropensity(InversePropensity):
@@ -135,7 +133,7 @@ class GlobalInversePropensity(InversePropensity):
         item_count = data_matrix.sum(axis=0)
         total = data_matrix.sum()
         propensities = item_count / total
-        propensities[propensities == np.inf] = 0
+        propensities[propensities == numpy.inf] = 0
         return propensities
 
 
@@ -159,7 +157,7 @@ class UserInversePropensity(InversePropensity):
 
     def _get_propensities(self, users):
         row_sum = self.data_matrix[users].sum(axis=1)
-        user_mask = np.zeros((self.data_matrix.shape[0], 1))
+        user_mask = numpy.zeros((self.data_matrix.shape[0], 1))
         user_mask[users, 0] = 1
         dm_selected_users = self.data_matrix.multiply(user_mask)
         # After removing potentially non zero values by mult with 0, we need to remove them

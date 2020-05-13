@@ -5,6 +5,7 @@ import recpack.algorithms.retail_algorithms as retail_algorithms
 import recpack.algorithms.true_baseline_algorithms as true_baseline_algorithms
 import recpack.algorithms.item_metadata_algorithms.hashing_algorithms as ha
 
+
 def test_user_history_filter_durable(pageviews, purchases, labels):
     """
     User 0 has purchased item 0,
@@ -44,12 +45,14 @@ def test_product_labeler(labels_more_durable_items):
     pl = retail_algorithms.ProductLabeler()
     pl.fit(labels_more_durable_items)
 
-    test_mat = scipy.sparse.dia_matrix(numpy.ones(labels_more_durable_items.shape)).tocsr()
+    test_mat = scipy.sparse.dia_matrix(
+        numpy.ones(labels_more_durable_items.shape)
+    ).tocsr()
     durables = pl.get_durable(test_mat)
 
     assert durables.nnz == labels_more_durable_items.nnz
-    assert durables[0,1] == 0
-    assert durables[0,0] == 1
+    assert durables[0, 1] == 0
+    assert durables[0, 0] == 1
 
 
 def test_product_labeler_durable(pageviews, purchases, labels):
@@ -114,7 +117,9 @@ def test_discount_durable_goods(pageviews, purchases, labels):
 
     base_algo = true_baseline_algorithms.Popularity(1)
 
-    true_algo = retail_algorithms.DiscountDurableGoods(base_algo, pl, discount_value=0.5, K=1)
+    true_algo = retail_algorithms.DiscountDurableGoods(
+        base_algo, pl, discount_value=0.5, K=1
+    )
 
     true_algo.fit(pageviews)
 
@@ -129,14 +134,18 @@ def test_discount_durable_goods(pageviews, purchases, labels):
     assert len(res[2].nonzero()[1]) == 1
 
 
-def test_discount_durable_neighbours_goods(pageviews, purchases, labels_more_durable_items):
+def test_discount_durable_neighbours_goods(
+    pageviews, purchases, labels_more_durable_items
+):
     pl = retail_algorithms.ProductLabeler()
 
     pl_user = retail_algorithms.PurchaseHistoryDurableFilter()
 
     base_algo = true_baseline_algorithms.Popularity(1)
 
-    true_algo = retail_algorithms.DiscountDurableNeighboursOfDurableItems(base_algo, pl, pl_user, discount_value=1, K=1)
+    true_algo = retail_algorithms.DiscountDurableNeighboursOfDurableItems(
+        base_algo, pl, pl_user, discount_value=1, K=1
+    )
     true_algo.fit_classifier(labels_more_durable_items, purchases)
 
     true_algo.fit(pageviews)
@@ -152,22 +161,26 @@ def test_discount_durable_neighbours_goods(pageviews, purchases, labels_more_dur
     assert len(res[2].nonzero()[1]) == 1
 
 
-def test_discount_alternative_goods(metadata, pageviews, purchases, labels_more_durable_items):
+def test_discount_alternative_goods(
+    metadata, pageviews, purchases, labels_more_durable_items
+):
     pl = retail_algorithms.ProductLabeler()
 
     pl_user = retail_algorithms.PurchaseHistoryDurableFilter()
 
     base_algo = true_baseline_algorithms.Popularity(1)
-    alternative_algo = ha.LSHModel(metadata, min_jaccard=0.1, n_gram=3,
-        content_key='title', item_key='item_id')
+    alternative_algo = ha.LSHModel(
+        metadata, min_jaccard=0.1, n_gram=3, content_key="title", item_key="item_id"
+    )
 
-    true_algo = retail_algorithms.DiscountAlternativesOfDurableItems(base_algo, alternative_algo, pl, pl_user, discount_value=1, K=1)
+    true_algo = retail_algorithms.DiscountAlternativesOfDurableItems(
+        base_algo, alternative_algo, pl, pl_user, discount_value=1, K=1
+    )
     true_algo.fit_classifier(labels_more_durable_items, purchases)
 
     true_algo.fit(pageviews)
 
     res = true_algo.predict(purchases)
-    print(res.toarray())
     # Purchase was discounted, but not removed
     assert len(res[0].nonzero()[1]) == 1
     assert res[0, 3] < 1

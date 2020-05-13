@@ -5,6 +5,9 @@ from sklearn.base import BaseEstimator
 
 class Algorithm(BaseEstimator):
 
+    def __init__(self):
+        super().__init__()
+
     @property
     def name(self):
         return self.__class__.__name__
@@ -27,13 +30,4 @@ class Algorithm(BaseEstimator):
         pass
 
     def load(self, filename):
-        pass
-
-
-class Baseline:
-
-    def fit(self, X):
-        pass
-
-    def predict(self, X, K):
         pass

@@ -93,10 +93,6 @@ class HOEASE(EASE):
         X_ext = extend_with_itemsets(X, self.itemsets_)
         return super().predict(X_ext)
 
-    # @property
-    # def name(self):
-    #     return f"HO-EASE_lambda_{self.l2}"
-
 
 def extend_with_itemsets(Y, itemsets):
     """ Extends a user-item interaction matrix with itemset interactions. Returns augmented X. """

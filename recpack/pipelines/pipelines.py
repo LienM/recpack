@@ -1,15 +1,17 @@
 from collections import defaultdict
+from typing import Tuple, Union
 
 import scipy.sparse
 import numpy as np
 
+from tqdm.auto import tqdm
+
 from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
-from recpack.utils import get_logger
+from recpack.utils import logger
 from recpack.data_matrix import DataM
 import recpack.experiment as experiment
 from recpack.splitters.splitter_base import FoldIterator
-
-from tqdm.auto import tqdm
+from recpack.algorithms.torch_algorithms.vaes import MultVAE
 
 
 class MetricRegistry:
@@ -25,7 +27,6 @@ class MetricRegistry:
         self.metric_names = metric_names
 
         self.algorithms = algorithms
-        self.logger = get_logger()
 
         for algo in algorithms:
             for m in self.metric_names:
@@ -35,7 +36,7 @@ class MetricRegistry:
     def _create(self, algorithm_name, metric_name, K):
         metric = self.METRICS[metric_name](K)
         self.registry[algorithm_name][f"{metric_name}_K_{K}"] = metric
-        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         return
 
     def __getitem__(self, key):
@@ -47,7 +48,7 @@ class MetricRegistry:
                 self.register(metric_factory.create(K), algo.identifier, f"{identifier}@{K}")
 
     def register(self, metric, algorithm_name, metric_name):
-        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         self.registry[algorithm_name][metric_name] = metric
 
     @property
@@ -89,7 +90,7 @@ class Pipeline(object):
         self.K_values = K_values
         self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
 
-    def run(self, train_X, test_data_in, test_data_out, train_y=None, batch_size=1000):
+    def run(self, train_data: Union[Tuple[DataM, DataM], DataM], test_data: Tuple[DataM, DataM], validation_data: Tuple[DataM, DataM] = None, batch_size=1000):
         """
         Run the pipeline with the input data.
         This will use the different components in the pipeline to:
@@ -106,40 +107,47 @@ class Pipeline(object):
                        you should use this one to give it that information.
         :type data_2: `recpack.DataM`
         """
-        X = train_X.binary_values
-        y = train_y.binary_values if train_y else None
 
-        self.train(X, y)
-        self.eval(test_data_in, test_data_out, batch_size)
+        if isinstance(train_data, DataM):
+            X = train_data.binary_values
+            y = None
+        else:
+            X = train_data[0].binary_values
+            y = train_data[1].binary_values
 
-    def train(self, X, y=None):
+        self.train(X, y=y, validation_data=validation_data)
+        self.eval(test_data[0], test_data[1], batch_size)
+
+    def train(self, X, y=None, validation_data=None):
         for algo in self.algorithms:
-            get_logger().debug(f"Training algo {algo.identifier}")
-            if y is not None:
-                algo.fit(X, y)
+            logger.debug(f"Training algo {algo.identifier}")
+            if y is not None and validation_data is not None:
+                algo.fit(X, y=y, validation_data=validation_data)
+            elif y is not None:
+                algo.fit(X, y=y)
+            elif validation_data is not None:
+                algo.fit(X, validation_data=validation_data)
             else:
                 algo.fit(X)
 
     def eval(self, data_in, data_out, batch_size):
         for _in, _out, user_ids in tqdm(FoldIterator(data_in, data_out, batch_size=batch_size)):
-            get_logger().debug(f"start evaluation batch")
+            logger.debug(f"start evaluation batch")
             for algo in self.algorithms:
                 metrics = self.metric_registry[algo.identifier]
 
-                get_logger().debug(f"predicting batch with algo {algo.identifier}")
+                logger.debug(f"predicting batch with algo {algo.identifier}")
                 X_pred = algo.predict(_in, user_ids=user_ids)
-                if scipy.sparse.issparse(X_pred):
-                    # to dense format
-                    X_pred = X_pred.toarray()
-                else:
-                    # ensure ndarray instead of matrix
-                    X_pred = np.asarray(X_pred)
-                get_logger().debug(f"finished predicting batch with algo {algo.identifier}")
+
+                if not scipy.sparse.issparse(X_pred):
+                    X_pred = scipy.sparse.csr_matrix(X_pred)
+
+                logger.debug(f"finished predicting batch with algo {algo.identifier}")
 
                 for metric in metrics.values():
                     metric.update(X_pred, _out)
 
-            get_logger().debug(f"end evaluation batch")
+            logger.debug(f"end evaluation batch")
 
     def get(self):
         return self.metric_registry.metrics
@@ -156,7 +164,7 @@ class LoggingPipeline(Pipeline):
         """
         super().__init__(algorithms, metric_names, K_values)
 
-    def train(self, X, y=None):
+    def train(self, X, y=None, validation_data=None):
         # first experiment forks current one, following ones for parent of current
         above = 0
 
@@ -168,9 +176,13 @@ class LoggingPipeline(Pipeline):
             for param, value in algo.get_params().items():
                 experiment.log_param(param, value)
 
-            get_logger().debug(f"Training algo {algo.identifier}")
-            if y is not None:
-                algo.fit(X, y)
+            logger.debug(f"Training algo {algo.identifier}")
+            if y is not None and validation_data is not None:
+                algo.fit(X, y=y, validation_data=validation_data)
+            elif y is not None:
+                algo.fit(X, y=y)
+            elif validation_data is not None:
+                algo.fit(X, validation_data=validation_data)
             else:
                 algo.fit(X)
 

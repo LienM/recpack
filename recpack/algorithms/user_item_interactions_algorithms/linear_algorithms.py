@@ -72,10 +72,6 @@ class EASE(UserItemInteractionsAlgorithm):
 
         return scores
 
-    # @property
-    # def name(self):
-    #     return f"ease_lambda_{self.l2}"
-
 
 class EASE_XY(EASE):
     """ Variation of EASE where we encode Y from X (no autoencoder). """
@@ -216,6 +212,8 @@ class SLIM(UserItemInteractionsAlgorithm):
         ignore_neg_weights=True,
         model="sgd",
     ):
+        super().__init__()
+
         self.l1_reg = l1_reg
         self.l2_reg = l2_reg
         # Translate regression parameters into the expected sgd parameters
@@ -300,7 +298,3 @@ class SLIM(UserItemInteractionsAlgorithm):
             scores = scipy.sparse.csr_matrix(scores)
 
         return scores
-
-    # @property
-    # def name(self):
-    #     return f"slim_l1_{self.l1_reg}_l2_{self.l2_reg}_{self.model}"
