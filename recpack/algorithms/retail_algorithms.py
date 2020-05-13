@@ -164,7 +164,7 @@ class FilterDurableGoods(RetailAlgorithm):
 
         consumable_X = self.goods_classifier.get_consumable(X)
 
-        return self.rec_algo.predict(consumable_X)
+        return self.rec_algo.predict(consumable_X, user_ids=user_ids)
 
 
 class DiscountDurableGoods(RetailAlgorithm):
@@ -203,12 +203,12 @@ class DiscountDurableGoods(RetailAlgorithm):
         consumable_X = self.user_goods_classifier.get_consumable(X)
         durable_X = self.user_goods_classifier.get_durable(X)
 
-        durable_recos = self.rec_algo.predict(durable_X)
+        durable_recos = self.rec_algo.predict(durable_X, user_ids=user_ids)
 
         topK_durable_recos = self.get_topK(durable_recos)
 
         return (
-            self.rec_algo.predict(consumable_X)
+            self.rec_algo.predict(consumable_X, user_ids=user_ids)
             - self.discount_value * topK_durable_recos
         )
 
@@ -291,13 +291,13 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
         # but the user has not yet purchased
         durable_X = self.user_goods_classifier.get_durable(X)
 
-        reco_scores = self.rec_algo.predict(X)
+        reco_scores = self.rec_algo.predict(X, user_ids=user_ids)
 
         # For each nonzero item in durable_X get the score for that item, and discount it from the user's that have seen that item.
         for i in set(durable_X.nonzero()[1]):
             m = scipy.sparse.csr_matrix(([1], ([0], [i])), shape=(1, X.shape[1]))
             # Discount the items the durable neighbours
-            pred = self.rec_algo.predict(durable_X.multiply(m))
+            pred = self.rec_algo.predict(durable_X.multiply(m), user_ids=user_ids)
 
             reco_scores -= self.discount_value * self.goods_classifier.get_durable(
                 self.get_topK(pred)
@@ -394,13 +394,13 @@ class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
         # but the user has not yet purchased
         durable_X = self.user_goods_classifier.get_durable(X)
 
-        reco_scores = self.rec_algo.predict(X)
+        reco_scores = self.rec_algo.predict(X, user_ids=user_ids)
 
         # For each nonzero item in durable_X get the score for that item, and discount it from the user's that have seen that item.
         for i in set(durable_X.nonzero()[1]):
             m = scipy.sparse.csr_matrix(([1], ([0], [i])), shape=(1, X.shape[1]))
             # Discount the items the durable neighbours
-            pred = self.alternatives_algo.predict(durable_X.multiply(m))
+            pred = self.alternatives_algo.predict(durable_X.multiply(m), user_ids=user_ids)
 
             reco_scores -= self.discount_value * self.goods_classifier.get_durable(
                 self.get_topK(pred)

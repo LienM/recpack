@@ -43,10 +43,10 @@ class EASE(UserItemInteractionsAlgorithm):
         B[np.diag_indices(B.shape[0])] = 0.0
 
         if w is None:
-            self.B_ = B
+            self.B_ = scipy.sparse.csr_matrix(B)
         else:
             B_scaled = B @ np.diag(w)
-            self.B_ = B_scaled
+            self.B_ = scipy.sparse.csr_matrix(B_scaled)
 
         return self
 
@@ -84,7 +84,7 @@ class EASE_XY(EASE):
         B_rr = P @ (X.T @ y).todense()
 
         D = np.identity(X.shape[1]) @ np.diag(np.diag(B_rr) / np.diag(P))
-        self.B_ = B_rr - P @ D
+        self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
 
         return self
 
@@ -105,7 +105,7 @@ class EASE_VP(UserItemInteractionsAlgorithm):
         VminP = X - y
         Bp = EASE_XY(l2=self.l2p).fit(y, VminP).B_
 
-        self.B_ = np.vstack((Bv, -Bp))
+        self.B_ = scipy.sparse.csr_matrix(np.vstack((Bv, -Bp)))
 
         return self
 
@@ -187,7 +187,7 @@ class DurabEASE(UserItemInteractionsAlgorithm):
         monitor.update("Calculate  B")
         B = B_rr - P @ LM
 
-        self.B_ = B
+        self.B_ = scipy.sparse.csr_matrix(B)
         return self
 
     def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):

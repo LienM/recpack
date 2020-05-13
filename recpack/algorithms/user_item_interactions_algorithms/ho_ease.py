@@ -82,7 +82,7 @@ class HOEASE(EASE):
         monitor.update("Calculate  B")
         B = B_rr - P @ LM
 
-        self.B_ = B
+        self.B_ = scipy.sparse.csr_matrix(B)
         self.itemsets_ = itemsets
 
         return self

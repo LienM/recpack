@@ -249,7 +249,7 @@ class MultVAE(Algorithm):
         ) as f:
             torch.save(self.model_, f)
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         check_is_fitted(self)
 
         users = list(set(X.nonzero()[0]))
@@ -268,10 +268,6 @@ class MultVAE(Algorithm):
         X_pred = csr_matrix((V, (U, I)), shape=X.shape)
 
         return X_pred
-
-    @property
-    def name(self):
-        return f"mult_vae"
 
 
 def naive_sparse2tensor(data):
