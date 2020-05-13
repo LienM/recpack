@@ -6,7 +6,7 @@ import scipy.sparse
 import recpack.preprocessing.helpers as helpers
 from recpack.data_matrix import DataM
 from recpack.preprocessing.filters import Filter
-from recpack.utils import get_logger
+from recpack.utils import logger
 
 from tqdm.auto import tqdm
 tqdm.pandas()
@@ -46,7 +46,7 @@ class DataFramePreprocessor:
         self.filters.append(_filter)
 
     def map_users(self, df):
-        get_logger().debug("Map users")
+        logger.debug("Map users")
         if not self.user_id_mapping:
             raise RuntimeError(
                 "User ID Mapping should be fit before attempting to map users"
@@ -55,7 +55,7 @@ class DataFramePreprocessor:
         return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def map_items(self, df):
-        get_logger().debug("Map items")
+        logger.debug("Map items")
         if not self.item_id_mapping:
             raise RuntimeError(
                 "Item ID Mapping should be fit before attempting to map items"
@@ -82,26 +82,26 @@ class DataFramePreprocessor:
         """
         dfs = list(dfs)
         for index, df in enumerate(dfs):
-            get_logger().debug(f"Processing df {index}")
-            get_logger().debug(f"\tratings before preprocess: {len(df.index)}")
-            get_logger().debug(f"\titems before preprocess: {df[self.item_id].nunique()}")
-            get_logger().debug(f"\tusers before preprocess: {df[self.user_id].nunique()}")
+            logger.debug(f"Processing df {index}")
+            logger.debug(f"\tinteractions before preprocess: {len(df.index)}")
+            logger.debug(f"\titems before preprocess: {df[self.item_id].nunique()}")
+            logger.debug(f"\tusers before preprocess: {df[self.user_id].nunique()}")
             if self.dedupe:
                 df.drop_duplicates(
                     [self.user_id, self.item_id], keep="first", inplace=True
                 )
-                get_logger().debug(f"\tratings after dedupe: {len(df.index)}")
-                get_logger().debug(f"\titems after dedupe: {df[self.item_id].nunique()}")
-                get_logger().debug(f"\tusers after dedupe: {df[self.user_id].nunique()}")
+                logger.debug(f"\tinteractions after dedupe: {len(df.index)}")
+                logger.debug(f"\titems after dedupe: {df[self.item_id].nunique()}")
+                logger.debug(f"\tusers after dedupe: {df[self.user_id].nunique()}")
 
         for filter in self.filters:
-            get_logger().debug(f"applying filter: {filter}")
+            logger.debug(f"applying filter: {filter}")
             dfs = filter.apply_all(*dfs)
             for index, df in enumerate(dfs):
-                get_logger().debug(f"df {index}")
-                get_logger().debug(f"\tratings after filter: {len(df.index)}")
-                get_logger().debug(f"\titems after filter: {df[self.item_id].nunique()}")
-                get_logger().debug(f"\tusers after filter: {df[self.user_id].nunique()}")
+                logger.debug(f"df {index}")
+                logger.debug(f"\tinteractions after filter: {len(df.index)}")
+                logger.debug(f"\titems after filter: {df[self.item_id].nunique()}")
+                logger.debug(f"\tusers after filter: {df[self.user_id].nunique()}")
 
         for index, df in enumerate(dfs):
             self.update_id_mappings(df)
