@@ -11,6 +11,8 @@ from sklearn.utils.validation import check_is_fitted
 
 class Random(Algorithm):
     def __init__(self, K=200, seed=None):
+        super().__init__()
+        self.items = None
         self.K = K
         self.seed = seed
 
@@ -22,7 +24,7 @@ class Random(Algorithm):
         self.items_ = list(set(X.nonzero()[1]))
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         """Predict K random scores for items per row in X
 
         Returns numpy array of the same shape as X, with non zero scores for K items per row.
@@ -44,13 +46,10 @@ class Random(Algorithm):
         )
         return score_matrix
 
-    @property
-    def name(self):
-        return f"random_{self.K}"
-
 
 class Popularity(Algorithm):
     def __init__(self, K=200):
+        super().__init__()
         self.K = K
 
     def fit(self, X):
@@ -59,7 +58,7 @@ class Popularity(Algorithm):
         self.sorted_scores_ = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
         return self
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         """For each user predict the K most popular items"""
         check_is_fitted(self)
 
@@ -76,7 +75,3 @@ class Popularity(Algorithm):
 
         score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
         return score_matrix
-
-    @property
-    def name(self):
-        return f"popularity_{self.K}"

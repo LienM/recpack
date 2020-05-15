@@ -10,14 +10,13 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 class MF(UserItemInteractionsAlgorithm):
     def __init__(self, K=100):
+        super().__init__()
         self.K = K
-
-        # self.similarity_matrix_ = None
 
     def fit(self, X):
         pass
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         check_is_fitted(self)
 
         # TODO again the same similarity approach
@@ -27,10 +26,6 @@ class MF(UserItemInteractionsAlgorithm):
             scores = scipy.sparse.csr_matrix(scores)
 
         return scores
-
-    @property
-    def name(self):
-        return f"MF_K_{self.K}"
 
 
 class NMF(MF):
@@ -49,10 +44,6 @@ class NMF(MF):
         self.similarity_matrix_ = H.T @ H
         return self
 
-    @property
-    def name(self):
-        return f"NMF_K_{self.K}"
-
 
 class SVD(MF):
 
@@ -67,7 +58,3 @@ class SVD(MF):
         sigma = scipy.sparse.diags(model.singular_values_)
         self.similarity_matrix_ = V.T @ sigma @ V
         return self
-
-    @property
-    def name(self):
-        return f"SVD_K_{self.K}"

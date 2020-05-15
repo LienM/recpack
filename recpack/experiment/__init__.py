@@ -32,13 +32,15 @@ def log_file(name, path):
     return currentEC.log_file(name, path)
 
 
-@ECRequired
-def set_name(name):
-    if currentEC.name:
+def init(name, wandb=False):
+    global WANDB_ENABLED
+    if rootEC.name:
         raise RuntimeError("Experiment already labeled")
     assert name not in ECMap
-    currentEC.name = name
-    ECMap[name] = currentEC
+    rootEC.name = name
+    ECMap[name] = rootEC
+    if wandb:
+        ExperimentContext.enable_wandb()
 
 
 def _fork_experiment(name, to_fork_ec):

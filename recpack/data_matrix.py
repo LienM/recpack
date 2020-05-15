@@ -4,7 +4,7 @@ import numpy as np
 
 import scipy.sparse
 
-from recpack.utils import get_logger, groupby2
+from recpack.utils import logger, groupby2
 
 
 class DataM:
@@ -16,7 +16,6 @@ class DataM:
     def __init__(self, values, timestamps=None):
         self._values = values
         self._timestamps = timestamps
-        self.logger = get_logger()
 
     @property
     def values(self) -> scipy.sparse.csr_matrix:
@@ -50,7 +49,7 @@ class DataM:
             c_timestamps.reset_index(), self.item_id, self.user_id, self._values.shape
         )
 
-        self.logger.debug("Timestamp comparison done")
+        logger.debug("Timestamp comparison done")
 
         if not inplace:
             return DataM(c_values, c_timestamps)
@@ -59,7 +58,7 @@ class DataM:
             self._values = c_values
 
     def timestamps_gt(self, timestamp, inplace=False):
-        self.logger.debug("Performing t > timestamp")
+        logger.debug("Performing t > timestamp")
 
         def func():
             return self._timestamps > timestamp
@@ -67,7 +66,7 @@ class DataM:
         return self._timestamp_comparator(func, inplace=inplace)
 
     def timestamps_lt(self, timestamp, inplace=False):
-        self.logger.debug("Performing t < timestamp")
+        logger.debug("Performing t < timestamp")
 
         def func():
             return self._timestamps < timestamp
@@ -75,7 +74,7 @@ class DataM:
         return self._timestamp_comparator(func, inplace=inplace)
 
     def timestamps_gte(self, timestamp, inplace=False):
-        self.logger.debug("Performing t => timestamp")
+        logger.debug("Performing t => timestamp")
 
         def func():
             return self._timestamps >= timestamp
@@ -83,7 +82,7 @@ class DataM:
         return self._timestamp_comparator(func, inplace=inplace)
 
     def timestamps_lte(self, timestamp, inplace=False):
-        self.logger.debug("Performing t <= timestamp")
+        logger.debug("Performing t <= timestamp")
 
         def func():
             return self._timestamps <= timestamp
@@ -91,7 +90,7 @@ class DataM:
         return self._timestamp_comparator(func, inplace=inplace)
 
     def users_in(self, U, inplace=False):
-        self.logger.debug("Performing users_in comparison")
+        logger.debug("Performing users_in comparison")
 
         mask_values = np.ones(len(U))
         I = np.zeros(len(U))
@@ -103,7 +102,7 @@ class DataM:
         c_values = self._values.multiply(mask)
         c_values.eliminate_zeros()
 
-        self.logger.debug("Users_in comparison done")
+        logger.debug("Users_in comparison done")
 
         if self._timestamps is None:
             c_timestamps = None
@@ -118,7 +117,7 @@ class DataM:
             self._values = c_values
 
     def indices_in(self, u_i_lists, inplace=False):
-        self.logger.debug("Performing indices_in comparison")
+        logger.debug("Performing indices_in comparison")
 
         U, I = u_i_lists
 
@@ -131,7 +130,7 @@ class DataM:
         c_values = self._values.multiply(mask)
         c_values.eliminate_zeros()
 
-        self.logger.debug("Indices_in comparison done")
+        logger.debug("Indices_in comparison done")
 
         if self._timestamps is None:
             c_timestamps = None

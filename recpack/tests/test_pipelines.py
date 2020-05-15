@@ -16,16 +16,20 @@ def generate_data():
     data = DataM.create_from_dataframe(df, 'movieId', 'userId', 'timestamp')
     return data
 
+# TODO Add tests for the if-else branches in pipeline now
 
 def test_pipeline():
     data = generate_data()
     scenario = scenarios.TrainingInTestOutTimed(20)
+    scenario.split(data)
+
     algo = recpack.algorithms.algorithm_registry.get('popularity')(K=2)
 
-    p = recpack.pipelines.Pipeline(scenario, [algo], ['NDCG', 'Recall'], [2])
-    p.run(data)
+    p = recpack.pipelines.Pipeline([algo], ['NDCG', 'Recall'], [2])
+
+    p.run(scenario.training_data, scenario.test_data)
 
     metrics = p.get()
-    assert algo.name in metrics
-    assert "NDCG_K_2" in metrics[algo.name]
-    assert "Recall_K_2" in metrics[algo.name]
+    assert algo.identifier in metrics
+    assert "NDCG_K_2" in metrics[algo.identifier]
+    assert "Recall_K_2" in metrics[algo.identifier]

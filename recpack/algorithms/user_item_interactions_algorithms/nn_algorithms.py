@@ -1,5 +1,3 @@
-from collections import Counter, defaultdict
-import math
 import numpy as np
 import scipy
 from scipy.sparse import diags
@@ -17,6 +15,7 @@ class ItemKNN(UserItemInteractionsAlgorithm):
     def __init__(self, K=200):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item."""
+        super().__init__()
         self.K = K
 
     def fit(self, X):
@@ -41,7 +40,7 @@ class ItemKNN(UserItemInteractionsAlgorithm):
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         # Use total sum of similarities
         check_is_fitted(self)
         # TODO: Use average?
@@ -52,17 +51,13 @@ class ItemKNN(UserItemInteractionsAlgorithm):
 
         return scores
 
-    @property
-    def name(self):
-        return f"item_knn_{self.K}"
-
 
 class SharedAccount(ItemKNN):
 
     def __init__(self, K):
         super().__init__(K)
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         raise NotImplementedError("Under construction, the gnomes are working on it.")
 
 
@@ -75,6 +70,7 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
     def __init__(self, K=200):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item."""
+        super().__init__()
         self.K = K
 
     def fit(self, X):
@@ -102,7 +98,7 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         # Use total sum of similarities
         # TODO: Use average?
         check_is_fitted(self)
@@ -112,7 +108,3 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
             scores = scipy.sparse.csr_matrix(scores)
 
         return scores
-
-    @property
-    def name(self):
-        return f"item_knn_{self.K}"

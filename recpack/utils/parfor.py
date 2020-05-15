@@ -1,5 +1,3 @@
-import time
-
 from joblib import Parallel, delayed
 
 
@@ -8,7 +6,7 @@ def to_tuple(el):
         return el
     else:
         return (el, )
-    
+
 
 def parfor(iterator, parallel=True, n_jobs=-1, **kwargs):
     """
@@ -50,7 +48,7 @@ def parfor(iterator, parallel=True, n_jobs=-1, **kwargs):
             data = list()
             for args in iterator:
                 data.append(body(*to_tuple(args)))
-                
+
         return data
-    
+
     return decorator

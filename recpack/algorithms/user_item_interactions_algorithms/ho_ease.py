@@ -87,15 +87,11 @@ class HOEASE(EASE):
 
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
         check_is_fitted(self)
 
         X_ext = extend_with_itemsets(X, self.itemsets_)
         return super().predict(X_ext)
-
-    @property
-    def name(self):
-        return f"HO-EASE_lambda_{self.l2}"
 
 
 def extend_with_itemsets(Y, itemsets):

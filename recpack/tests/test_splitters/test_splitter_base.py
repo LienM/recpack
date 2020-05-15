@@ -198,7 +198,7 @@ def test_fold_iterator_correctness(data_m, batch_size):
         data_m_in, data_m_out, batch_size=batch_size
     )
 
-    for fold_in, fold_out in fold_iterator:
+    for fold_in, fold_out, users in fold_iterator:
         assert fold_in.nnz > 0
         assert fold_out.nnz > 0
 
@@ -215,7 +215,7 @@ def test_fold_iterator_completeness(data_m, batch_size):
 
     all_batches = set()
 
-    for fold_in, fold_out in fold_iterator:
+    for fold_in, fold_out, users in fold_iterator:
         assert (fold_in != fold_out).nnz == 0
 
         users_in_batch = set(fold_in.nonzero()[0])

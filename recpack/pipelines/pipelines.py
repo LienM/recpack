@@ -1,11 +1,15 @@
 from collections import defaultdict
+from typing import Tuple, Union
 
-from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
-from recpack.utils import get_logger
-from recpack.data_matrix import DataM
-import recpack.experiment as experiment
+import scipy.sparse
 
 from tqdm.auto import tqdm
+
+from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
+from recpack.utils import logger
+from recpack.data_matrix import DataM
+import recpack.experiment as experiment
+from recpack.splitters.splitter_base import FoldIterator
 
 
 class MetricRegistry:
@@ -21,17 +25,16 @@ class MetricRegistry:
         self.metric_names = metric_names
 
         self.algorithms = algorithms
-        self.logger = get_logger()
 
         for algo in algorithms:
             for m in self.metric_names:
                 for K in K_values:
-                    self._create(algo.name, m, K)
+                    self._create(algo.identifier, m, K)
 
     def _create(self, algorithm_name, metric_name, K):
         metric = self.METRICS[metric_name](K)
         self.registry[algorithm_name][f"{metric_name}_K_{K}"] = metric
-        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         return
 
     def __getitem__(self, key):
@@ -40,10 +43,10 @@ class MetricRegistry:
     def register_from_factory(self, metric_factory, identifier, K_values):
         for algo in self.algorithms:
             for K in K_values:
-                self.register(metric_factory.create(K), algo.name, f"{identifier}@{K}")
+                self.register(metric_factory.create(K), algo.identifier, f"{identifier}@{K}")
 
     def register(self, metric, algorithm_name, metric_name):
-        self.logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         self.registry[algorithm_name][metric_name] = metric
 
     @property
@@ -63,14 +66,11 @@ class MetricRegistry:
         return results
 
 
-class Pipeline:
+class Pipeline(object):
 
-    def __init__(self, scenario, algorithms, metric_names, K_values):
+    def __init__(self, algorithms, metric_names, K_values):
         """
         Performs all steps in order and holds on to results.
-
-        :param scenario: Splitter object which will split input data into train, validation and test data
-        :type scenario: `recpack.splitters.Scenario`
 
         :param algorithms: List of algorithms to evaluate in this pipeline
         :type algorithms: `list(recpack.algorithms.Model)`
@@ -82,14 +82,13 @@ class Pipeline:
         :param K_values: The K values for each of the metrics
         :type K_values: `list(int)`
         """
-        self.scenario = scenario
         self.algorithms = algorithms
 
         self.metric_names = metric_names
         self.K_values = K_values
         self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
 
-    def run(self, *data_ms: DataM):
+    def run(self, train_data: Union[Tuple[DataM, DataM], DataM], test_data: Tuple[DataM, DataM], validation_data: Tuple[DataM, DataM] = None, batch_size=1000):
         """
         Run the pipeline with the input data.
         This will use the different components in the pipeline to:
@@ -106,44 +105,93 @@ class Pipeline:
                        you should use this one to give it that information.
         :type data_2: `recpack.DataM`
         """
-        self.scenario.split(*data_ms)
 
-        # first experiment forks current one, following ones for parent of current
-        above = 0
+        if isinstance(train_data, DataM):
+            X = train_data.binary_values
+            y = None
+        else:
+            X = train_data[0].binary_values
+            y = train_data[1].binary_values
 
+        self.train(X, y=y, validation_data=validation_data)
+        self.eval(test_data[0], test_data[1], batch_size)
+
+    def train(self, X, y=None, validation_data=None):
         for algo in self.algorithms:
-            # Only pass the sparse training interaction matrix to algo
-            experiment.fork_experiment(algo.name, above)
-            above = 1
-            for param, value in algo.get_params().items():
-                experiment.log_param(param, value)
+            logger.debug(f"Training algo {algo.identifier}")
+            if y is not None and validation_data is not None:
+                algo.fit(X, y=y, validation_data=validation_data)
+            elif y is not None:
+                algo.fit(X, y=y)
+            elif validation_data is not None:
+                algo.fit(X, validation_data=validation_data)
+            else:
+                algo.fit(X)
 
-            get_logger().debug(f"Training algo {algo.name}")
-            algo.fit(self.scenario.training_data.binary_values)
-
-        for _in, _out in tqdm(self.scenario.test_iterator):
-            get_logger().debug(f"start evaluation batch")
+    def eval(self, data_in, data_out, batch_size):
+        for _in, _out, user_ids in tqdm(FoldIterator(data_in, data_out, batch_size=batch_size)):
+            logger.debug(f"start evaluation batch")
             for algo in self.algorithms:
-                metrics = self.metric_registry[algo.name]
+                metrics = self.metric_registry[algo.identifier]
 
-                get_logger().debug(f"predicting batch with algo {algo.name}")
-                X_pred = algo.predict(_in)
-                get_logger().debug(f"finished predicting batch with algo {algo.name}")
+                logger.debug(f"predicting batch with algo {algo.identifier}")
+                X_pred = algo.predict(_in, user_ids=user_ids)
+
+                if not scipy.sparse.issparse(X_pred):
+                    X_pred = scipy.sparse.csr_matrix(X_pred)
+
+                logger.debug(f"finished predicting batch with algo {algo.identifier}")
 
                 for metric in metrics.values():
                     metric.update(X_pred, _out)
-                    get_logger().debug(f"metric {metric.name} current value: {metric.value}")
 
-            get_logger().debug(f"end evaluation batch")
-
-        metrics = self.metric_registry.metrics
-        for algo in self.algorithms:
-            experiment.set_experiment(algo.name)
-            for metric, value in metrics[algo.name].items():
-                experiment.log_result(metric, value)
+            logger.debug(f"end evaluation batch")
 
     def get(self):
         return self.metric_registry.metrics
 
     def get_number_of_users_evaluated(self):
         return self.metric_registry.number_of_users_evaluated
+
+
+class LoggingPipeline(Pipeline):
+
+    def __init__(self, algorithms, metric_names, K_values):
+        """
+        Performs the steps like Pipeline, but with logging using experiment context.
+        """
+        super().__init__(algorithms, metric_names, K_values)
+
+    def train(self, X, y=None, validation_data=None):
+        # first experiment forks current one, following ones for parent of current
+        above = 0
+
+        for algo in self.algorithms:
+            # Only pass the sparse training interaction matrix to algo
+            experiment.fork_experiment(algo.identifier, above)
+            above = 1
+            experiment.log_param("algorithm", algo.name)
+            for param, value in algo.get_params().items():
+                experiment.log_param(param, value)
+
+            logger.debug(f"Training algo {algo.identifier}")
+            if y is not None and validation_data is not None:
+                algo.fit(X, y=y, validation_data=validation_data)
+            elif y is not None:
+                algo.fit(X, y=y)
+            elif validation_data is not None:
+                algo.fit(X, validation_data=validation_data)
+            else:
+                algo.fit(X)
+
+    def eval(self, data_in, data_out, batch_size):
+        super().eval(data_in, data_out, batch_size)
+
+        # log results
+        metrics = self.metric_registry.metrics
+        users_evaluated = self.metric_registry.number_of_users_evaluated
+        for algo in self.algorithms:
+            experiment.set_experiment(algo.identifier)
+            for metric, value in metrics[algo.identifier].items():
+                experiment.log_result(metric, value)
+                experiment.log_result(f'{metric}_users_evaluated', users_evaluated[algo.identifier][metric])

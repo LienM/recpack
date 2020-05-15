@@ -3,6 +3,8 @@ import numpy
 import pandas
 from snapy import MinHash, LSH
 
+# TODO Implement BaseEstimator interface.
+
 class LSHModel:
     """
     Model based on metadata only.
@@ -69,7 +71,7 @@ class LSHModel:
         """
         self._train(self.data)
 
-    def predict(self, X: scipy.sparse.csr):
+    def predict(self, X: scipy.sparse.csr, user_ids=None):
         if self.lsh_model is None:
             raise RuntimeError("mux model has not been trained yet.")
         values = self.lsh_model @ X.T

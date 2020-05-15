@@ -2,12 +2,12 @@ from typing import Union
 
 import numpy as np
 import scipy.sparse
-import logging
+from sklearn.utils.validation import check_is_fitted, NotFittedError
 
 from recpack.algorithms.algorithm_base import Algorithm
 
 
-def get_topK(X_pred: scipy.sparse.csr_matrix, K: int) -> scipy.sparse.csr_matrix : 
+def get_topK(X_pred: scipy.sparse.csr_matrix, K: int) -> scipy.sparse.csr_matrix:
     # Get nonzero users
     nonzero_users = list(set(X_pred.nonzero()[0]))
     X = X_pred[nonzero_users, :].toarray()
@@ -31,30 +31,27 @@ def get_topK(X_pred: scipy.sparse.csr_matrix, K: int) -> scipy.sparse.csr_matrix
 class ProductLabeler:
     def __init__(self):
         """
-        ProductLabeler labels the purchase history with durable or consumable.
+        ProductLabeler labels items as durable (1) or consumable (0).
         """
-        self.is_fit = False
+        self._is_fit = False
         self.labels = None
 
     def fit(self, labels):
         """
-        Fit the ProductLabeler so that if an item is both durable
-        and it occurs in the user's purchase history,
-        it is labeled 1, otherwise zero.
+        Store labels.
         """
         self.labels = labels
-        self.is_fit = True
+        self._is_fit = True
 
     def get_durable(self, X):
         """
-        Return only the part of X that is durable
-        and occured in the user's purchase history.
+        Return only the part of X that is durable.
         """
         return X.multiply(self.labels)
 
     def get_consumable(self, X):
         """
-        Return only the part of X that is not both durable and occured in the user's purchase history.
+        Return only the part of X that is consumable.
         """
         durable = X.multiply(self.labels)
 
@@ -66,23 +63,27 @@ class ProductLabeler:
 
         return new_X
 
+    @property
+    def is_fit(self):
+        return self._is_fit
+
 
 class PurchaseHistoryDurableFilter:
     def __init__(self):
         """
-        ProductLabeler labels the purchase history with durable or consumable.
+        PurchaseHistoryDurableFilter labels the purchase history with durable or consumable.
         """
-        self.is_fit = False
+        self._is_fit = False
         self.user_labels = None
 
     def fit(self, labels, purchases):
         """
-        Fit the ProductLabeler so that if an item is both durable
+        Fit the PurchaseHistoryDurableFilter so that if an item is both durable
         and it occurs in the user's purchase history,
         it is labeled 1, otherwise zero.
         """
         self.user_labels = purchases.multiply(labels)
-        self.is_fit = True
+        self._is_fit = True
 
     def get_durable(self, X):
         """
@@ -105,31 +106,35 @@ class PurchaseHistoryDurableFilter:
 
         return new_X
 
+    @property
+    def is_fit(self):
+        return self._is_fit
+
 
 class RetailAlgorithm(Algorithm):
     def __init__(self):
-        pass
+        super().__init__()
 
-    def fit(self, X):
+    def fit(self, X: scipy.sparse.csr_matrix):
         """
-        Fit a model using purchases and optionally pageviews information.
+        Fit a RetailAlgorithm.
 
-        :param purchases: [description]
-        :type purchases: [type]
-        :param pageviews: [description], defaults to None
-        :type pageviews: [type], optional
+        :param X: Data to fit.
+        :type X: scipy.sparse.csr_matrix
         """
         pass
 
     def fit_classifier(self, labels, purchases):
         pass
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
         pass
 
+# TODO Refactor using X and y like EASE_XY
 
 class FilterDurableGoods(RetailAlgorithm):
     def __init__(self, rec_algo, goods_classifier):
+        super().__init__()
         self.rec_algo = rec_algo
         self.goods_classifier = goods_classifier
 
@@ -144,31 +149,34 @@ class FilterDurableGoods(RetailAlgorithm):
         if not self.goods_classifier.is_fit:
             raise RuntimeError("Goods Classifier should have been fit")
 
-        self.rec_algo.fit(X)
+        try:
+            check_is_fitted(self.rec_algo)
+        except NotFittedError:
+            self.rec_algo.fit(X)
+
+        self.fitted_ = True
 
     def fit_classifier(self, labels, purchases):
         self.goods_classifier.fit(labels, purchases)
 
-    def predict(self, X):
+    def predict(self, X, user_ids=None):
+        check_is_fitted(self)
+
         consumable_X = self.goods_classifier.get_consumable(X)
 
-        return self.rec_algo.predict(consumable_X)
-
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_filter_durable"
+        return self.rec_algo.predict(consumable_X, user_ids=user_ids)
 
 
 class DiscountDurableGoods(RetailAlgorithm):
-    def __init__(
-        self, rec_algo, goods_classifier, discount_value=1 / 3, K=10):
+    def __init__(self, rec_algo, user_goods_classifier, discount_value=1 / 3, K=10):
+        super().__init__()
         self.rec_algo = rec_algo
-        self.goods_classifier = goods_classifier
+        self.user_goods_classifier = user_goods_classifier
         self.discount_value = discount_value
         self.K = K
 
     def fit_classifier(self, labels, purchases):
-        self.goods_classifier.fit(labels, purchases)
+        self.user_goods_classifier.fit(labels, purchases)
 
     def fit(self, X):
         """
@@ -178,30 +186,34 @@ class DiscountDurableGoods(RetailAlgorithm):
         :param X: [description]
         :type X: [type]
         """
-        if not self.goods_classifier.is_fit:
+        if not self.user_goods_classifier.is_fit:
             raise RuntimeError("Goods Classifier should have been fit up front.")
 
-        self.rec_algo.fit(X)
+        try:
+            check_is_fitted(self.rec_algo)
+        except NotFittedError:
+            self.rec_algo.fit(X)
 
-    def predict(self, X):
+        self.fitted_ = True
 
-        consumable_X = self.goods_classifier.get_consumable(X)
-        durable_X = self.goods_classifier.get_durable(X)
+    def predict(self, X, user_ids=None):
 
-        durable_recos = self.rec_algo.predict(durable_X)
+        check_is_fitted(self)
+
+        consumable_X = self.user_goods_classifier.get_consumable(X)
+        durable_X = self.user_goods_classifier.get_durable(X)
+
+        durable_recos = self.rec_algo.predict(durable_X, user_ids=user_ids)
 
         topK_durable_recos = self.get_topK(durable_recos)
 
-        return self.rec_algo.predict(
-            consumable_X
-        ) - self.discount_value * topK_durable_recos
+        return (
+            self.rec_algo.predict(consumable_X, user_ids=user_ids)
+            - self.discount_value * topK_durable_recos
+        )
 
     def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
         return get_topK(X_pred, self.K)
-
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_discount_durable_{self.discount_value}"
 
 
 class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
@@ -222,7 +234,7 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
     :type user_goods_classifier: ProductLabeler
 
 
-    :param discount_value: The amount with which durable neighbours will be discounted. Default = 1, 
+    :param discount_value: The amount with which durable neighbours will be discounted. Default = 1,
                             so that the contribution of the durable items NN scores is removed.
                             In order to remove the items use a discount_value of 2 or higher
     :type discount_value: float
@@ -231,12 +243,14 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
     :type K: int
 
     """
-    def __init__(self, rec_algo, goods_classifier, user_goods_classifier, discount_value=1, K=10):
-        self.rec_algo = rec_algo
+
+    def __init__(
+        self, rec_algo, goods_classifier, user_goods_classifier, discount_value=1, K=10
+    ):
+        super().__init__(
+            rec_algo, user_goods_classifier, discount_value=discount_value, K=K
+        )
         self.goods_classifier = goods_classifier
-        self.user_goods_classifier = user_goods_classifier
-        self.discount_value = discount_value
-        self.K = K
 
     def fit_classifier(self, labels, purchases):
         self.goods_classifier.fit(labels)
@@ -256,9 +270,14 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
         if not self.user_goods_classifier.is_fit:
             raise RuntimeError("User Goods Classifier should have been fit up front.")
 
-        self.rec_algo.fit(X)
- 
-    def predict(self, X):
+        try:
+            check_is_fitted(self.rec_algo)
+        except NotFittedError:
+            self.rec_algo.fit(X)
+
+        self.fitted_ = True
+
+    def predict(self, X, user_ids=None):
         """
         Predict scores given X the user interaction matrix.
 
@@ -267,32 +286,30 @@ class DiscountDurableNeighboursOfDurableItems(DiscountDurableGoods):
         :param X: The user interaction matrix
         :type X: scipy.sparse.csr_matrix
         """
-
+        check_is_fitted(self)
         # Get the items the user has either purchased but are consumable or items that are durable,
         # but the user has not yet purchased
         durable_X = self.user_goods_classifier.get_durable(X)
-        
-        reco_scores = self.rec_algo.predict(X)
+
+        reco_scores = self.rec_algo.predict(X, user_ids=user_ids)
 
         # For each nonzero item in durable_X get the score for that item, and discount it from the user's that have seen that item.
         for i in set(durable_X.nonzero()[1]):
             m = scipy.sparse.csr_matrix(([1], ([0], [i])), shape=(1, X.shape[1]))
             # Discount the items the durable neighbours
-            pred = self.rec_algo.predict(durable_X.multiply(m))
+            pred = self.rec_algo.predict(durable_X.multiply(m), user_ids=user_ids)
 
-            reco_scores -= self.discount_value * self.goods_classifier.get_durable(self.get_topK(pred))
+            reco_scores -= self.discount_value * self.goods_classifier.get_durable(
+                self.get_topK(pred)
+            )
 
         return reco_scores
-
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_discount_durable_neighbours_{self.discount_value}_@_{self.K}"
 
 
 class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
     """
     This approach is very similar to DiscountDurableNeighboursOfDurableItems,
-    Where for that approach we used the recommender algorithm to also do the discounting, 
+    Where for that approach we used the recommender algorithm to also do the discounting,
     We will now use a special second algorithm to compute alternatives for the durable items,
     those will then get discounted.
 
@@ -309,7 +326,7 @@ class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
                                   or not based on user interactions with that item
     :type user_goods_classifier: ProductLabeler
 
-    :param discount_value: The amount with which durable neighbours will be discounted. Default = 1, 
+    :param discount_value: The amount with which durable neighbours will be discounted. Default = 1,
                             so that the contribution of the durable items NN scores is removed.
                             In order to remove the items use a discount_value of 2 or higher
     :type discount_value: float
@@ -319,7 +336,15 @@ class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
 
     """
 
-    def __init__(self, rec_algo, alternatives_algo, goods_classifier, user_goods_classifier, discount_value=1, K=10):
+    def __init__(
+        self,
+        rec_algo,
+        alternatives_algo,
+        goods_classifier,
+        user_goods_classifier,
+        discount_value=1,
+        K=10,
+    ):
         self.rec_algo = rec_algo
         self.alternatives_algo = alternatives_algo
         self.goods_classifier = goods_classifier
@@ -345,10 +370,17 @@ class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
         if not self.user_goods_classifier.is_fit:
             raise RuntimeError("User Goods Classifier should have been fit up front.")
 
-        self.rec_algo.fit(X)
+        try:
+            check_is_fitted(self.rec_algo)
+        except NotFittedError:
+            self.rec_algo.fit(X)
+
+        # TODO Make BaseEstimator
         self.alternatives_algo.fit(X)
 
-    def predict(self, X):
+        self.fitted_ = True
+
+    def predict(self, X, user_ids=None):
         """
         Predict scores given X the user interaction matrix.
 
@@ -357,23 +389,21 @@ class DiscountAlternativesOfDurableItems(DiscountDurableGoods):
         :param X: The user interaction matrix
         :type X: scipy.sparse.csr_matrix
         """
-
+        check_is_fitted(self)
         # Get the items the user has either purchased but are consumable or items that are durable,
         # but the user has not yet purchased
         durable_X = self.user_goods_classifier.get_durable(X)
-        
-        reco_scores = self.rec_algo.predict(X)
+
+        reco_scores = self.rec_algo.predict(X, user_ids=user_ids)
 
         # For each nonzero item in durable_X get the score for that item, and discount it from the user's that have seen that item.
         for i in set(durable_X.nonzero()[1]):
             m = scipy.sparse.csr_matrix(([1], ([0], [i])), shape=(1, X.shape[1]))
             # Discount the items the durable neighbours
-            pred = self.alternatives_algo.predict(durable_X.multiply(m))
+            pred = self.alternatives_algo.predict(durable_X.multiply(m), user_ids=user_ids)
 
-            reco_scores -= self.discount_value * self.goods_classifier.get_durable(self.get_topK(pred))
+            reco_scores -= self.discount_value * self.goods_classifier.get_durable(
+                self.get_topK(pred)
+            )
 
         return reco_scores
-
-    @property
-    def name(self):
-        return f"{self.rec_algo.name}_discount_{self.alternatives_algo.name}_alternatives_{self.discount_value}_@{self.K}"
