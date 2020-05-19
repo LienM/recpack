@@ -1,11 +1,6 @@
 from joblib import Parallel, delayed
 
-
-def to_tuple(el):
-    if type(el) == tuple:
-        return el
-    else:
-        return (el, )
+from recpack.utils import to_tuple
 
 
 def parfor(iterator, parallel=True, n_jobs=-1, **kwargs):

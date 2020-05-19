@@ -2,6 +2,7 @@
 They will be stored at the end of the program (atexit). """
 
 from recpack.experiment.ExperimentContext import ExperimentContext
+from recpack.experiment.experiment import Experiment
 
 
 rootEC = ExperimentContext("")          # root ec
