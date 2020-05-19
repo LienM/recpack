@@ -13,30 +13,97 @@ from recpack.splitters.splitter_base import FoldIterator
 from tqdm.auto import tqdm
 
 
-def NoRepeats(user_iterator):
-    """
-    Example business rule to apply in transform_predictions
-    Lower prediction scores of items in history by 10^10.
-    """
-    for user_id, y_hist_u, y_true_u, y_pred_u in user_iterator:
-        yield user_id, y_hist_u, y_true_u, y_pred_u - 1e10 * y_hist_u
-
-
 class ExperimentMeta(type):
+    BASE_CLASSES = ["IExperiment", "Experiment", "LoggingExperiment"]
+
     def __new__(meta, name, bases, attrs):
         cls = super().__new__(meta, name, bases, attrs)
-        if name != "Experiment" and name != "LoggingExperiment":
+        if name not in ExperimentMeta.BASE_CLASSES:
             print(meta, name, bases, attrs)
         return cls
 
 
-class Experiment(metaclass=ExperimentMeta):
+class IExperiment(metaclass=ExperimentMeta):
     """
-    Extend from this class to create experiments.
+    Extend from this class to create experiments from scratch. The Experiment class already has the basic functionallity.
     Every step of the process can be overriden individually to create a custom experiment structure.
     Keyword arguments are injected into the respective functions from the command line. For example, preprocess can
     take a path as parameter in the subclass, this will then be injected from the command line automatically.
     In other words, when calling preprocess, only the arguments defined in Experiment need to be given in Python.
+
+    Parameters starting with underscore are not logged, but can be supplied through the command line.
+    """
+    def __init__(self):
+        super().__init__()
+        self.parameters = dict()
+
+    @property
+    def name(self):
+        return self.__class__.__name__
+
+    @property
+    def identifier(self):
+        paramstring = "_".join((f"{k}_{v}" for k, v in self.parameters.items()))
+        return self.name + "__" + paramstring
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
+    def preprocess(self):
+        """
+        Return one or two datasets of type np.ndarray.
+        """
+        raise NotImplementedError("Need to override Experiment.preprocess")
+
+    def split(self, X, y=None):
+        """
+        Return train and test sets.
+        Train can be single variable, or tuple with features and labels.
+        Test set is always a tuple of history and ground truth.
+        """
+        raise NotImplementedError("Need to override Experiment.split")
+
+    def fit(self, X, y=None, **fit_params):
+        raise NotImplementedError("Need to override Experiment.fit")
+
+    def predict(self, X, **predict_params):
+        raise NotImplementedError("Need to override Experiment.predict")
+
+    def iter_predict(self, X, y, **predict_params):
+        raise NotImplementedError("Need to override Experiment.iter_predict")
+
+    def transform_predictions(self, user_iterator):
+        """
+        Apply business rules after the recommendation step and before evaluation.
+        These may influence the calculated performance.
+        Example:
+        def transform_predictions(self, user_iterator, no_repeats=False):
+            user_iterator = super().transform_predictions(user_iterator)
+            if no_repeats:
+                user_iterator = NoRepeats(user_iterator)
+            yield from user_iterator
+        """
+        yield from user_iterator
+
+    def eval_user(self, X, y_true, y_pred, user_id=None):
+        raise NotImplementedError("Need to override Experiment.eval_user")
+
+    def run(self):
+        raise NotImplementedError("Need to override Experiment.run")
+
+
+class Experiment(IExperiment):
+    """
+    Extend from this class to create experiments with already some default behavior. Uses pipelines and metrics@K.
+    Every step of the process can be overriden individually to create a custom experiment structure.
+    Keyword arguments are injected into the respective functions from the command line. For example, preprocess can
+    take a path as parameter in the subclass, this will then be injected from the command line automatically.
+    In other words, when calling preprocess, only the arguments defined in Experiment need to be given in Python.
+
+    Parameters starting with underscore are not logged, but can be supplied through the command line.
     """
     def __init__(self, _batch_size=1000):
         super().__init__()
@@ -45,12 +112,6 @@ class Experiment(metaclass=ExperimentMeta):
     @property
     def name(self):
         return self.__class__.__name__
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.name
 
     @cached_property
     def pipeline(self):
@@ -64,13 +125,13 @@ class Experiment(metaclass=ExperimentMeta):
     def K_values(self):
         return [1, 5, 10, 20, 50, 100]
 
-    def preprocess(self, **kwargs):
+    def preprocess(self):
         """
         Return one or two datasets of type np.ndarray.
         """
         raise NotImplementedError("Need to override Experiment.preprocess")
 
-    def split(self, X, y=None, **kwargs):
+    def split(self, X, y=None):
         """
         Return train and test sets.
         Train can be single variable, or tuple with features and labels.
@@ -106,7 +167,6 @@ class Experiment(metaclass=ExperimentMeta):
         Apply business rules after the recommendation step and before evaluation.
         These may influence the calculated performance.
         Example:
-
         def transform_predictions(self, user_iterator, no_repeats=False):
             user_iterator = super().transform_predictions(user_iterator)
             if no_repeats:
@@ -137,12 +197,10 @@ class Experiment(metaclass=ExperimentMeta):
 
 # TODO:
 #  - metrics and evaluation
-#  - logging with wandb and ExperimentContext (refactor into LoggingExperiment?)
 #  - parse command (class name) and run if provided
 #  - parse parameters and inject based on diff with interface (Experiment)
 #  - find better solution to use of cached_property
+#  - logging with wandb and ExperimentContext (refactor into LoggingExperiment?)
 
 
-class LoggingExperiment(Experiment):
-    pass
 
