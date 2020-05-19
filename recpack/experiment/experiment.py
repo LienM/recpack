@@ -13,17 +13,7 @@ from recpack.splitters.splitter_base import FoldIterator
 from tqdm.auto import tqdm
 
 
-class ExperimentMeta(type):
-    BASE_CLASSES = ["IExperiment", "Experiment", "LoggingExperiment"]
-
-    def __new__(meta, name, bases, attrs):
-        cls = super().__new__(meta, name, bases, attrs)
-        if name not in ExperimentMeta.BASE_CLASSES:
-            print(meta, name, bases, attrs)
-        return cls
-
-
-class IExperiment(metaclass=ExperimentMeta):
+class IExperiment(object):
     """
     Extend from this class to create experiments from scratch. The Experiment class already has the basic functionallity.
     Every step of the process can be overriden individually to create a custom experiment structure.
@@ -185,7 +175,8 @@ class Experiment(IExperiment):
     def run(self):
         data = to_tuple(self.preprocess())
         train, (X_test, y_test) = self.split(*data)
-        train = to_tuple(train)
+        # train = to_tuple(train)
+        train = map(lambda x: x.binary_values, to_tuple(train))
 
         self.fit(*train)
         user_iterator = self.iter_predict(X_test, y_test)
@@ -197,8 +188,6 @@ class Experiment(IExperiment):
 
 # TODO:
 #  - metrics and evaluation
-#  - parse command (class name) and run if provided
-#  - parse parameters and inject based on diff with interface (Experiment)
 #  - find better solution to use of cached_property
 #  - logging with wandb and ExperimentContext (refactor into LoggingExperiment?)
 
