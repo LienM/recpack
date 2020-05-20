@@ -11,6 +11,17 @@ from recpack.utils import to_tuple
 from recpack.splitters.splitter_base import FoldIterator
 
 from tqdm.auto import tqdm
+import functools
+
+
+def parameter(f):
+    cache = dict()
+    @functools.wraps(f)
+    def wrapper(self, **kwargs):
+        if self not in cache:
+            cache[self] = f(self, **kwargs)
+        return cache[self]
+    return wrapper
 
 
 class IExperiment(object):
@@ -56,10 +67,10 @@ class IExperiment(object):
         """
         raise NotImplementedError("Need to override Experiment.split")
 
-    def fit(self, X, y=None, **fit_params):
+    def fit(self, X, y=None):
         raise NotImplementedError("Need to override Experiment.fit")
 
-    def predict(self, X, **predict_params):
+    def predict(self, X):
         raise NotImplementedError("Need to override Experiment.predict")
 
     def iter_predict(self, X, y, **predict_params):
@@ -103,15 +114,15 @@ class Experiment(IExperiment):
     def name(self):
         return self.__class__.__name__
 
-    @cached_property
+    @parameter
     def pipeline(self):
         raise NotImplementedError("Need to override Experiment.pipeline")
 
-    @cached_property
+    @parameter
     def metrics(self):
         return []
 
-    @cached_property
+    @parameter
     def K_values(self):
         return [1, 5, 10, 20, 50, 100]
 
@@ -129,19 +140,25 @@ class Experiment(IExperiment):
         """
         return (X, None), (X, y)
 
-    def fit(self, X, y=None, **fit_params):
-        self.pipeline.fit(X, y, **fit_params)
+    def fit_params(self):
+        return dict()
 
-    def predict(self, X, **predict_params):
-        return self.pipeline.predict(X, **predict_params)
+    def fit(self, X, y=None):
+        self.pipeline().fit(X, y, **self.fit_params())
+
+    def predict_params(self):
+        return dict()
+
+    def predict(self, X):
+        return self.pipeline().predict(X, **self.predict_params())
 
     def iter_predict(self, X, y, **predict_params):
         Xt = X
-        for _, name, transform in self.pipeline._iter(with_final=False):
+        for _, name, transform in self.pipeline()._iter(with_final=False):
             Xt = transform.transform(Xt)
 
         for _in, _out, user_ids in FoldIterator(Xt, y, batch_size=self.batch_size):
-            y_pred = self.pipeline.steps[-1][-1].predict(_in, **predict_params)
+            y_pred = self.pipeline().steps[-1][-1].predict(_in, **predict_params)
             if scipy.sparse.issparse(y_pred):
                 # to dense format
                 y_pred = y_pred.toarray()

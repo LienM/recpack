@@ -5,6 +5,7 @@ from tqdm import tqdm
 from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import EASE
 
 from sklearn.utils.validation import check_is_fitted
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from recpack.utils.parfor import parfor
 from recpack.utils.monitor import Monitor
@@ -17,7 +18,7 @@ class HOEASE(EASE):
         self.min_freq = min_freq
         self.amt_itemsets = amt_itemsets
 
-    def fit(self, X: scipy.sparse.csr_matrix, w=None):
+    def fit(self, X: scipy.sparse.csr_matrix, y: scipy.sparse.csr_matrix=None, itemset_transform=None):
         """
         Compute the solution for HO-EASE in closed-form.
         We follow the sklearn notation where X is the training data.
@@ -31,35 +32,31 @@ class HOEASE(EASE):
         :return: self
         :rtype: type
         """
-        if w:
-            raise RuntimeError("Weights are not supported in HO-EASE")
+        if y is None:
+            raise ValueError("Need to provide interaction matrix (without extensions) as y in HO-EASE")
+
+        if itemset_transform is None:
+            raise ValueError("Need itemsets to calculate correct indices")
 
         monitor = Monitor("HO-EASE")
 
-        # Y != X (We try to complete Y based on X, as in the paper by Harald Steck.)
-        # Y = X.copy()
-
-        monitor.update("Compute Itemsets")
-        itemsets = compute_itemsets(X, self.min_freq * X.shape[1], self.amt_itemsets)
-
-        monitor.update("Add Itemsets")
-        itemset_index = X.shape[1]
-        X_ext = extend_with_itemsets(X, itemsets)
-
         monitor.update("Calculate G")
-        G = X_ext.T @ X_ext + self.l2 * np.identity(X_ext.shape[1])
+        G = X.T @ X + self.l2 * np.identity(X.shape[1])
 
         monitor.update("Invert G")
         P = np.linalg.inv(G)
         del G       # free memory
 
         monitor.update("Calculate  Brr")
-        B_rr = P @ (X_ext.T @ X).todense()
+        B_rr = P @ (X.T @ y).todense()
 
         # calculate lagrangian multipliers
         monitor.update("Calculate Lagr. Mult. (prepr.)")
 
         # first do one pass over itemsets to find indices
+        itemset_index = y.shape[1]
+        itemsets = itemset_transform.itemsets
+
         item_indices = {j: [j] for j in range(B_rr.shape[1])}
         for i, itemset in enumerate(itemsets):
             for j in itemset:
@@ -76,6 +73,7 @@ class HOEASE(EASE):
 
             # pinv to account for numerical errors
             LM_sj = np.linalg.pinv(P_ss) @ B_rr_sj
+            # TODO: could use linalg.lstsq or solve
 
             LM[S, j] = np.squeeze(LM_sj)
 
@@ -83,39 +81,46 @@ class HOEASE(EASE):
         B = B_rr - P @ LM
 
         self.B_ = scipy.sparse.csr_matrix(B)
-        self.itemsets_ = itemsets
 
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
-        check_is_fitted(self)
 
-        X_ext = extend_with_itemsets(X, self.itemsets_)
-        return super().predict(X_ext)
-
-
-def extend_with_itemsets(Y, itemsets):
+class ItemsetTransform(BaseEstimator, TransformerMixin):
     """ Extends a user-item interaction matrix with itemset interactions. Returns augmented X. """
 
-    if not itemsets:
-        return Y
+    def __init__(self, min_freq=0.1, amt_itemsets=300):
+        super().__init__()
+        self.min_freq = min_freq
+        self.amt_itemsets = amt_itemsets
 
-    # Note: could use tidlist to add entries in sparse matrix
-    # should be faster than recalculating indices here, but less uniform
+    @property
+    def itemsets(self):
+        """ lazy loading of itemsets """
+        return self.itemsets_
 
-    @parfor(itemsets)
-    def extensions(itemset):
-        itemset = list(itemset)
-        vector = Y[:, itemset[0]]
-        for item in itemset[1:]:
-            vector = Y[:, item].multiply(vector)
+    def fit(self, X, y=None):
+        print("Calculating itemsets")
+        self.itemsets_ = miner.calculate_itemsets(X, minsup=self.min_freq * X.shape[1], amount=self.amt_itemsets)
+        return self
 
-        return vector
+    def transform(self, X):
+        check_is_fitted(self)
+        print("Extending features with itemsets")
 
-    X_ext = scipy.sparse.hstack((Y, *extensions), format="csr")
+        assert scipy.sparse.issparse(X), "Sparse matrix required"
 
-    return X_ext
+        # Note: could use tidlist to add entries in sparse matrix
+        # should be faster than recalculating indices here, but less uniform
 
+        @parfor(self.itemsets_)
+        def extensions(itemset):
+            itemset = list(itemset)
+            vector = X[:, itemset[0]]
+            for item in itemset[1:]:
+                vector = X[:, item].multiply(vector)
 
-def compute_itemsets(Y, minsup, amount):
-    return miner.calculate_itemsets(Y, minsup=minsup, amount=amount)
+            return vector
+
+        X_ext = scipy.sparse.hstack((X, *extensions), format="csr")
+
+        return X_ext

@@ -77,7 +77,7 @@ def calculate_itemsets(X, minsup=2, amount=None):
     monitor.update("eclat")
     itemsets = eclat(tidmap, minsup=minsup, size=3)
 
-    logger.debug("Amount of itemsets:", len(itemsets))
+    logger.debug(f"Amount of itemsets: {len(itemsets)}")
 
     monitor.update("Calculate influence")
     itemsets = process_itemsets(tidmap, itemsets)

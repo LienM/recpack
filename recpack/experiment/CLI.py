@@ -21,15 +21,14 @@ class CLI(object):
             def __init__(self):
                 super().__init__()
 
-            def __init_subclass__(cls, interface=None, **kwargs):
+            def __init_subclass__(cls, mask=None, **kwargs):
                 super().__init_subclass__(**kwargs)
-                self.commands[cls.__name__] = (cls, interface)
+                self.commands[cls.__name__] = (cls, mask)
 
             @classmethod
             def update_functions(cls, function_kwargs):
                 cls.function_kwargs = function_kwargs
                 for fName, kwargs in function_kwargs.items():
-                    print(fName, kwargs)
                     f = getattr(cls, fName)
                     wrapper = functools.partialmethod(f, **kwargs)
                     setattr(cls, fName, wrapper)
@@ -59,7 +58,7 @@ class CLI(object):
                                            metavar="subcommand")
         subparsers.required = True
 
-        for name, (cls, interface) in self.commands.items():
+        for name, (cls, mask) in self.commands.items():
             sub_parser = subparsers.add_parser(name, help=cls.__doc__, description=cls.__doc__)
             for fName, f in inspect.getmembers(cls, predicate=inspect.isfunction):
                 for param in inspect.signature(f).parameters.values():
@@ -70,8 +69,9 @@ class CLI(object):
                     if param.kind in [inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL]:
                         continue
 
-                    interfaceF = getattr(interface, fName, None)
-                    if interfaceF is not None and param.name in [p.name for p in inspect.signature(interfaceF).parameters.values()]:
+                    # skip parameters that are part of mask
+                    maskF = getattr(mask, fName, None)
+                    if maskF is not None and param.name in [p.name for p in inspect.signature(maskF).parameters.values()]:
                         continue
 
                     tpe = param.annotation
