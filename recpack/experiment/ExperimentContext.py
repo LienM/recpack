@@ -29,9 +29,9 @@ class ExperimentContext(object):
         self._start_time = datetime.now().replace(microsecond=0)
 
         self._output_path = os.path.join(BASE_OUTPUT_DIR, str(self.name) + "_" +self._start_time.isoformat())
-        if name:
-            os.makedirs(self.output_path)
-            atexit.register(self.save)
+
+        os.makedirs(self.output_path)
+        atexit.register(self.save)
 
     WANDB_ENABLED = False
 

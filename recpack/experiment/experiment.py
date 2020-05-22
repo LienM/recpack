@@ -92,6 +92,9 @@ class IExperiment(object):
     def eval_user(self, X, y_true, y_pred, user_id=None):
         raise NotImplementedError("Need to override Experiment.eval_user")
 
+    def eval_batch(self, X, y_true, y_pred, user_ids=None):
+        raise NotImplementedError("Need to override Experiment.eval_batch")
+
     def run(self):
         raise NotImplementedError("Need to override Experiment.run")
 
@@ -125,6 +128,14 @@ class Experiment(IExperiment):
     @parameter
     def K_values(self):
         return [1, 5, 10, 20, 50, 100]
+
+    @cached_property
+    def _metrics(self):
+        metrics = list()
+        for metric in self.metrics():
+            for k in self.K_values():
+                metrics.append(metric(k))
+        return metrics
 
     def preprocess(self):
         """
@@ -166,8 +177,9 @@ class Experiment(IExperiment):
                 # ensure ndarray instead of matrix
                 y_pred = np.asarray(y_pred)
 
-            for user_id, y_hist_u, y_true_u, y_pred_u in zip(user_ids, _in, _out, y_pred):
-                yield user_id, y_hist_u, y_true_u, y_pred_u
+            yield user_ids, _in, _out, y_pred
+            # for user_id, y_hist_u, y_true_u, y_pred_u in zip(user_ids, _in, _out, y_pred):
+            #     yield user_id, y_hist_u, y_true_u, y_pred_u
 
     def transform_predictions(self, user_iterator):
         """
@@ -184,10 +196,17 @@ class Experiment(IExperiment):
 
     def eval_user(self, X, y_true, y_pred, user_id=None):
         pass
-        # print("X", X)
-        # print("y_true", y_true)
-        # print("y_pred", y_pred)
-        # print("user_id", user_id)
+
+    def eval_batch(self, X, y_true, y_pred, user_ids=None):
+        if not scipy.sparse.issparse(y_pred):
+            y_pred = scipy.sparse.csr_matrix(y_pred)
+
+        for metric in self._metrics:
+            metric.update(y_pred, y_true)
+
+        # TODO: can be parallel maybe
+        # for user_id, y_hist_u, y_true_u, y_pred_u in tqdm(user_iterator, total=len(set(X_test.indices[0]))):
+        #     self.eval_user(y_hist_u, y_true_u, y_pred_u, user_id=user_id)
 
     def run(self):
         data = to_tuple(self.preprocess())
@@ -196,11 +215,13 @@ class Experiment(IExperiment):
         train = map(lambda x: x.binary_values, to_tuple(train))
 
         self.fit(*train)
-        user_iterator = self.iter_predict(X_test, y_test)
+        batch_iterator = self.iter_predict(X_test, y_test)
 
-        # TODO: can be parallel maybe
-        for user_id, y_hist_u, y_true_u, y_pred_u in tqdm(user_iterator, total=len(set(X_test.indices[0]))):
-            self.eval_user(y_hist_u, y_true_u, y_pred_u, user_id=user_id)
+        for user_ids, y_hist, y_true, y_pred in tqdm(batch_iterator, total=len(set(X_test.indices[0]))):
+            self.eval_batch(y_hist, y_true, y_pred, user_ids=user_ids)
+
+        for metric in self._metrics:
+            print(metric, metric.value)
 
 
 # TODO:

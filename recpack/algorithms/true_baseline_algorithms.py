@@ -52,7 +52,7 @@ class Popularity(Algorithm):
         super().__init__()
         self.K = K
 
-    def fit(self, X):
+    def fit(self, X, y=None):
         items = list(X.nonzero()[1])
         sorted_scores = Counter(items).most_common()
         self.sorted_scores_ = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
