@@ -13,7 +13,7 @@ tqdm.pandas()
 
 
 class DataFramePreprocessor:
-    def __init__(self, item_id, user_id, timestamp_id=None, dedupe=False):
+    def __init__(self, item_id, user_id, value_id=None, timestamp_id=None, dedupe=False):
         """
         Class to preprocess a Pandas Dataframe and turn it into a DataM object.
         All ID mappings are stored, so that processing of multiple DataFrames will lead to consistent mapped identifiers.
@@ -22,6 +22,8 @@ class DataFramePreprocessor:
         :type item_id: str
         :param user_id: Column name of the User ID column
         :type user_id: str
+        :param value_id: Column name of the value column, defaults to None
+        :type value_id: str, optional
         :param timestamp_id: Column name of the timestamp column, defaults to None
         :type timestamp_id: str, optional
         :param dedupe: Deduplicate events, such that (user_id, item_id) pairs are unique, defaults to False
@@ -31,6 +33,7 @@ class DataFramePreprocessor:
         self.user_id_mapping = {}
         self.item_id = item_id
         self.user_id = user_id
+        self.value_id = value_id
         self.timestamp_id = timestamp_id
         self.dedupe = dedupe
         self.filters = []
@@ -120,6 +123,7 @@ class DataFramePreprocessor:
                 df,
                 cleaned_item_id,
                 cleaned_user_id,
+                self.value_id,
                 self.timestamp_id,
                 shape=self.shape,
             )

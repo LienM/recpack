@@ -171,10 +171,10 @@ class DataM:
 
     @classmethod
     def create_from_dataframe(
-        cls, df: pd.DataFrame, item_ix: str, user_ix: str, timestamp_ix=None, shape=None
+        cls, df: pd.DataFrame, item_ix: str, user_ix: str, value_ix: str, timestamp_ix=None, shape=None
     ):
 
-        sparse_matrix = DataM.__create_values(df, item_ix, user_ix, shape)
+        sparse_matrix = DataM.__create_values(df, item_ix, user_ix, value_ix, shape)
 
         if timestamp_ix:
             df = df.rename(
@@ -191,11 +191,14 @@ class DataM:
         return DataM(sparse_matrix, timestamps)
 
     @classmethod
-    def __create_values(cls, df, item_ix, user_ix, shape):
-        num_entries = df.shape[0]
-        # Scipy sums up the entries when an index-pair occurs more than once,
-        # resulting in the actual counts being stored. Neat!
-        values = np.ones(num_entries)
+    def __create_values(cls, df, item_ix, user_ix, value_ix, shape):
+        if value_ix is not None:
+            values = df[value_ix]
+        else:
+            num_entries = df.shape[0]
+            # Scipy sums up the entries when an index-pair occurs more than once,
+            # resulting in the actual counts being stored. Neat!
+            values = np.ones(num_entries)
 
         indices = list(zip(*df.loc[:, [user_ix, item_ix]].values))
 

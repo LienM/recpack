@@ -3,8 +3,7 @@ import math
 import numpy as np
 import scipy.sparse
 
-# from functools import cached_property
-from cached_property import cached_property
+from functools import lru_cache
 
 from recpack.utils import to_tuple
 
@@ -129,7 +128,7 @@ class Experiment(IExperiment):
     def K_values(self):
         return [1, 5, 10, 20, 50, 100]
 
-    @cached_property
+    @lru_cache(maxsize=None)
     def _metrics(self):
         metrics = list()
         for metric in self.metrics():
@@ -201,7 +200,7 @@ class Experiment(IExperiment):
         if not scipy.sparse.issparse(y_pred):
             y_pred = scipy.sparse.csr_matrix(y_pred)
 
-        for metric in self._metrics:
+        for metric in self._metrics():
             metric.update(y_pred, y_true)
 
         # TODO: can be parallel maybe
@@ -212,7 +211,7 @@ class Experiment(IExperiment):
         data = to_tuple(self.preprocess())
         train, (X_test, y_test) = self.split(*data)
         # train = to_tuple(train)
-        train = map(lambda x: x.binary_values, to_tuple(train))
+        train = map(lambda x: x.values, to_tuple(train))
 
         self.fit(*train)
         batch_iterator = self.iter_predict(X_test, y_test)
@@ -220,13 +219,12 @@ class Experiment(IExperiment):
         for user_ids, y_hist, y_true, y_pred in tqdm(batch_iterator, total=len(set(X_test.indices[0]))):
             self.eval_batch(y_hist, y_true, y_pred, user_ids=user_ids)
 
-        for metric in self._metrics:
+        for metric in self._metrics():
             print(metric, metric.value)
 
 
 # TODO:
 #  - metrics and evaluation
-#  - find better solution to use of cached_property
 #  - logging with wandb and ExperimentContext (refactor into LoggingExperiment?)
 
 

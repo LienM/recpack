@@ -31,7 +31,7 @@ class LoggingExperiment(Experiment):
     def run(self):
         super().run()
 
-        for metric in self._metrics:
+        for metric in self._metrics():
             experiment.log_result(metric, metric.value)
 
         # if WANDB:
