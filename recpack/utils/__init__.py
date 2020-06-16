@@ -43,10 +43,15 @@ def dict_to_csv(d, path):
         writer.writerow(d.values())
 
 
-def sparse_to_csv(m, path):
+def sparse_to_csv(m, path, values=True):
     with open(path, 'w') as f:
         writer = csv.writer(f)
-        writer.writerow(['user', 'item', 'value'])
         coo = m.tocoo()
-        for u, i, v in zip(coo.row, coo.col, coo.data):
-            writer.writerow([u, i, v])
+        if values:
+            writer.writerow(['user', 'item', 'value'])
+            for u, i, v in zip(coo.row, coo.col, coo.data):
+                writer.writerow([u, i, v])
+        else:
+            writer.writerow(['user', 'item'])
+            for u, i in zip(coo.row, coo.col):
+                writer.writerow([u, i])

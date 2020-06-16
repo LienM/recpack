@@ -6,6 +6,8 @@ import datetime
 import numpy as np
 import scipy.sparse
 
+from sklearn.pipeline import Pipeline
+
 from typing import List
 
 from recpack.utils import to_tuple, sparse_to_csv, dict_to_csv
@@ -120,6 +122,12 @@ class IExperiment(IDataSource, ISceneario):
     def __repr__(self):
         return self.name
 
+    def recommender(self):
+        raise NotImplementedError("Need to override Experiment.recommender or Experiment.pipeline")
+
+    def pipeline(self):
+        raise NotImplementedError("Need to override Experiment.pipeline or Experiment.recommender")
+
     def fit(self, X, y=None):
         raise NotImplementedError("Need to override Experiment.fit")
 
@@ -128,12 +136,6 @@ class IExperiment(IDataSource, ISceneario):
 
     def iter_predict(self, X, y, **predict_params):
         raise NotImplementedError("Need to override Experiment.iter_predict")
-
-    # def eval_user(self, X, y_true, y_pred, user_id=None):
-    #     raise NotImplementedError("Need to override Experiment.eval_user")
-    #
-    # def eval_batch(self, X, y_true, y_pred, user_ids=None):
-    #     raise NotImplementedError("Need to override Experiment.eval_batch")
 
     def generate_recommendations(self, y_pred):
         pass
@@ -184,35 +186,16 @@ class Experiment(IExperiment):
         return params
 
     @provider
-    def pipeline(self):
-        raise NotImplementedError("Need to override Experiment.pipeline")
+    def pipeline(self, _cache=False):
+        return Pipeline(
+            steps=[
+                ("recommender", self.recommender()),
+            ],
+            memory="cache" if _cache else None
+        )
 
     def get_output_file(self, filename):
         return os.path.join(self.output_path, filename)
-
-    # @provider
-    # def metrics(self):
-    #     return []
-    #
-    # @provider
-    # def k_values(self):
-    #     return [1, 5, 10, 20, 50, 100]
-
-    # @lru_cache(maxsize=None)
-    # def _metrics(self):
-    #     metrics = list()
-    #     for metric in self.metrics():
-    #         for k in self.K_values():
-    #             metrics.append(metric(k))
-    #     return metrics
-
-    # @provider
-    # def metrics(self, metrics: List[str], k_values: List[int]):
-    #     metrics = list()
-    #     for metric in metrics:
-    #         for k in k_values:
-    #             metrics.append(metric(k))
-    #     return metrics
 
     def split(self, X, y=None):
         """
@@ -252,8 +235,6 @@ class Experiment(IExperiment):
                 y_pred = np.asarray(y_pred)
 
             yield user_ids, _in, _out, y_pred
-            # for user_id, y_hist_u, y_true_u, y_pred_u in zip(user_ids, _in, _out, y_pred):
-            #     yield user_id, y_hist_u, y_true_u, y_pred_u
 
     def transform_predictions(self, user_iterator):
         """
@@ -268,20 +249,6 @@ class Experiment(IExperiment):
         """
         yield from user_iterator
 
-    # def eval_user(self, X, y_true, y_pred, user_id=None):
-    #     pass
-
-    # def eval_batch(self, X, y_true, y_pred, user_ids=None):
-    #     if not scipy.sparse.issparse(y_pred):
-    #         y_pred = scipy.sparse.csr_matrix(y_pred)
-    #
-    #     for metric in self._metrics():
-    #         metric.update(y_pred, y_true)
-    #
-    #     # TODO: can be parallel maybe
-    #     # for user_id, y_hist_u, y_true_u, y_pred_u in tqdm(user_iterator, total=len(set(X_test.indices[0]))):
-    #     #     self.eval_user(y_hist_u, y_true_u, y_pred_u, user_id=user_id)
-
     def generate_recommendations(self, y_pred, _max_k: int = 100):
         """ Extract the sparse top-K recommendations from a dense list of predictions for each user"""
         items = np.argpartition(y_pred, -_max_k)[:, -_max_k:]
@@ -292,7 +259,7 @@ class Experiment(IExperiment):
             I.extend(items[ix])
             V.extend(y_pred[ix, items[ix]])
 
-        y_pred_top_K = scipy.sparse.lil_matrix(
+        y_pred_top_K = scipy.sparse.csr_matrix(
             (V, (U, I)), dtype=y_pred.dtype, shape=y_pred.shape
         )
         return y_pred_top_K
@@ -306,8 +273,8 @@ class Experiment(IExperiment):
         dict_to_csv(self.statistics, self.get_output_file("statistics.csv"))
 
         # save results
-        sparse_to_csv(hist, self.get_output_file("history.csv"))
-        sparse_to_csv(y_true, self.get_output_file("y_true.csv"))
+        sparse_to_csv(hist, self.get_output_file("history.csv"), values=False)
+        sparse_to_csv(y_true, self.get_output_file("y_true.csv"), values=False)
         sparse_to_csv(y_pred, self.get_output_file("y_pred.csv"))
 
     def process_predictions(self, X_test, y_test, batch_iterator):
@@ -315,7 +282,7 @@ class Experiment(IExperiment):
         for user_ids, X, y_true, y_pred in batch_iterator:
             recommendations[user_ids] = self.generate_recommendations(y_pred)
 
-        self.save(X_test, y_test, recommendations)
+        self.save(X_test.values, y_test.values, recommendations)
 
     def run(self):
         data = to_tuple(self.preprocess())
@@ -333,6 +300,8 @@ class Experiment(IExperiment):
 
 # TODO:
 #  - metrics and evaluation
+#  - preprocessing options (binary values, etc)
+#  - auto generate sweep file
 
 
 
