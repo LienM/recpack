@@ -52,13 +52,13 @@ class WEASE(UserItemInteractionsAlgorithm):
         for j in tqdm(sortKeysByValue(counts)):
             cj = C[:,j].toarray().squeeze() + 1
             Cj = scipy.sparse.diags(cj, 0)
-            xtc = P.T @ Cj
+            ptc = P.T @ Cj
 
-            print(C[:, j].nnz)
+            # print(C[:, j].nnz)
 
             # Choose best option to do inversion
             if P.shape[1] <= C[:, j].nnz:
-                A = np.linalg.inv(xtc @ P + l2_n)
+                A = np.linalg.inv(ptc @ P + l2_n)
             else:
                 # Option to compute A with woodbury matrix identity using:
                 #  Y^TCjY = Y^TY + Y^T(Cj-I)Y, and
@@ -70,7 +70,7 @@ class WEASE(UserItemInteractionsAlgorithm):
                 D = np.diag(d[d.nonzero()])
                 A = woodbury(Ainv, U.toarray(), D, V.toarray())
 
-            col = xtc @ P[:, j]
+            col = ptc @ P[:, j]
 
             lag = np.zeros((P.shape[1], 1))
             lag[j] = - A[j] @ col / A[j, j]

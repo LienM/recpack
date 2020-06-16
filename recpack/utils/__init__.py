@@ -1,4 +1,5 @@
 import sys
+import csv
 import logging.config
 from collections import defaultdict
 import logging
@@ -33,3 +34,19 @@ def to_tuple(el):
         return el
     else:
         return (el, )
+
+
+def dict_to_csv(d, path):
+    with open(path, "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(d.keys())
+        writer.writerow(d.values())
+
+
+def sparse_to_csv(m, path):
+    with open(path, 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(['user', 'item', 'value'])
+        coo = m.tocoo()
+        for u, i, v in zip(coo.row, coo.col, coo.data):
+            writer.writerow([u, i, v])

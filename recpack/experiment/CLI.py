@@ -34,9 +34,9 @@ class CLI(object):
                     setattr(cls, fName, wrapper)
 
             def get_params(self):
-                params = dict()
+                params = super().get_params() if hasattr(super(), "get_params") else dict()
                 for kwargs in self.__class__.function_kwargs.values():
-                    params.update(kwargs)
+                    params.update(kwargs.items())
                 return params
 
             def run(self):
@@ -54,12 +54,20 @@ class CLI(object):
             inst.run()
 
     def setup(self):
-        subparsers = self.parser.add_subparsers(help="Select one of the following subcommands:", dest='command',
-                                           metavar="subcommand")
+        subparsers = self.parser.add_subparsers(
+            help="Select one of the following subcommands:",
+            dest='command',
+            metavar="subcommand"
+        )
         subparsers.required = True
 
         for name, (cls, mask) in self.commands.items():
-            sub_parser = subparsers.add_parser(name, help=cls.__doc__, description=cls.__doc__)
+            sub_parser = subparsers.add_parser(
+                name,
+                help=cls.__doc__,
+                description=cls.__doc__,
+                formatter_class=argparse.MetavarTypeHelpFormatter
+            )
             for fName, f in inspect.getmembers(cls, predicate=inspect.isfunction):
                 for param in inspect.signature(f).parameters.values():
                     if param.name == "self":
@@ -74,17 +82,33 @@ class CLI(object):
                     if maskF is not None and param.name in [p.name for p in inspect.signature(maskF).parameters.values()]:
                         continue
 
-                    tpe = param.annotation
-                    if tpe is inspect.Parameter.empty:
-                        tpe = str
-                    prefix = "-" if len(param.name) == 1 else "--"
+                    param_name = param.name[1:] if param.name[0] == "_" else param.name
+                    prefix = "-" if len(param_name) == 1 else "--"
                     if param.default is not inspect.Parameter.empty:
-                        sub_parser.add_argument(prefix + param.name,
-                                                help="type: {}, default={}".format(tpe.__name__, param.default),
-                                                type=tpe, default=param.default, dest=f"{fName}.{param.name}")
+                        tpe = param.annotation
+                        if tpe is inspect.Parameter.empty:
+                            tpe = type(param.default)
+
+                        if tpe == bool:
+                            group = sub_parser.add_mutually_exclusive_group(required=False)
+                            group.add_argument('--' + param_name, help="(default)" if param.default else "", dest=f"{fName}.{param.name}", action='store_true')
+                            group.add_argument('--no-' + param_name, help="(default)" if not param.default else "", dest=f"{fName}.{param.name}", action='store_false')
+                            group.set_defaults(**{f"{fName}.{param.name}": param.default})
+                        else:
+                            sub_parser.add_argument(prefix + param_name,
+                                                    help="(default: {})".format(param.default),
+                                                    type=tpe, default=param.default, dest=f"{fName}.{param.name}")
                     else:
-                        sub_parser.add_argument(prefix + param.name, help="type: " + tpe.__name__,
-                                                type=tpe, dest=f"{fName}.{param.name}")
+                        tpe = param.annotation
+                        if tpe is inspect.Parameter.empty:
+                            tpe = str
+
+                        if tpe == bool:
+                            group = sub_parser.add_mutually_exclusive_group(required=True)
+                            group.add_argument('--' + param_name, dest=f"{fName}.{param.name}", action='store_true')
+                            group.add_argument('--no-' + param_name, dest=f"{fName}.{param.name}", action='store_false')
+                        else:
+                            sub_parser.add_argument(prefix + param_name, type=tpe, dest=f"{fName}.{param.name}")
 
     def parse_args(self):
         cmd_args = self.parser.parse_args()
