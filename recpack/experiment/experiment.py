@@ -106,6 +106,7 @@ class IExperiment(IDataSource, ISceneario):
 
     @property
     def identifier(self):
+        # TODO: decouple from parameters (join identifier of algo, scenario and datasource)
         identifying_params = {k: v for k, v in self.get_params().items() if not k[0] == "_"}
         paramstring = "_".join((f"{k}_{v}" for k, v in sorted(identifying_params.items())))
         return self.name + "__" + paramstring
@@ -123,10 +124,14 @@ class IExperiment(IDataSource, ISceneario):
         return self.name
 
     def recommender(self):
-        raise NotImplementedError("Need to override Experiment.recommender or Experiment.pipeline")
+        raise NotImplementedError("Need to override Experiment.recommender")
+
+    def transformers(self):
+        """ Return a list of (name, transformer) pairs to be applied before the recommendation. """
+        raise NotImplementedError("Need to override Experiment.transformers")
 
     def pipeline(self):
-        raise NotImplementedError("Need to override Experiment.pipeline or Experiment.recommender")
+        raise NotImplementedError("Need to override Experiment.pipeline")
 
     def fit(self, X, y=None):
         raise NotImplementedError("Need to override Experiment.fit")
@@ -136,6 +141,9 @@ class IExperiment(IDataSource, ISceneario):
 
     def iter_predict(self, X, y, **predict_params):
         raise NotImplementedError("Need to override Experiment.iter_predict")
+
+    def transform_predictions(self, batch_iterator):
+        raise NotImplementedError("Need to override Experiment.transform_predictions")
 
     def generate_recommendations(self, y_pred):
         pass
@@ -183,16 +191,26 @@ class Experiment(IExperiment):
     def get_params(self):
         params = super().get_params()
         params['_seed'] = self.seed
+        params['algorithm'] = self.algorithm_name
         return params
 
     @provider
     def pipeline(self, _cache=False):
         return Pipeline(
-            steps=[
+            steps=self.transformers + [
                 ("recommender", self.recommender()),
             ],
             memory="cache" if _cache else None
         )
+
+    @provider
+    def transformers(self):
+        """ Return a list of (name, transformer) pairs to be applied before the recommendation. """
+        return []
+
+    @property
+    def algorithm_name(self):
+        return self.recommender().name
 
     def get_output_file(self, filename):
         return os.path.join(self.output_path, filename)
@@ -236,7 +254,7 @@ class Experiment(IExperiment):
 
             yield user_ids, _in, _out, y_pred
 
-    def transform_predictions(self, user_iterator):
+    def transform_predictions(self, batch_iterator):
         """
         Apply business rules after the recommendation step and before evaluation.
         These may influence the calculated performance.
@@ -247,7 +265,7 @@ class Experiment(IExperiment):
                 user_iterator = NoRepeats(user_iterator)
             yield from user_iterator
         """
-        yield from user_iterator
+        yield from batch_iterator
 
     def generate_recommendations(self, y_pred, _max_k: int = 100):
         """ Extract the sparse top-K recommendations from a dense list of predictions for each user"""
@@ -302,6 +320,8 @@ class Experiment(IExperiment):
 #  - metrics and evaluation
 #  - preprocessing options (binary values, etc)
 #  - auto generate sweep file
+#  - allow to inject default values through functions (to override specific parts)
+#  - group parameters per class? (easier to derive unique name for algo)
 
 
 

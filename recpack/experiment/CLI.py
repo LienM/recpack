@@ -83,6 +83,7 @@ class CLI(object):
                         continue
 
                     param_name = param.name[1:] if param.name[0] == "_" else param.name
+                    param_name = param_name.replace('_', '-')
                     prefix = "-" if len(param_name) == 1 else "--"
                     if param.default is not inspect.Parameter.empty:
                         tpe = param.annotation
