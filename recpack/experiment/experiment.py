@@ -197,7 +197,7 @@ class Experiment(IExperiment):
     @provider
     def pipeline(self, _cache=False):
         return Pipeline(
-            steps=self.transformers + [
+            steps=self.transformers() + [
                 ("recommender", self.recommender()),
             ],
             memory="cache" if _cache else None
@@ -269,7 +269,10 @@ class Experiment(IExperiment):
 
     def generate_recommendations(self, y_pred, _max_k: int = 100):
         """ Extract the sparse top-K recommendations from a dense list of predictions for each user"""
-        items = np.argpartition(y_pred, -_max_k)[:, -_max_k:]
+        if _max_k < 0:
+            return scipy.sparse.csr_matrix(y_pred)
+        else:
+            items = np.argpartition(y_pred, -_max_k)[:, -_max_k:]
 
         U, I, V = [], [], []
         for ix in range(y_pred.shape[0]):

@@ -83,10 +83,37 @@ class EASE_XY(EASE):
         P = np.linalg.inv(G)
         B_rr = P @ (X.T @ y).todense()
 
-        D = np.identity(X.shape[1]) @ np.diag(np.diag(B_rr) / np.diag(P))
+        D = np.diag(np.diag(B_rr) / np.diag(P))
         self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
 
         return self
+
+
+def normalize(X):
+    return scipy.sparse.csr_matrix(np.diag(1/np.sum(X, axis=1).A1) @ X)
+
+
+class EASE_AVG(EASE):
+    """ Variation of EASE where we encode Y from X (no autoencoder). """
+    def fit(self, X, y=None):
+        if y is not None:
+            raise RuntimeError("Train EASE_XY for distinct y.")
+        y = X
+        X = normalize(y)
+        
+        G = X.T @ X + self.l2 * np.identity(X.shape[1])
+
+        P = np.linalg.inv(G)
+        B_rr = P @ (X.T @ y).todense()
+
+        D = np.diag((1 - np.diag(B_rr)) / -np.diag(P))
+        self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
+
+        return self
+
+    def predict(self, X, user_ids=None):
+        X = normalize(X)
+        return super().predict(X, user_ids=user_ids)
 
 
 class EASE_VP(UserItemInteractionsAlgorithm):

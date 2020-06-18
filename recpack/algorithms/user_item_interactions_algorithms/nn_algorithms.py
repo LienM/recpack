@@ -18,15 +18,15 @@ class ItemKNN(UserItemInteractionsAlgorithm):
         super().__init__()
         self.K = K
 
-    def fit(self, X):
+    def fit(self, X, y=None):
         """Fit a cosine similarity matrix from item to item"""
         # Do the cosine similarity computation here, this way we can set the diagonal to zero
         # to avoid self recommendation
         # X.T otherwise we are doing a user KNN
         self.item_cosine_similarities_ = cosine_similarity(X.T, dense_output=False)
 
-        # Set diagonal to 0, because we don't want to support self similarity
         self.item_cosine_similarities_.setdiag(0)
+        # Set diagonal to 0, because we don't want to support self similarity
 
         # resolve top K per item
         # Get indices of top K items per item
