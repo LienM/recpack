@@ -26,6 +26,8 @@ HISTORY_FILE = "history.csv"
 Y_TRUE_FILE = "y_true.csv"
 Y_PRED_FILE = "y_pred.csv"
 
+METRICS_FILE = "metrics.csv"
+
 
 def provider(f):
     cache = dict()
@@ -333,16 +335,18 @@ class Experiment(IExperiment):
 
         recommendations = self.process_predictions(X_test, y_test, batch_iterator)
         self.save(X_test.values, y_test.values, recommendations)
-        self.evaluate(X_test, y_test, recommendations)
+        data = self.evaluate(X_test.values, y_test.values, recommendations)
+
+        dict_to_csv(data, self.get_output_file(METRICS_FILE))
 
 
 
 # TODO:
-#  - metrics and evaluation
 #  - preprocessing options (binary values, etc)
 #  - auto generate sweep file
 #  - allow to inject default values through functions (to override specific parts)
 #  - group parameters per class? (easier to derive unique name for algo and generate sweep file)
+#  - entry point for eval?
 
 
 

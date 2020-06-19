@@ -1,4 +1,4 @@
-
+import numpy as np
 
 
 def NoRepeats(batch_iterator):
@@ -7,4 +7,4 @@ def NoRepeats(batch_iterator):
     Lower prediction scores of items in history by 10^10.
     """
     for user_ids, X, y_true, y_pred in batch_iterator:
-        yield user_ids, X, y_true, y_pred - 1e10 * X
+        yield user_ids, X, y_true, np.asarray(y_pred - 1e10 * X)

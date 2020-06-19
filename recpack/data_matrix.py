@@ -4,7 +4,7 @@ import numpy as np
 
 import scipy.sparse
 
-from recpack.utils import logger, groupby2
+from recpack.utils import logger, groupby2, df_to_sparse
 
 
 class DataM:
@@ -174,7 +174,7 @@ class DataM:
         cls, df: pd.DataFrame, item_ix: str, user_ix: str, value_ix: str, timestamp_ix=None, shape=None
     ):
 
-        sparse_matrix = DataM._create_values(df, item_ix, user_ix, value_ix, shape)
+        sparse_matrix = df_to_sparse(df, item_ix, user_ix, value_ix, shape)
 
         if timestamp_ix:
             df = df.rename(
@@ -189,29 +189,6 @@ class DataM:
             timestamps = None
 
         return DataM(sparse_matrix, timestamps)
-
-    @classmethod
-    def _create_values(cls, df, item_ix, user_ix, value_ix=None, shape=None):
-        if value_ix is not None:
-            values = df[value_ix]
-        else:
-            num_entries = df.shape[0]
-            # Scipy sums up the entries when an index-pair occurs more than once,
-            # resulting in the actual counts being stored. Neat!
-            values = np.ones(num_entries)
-
-        indices = list(zip(*df.loc[:, [user_ix, item_ix]].values))
-
-        if indices == []:
-            indices = [[], []]  # Empty zip does not evaluate right
-
-        if shape is None:
-            shape = df[user_ix].max() + 1, df[item_ix].max() + 1
-        sparse_matrix = scipy.sparse.csr_matrix(
-            (values, indices), shape=shape, dtype=values.dtype
-        )
-
-        return sparse_matrix
 
 
 class ShapeError(Exception):

@@ -4,9 +4,9 @@ import logging.config
 from collections import defaultdict
 import logging
 
+import numpy as np
+import scipy.sparse
 import pandas as pd
-
-import recpack.data_matrix
 
 logger = logging.getLogger("recpack")
 logger.setLevel(logging.INFO)
@@ -47,6 +47,29 @@ def dict_to_csv(d, path):
         writer.writerow(d.values())
 
 
+def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
+    if value_ix is not None:
+        values = df[value_ix]
+    else:
+        num_entries = df.shape[0]
+        # Scipy sums up the entries when an index-pair occurs more than once,
+        # resulting in the actual counts being stored. Neat!
+        values = np.ones(num_entries)
+
+    indices = list(zip(*df.loc[:, [user_ix, item_ix]].values))
+
+    if indices == []:
+        indices = [[], []]  # Empty zip does not evaluate right
+
+    if shape is None:
+        shape = df[user_ix].max() + 1, df[item_ix].max() + 1
+    sparse_matrix = scipy.sparse.csr_matrix(
+        (values, indices), shape=shape, dtype=values.dtype
+    )
+
+    return sparse_matrix
+
+
 USER_KEY = "user"
 ITEM_KEY = "item"
 VALUE_KEY = "value"
@@ -69,6 +92,6 @@ def sparse_to_csv(m, path, values=True):
 def csv_to_sparse(path, values=True):
     df = pd.read_csv(path)
     if values:
-        return recpack.data_matrix.DataM._create_values(df, ITEM_KEY, USER_KEY, VALUE_KEY)
+        return df_to_sparse(df, ITEM_KEY, USER_KEY, VALUE_KEY)
     else:
-        return recpack.data_matrix.DataM._create_values(df, ITEM_KEY, USER_KEY)
+        return df_to_sparse(df, ITEM_KEY, USER_KEY)

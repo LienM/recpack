@@ -90,7 +90,7 @@ class EASE_XY(EASE):
 
 
 def normalize(X):
-    return scipy.sparse.csr_matrix(np.diag(1/np.sum(X, axis=1).A1) @ X)
+    return scipy.sparse.csr_matrix(scipy.sparse.diags(1/np.sum(X, axis=1).A1) @ X)
 
 
 class EASE_AVG(EASE):
