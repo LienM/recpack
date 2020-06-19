@@ -20,6 +20,12 @@ import functools
 
 BASE_OUTPUT_DIR = "output/"
 
+PARAMS_FILE = "params.csv"
+STATISTICS_FILE = "statistics.csv"
+HISTORY_FILE = "history.csv"
+Y_TRUE_FILE = "y_true.csv"
+Y_PRED_FILE = "y_pred.csv"
+
 
 def provider(f):
     cache = dict()
@@ -86,7 +92,16 @@ class ISceneario(object):
         yield from user_iterator
 
 
-class IExperiment(IDataSource, ISceneario):
+class IEvaluator(object):
+    def __init__(self):
+        super().__init__()
+
+    def evaluate(self, X, y, recommendations):
+        """ Evaluate recommendations. X is the history and y the left out 'ground truth'. """
+        pass
+
+
+class IExperiment(IDataSource, ISceneario, IEvaluator):
     """
     Extend from this class to create experiments from scratch. The Experiment class already has the basic functionallity.
     Every step of the process can be overriden individually to create a custom experiment structure.
@@ -288,22 +303,22 @@ class Experiment(IExperiment):
     def save(self, hist, y_true, y_pred):
         # save params
         cleaned_params = {k[1:] if k[0] == "_" else k: v for k, v in self.get_params().items()}
-        dict_to_csv(cleaned_params, self.get_output_file("params.csv"))
+        dict_to_csv(cleaned_params, self.get_output_file(PARAMS_FILE))
 
         # save statistics
-        dict_to_csv(self.statistics, self.get_output_file("statistics.csv"))
+        dict_to_csv(self.statistics, self.get_output_file(STATISTICS_FILE))
 
         # save results
-        sparse_to_csv(hist, self.get_output_file("history.csv"), values=False)
-        sparse_to_csv(y_true, self.get_output_file("y_true.csv"), values=False)
-        sparse_to_csv(y_pred, self.get_output_file("y_pred.csv"))
+        sparse_to_csv(hist, self.get_output_file(HISTORY_FILE), values=False)
+        sparse_to_csv(y_true, self.get_output_file(Y_TRUE_FILE), values=False)
+        sparse_to_csv(y_pred, self.get_output_file(Y_PRED_FILE))
 
     def process_predictions(self, X_test, y_test, batch_iterator):
         recommendations = scipy.sparse.lil_matrix(y_test.shape)
         for user_ids, X, y_true, y_pred in batch_iterator:
             recommendations[user_ids] = self.generate_recommendations(y_pred)
 
-        self.save(X_test.values, y_test.values, recommendations)
+        return recommendations
 
     def run(self):
         data = to_tuple(self.preprocess())
@@ -316,7 +331,10 @@ class Experiment(IExperiment):
         batch_iterator = self.iter_predict(X_test, y_test)
         batch_iterator = self.transform_predictions(batch_iterator)
 
-        self.process_predictions(X_test, y_test, batch_iterator)
+        recommendations = self.process_predictions(X_test, y_test, batch_iterator)
+        self.save(X_test.values, y_test.values, recommendations)
+        self.evaluate(X_test, y_test, recommendations)
+
 
 
 # TODO:
@@ -324,7 +342,7 @@ class Experiment(IExperiment):
 #  - preprocessing options (binary values, etc)
 #  - auto generate sweep file
 #  - allow to inject default values through functions (to override specific parts)
-#  - group parameters per class? (easier to derive unique name for algo)
+#  - group parameters per class? (easier to derive unique name for algo and generate sweep file)
 
 
 

@@ -4,6 +4,10 @@ import logging.config
 from collections import defaultdict
 import logging
 
+import pandas as pd
+
+import recpack.data_matrix
+
 logger = logging.getLogger("recpack")
 logger.setLevel(logging.INFO)
 
@@ -43,15 +47,28 @@ def dict_to_csv(d, path):
         writer.writerow(d.values())
 
 
+USER_KEY = "user"
+ITEM_KEY = "item"
+VALUE_KEY = "value"
+
+
 def sparse_to_csv(m, path, values=True):
     with open(path, 'w') as f:
         writer = csv.writer(f)
         coo = m.tocoo()
         if values:
-            writer.writerow(['user', 'item', 'value'])
+            writer.writerow([USER_KEY, ITEM_KEY, VALUE_KEY])
             for u, i, v in zip(coo.row, coo.col, coo.data):
                 writer.writerow([u, i, v])
         else:
-            writer.writerow(['user', 'item'])
+            writer.writerow([USER_KEY, ITEM_KEY])
             for u, i in zip(coo.row, coo.col):
                 writer.writerow([u, i])
+
+
+def csv_to_sparse(path, values=True):
+    df = pd.read_csv(path)
+    if values:
+        return recpack.data_matrix.DataM._create_values(df, ITEM_KEY, USER_KEY, VALUE_KEY)
+    else:
+        return recpack.data_matrix.DataM._create_values(df, ITEM_KEY, USER_KEY)

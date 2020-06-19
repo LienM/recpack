@@ -45,7 +45,7 @@ class DataM:
 
         c_timestamps = self._timestamps[func()]
 
-        c_values = self.__create_values(
+        c_values = self._create_values(
             c_timestamps.reset_index(), self.item_id, self.user_id, self._values.shape
         )
 
@@ -174,7 +174,7 @@ class DataM:
         cls, df: pd.DataFrame, item_ix: str, user_ix: str, value_ix: str, timestamp_ix=None, shape=None
     ):
 
-        sparse_matrix = DataM.__create_values(df, item_ix, user_ix, value_ix, shape)
+        sparse_matrix = DataM._create_values(df, item_ix, user_ix, value_ix, shape)
 
         if timestamp_ix:
             df = df.rename(
@@ -191,7 +191,7 @@ class DataM:
         return DataM(sparse_matrix, timestamps)
 
     @classmethod
-    def __create_values(cls, df, item_ix, user_ix, value_ix, shape):
+    def _create_values(cls, df, item_ix, user_ix, value_ix=None, shape=None):
         if value_ix is not None:
             values = df[value_ix]
         else:
@@ -208,7 +208,7 @@ class DataM:
         if shape is None:
             shape = df[user_ix].max() + 1, df[item_ix].max() + 1
         sparse_matrix = scipy.sparse.csr_matrix(
-            (values, indices), shape=shape, dtype=np.int32
+            (values, indices), shape=shape, dtype=values.dtype
         )
 
         return sparse_matrix

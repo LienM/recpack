@@ -109,7 +109,7 @@ class CLI(object):
                             group.add_argument('--' + param_name, dest=f"{fName}.{param.name}", action='store_true')
                             group.add_argument('--no-' + param_name, dest=f"{fName}.{param.name}", action='store_false')
                         else:
-                            sub_parser.add_argument(prefix + param_name, type=tpe, dest=f"{fName}.{param.name}")
+                            sub_parser.add_argument(prefix + param_name, type=tpe, dest=f"{fName}.{param.name}", required=True)
 
     def parse_args(self):
         cmd_args = self.parser.parse_args()
