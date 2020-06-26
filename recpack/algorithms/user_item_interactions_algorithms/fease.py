@@ -13,7 +13,7 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 
 class FEASE(UserItemInteractionsAlgorithm):
-    def __init__(self, k=10, iterations=10, l2=500):
+    def __init__(self, k=10, iterations=10, l2=1):
         super().__init__()
         self.l2 = l2
         self.k = k
@@ -22,24 +22,19 @@ class FEASE(UserItemInteractionsAlgorithm):
     def fit(self, X, w=None):
 
         print("Calculate XTX")
-        l2_n = self.l2 * np.identity((X.shape[1]))
+        l2_k = self.l2 * np.identity(self.k)
         xtx = (X.T @ X).todense()
         print("Invert XTX")
-        xtx_inv = np.linalg.inv(xtx + l2_n)
+        xtx_inv = np.linalg.pinv(xtx)
 
-        # Q = np.ones((self.k, X.shape[1]))
-        # for row in range(Q.shape[0]):
-        #     Q[row] = 10 ** row
         print("Init Q")
         Q = np.random.random((self.k, X.shape[1]))
-
-        # print(Q)
 
         print("Start iterations")
         for i in range(self.iterations):
             print("Iteration", i)
-            P = xtx_inv @ xtx @ Q.T @ np.linalg.pinv(Q @ Q.T)
-            Q = np.linalg.inv(P.T @ xtx @ P + self.l2 * P.T @ P) @ P.T @ xtx
+            P = xtx_inv @ xtx @ Q.T @ np.linalg.inv(Q @ Q.T + l2_k)
+            Q = np.linalg.inv(P.T @ xtx @ P + l2_k) @ P.T @ xtx
             B = P @ Q
 
             if hasattr(self, "B_"):
@@ -47,10 +42,8 @@ class FEASE(UserItemInteractionsAlgorithm):
                 print("change", change)
 
             self.B_ = B
-            # print("P", P)
-            # print("Q", Q)
-            # print("B", self.B_)
-            # print()
+            self.P_ = P
+            self.Q_ = Q
 
         return self
 
@@ -62,7 +55,7 @@ class FEASE(UserItemInteractionsAlgorithm):
         return scores
 
 
-class FEASE2(UserItemInteractionsAlgorithm):
+class FEASEAdd(UserItemInteractionsAlgorithm):
     def __init__(self, k=2, iterations=10, l2=1):
         super().__init__()
         self.l2 = l2
@@ -72,8 +65,8 @@ class FEASE2(UserItemInteractionsAlgorithm):
     def fit(self, X, w=None):
 
         print("Calculate XTX")
-        l2_n = self.l2 * np.identity((X.shape[1]))
-        l2_k = self.l2 * np.identity((self.k))
+        l2_n = self.l2 * np.identity(X.shape[1])
+        l2_k = self.l2 * np.identity(self.k)
         xtx = (X.T @ X).todense()
         xtx_minl2 = xtx - l2_n
 
@@ -84,11 +77,7 @@ class FEASE2(UserItemInteractionsAlgorithm):
         i_knl2 = self.l2 * np.identity((X.shape[1] * self.k))
         for i in range(self.iterations):
             print("Iteration", i)
-            A = np.kron(Q@Q.T, xtx) + i_knl2
-            c = (xtx_minl2 @ Q.T).flatten('F').T
-            p = np.linalg.solve(A, c)
-            # print("zero", A @ p - c)
-            P = p.T.reshape(Q.T.shape, order='F')
+            P = vec_trick(xtx, Q@Q.T, xtx_minl2 @ Q.T, self.l2)
             # print("zero", xtx @ P @ Q @ Q.T + self.l2 * P - xtx_minl2 @ Q.T)
 
             Q = np.linalg.inv(P.T @ xtx @ P + self.l2 * l2_k) @ P.T @ xtx_minl2
@@ -112,30 +101,95 @@ class FEASE2(UserItemInteractionsAlgorithm):
         return scores
 
 
-class FEASEInv(UserItemInteractionsAlgorithm):
+def diag_XXT_inv(X):
+    return scipy.sparse.diags(1/np.sum(X, axis=1).A1)
+
+
+def vec_trick(A, B, C, l2):
+    """ Solve AXB + lambda X = C """
+    i_knl2 = l2 * np.identity((B.shape[0] * A.shape[0]))
+    M = np.kron(B, A) + i_knl2
+    c = C.flatten('F').T
+    p = np.linalg.solve(M, c)
+    # print("zero", A @ p - c)
+    P = p.T.reshape((A.shape[0], B.shape[0]), order='F')
+    return P
+
+
+def solve_AXB_c(A, B, c):
+    """ solve diag(AXB) = c """
+    T = np.empty((A.shape[0], A.shape[1] * B.T.shape[1]))
+    for i in range(T.shape[0]):
+        T[i] = np.kron(A[i], B.T[i])
+    W = np.linalg.lstsq(T, c)[0]
+
+    # print("rankT", np.linalg.matrix_rank(T))
+    # print("rankAug", np.linalg.matrix_rank(np.hstack((T, c))))
+    print("zero", T @ W - c)
+    W = W.reshape(B.T.shape)
+    return W
+
+
+class FEASE_ONE(UserItemInteractionsAlgorithm):
     def __init__(self, k=2, iterations=10, l2=1):
         super().__init__()
-        self.l2 = l2
         self.k = k
+        self.l2 = l2
         self.iterations = iterations
 
     def fit(self, X, w=None):
-        # doesn't converge
-        print("Calculate XTX")
-        l2_n = self.l2 * np.identity((X.shape[1]))
-        l2_n_k = l2_n * self.k
-        xtx = X.T @ X
-        print("Invert XTX")
-        xtx_inv = np.linalg.inv(xtx + l2_n)
+        print("Pre calculate constants")
+        l2_k = self.l2 * np.identity(self.k)
+        # A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X + self.l2 * np.identity(X.shape[1]))#.toarray()
+        A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X).toarray()
+        # print("A", A)
+        G = X.T @ diag_XXT_inv(X) @ X
+        Ainv = np.linalg.pinv(A)
 
-        print("Init Q")
         Q = np.random.random((self.k, X.shape[1]))
 
-        print("Start iterations")
         for i in range(self.iterations):
-            P = xtx_inv @ ((self.k+1) * xtx + l2_n_k) @ Q.T @ np.linalg.inv(Q @ Q.T)
-            Q = np.reciprocal(P).T
-            B = P @ Q - self.k * np.identity((X.shape[1]))
+            print("Iteration", i)
+            QQTinv = np.linalg.inv(Q @ Q.T + l2_k)
+            QT_QQTinv = Q.T @ QQTinv
+            QT_QQTinv_Q = QT_QQTinv @ Q
+
+            W_term = (np.identity(A.shape[0]) - Ainv @ A)
+
+            T = Ainv * QT_QQTinv_Q
+            # print("T", T)
+            Tinv = np.linalg.pinv(T)
+            TTinv = T @ Tinv
+            b = (np.diag(Ainv @ G @ QT_QQTinv_Q) - 1).reshape(A.shape[0], 1)
+            # print("b", b)
+            c = np.linalg.inv(TTinv - np.identity(A.shape[0])) @ (-TTinv @ b + b)
+            # print("c", c)
+
+            # W = solve_AXB_c(W_term, Q, c)
+            # w = np.diag(W_term @ W @ Q).reshape(b.shape)
+            # print("W", W)
+
+            w = c
+            print("w", w)
+
+            bb = b + w
+            Dp = np.linalg.pinv(T) @ bb
+            print("Dp", Dp)
+            print("zero", T @ Dp - bb)
+
+            P = Ainv @ (G - Dp) @ QT_QQTinv + W_term @ W
+            # print("P", P)
+            print("diag", np.diag(P @ Q))
+
+            PTAPinv = np.linalg.inv(P.T @ A @ P + l2_k)
+            P_PTAPinv_PT = P @ PTAPinv @ P.T
+            Dq = (1 / np.diag(P_PTAPinv_PT)) * (np.diag(P_PTAPinv_PT @ G) - 1)
+            # print("Dq", Dq)
+            Q = PTAPinv @ P.T @ (G - np.diag(Dq))
+            # print("Q", Q)
+
+            B = P @ Q
+            # print("B", B)
 
             if hasattr(self, "B_"):
                 change = np.sum(np.abs(self.B_ - B))
@@ -144,17 +198,14 @@ class FEASEInv(UserItemInteractionsAlgorithm):
             self.B_ = B
             self.P_ = P
             self.Q_ = Q
-
-            # print("P", P)
-            # print("Q", Q)
-            # print("B", self.B_)
-            # print()
+            
+            print()
 
         return self
 
     def predict(self, X, user_ids=None):
         check_is_fitted(self)
 
+        X = diag_XXT_inv(X) @ X
         scores = X @ self.B_
-
         return scores
