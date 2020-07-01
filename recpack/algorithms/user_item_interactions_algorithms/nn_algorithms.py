@@ -12,7 +12,10 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 class ItemKNN(SimilarityMatrixAlgorithm):
     def __init__(self, K=200, normalize=False):
         """Construct an ItemKNN model. Before use make sure to fit the model.
-        The K parameter defines the how much best neighbours are kept for each item."""
+        The K parameter defines the how much best neighbours are kept for each item.
+        
+        If normalise is True, the scores are divided by the max score.
+        """
         super().__init__()
         self.K = K
         self.normalize = normalize
@@ -40,8 +43,9 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         mask = scipy.sparse.csr_matrix(
             ([1 for i in range(len(indices))], (list(zip(*indices))))
         )
+        
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
-
+        
         if self.normalize:
             # normalize per row
             row_sums = self.item_cosine_similarities_.sum(axis=1)
@@ -49,7 +53,6 @@ class ItemKNN(SimilarityMatrixAlgorithm):
             self.item_cosine_similarities_ = scipy.sparse.csr_matrix(
                 self.item_cosine_similarities_
             )
-            self.item_cosine_similarities_.eliminate_zeros()
 
         return self
 

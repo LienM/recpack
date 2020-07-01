@@ -70,7 +70,7 @@ class MetricRegistry:
 
 class Pipeline(object):
 
-    def __init__(self, algorithms, metric_names, K_values):
+    def __init__(self, algorithms, metric_names, K_values, ranker=None):
         """
         Performs all steps in order and holds on to results.
 
@@ -83,12 +83,16 @@ class Pipeline(object):
 
         :param K_values: The K values for each of the metrics
         :type K_values: `list(int)`
+
+        :param ranker: A ranker algorithm which will be used to rerank the outputs of the algorithms
+        :type ranker: recpack.algorithms.algorithm_base.Ranker
         """
         self.algorithms = algorithms
 
         self.metric_names = metric_names
         self.K_values = K_values
         self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
+        self.ranker = ranker
 
     def run(self, train_data: Union[Tuple[DataM, DataM], DataM], test_data: Tuple[DataM, DataM], validation_data: Tuple[DataM, DataM] = None, batch_size=1000):
         """
@@ -130,6 +134,9 @@ class Pipeline(object):
             else:
                 algo.fit(X)
 
+        if self.ranker is not None:
+            self.ranker.fit(X)
+
     def eval(self, data_in, data_out, batch_size):
         for _in, _out, user_ids in tqdm(FoldIterator(data_in, data_out, batch_size=batch_size)):
             logger.debug(f"start evaluation batch")
@@ -143,6 +150,9 @@ class Pipeline(object):
                     X_pred = scipy.sparse.csr_matrix(X_pred)
 
                 logger.debug(f"finished predicting batch with algo {algo.identifier}")
+
+                if self.ranker is not None:
+                    X_pred = self.ranker.rank(X_pred, _in, user_ids=user_ids)
 
                 for metric in metrics.values():
                     metric.update(X_pred, _out)
