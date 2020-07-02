@@ -130,6 +130,12 @@ def solve_AXB_c(A, B, c):
     return W
 
 
+def has_solutions(A, b):
+    rankA = np.linalg.matrix_rank(A)
+    rankAug = np.linalg.matrix_rank(np.hstack((A, b)))
+    return rankA >= rankAug
+
+
 class FEASE_ONE(UserItemInteractionsAlgorithm):
     def __init__(self, k=2, iterations=10, l2=1):
         super().__init__()
@@ -140,46 +146,58 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
     def fit(self, X, w=None):
         print("Pre calculate constants")
         l2_k = self.l2 * np.identity(self.k)
+        l2_n = self.l2 * np.identity(X.shape[1])
+
         # A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X + self.l2 * np.identity(X.shape[1]))#.toarray()
         A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X).toarray()
         # print("A", A)
         G = X.T @ diag_XXT_inv(X) @ X
-        Ainv = np.linalg.pinv(A)
+        # Ainv = np.linalg.pinv(A)
+        Ainv = np.linalg.inv(A + l2_n)
 
         Q = np.random.random((self.k, X.shape[1]))
+        # P = np.random.random((self.k, X.shape[1])).T
 
         for i in range(self.iterations):
             print("Iteration", i)
-            QQTinv = np.linalg.inv(Q @ Q.T + l2_k)
+
+            QQTinv = np.linalg.pinv(Q @ Q.T )
             QT_QQTinv = Q.T @ QQTinv
             QT_QQTinv_Q = QT_QQTinv @ Q
 
-            W_term = (np.identity(A.shape[0]) - Ainv @ A)
+            # W_term = (np.identity(A.shape[0]) - Ainv @ A)
 
             T = Ainv * QT_QQTinv_Q
             # print("T", T)
             Tinv = np.linalg.pinv(T)
-            TTinv = T @ Tinv
+            # TTinv = T @ Tinv
             b = (np.diag(Ainv @ G @ QT_QQTinv_Q) - 1).reshape(A.shape[0], 1)
             # print("b", b)
-            c = np.linalg.inv(TTinv - np.identity(A.shape[0])) @ (-TTinv @ b + b)
+            # c = np.linalg.inv(TTinv - np.identity(A.shape[0])) @ (-TTinv @ b + b)
             # print("c", c)
 
             # W = solve_AXB_c(W_term, Q, c)
             # w = np.diag(W_term @ W @ Q).reshape(b.shape)
             # print("W", W)
 
-            w = c
-            print("w", w)
+            # w = c
+            # print("w", w)
 
-            bb = b + w
-            Dp = np.linalg.pinv(T) @ bb
-            print("Dp", Dp)
-            print("zero", T @ Dp - bb)
+            # print("test", Ainv * (QT_QQTinv_Q))
+            # print("rank", np.linalg.matrix_rank(Ainv * (QT_QQTinv_Q)))
+            # print("sol?", has_solutions(T, b))
+            # print("rankA", np.linalg.matrix_rank(Ainv))
+            # print("rankB", np.linalg.matrix_rank(QT_QQTinv_Q))
 
-            P = Ainv @ (G - Dp) @ QT_QQTinv + W_term @ W
+            # bb = b + w
+            Dp = (Tinv @ b).flatten()
+            # print("Dp", Dp)
+            # print("zero", T @ Dp - b)
+
+            # lagrangians aren't enough to guarantee one on diag (placement in formula maybe?)
+            P = Ainv @ (G - np.diag(Dp)) @ QT_QQTinv
             # print("P", P)
-            print("diag", np.diag(P @ Q))
+            print("diag_P", np.diag(P @ Q))
 
             PTAPinv = np.linalg.inv(P.T @ A @ P + l2_k)
             P_PTAPinv_PT = P @ PTAPinv @ P.T
@@ -187,8 +205,10 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
             # print("Dq", Dq)
             Q = PTAPinv @ P.T @ (G - np.diag(Dq))
             # print("Q", Q)
+            print("diag_Q", np.diag(P @ Q))
 
             B = P @ Q
+
             # print("B", B)
 
             if hasattr(self, "B_"):
@@ -199,6 +219,68 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
             self.P_ = P
             self.Q_ = Q
             
+            print()
+
+        return self
+
+    def predict(self, X, user_ids=None):
+        check_is_fitted(self)
+
+        X = diag_XXT_inv(X) @ X
+        scores = X @ self.B_
+        return scores
+
+
+class FEASE_ONE_Test(UserItemInteractionsAlgorithm):
+    def __init__(self, k=2, iterations=10, l2=1, rho=0.01):
+        super().__init__()
+        self.k = k
+        self.l2 = l2
+        self.iterations = iterations
+        self.rho = rho
+
+    def fit(self, X, w=None):
+        print("Pre calculate constants")
+        l2_k = self.l2 * np.identity(self.k)
+        # A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X + self.l2 * np.identity(X.shape[1]))#.toarray()
+        A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X).toarray()
+        # print("A", A)
+        G = X.T @ diag_XXT_inv(X) @ X
+        Ainv = np.linalg.inv(A + self.l2 * np.identity(X.shape[1]))
+
+        Q = np.random.random((self.k, X.shape[1]))
+        D = np.zeros((X.shape[1]))
+
+        for i in range(self.iterations):
+            print("Iteration", i)
+
+            # update P
+            QQTinv = np.linalg.pinv(Q @ Q.T)
+            QT_QQTinv = Q.T @ QQTinv
+            P = Ainv @ (G - np.diag(D)) @ QT_QQTinv
+
+            # update Q
+            PTAPinv = np.linalg.inv(P.T @ A @ P + l2_k)
+            Q = PTAPinv @ P.T @ (G - np.diag(D))
+
+            # working version of B
+            B = P @ Q
+
+            # constraint
+            D = D + self.rho * (np.diag(B) - 1)
+
+            # TODO: try update P and Q based on two previous versions (not current iteration)
+
+            # print("B", B)
+
+            if hasattr(self, "B_"):
+                change = np.sum(np.abs(self.B_ - B))
+                print("change", change)
+
+            self.B_ = B
+            self.P_ = P
+            self.Q_ = Q
+
             print()
 
         return self
