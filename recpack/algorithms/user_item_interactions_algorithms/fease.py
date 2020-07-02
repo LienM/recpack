@@ -151,7 +151,7 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
         # A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X + self.l2 * np.identity(X.shape[1]))#.toarray()
         A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X).toarray()
         # print("A", A)
-        G = X.T @ diag_XXT_inv(X) @ X
+        G = X.T @ diag_XXT_inv(X) @ X - self.l2 * l2_n
         # Ainv = np.linalg.pinv(A)
         Ainv = np.linalg.inv(A + l2_n)
 
@@ -161,46 +161,26 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
         for i in range(self.iterations):
             print("Iteration", i)
 
-            QQTinv = np.linalg.pinv(Q @ Q.T )
+            QQTinv = np.linalg.inv(Q @ Q.T + l2_k)
             QT_QQTinv = Q.T @ QQTinv
             QT_QQTinv_Q = QT_QQTinv @ Q
-
-            # W_term = (np.identity(A.shape[0]) - Ainv @ A)
 
             T = Ainv * QT_QQTinv_Q
             # print("T", T)
             Tinv = np.linalg.pinv(T)
             # TTinv = T @ Tinv
             b = (np.diag(Ainv @ G @ QT_QQTinv_Q) - 1).reshape(A.shape[0], 1)
-            # print("b", b)
-            # c = np.linalg.inv(TTinv - np.identity(A.shape[0])) @ (-TTinv @ b + b)
-            # print("c", c)
-
-            # W = solve_AXB_c(W_term, Q, c)
-            # w = np.diag(W_term @ W @ Q).reshape(b.shape)
-            # print("W", W)
-
-            # w = c
-            # print("w", w)
-
-            # print("test", Ainv * (QT_QQTinv_Q))
-            # print("rank", np.linalg.matrix_rank(Ainv * (QT_QQTinv_Q)))
-            # print("sol?", has_solutions(T, b))
-            # print("rankA", np.linalg.matrix_rank(Ainv))
-            # print("rankB", np.linalg.matrix_rank(QT_QQTinv_Q))
-
-            # bb = b + w
             Dp = (Tinv @ b).flatten()
             # print("Dp", Dp)
-            # print("zero", T @ Dp - b)
+            # print("zero", T @ Dp.reshape(A.shape[0], 1) - b)
 
-            # lagrangians aren't enough to guarantee one on diag (placement in formula maybe?)
             P = Ainv @ (G - np.diag(Dp)) @ QT_QQTinv
             # print("P", P)
             print("diag_P", np.diag(P @ Q))
 
-            PTAPinv = np.linalg.inv(P.T @ A @ P + l2_k)
+            PTAPinv = np.linalg.inv(P.T @ (A + l2_n) @ P + (self.l2 + self.l2**2) * np.identity(self.k))
             P_PTAPinv_PT = P @ PTAPinv @ P.T
+
             Dq = (1 / np.diag(P_PTAPinv_PT)) * (np.diag(P_PTAPinv_PT @ G) - 1)
             # print("Dq", Dq)
             Q = PTAPinv @ P.T @ (G - np.diag(Dq))
