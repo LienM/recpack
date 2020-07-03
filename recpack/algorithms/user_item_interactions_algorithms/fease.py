@@ -157,6 +157,7 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
         Ainv = np.linalg.inv(A + self.l2_1 * In)
 
         Q = np.random.random((self.k, X.shape[1]))
+        print("Qinit", Q)
         # P = np.random.random((self.k, X.shape[1])).T
 
         for i in range(self.iterations):

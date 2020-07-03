@@ -6,11 +6,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.user_item_interactions_algorithms import (
-    UserItemInteractionsAlgorithm,
+    SimilarityMatrixAlgorithm,
 )
 
 
-class ItemKNN(UserItemInteractionsAlgorithm):
+class ItemKNN(SimilarityMatrixAlgorithm):
 
     def __init__(self, K=200):
         """Construct an ItemKNN model. Before use make sure to fit the model.
@@ -40,28 +40,11 @@ class ItemKNN(UserItemInteractionsAlgorithm):
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
-        # Use total sum of similarities
-        check_is_fitted(self)
-        # TODO: Use average?
-        scores = X @ self.item_cosine_similarities_
-
-        if not isinstance(scores, scipy.sparse.csr_matrix):
-            scores = scipy.sparse.csr_matrix(scores)
-
-        return scores
+    def get_sim_matrix(self):
+        return self.item_cosine_similarities_
 
 
-class SharedAccount(ItemKNN):
-
-    def __init__(self, K):
-        super().__init__(K)
-
-    def predict(self, X, user_ids=None):
-        raise NotImplementedError("Under construction, the gnomes are working on it.")
-
-
-class NotItemKNN(UserItemInteractionsAlgorithm):
+class NotItemKNN(SimilarityMatrixAlgorithm):
     """
     TODO: Figure out what this code is actually implementing. It is not cosine similarity
     It does seem to work fine though.
@@ -98,13 +81,6 @@ class NotItemKNN(UserItemInteractionsAlgorithm):
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
-    def predict(self, X, user_ids=None):
-        # Use total sum of similarities
-        # TODO: Use average?
-        check_is_fitted(self)
-        scores = X @ self.item_cosine_similarities_
+    def get_sim_matrix(self):
+        return self.item_cosine_similarities_
 
-        if not isinstance(scores, scipy.sparse.csr_matrix):
-            scores = scipy.sparse.csr_matrix(scores)
-
-        return scores

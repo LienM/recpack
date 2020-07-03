@@ -10,12 +10,13 @@ from sklearn.utils.validation import check_is_fitted
 
 from recpack.utils.monitor import Monitor
 from recpack.algorithms.user_item_interactions_algorithms import (
-    UserItemInteractionsAlgorithm,
+    SimilarityMatrixAlgorithm,
 )
 
 
-class EASE(UserItemInteractionsAlgorithm):
+class EASE(SimilarityMatrixAlgorithm):
     def __init__(self, l2=1e3):
+        super().__init__()
         self.l2 = l2
 
     def fit(self, X, w=None):
@@ -50,6 +51,9 @@ class EASE(UserItemInteractionsAlgorithm):
 
         return self
 
+    def get_sim_matrix(self):
+        return self.B_
+
     def load(self, filename):
         self.B_ = np.load(filename)
 
@@ -64,13 +68,6 @@ class EASE(UserItemInteractionsAlgorithm):
         np.save(filename, self.B_)
 
         return filename
-
-    def predict(self, X, user_ids=None):
-        check_is_fitted(self)
-
-        scores = X @ self.B_
-
-        return scores
 
 
 class EASE_XY(EASE):
@@ -116,117 +113,7 @@ class EASE_AVG(EASE):
         return super().predict(X, user_ids=user_ids)
 
 
-class EASE_VP(UserItemInteractionsAlgorithm):
-    """ Variation of EASE for views and purchases. """
-    def __init__(self, l2v=300, l2p=100):
-        self.l2v = l2v
-        self.l2p = l2p
-
-    def fit(self, X, y=None):
-        # X are views, y are purchases
-        if y is None:
-            raise RuntimeError("Train regular EASE (with X=Y) using the EASE algorithm.")
-
-        Bv = EASE(l2=self.l2v).fit(X).B_
-
-        VminP = X - y
-        Bp = EASE_XY(l2=self.l2p).fit(y, VminP).B_
-
-        self.B_ = scipy.sparse.csr_matrix(np.vstack((Bv, -Bp)))
-
-        return self
-
-    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
-        # X should be hstack of X and y
-        check_is_fitted(self)
-
-        scores = X @ self.B_
-
-        return scores
-
-
-# TODO: rename to multimodal EASE? Uses different interaction types to train model
-class DurabEASE(UserItemInteractionsAlgorithm):
-    def __init__(self, l2v=300, l2p=100):
-        self.l2v = l2v
-        self.l2p = l2p
-
-    def fit(self, X, y=None):
-        if y is None:
-            raise ValueError(f"Y required for {self.__class__.__name__}")
-        if X.shape[1] != y.shape[1]:
-            raise ValueError("X and y should have the same amount of items.")
-
-        # Idea 1
-        # learn B1: V -> P (or V -> V?)
-        # learn B2: P -> V - P (does not need zero diagonal)
-        # B1 encodes similarity
-        # B2 encodes alternatives that are not bought together
-        # predict: V @ B1 - alpha * P @ B2
-
-        # Idea 2
-        # could also optimize B1 first and then: B2 = argmin || P - (V @ B1 - P @ B2)  || + lambda_2 * || B2 ||
-
-        # Idea 3
-        # Idea 2, but use ALS method to optimize further (train B1 then B2 then B1 again, ...)
-        # This is a more efficient approximation of Idea 4
-        # (matrix inv of IxI instead of 2Ix2I is much less expensive, which compensates for iterative optimization)
-
-        # Idea 4
-        # stack V and P horizontally and B1 and B2 vertically. This can be optimized in closed form.
-        monitor = Monitor("DurabEASE")
-
-        monitor.update("Merge interactions")
-        X_ext = scipy.sparse.hstack((X, y), format="csr")
-
-        monitor.update("Calculate G")
-        # creates diagonal matrix with first half of diagonal elements l2v and second half l2p
-        reg = np.diag([self.l2v] * X.shape[1] + [self.l2p] * y.shape[1])
-        G = X_ext.T @ X_ext + reg
-
-        monitor.update("Invert G")
-        P = np.linalg.inv(G)
-        del G       # free memory
-
-        monitor.update("Calculate  Brr")
-        B_rr = P @ (X_ext.T @ y).todense()
-
-        # calculate lagrangian multipliers
-        monitor.update("Calculate Lagr. Mult. (prepr.)")
-
-        # first do one pass over itemsets to find indices
-        item_indices = {j: [j, j + X.shape[1]] for j in range(B_rr.shape[1])}
-
-        monitor.update("Calculate Lagr. Mult. (invert)")
-        # then calculate multipliers
-        LM = np.zeros(B_rr.shape)
-        for j in tqdm(range(LM.shape[1])):
-            S = item_indices[j]
-
-            P_ss = P[np.ix_(S, S)]
-            B_rr_sj = B_rr[S, j]
-
-            # pinv to account for numerical errors
-            LM_sj = np.linalg.pinv(P_ss) @ B_rr_sj
-
-            LM[S, j] = np.squeeze(LM_sj)
-
-        monitor.update("Calculate  B")
-        B = B_rr - P @ LM
-
-        self.B_ = scipy.sparse.csr_matrix(B)
-        return self
-
-    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
-        # X should be hstack of X and y
-        check_is_fitted(self)
-
-        scores = X @ self.B_
-
-        return scores
-
-
-class SLIM(UserItemInteractionsAlgorithm):
+class SLIM(SimilarityMatrixAlgorithm):
     """ Implementation of the SLIM model.
     loosely based on https://github.com/Mendeley/mrec
     """
@@ -307,21 +194,5 @@ class SLIM(UserItemInteractionsAlgorithm):
         )
         return self
 
-    def predict(self, X, user_ids=None):
-        """Predict scores for each user, item pair
-        X is a user item interaction matrix in sparse represenation size m' x n
-        Where n needs to be the same as the n in fit, but m' can be anything.
-
-        response will be a m' x n matrix again with predicted scores.
-
-        No history is actually filtered.
-        """
-        check_is_fitted(self)
-
-        # TODO, this looks exactly the same as NN's recommendation -> refactor into a similarity based class.
-        scores = X @ self.similarity_matrix_
-
-        if not isinstance(scores, scipy.sparse.csr_matrix):
-            scores = scipy.sparse.csr_matrix(scores)
-
-        return scores
+    def get_sim_matrix(self):
+        return self.similarity_matrix_
