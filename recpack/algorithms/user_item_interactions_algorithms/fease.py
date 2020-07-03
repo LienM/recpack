@@ -137,23 +137,24 @@ def has_solutions(A, b):
 
 
 class FEASE_ONE(UserItemInteractionsAlgorithm):
-    def __init__(self, k=2, iterations=10, l2=1):
+    def __init__(self, k=2, iterations=10, l2_1=0.1, l2_2=1):
         super().__init__()
         self.k = k
-        self.l2 = l2
+        self.l2_1 = l2_1
+        self.l2_2 = l2_2
         self.iterations = iterations
 
     def fit(self, X, w=None):
         print("Pre calculate constants")
-        l2_k = self.l2 * np.identity(self.k)
-        l2_n = self.l2 * np.identity(X.shape[1])
+        Ik = np.identity(self.k)
+        In = np.identity(X.shape[1])
 
         # A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X + self.l2 * np.identity(X.shape[1]))#.toarray()
         A = (X.T @ diag_XXT_inv(X) @ diag_XXT_inv(X) @ X).toarray()
         # print("A", A)
-        G = X.T @ diag_XXT_inv(X) @ X - self.l2 * l2_n
+        G = X.T @ diag_XXT_inv(X) @ X + self.l2_1 * self.l2_2 * In
         # Ainv = np.linalg.pinv(A)
-        Ainv = np.linalg.inv(A + l2_n)
+        Ainv = np.linalg.inv(A + self.l2_1 * In)
 
         Q = np.random.random((self.k, X.shape[1]))
         # P = np.random.random((self.k, X.shape[1])).T
@@ -161,7 +162,7 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
         for i in range(self.iterations):
             print("Iteration", i)
 
-            QQTinv = np.linalg.inv(Q @ Q.T + l2_k)
+            QQTinv = np.linalg.inv(Q @ Q.T + self.l2_2 * Ik)
             QT_QQTinv = Q.T @ QQTinv
             QT_QQTinv_Q = QT_QQTinv @ Q
 
@@ -178,7 +179,7 @@ class FEASE_ONE(UserItemInteractionsAlgorithm):
             # print("P", P)
             print("diag_P", np.diag(P @ Q))
 
-            PTAPinv = np.linalg.inv(P.T @ (A + l2_n) @ P + (self.l2 + self.l2**2) * np.identity(self.k))
+            PTAPinv = np.linalg.inv(P.T @ (A + self.l2_1 * In) @ P + (self.l2_2 + self.l2_1 * self.l2_2) * Ik)
             P_PTAPinv_PT = P @ PTAPinv @ P.T
 
             Dq = (1 / np.diag(P_PTAPinv_PT)) * (np.diag(P_PTAPinv_PT @ G) - 1)
