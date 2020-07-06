@@ -15,11 +15,12 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 
 class EASE(SimilarityMatrixAlgorithm):
-    def __init__(self, l2=1e3):
+    def __init__(self, l2=1e3, alpha=0):
         super().__init__()
         self.l2 = l2
+        self.alpha = alpha      # alpha exponent for filtering popularity bias
 
-    def fit(self, X, w=None):
+    def fit(self, X, y=None):
         """Compute the closed form solution and then rescale using diagM(w)"""
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
@@ -33,21 +34,20 @@ class EASE(SimilarityMatrixAlgorithm):
         # Eq. 14 B_scaled = B * diagM(w)
 
         # Compute P
+        XTX = (X.T @ X).toarray()
         P = np.linalg.inv(
-            X.T @ X + self.l2 * np.identity((X.shape[1]), dtype=np.float32)
+            XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32)
         )
-        # Somehow Robin's local env seems to not want to make P an ndarray, and makes it a matrix
-        if type(P) == np.matrix:
-            P = P.A
+
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))
         B[np.diag_indices(B.shape[0])] = 0.0
 
-        if w is None:
-            self.B_ = scipy.sparse.csr_matrix(B)
-        else:
-            B_scaled = B @ np.diag(w)
-            self.B_ = scipy.sparse.csr_matrix(B_scaled)
+        if self.alpha != 0:
+            w = 1 / np.diag(XTX) ** self.alpha
+            B = B @ np.diag(w)
+
+        self.B_ = scipy.sparse.csr_matrix(B)
 
         return self
 
