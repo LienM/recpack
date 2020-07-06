@@ -70,18 +70,57 @@ class EASE(SimilarityMatrixAlgorithm):
         return filename
 
 
+class EASE_Intercept(EASE):
+    """ Variation of EASE where we encode Y from X (no autoencoder). """
+    def fit(self, X, y=None):
+        if y is not None:
+            raise RuntimeError("Train EASE_XY.")
+
+        y = X
+        X = scipy.sparse.hstack((y, np.ones((X.shape[0], 1))))
+
+        XTX = (X.T @ X).toarray()
+        G = XTX + self.l2 * np.identity(X.shape[1])
+
+        P = np.linalg.inv(G)
+        B_rr = P @ (X.T @ y).todense()
+
+        D = np.diag(np.diag(B_rr) / np.diag(P)[:-1])
+        B = B_rr
+        B[:-1,:] -= P[:-1,:-1] @ D
+
+        if self.alpha != 0:
+            w = 1 / np.diag(XTX)[:-1] ** self.alpha
+            B = B @ np.diag(w)
+
+        self.B_ = scipy.sparse.csr_matrix(B)
+
+        return self
+
+    def predict(self, X, user_ids=None):
+        X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
+        return super().predict(X, user_ids=user_ids)
+
+
 class EASE_XY(EASE):
     """ Variation of EASE where we encode Y from X (no autoencoder). """
     def fit(self, X, y=None):
         if y is None:
             raise RuntimeError("Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY.")
-        G = X.T @ X + self.l2 * np.identity(X.shape[1])
+        XTX = X.T @ X
+        G = XTX + self.l2 * np.identity(X.shape[1])
 
         P = np.linalg.inv(G)
         B_rr = P @ (X.T @ y).todense()
 
-        D = np.diag(np.diag(B_rr) / np.diag(P))
-        self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
+        D = np.diag(np.diag(B_rr) / np.diag(P)[:-1])
+        B = B_rr - P @ D
+
+        if self.alpha != 0:
+            w = 1 / np.diag(XTX) ** self.alpha
+            B = B @ np.diag(w)
+
+        self.B_ = scipy.sparse.csr_matrix(B)
 
         return self
 
@@ -104,11 +143,42 @@ class EASE_AVG(EASE):
         B_rr = P @ (X.T @ y).todense()
 
         D = np.diag((1 - np.diag(B_rr)) / -np.diag(P))
-        self.B_ = scipy.sparse.csr_matrix(B_rr - P @ D)
+        B = B_rr - P @ D
+        self.B_ = scipy.sparse.csr_matrix(B)
 
         return self
 
     def predict(self, X, user_ids=None):
+        X = normalize(X)
+        return super().predict(X, user_ids=user_ids)
+
+
+class EASE_AVG_Int(EASE):
+    """ Variation of EASE where we encode Y from X (no autoencoder). """
+
+    def fit(self, X, y=None):
+        if y is not None:
+            raise RuntimeError("Train EASE_XY for distinct y.")
+        y = X
+
+        X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
+        X = normalize(X)
+
+        G = X.T @ X + self.l2 * np.identity(X.shape[1])
+
+        P = np.linalg.inv(G)
+        B_rr = P @ (X.T @ y).todense()
+
+        D = np.diag(1 - np.diag(B_rr) / -np.diag(P)[:-1])
+        B = B_rr
+        B[:-1,:] -= P[:-1,:-1] @ D
+
+        self.B_ = scipy.sparse.csr_matrix(B)
+
+        return self
+
+    def predict(self, X, user_ids=None):
+        X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
         X = normalize(X)
         return super().predict(X, user_ids=user_ids)
 
