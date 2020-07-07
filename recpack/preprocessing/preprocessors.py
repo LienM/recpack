@@ -29,8 +29,8 @@ class DataFramePreprocessor:
         :param dedupe: Deduplicate events, such that (user_id, item_id) pairs are unique, defaults to False
         :type dedupe: bool, optional
         """
-        self.item_id_mapping = {}
-        self.user_id_mapping = {}
+        self.item_id_mapping = dict()
+        self.user_id_mapping = dict()
         self.item_id = item_id
         self.user_id = user_id
         self.value_id = value_id

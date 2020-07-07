@@ -7,10 +7,10 @@ import numpy as np
 import scipy.sparse
 
 from sklearn.pipeline import Pipeline
+from recpack.preprocessing.preprocessors import DataFramePreprocessor
+from recpack.data_matrix import DataM
 
-from typing import List
-
-from recpack.utils import to_tuple, sparse_to_csv, dict_to_csv
+from recpack.utils import to_tuple, dict_to_csv, InteractionsCSVWriter
 
 from recpack.splitters.splitter_base import FoldIterator
 
@@ -40,6 +40,9 @@ def provider(f):
 
 
 class IDataSource(object):
+    user_id = "user"
+    item_id = "item"
+
     def __init__(self):
         super().__init__()
 
@@ -52,11 +55,27 @@ class IDataSource(object):
         params['data_source'] = self.data_name
         return params
 
+    def load_df(self):
+        raise NotImplementedError("Need to override `load_df` or `preprocess`")
+
+    def get_preprocessor(self):
+        preprocessor = DataFramePreprocessor(self.item_id, self.user_id, dedupe=True)
+        return preprocessor
+
     def preprocess(self):
         """
-        Return one or two datasets of type np.ndarray.
+        Return one or two datasets of type DataM
         """
-        raise NotImplementedError("Need to override Experiment.preprocess")
+        df = self.load_df()
+        preprocessor = self.get_preprocessor()
+        data, = preprocessor.process(df)
+        return DataM(data.binary_values)
+
+    def get_item_id_mapping(self):
+        return self.get_preprocessor().item_id_mapping
+
+    def get_user_id_mapping(self):
+        return self.get_preprocessor().user_id_mapping
 
 
 class ISceneario(object):
@@ -311,9 +330,10 @@ class Experiment(IExperiment):
         dict_to_csv(self.statistics, self.get_output_file(STATISTICS_FILE))
 
         # save results
-        sparse_to_csv(hist, self.get_output_file(HISTORY_FILE), values=False)
-        sparse_to_csv(y_true, self.get_output_file(Y_TRUE_FILE), values=False)
-        sparse_to_csv(y_pred, self.get_output_file(Y_PRED_FILE))
+        writer = InteractionsCSVWriter(user_id_mapping=self.get_user_id_mapping(), item_id_mapping=self.get_item_id_mapping())
+        writer.sparse_to_csv(hist, self.get_output_file(HISTORY_FILE), values=False)
+        writer.sparse_to_csv(y_true, self.get_output_file(Y_TRUE_FILE), values=False)
+        writer.sparse_to_csv(y_pred, self.get_output_file(Y_PRED_FILE))
 
     def process_predictions(self, X_test, y_test, batch_iterator):
         recommendations = scipy.sparse.lil_matrix(y_test.shape)

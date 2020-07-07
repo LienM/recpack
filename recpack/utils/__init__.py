@@ -75,18 +75,52 @@ ITEM_KEY = "item"
 VALUE_KEY = "value"
 
 
-def sparse_to_csv(m, path, values=True):
-    with open(path, 'w') as f:
-        writer = csv.writer(f)
-        coo = m.tocoo()
-        if values:
-            writer.writerow([USER_KEY, ITEM_KEY, VALUE_KEY])
-            for u, i, v in zip(coo.row, coo.col, coo.data):
-                writer.writerow([u, i, v])
-        else:
-            writer.writerow([USER_KEY, ITEM_KEY])
-            for u, i in zip(coo.row, coo.col):
-                writer.writerow([u, i])
+class ItemCSVWriter(object):
+    def __init__(self, item_id_mapping=None):
+        super().__init__()
+        self.item_id_mapping = item_id_mapping
+        self.reverse_item_id_mapping = dict()
+        if self.item_id_mapping is not None:
+            pass
+
+    def reverse_map_item_id(self, iid):
+        return self.reverse_item_id_mapping.get(iid, iid)
+
+
+class UserCSVWriter(object):
+    def __init__(self, user_id_mapping=None):
+        super().__init__()
+        self.user_id_mapping = user_id_mapping
+        self.reverse_user_id_mapping = dict()
+        if self.user_id_mapping is not None:
+            pass
+
+    def reverse_map_user_id(self, uid):
+        return self.reverse_user_id_mapping.get(uid, uid)
+
+
+class InteractionsCSVWriter(ItemCSVWriter, UserCSVWriter):
+    def __init__(self, user_id_mapping=None, item_id_mapping=None):
+        super().__init__(user_id_mapping=user_id_mapping)
+        super().__init__(item_id_mapping=item_id_mapping)
+
+    def reverse_map_user_item_id(self, uid, iid):
+        return self.reverse_map_user_id(uid), self.reverse_map_item_id(iid)
+
+    def sparse_to_csv(self, m, path, values=True):
+        with open(path, 'w') as f:
+            writer = csv.writer(f)
+            coo = m.tocoo()
+            if values:
+                writer.writerow([USER_KEY, ITEM_KEY, VALUE_KEY])
+                for u, i, v in zip(coo.row, coo.col, coo.data):
+                    uid, iid = self.reverse_map_user_item_id(u, i)
+                    writer.writerow([uid, iid, v])
+            else:
+                writer.writerow([USER_KEY, ITEM_KEY])
+                for u, i in zip(coo.row, coo.col):
+                    uid, iid = self.reverse_map_user_item_id(u, i)
+                    writer.writerow([uid, iid])
 
 
 def csv_to_sparse(path, values=True):

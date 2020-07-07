@@ -1,18 +1,31 @@
-import numpy
+from collections import Counter
+
+import numpy as np
 import itertools
 import scipy.sparse
 
-from recpack.utils import get_logger
+from sklearn.base import TransformerMixin
+
+import logging
+
+logger = logging.getLogger("recpack")
 
 
-class Metric:
+class Metric(TransformerMixin):
     def __init__(self):
         super().__init__()
-        self.logger = get_logger()
 
     @property
     def name(self):
         return ""
+
+    def fit(self, X, y=None):
+        """ X are predictions, y ground truth """
+        raise NotImplementedError()
+
+    def transform(self, X):
+        """ X are predictions """
+        raise NotImplementedError()
 
 
 class MetricK(Metric):
@@ -25,14 +38,14 @@ class MetricK(Metric):
 
     @property
     def name(self):
-        return self.__class__.__name__
+        return self.__class__.__name__ + "_" + str(self.K)
 
     def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
         # Get nonzero users
         nonzero_users = list(set(X_pred.nonzero()[0]))
         X = X_pred[nonzero_users, :].toarray()
 
-        items = numpy.argpartition(X, -self.K)[:, -self.K :]
+        items = np.argpartition(X, -self.K)[:, -self.K :]
 
         U, I, V = [], [], []
 
@@ -47,12 +60,86 @@ class MetricK(Metric):
 
         return X_pred_top_K
 
+    def fit(self, X, y=None):
+        self.y = y
+
+    def transform(self, X):
+        raise NotImplementedError()
+
+    def sum_per_user(self, X):
+        """ Sum of individual scores per user """
+        return X.sum(axis=1)
+
+    def ideal_per_user(self, X):
+        """ Ideal score per user
+        Default: amount of entries in row (for average calculation) """
+        return self.count_per_user(X)
+
+    def count_per_user(self, X):
+        """ Sum of how many times a value occurs per user (for statistical significance/coverage/...) """
+        # empty = nan
+        # zeros should be recorded in matrix
+        rows, cols = X.indices
+        res = np.zeros(X.shape[0])
+        for k, v in Counter(rows).items():
+            res[k] = v
+        return
+
+    def per_user(self, X):
+        """ Score per user """
+        return self.sum_per_user(X) / self.ideal_per_user(X)
+
+    def per_user_average(self, X):
+        """ Average of per user scores """
+        l = self.per_user(X)
+        return sum(l) / len(l)
+
+    def sum_per_item(self, X):
+        """ Sum of individual scores per user """
+        return X.sum(axis=0)
+
+    def ideal_per_item(self, X):
+        """ Ideal score per item
+        Default: amount of entries in row (for average calculation) """
+        return self.count_per_item(X)
+
+    def count_per_item(self, X):
+        """ Sum of how many times a value occurs per item (for statistical significance/coverage/...) """
+        # empty = nan
+        # zeros should be recorded in matrix
+        rows, cols = X.indices
+        res = np.zeros(X.shape[1])
+        for k, v in Counter(cols).items():
+            res[k] = v
+        return
+
+    def per_item(self, X):
+        """ Score per item """
+        return self.sum_per_item(X) / self.ideal_per_item(X)
+
+    def per_item_average(self, X):
+        """ Average of per item scores """
+        l = self.per_item(X)
+        return sum(l) / len(l)
+
+    def calculate(self, X, y):
+        """ Returns Dataframe per user, Dataframe per item and avg per user score. """
+        pass
+        # TODO: Finish
+
+# TODO: Finish transform for existing metrics
+
 
 class RecallK(MetricK):
     def __init__(self, K):
         super().__init__(K)
         self.recall = 0
         self.num_users = 0
+
+    def transform(self, X):
+        X_pred_top_K = self.get_topK(X)
+        result = scipy.sparse.coo_matrix(X.shape)
+        # TODO: finish implementing
 
     def update(self, X_pred, X_true):
         # resolve top K items per user
@@ -72,7 +159,7 @@ class RecallK(MetricK):
             )
             self.num_users += 1
 
-        self.logger.debug(f"Metric {self.name} updated")
+        logger.debug(f"Metric {self.name} updated")
 
         return
 
@@ -109,7 +196,7 @@ class MeanReciprocalRankK(MetricK):
             recommended_items = X_pred_top_K[u, :].nonzero()[1]
             item_scores = X_pred_top_K[u, recommended_items].toarray()[0]
 
-            arr_indices = numpy.argsort(item_scores)
+            arr_indices = np.argsort(item_scores)
 
             for ix, item in enumerate(reversed(recommended_items[arr_indices])):
                 if item in true_items:
@@ -118,7 +205,7 @@ class MeanReciprocalRankK(MetricK):
 
             self.num_users += 1
 
-        self.logger.debug(f"Metric {self.name} updated")
+        logger.debug(f"Metric {self.name} updated")
 
         return
 
@@ -140,7 +227,7 @@ class NDCGK(MetricK):
         self.NDCG = 0
         self.num_users = 0
 
-        self.discount_template = 1.0 / numpy.log2(numpy.arange(2, K + 2))
+        self.discount_template = 1.0 / np.log2(np.arange(2, K + 2))
 
         # Calculate IDCG values by creating a list of partial sums (the functional way)
         self.IDCG_cache = [0] + list(
@@ -158,7 +245,7 @@ class NDCGK(MetricK):
             recommended_items = X_pred_top_K[u, :].nonzero()[1]
             item_scores = X_pred_top_K[u, recommended_items].toarray()[0]
 
-            arr_indices = numpy.argsort(item_scores)
+            arr_indices = np.argsort(item_scores)
 
             M = min(self.K, len(true_items))
             if M == 0:
@@ -181,7 +268,7 @@ class NDCGK(MetricK):
             self.num_users += 1
             self.NDCG += DCG / IDCG
 
-        self.logger.debug(f"Metric {self.name} updated")
+        logger.debug(f"Metric {self.name} updated")
 
         return
 
@@ -219,7 +306,7 @@ class MutexMetric:
         self.negatives = 0
 
     def update(
-        self, X_pred: numpy.matrix, X_true: scipy.sparse.csr_matrix, users: list
+        self, X_pred: np.matrix, X_true: scipy.sparse.csr_matrix, users: list
     ) -> None:
 
         self.positives += X_pred.sum()
@@ -228,7 +315,7 @@ class MutexMetric:
         false_pos = scipy.sparse.csr_matrix(X_pred).multiply(X_true)
         self.false_positives += false_pos.sum()
 
-        negatives = numpy.ones(X_pred.shape) - X_pred
+        negatives = np.ones(X_pred.shape) - X_pred
         true_neg = scipy.sparse.csr_matrix(negatives).multiply(X_true)
         self.true_negatives += true_neg.sum()
 
