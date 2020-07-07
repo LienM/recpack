@@ -13,10 +13,8 @@ from recpack.utils import miner
 
 
 class HOEASE(EASE):
-    def __init__(self, l2=500, min_freq=0.1, amt_itemsets=300):
+    def __init__(self, l2=500):
         super().__init__(l2)
-        self.min_freq = min_freq
-        self.amt_itemsets = amt_itemsets
 
     def fit(self, X: scipy.sparse.csr_matrix, y: scipy.sparse.csr_matrix=None, itemset_transform=None):
         """

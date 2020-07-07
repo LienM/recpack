@@ -5,7 +5,8 @@ from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms impo
     EASE
 )
 from recpack.algorithms.user_item_interactions_algorithms.ho_ease import (
-    HOEASE
+    HOEASE,
+    ItemsetTransform
 )
 
 
@@ -63,9 +64,12 @@ def test_hoease_does_ease():
     items = [0, 2, 0, 2, 0, 1, 2, 0, 2]
     data = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 3))
 
-    algo = HOEASE(l2=0.03, min_freq=0.5, amt_itemsets=0)
+    transform = ItemsetTransform(min_freq=0.5, amt_itemsets=0)
+    X = transform.fit_transform(data)
+    y = data
+    algo = HOEASE(l2=0.03)
 
-    algo.fit(data)
+    algo.fit(X, y, itemset_transform=transform)
 
     # Make sure the predictions "make sense"
     _in = scipy.sparse.csr_matrix(([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
@@ -95,15 +99,19 @@ def test_hoease():
     items = [0, 2, 0, 2, 0, 1, 2, 0, 2]
     data = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 3))
 
-    algo = HOEASE(l2=0.03, min_freq=0.1, amt_itemsets=1)
+    transform = ItemsetTransform(min_freq=0.1, amt_itemsets=1)
+    X = transform.fit_transform(data)
+    y = data
+    algo = HOEASE(l2=0.03)
 
-    algo.fit(data)
+    algo.fit(X, y, itemset_transform=transform)
 
     # Make sure the predictions "make sense"
     _in = scipy.sparse.csr_matrix(([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
+    _in = transform.transform(_in)
     result = algo.predict(_in)
 
     numpy.testing.assert_almost_equal(result[2, 0], 1, decimal=1)
     numpy.testing.assert_almost_equal(result[0, 2], 1, decimal=1)
 
-    assert len(algo.itemsets_) == 1
+    assert len(transform.itemsets) == 1

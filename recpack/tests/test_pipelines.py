@@ -13,7 +13,7 @@ def generate_data():
     input_dict = {'userId': [1, 1, 1, 0, 0, 0], 'movieId': [1, 3, 4, 0, 2, 4], 'timestamp': [15, 26, 29, 10, 22, 34]}
 
     df = pd.DataFrame.from_dict(input_dict)
-    data = DataM.create_from_dataframe(df, 'movieId', 'userId', 'timestamp')
+    data = DataM.create_from_dataframe(df, 'movieId', 'userId', timestamp_ix='timestamp')
     return data
 
 # TODO Add tests for the if-else branches in pipeline now

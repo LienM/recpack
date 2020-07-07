@@ -25,7 +25,7 @@ def df_w_duplicate():
 
 
 def test_create_data_M_from_pandas_df(df):
-    d = DataM.create_from_dataframe(df, "item_id", "user_id", "timestamp")
+    d = DataM.create_from_dataframe(df, "item_id", "user_id", timestamp_ix="timestamp")
     assert d.timestamps is not None
     assert d.values is not None
 
@@ -39,7 +39,7 @@ def test_create_data_M_from_pandas_df(df):
 
 
 def test_values_no_dups(df):
-    d = DataM.create_from_dataframe(df, "item_id", "user_id", "timestamp")
+    d = DataM.create_from_dataframe(df, "item_id", "user_id", timestamp_ix="timestamp")
     assert (
         d.values.toarray()
         == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
@@ -48,7 +48,7 @@ def test_values_no_dups(df):
 
 def test_values_w_dups(df_w_duplicate):
     d_w_duplicate = DataM.create_from_dataframe(
-        df_w_duplicate, "item_id", "user_id", "timestamp"
+        df_w_duplicate, "item_id", "user_id", timestamp_ix="timestamp"
     )
     assert (
         d_w_duplicate.values.toarray()
@@ -58,7 +58,7 @@ def test_values_w_dups(df_w_duplicate):
 
 def test_binary_values_w_dups(df_w_duplicate):
     d_w_duplicate = DataM.create_from_dataframe(
-        df_w_duplicate, "item_id", "user_id", "timestamp"
+        df_w_duplicate, "item_id", "user_id", timestamp_ix="timestamp"
     )
 
     binary_values = d_w_duplicate.binary_values
@@ -70,20 +70,20 @@ def test_binary_values_w_dups(df_w_duplicate):
 
 
 def test_timestamps_no_dups(df):
-    d = DataM.create_from_dataframe(df, "item_id", "user_id", "timestamp")
+    d = DataM.create_from_dataframe(df, "item_id", "user_id", timestamp_ix="timestamp")
 
     assert (d.timestamps.values == np.array([3, 2, 1, 1])).all()
 
 
 def test_timestamps_w_dups(df_w_duplicate):
-    d = DataM.create_from_dataframe(df_w_duplicate, "item_id", "user_id", "timestamp")
+    d = DataM.create_from_dataframe(df_w_duplicate, "item_id", "user_id", timestamp_ix="timestamp")
 
     assert (d.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
 
 
 def test_timestamps_gt_w_dups(df_w_duplicate):
     d_w_duplicate = DataM.create_from_dataframe(
-        df_w_duplicate, "item_id", "user_id", "timestamp"
+        df_w_duplicate, "item_id", "user_id", timestamp_ix="timestamp"
     )
 
     filtered_d_w_duplicate = d_w_duplicate.timestamps_gt(2)
@@ -98,7 +98,7 @@ def test_timestamps_gt_w_dups(df_w_duplicate):
 
 def test_timestamps_lt_w_dups(df_w_duplicate):
     d_w_duplicate = DataM.create_from_dataframe(
-        df_w_duplicate, "item_id", "user_id", "timestamp"
+        df_w_duplicate, "item_id", "user_id", timestamp_ix="timestamp"
     )
 
     filtered_d_w_duplicate = d_w_duplicate.timestamps_lt(2)
@@ -113,7 +113,7 @@ def test_timestamps_lt_w_dups(df_w_duplicate):
 
 
 def test_indices_in(df):
-    d = DataM.create_from_dataframe(df, "item_id", "user_id", "timestamp")
+    d = DataM.create_from_dataframe(df, "item_id", "user_id", timestamp_ix="timestamp")
 
     U = [0, 1]
     I = [1, 2]

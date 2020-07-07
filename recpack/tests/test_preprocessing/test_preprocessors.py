@@ -3,7 +3,7 @@ from recpack.preprocessing.preprocessors import DataFramePreprocessor
 
 def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
-    processor = DataFramePreprocessor("iid", "uid", "timestamp", dedupe=False)
+    processor = DataFramePreprocessor("iid", "uid", timestamp_id="timestamp", dedupe=False)
 
     data_ms = processor.process(dataframe)
 
@@ -17,7 +17,7 @@ def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
 
 def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
-    processor = DataFramePreprocessor("iid", "uid", "timestamp", dedupe=True)
+    processor = DataFramePreprocessor("iid", "uid", timestamp_id="timestamp", dedupe=True)
 
     org_row = dataframe.loc[3, :].values
     row = org_row.copy()
@@ -41,7 +41,7 @@ def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
 
 
 def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
-    processor = DataFramePreprocessor("iid", "uid", "timestamp", dedupe=False)
+    processor = DataFramePreprocessor("iid", "uid", timestamp_id="timestamp", dedupe=False)
 
     org_row = dataframe.loc[3, :].values
     row = org_row.copy()
