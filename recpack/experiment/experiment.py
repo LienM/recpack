@@ -42,6 +42,8 @@ def provider(f):
 class IDataSource(object):
     user_id = "user"
     item_id = "item"
+    value_id = None
+    timestamp_id = None
 
     def __init__(self):
         super().__init__()
@@ -59,17 +61,17 @@ class IDataSource(object):
         raise NotImplementedError("Need to override `load_df` or `preprocess`")
 
     def get_preprocessor(self):
-        preprocessor = DataFramePreprocessor(self.item_id, self.user_id, dedupe=True)
+        preprocessor = DataFramePreprocessor(self.item_id, self.user_id, self.value_id, self.timestamp_id, dedupe=True)
         return preprocessor
 
     def preprocess(self):
         """
         Return one or two datasets of type DataM
         """
-        df = self.load_df()
+        dfs = to_tuple(self.load_df())
         preprocessor = self.get_preprocessor()
-        data, = preprocessor.process(df)
-        return DataM(data.binary_values)
+        datasets = preprocessor.process(*dfs)
+        return datasets
 
     def get_item_id_mapping(self):
         return self.get_preprocessor().item_id_mapping

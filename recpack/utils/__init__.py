@@ -48,9 +48,13 @@ def dict_to_csv(d, path):
 
 
 def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
-    if value_ix is not None:
+    if value_ix is not None and value_ix in df:
         values = df[value_ix]
     else:
+        if value_ix is not None:
+            # value_ix provided, but not in df
+            logger.warning(f"Value column {value_ix} not found in dataframe. Using ones instead.")
+
         num_entries = df.shape[0]
         # Scipy sums up the entries when an index-pair occurs more than once,
         # resulting in the actual counts being stored. Neat!
