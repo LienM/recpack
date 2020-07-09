@@ -11,7 +11,7 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 
 class ItemKNN(SimilarityMatrixAlgorithm):
-    def __init__(self, K=200, normalize=True):
+    def __init__(self, K=200, normalize=False):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item."""
         super().__init__()
@@ -55,7 +55,7 @@ class ItemKNN(SimilarityMatrixAlgorithm):
 class CosineSimilarity(SimilarityMatrixAlgorithm):
     """ Item cosine similarity based on code of Olivier """
 
-    def __init__(self, normalize=True):
+    def __init__(self, normalize=False):
         super().__init__()
         self.normalize = normalize
 
