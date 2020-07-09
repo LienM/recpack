@@ -3,11 +3,14 @@ import pytest
 import scipy.sparse
 
 import recpack.metrics as metrics
+import recpack.metrics.mrr
+import recpack.metrics.ndcg
+import recpack.metrics.recall
 
 
 def test_recall(X_pred, X_true):
     K = 2
-    metric = metrics.RecallK(K)
+    metric = recpack.metrics.recall.RecallK(K)
 
     metric.update(X_pred, X_true)
 
@@ -17,7 +20,7 @@ def test_recall(X_pred, X_true):
 
 def test_recall_2(X_pred, X_true):
     K = 2
-    metric = metrics.RecallK(K)
+    metric = recpack.metrics.recall.RecallK(K)
 
     scores = metric.fit_transform(X_pred, X_true)
     value = scores.per_user_average()
@@ -27,7 +30,7 @@ def test_recall_2(X_pred, X_true):
 
 def test_mrr(X_pred, X_true):
     K = 2
-    metric = metrics.MeanReciprocalRankK(K)
+    metric = recpack.metrics.mrr.MeanReciprocalRankK(K)
 
     metric.update(X_pred, X_true)
 
@@ -37,7 +40,7 @@ def test_mrr(X_pred, X_true):
 
 def test_mrr_2(X_pred, X_true):
     K = 2
-    metric = metrics.MeanReciprocalRankK(K)
+    metric = recpack.metrics.mrr.MeanReciprocalRankK(K)
 
     scores = metric.fit_transform(X_pred, X_true)
     value = scores.per_user_average()
@@ -47,7 +50,7 @@ def test_mrr_2(X_pred, X_true):
 
 def test_ndcg_simple(X_pred, X_true_simplified):
     K = 2
-    metric = metrics.NDCGK(K)
+    metric = recpack.metrics.ndcg.NDCGK(K)
 
     metric.update(X_pred, X_true_simplified)
 
@@ -65,7 +68,7 @@ def test_ndcg_simple(X_pred, X_true_simplified):
 
 def test_ndcg(X_pred, X_true):
     K = 2
-    metric = metrics.NDCGK(K)
+    metric = recpack.metrics.ndcg.NDCGK(K)
 
     metric.update(X_pred, X_true)
 
@@ -88,7 +91,7 @@ def test_ndcg(X_pred, X_true):
 
 def test_ndcg_k3(X_pred, X_true):
     K = 3
-    metric = metrics.NDCGK(K)
+    metric = recpack.metrics.ndcg.NDCGK(K)
 
     metric.update(X_pred, X_true)
 
@@ -114,7 +117,7 @@ def test_ndcg_k3(X_pred, X_true):
 
 def test_ndcg_simple_2(X_pred, X_true_simplified):
     K = 2
-    metric = metrics.NDCGK(K)
+    metric = recpack.metrics.ndcg.NDCGK(K)
 
     scores = metric.fit_transform(X_pred, X_true_simplified)
     value = scores.per_user_average()
@@ -132,7 +135,7 @@ def test_ndcg_simple_2(X_pred, X_true_simplified):
 
 def test_ndcg_2(X_pred, X_true):
     K = 2
-    metric = metrics.NDCGK(K)
+    metric = recpack.metrics.ndcg.NDCGK(K)
 
     scores = metric.fit_transform(X_pred, X_true)
     value = scores.per_user_average()
@@ -155,7 +158,7 @@ def test_ndcg_2(X_pred, X_true):
 
 def test_ndcg_2_k3(X_pred, X_true):
     K = 3
-    metric = metrics.NDCGK(K)
+    metric = recpack.metrics.ndcg.NDCGK(K)
 
     scores = metric.fit_transform(X_pred, X_true)
     value = scores.per_user_average()

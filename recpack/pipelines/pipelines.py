@@ -5,7 +5,9 @@ import scipy.sparse
 
 from tqdm.auto import tqdm
 
-from recpack.metrics import RecallK, MeanReciprocalRankK, NDCGK
+from recpack.metrics.recall import RecallK
+from recpack.metrics.mrr import MeanReciprocalRankK
+from recpack.metrics.ndcg import NDCGK
 from recpack.utils import logger
 from recpack.data_matrix import DataM
 import recpack.experiment as experiment

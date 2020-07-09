@@ -1,10 +1,11 @@
 import recpack.metrics as metrics
+import recpack.metrics.recall
 import recpack.splitters.splitter_base as splitter_base
 
 
 def test_fold_iterator_and_metrics(data_m):
     K = 2
-    metric = metrics.RecallK(K)
+    metric = recpack.metrics.recall.RecallK(K)
 
     fold_iterator = splitter_base.FoldIterator(data_m, data_m, batch_size=10)
 
