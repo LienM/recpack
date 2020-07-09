@@ -11,12 +11,12 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 
 class ItemKNN(SimilarityMatrixAlgorithm):
-
-    def __init__(self, K=200):
+    def __init__(self, K=200, normalize=True):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item."""
         super().__init__()
         self.K = K
+        self.normalize = normalize
 
     def fit(self, X, y=None):
         """Fit a cosine similarity matrix from item to item"""
@@ -38,6 +38,54 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
         mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))))
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
+
+        if self.normalize:
+            # normalize per row
+            row_sums = self.item_cosine_similarities_.sum(axis=1)
+            self.item_cosine_similarities_ = self.item_cosine_similarities_ / row_sums
+            self.item_cosine_similarities_ = scipy.sparse.csr_matrix(self.item_cosine_similarities_)
+            self.item_cosine_similarities_.eliminate_zeros()
+
+        return self
+
+    def get_sim_matrix(self):
+        return self.item_cosine_similarities_
+
+
+class CosineSimilarity(SimilarityMatrixAlgorithm):
+    """ Item cosine similarity based on code of Olivier """
+
+    def __init__(self, normalize=True):
+        super().__init__()
+        self.normalize = normalize
+
+    def fit(self, X, y=None):
+        # Base similarity matrix (all dot products)
+        similarity = (X.T @ X).toarray()
+
+        # Squared magnitude of preference vectors (number of occurrences)
+        square_mag = np.diag(similarity)
+
+        # Inverse squared magnitude
+        inv_square_mag = 1 / square_mag
+        # If it doesn't occur, set it's inverse magnitude to zero (instead of inf)
+        inv_square_mag[np.isinf(inv_square_mag)] = 0
+
+        # inverse of the magnitude
+        inv_mag = np.sqrt(inv_square_mag)
+
+        # cosine similarity (elementwise multiply by inverse magnitudes)
+        cosine = similarity * inv_mag
+        cosine = cosine.T * inv_mag
+
+        np.fill_diagonal(cosine, 0)
+
+        if self.normalize:
+            # normalize per row
+            row_sums = cosine.sum(axis=1)
+            cosine = cosine / row_sums[:, np.newaxis]
+
+        self.item_cosine_similarities_ = cosine
         return self
 
     def get_sim_matrix(self):

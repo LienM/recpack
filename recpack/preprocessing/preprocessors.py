@@ -2,6 +2,7 @@ from typing import List
 
 import pandas as pd
 import scipy.sparse
+import numpy as np
 
 import recpack.preprocessing.helpers as helpers
 from recpack.data_matrix import DataM
@@ -55,7 +56,12 @@ class DataFramePreprocessor:
                 "User ID Mapping should be fit before attempting to map users"
             )
 
-        return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
+        user_id_mapping_array = np.empty(max(self.user_id_mapping.keys()) + 1)
+        user_id_mapping_array[list(self.user_id_mapping.keys())] = list(self.user_id_mapping.values())
+        res = user_id_mapping_array[df[self.item_id]]
+        logger.debug("Done")
+        return res
+        # return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def map_items(self, df):
         logger.debug("Map items")
@@ -64,7 +70,12 @@ class DataFramePreprocessor:
                 "Item ID Mapping should be fit before attempting to map items"
             )
 
-        return df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
+        item_id_mapping_array = np.empty(max(self.item_id_mapping.keys()) + 1)
+        item_id_mapping_array[list(self.item_id_mapping.keys())] = list(self.item_id_mapping.values())
+        res = item_id_mapping_array[df[self.item_id]]
+        logger.debug("Done")
+        return res
+        # res2 = df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
 
     @property
     def shape(self):

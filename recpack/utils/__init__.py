@@ -103,10 +103,10 @@ class UserCSVWriter(object):
         return self.reverse_user_id_mapping.get(uid, uid)
 
 
-class InteractionsCSVWriter(ItemCSVWriter, UserCSVWriter):
+class InteractionsCSVWriter(UserCSVWriter, ItemCSVWriter):
     def __init__(self, user_id_mapping=None, item_id_mapping=None):
-        super().__init__(user_id_mapping=user_id_mapping)
-        super().__init__(item_id_mapping=item_id_mapping)
+        UserCSVWriter.__init__(self, user_id_mapping=user_id_mapping)
+        ItemCSVWriter.__init__(self, item_id_mapping=item_id_mapping)
 
     def reverse_map_user_item_id(self, uid, iid):
         return self.reverse_map_user_id(uid), self.reverse_map_item_id(iid)

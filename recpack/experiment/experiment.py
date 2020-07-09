@@ -357,6 +357,14 @@ class Experiment(IExperiment):
 
         recommendations = self.process_predictions(X_test, y_test, batch_iterator)
         self.save(X_test.values, y_test.values, recommendations)
+
+        # HACK to remove zero rows
+        # TODO: should map ids again for propper saving of detailed metrics
+        X_test = DataM(X_test.values[X_test.values.getnnz(axis=1) > 0])
+        y_test = DataM(y_test.values[y_test.values.getnnz(axis=1) > 0])
+        recommendations = recommendations[recommendations.getnnz(axis=1) > 0]
+        # END of hack
+
         data = self.evaluate(X_test.values, y_test.values, recommendations)
 
         dict_to_csv(data, self.get_output_file(METRICS_FILE))
@@ -366,6 +374,7 @@ class Experiment(IExperiment):
 # TODO:
 #  - preprocessing options (binary values, etc)
 #  - auto generate sweep file
+#  - change saving structure to: data/scenario/algo/algo_params/seed
 #  - allow to inject default values through functions (to override specific parts)
 #  - group parameters per class? (easier to derive unique name for algo and generate sweep file)
 #  - entry point for eval?
