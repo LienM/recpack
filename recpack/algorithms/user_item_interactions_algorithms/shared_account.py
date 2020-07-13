@@ -30,8 +30,6 @@ class SharedAccount(SimilarityMatrixAlgorithm):
     The optimal set of explanations is found with the parameter `p` by dividing the sum of scores by the size of the set to the power `p`.
     The final score can either be the sum, average or adjusted average (with denominator) depending on the `agg` param.
     """
-
-
     def __init__(self, algo: SimilarityMatrixAlgorithm, p=0.75, agg: Agg = Agg.Adj):
         super().__init__()
         self.algo = algo
@@ -41,11 +39,12 @@ class SharedAccount(SimilarityMatrixAlgorithm):
     def fit(self, X: scipy.sparse.csr_matrix, y: scipy.sparse.csr_matrix=None):
         return self.algo.fit(X, y)
 
-    def get_sim_matrix(self):
-        return self.algo.get_sim_matrix()
+    @property
+    def sim_matrix(self):
+        return self.algo.sim_matrix
 
     def predict(self, X, user_ids=None):
-        M = self.get_sim_matrix().toarray()
+        M = self.sim_matrix.toarray()
 
         X = X.toarray()
         predictions = get_predictions(X, M, self.p, self.agg)

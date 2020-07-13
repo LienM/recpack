@@ -53,7 +53,8 @@ class EASE(SimilarityMatrixAlgorithm):
 
         return self
 
-    def get_sim_matrix(self):
+    @property
+    def sim_matrix(self):
         return self.B_
 
     def load(self, filename):
@@ -273,5 +274,6 @@ class SLIM(SimilarityMatrixAlgorithm):
         )
         return self
 
-    def get_sim_matrix(self):
+    @property
+    def sim_matrix(self):
         return self.similarity_matrix_

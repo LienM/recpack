@@ -12,13 +12,14 @@ class UserItemInteractionsAlgorithm(Algorithm):
 
 
 class SimilarityMatrixAlgorithm(UserItemInteractionsAlgorithm):
-    def get_sim_matrix(self):
+
+    @property
+    def sim_matrix(self):
         raise NotImplementedError()
 
     def predict(self, X, user_ids=None):
         check_is_fitted(self)
 
-        B = self.get_sim_matrix()
-        scores = X @ B
+        scores = X @ self.sim_matrix
 
         return scores

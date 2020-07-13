@@ -48,7 +48,8 @@ class ItemKNN(SimilarityMatrixAlgorithm):
 
         return self
 
-    def get_sim_matrix(self):
+    @property
+    def sim_matrix(self):
         return self.item_cosine_similarities_
 
 
@@ -88,7 +89,8 @@ class CosineSimilarity(SimilarityMatrixAlgorithm):
         self.item_cosine_similarities_ = cosine
         return self
 
-    def get_sim_matrix(self):
+    @property
+    def sim_matrix(self):
         return self.item_cosine_similarities_
 
 
@@ -129,6 +131,7 @@ class NotItemKNN(SimilarityMatrixAlgorithm):
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
-    def get_sim_matrix(self):
+    @property
+    def sim_matrix(self):
         return self.item_cosine_similarities_
 
