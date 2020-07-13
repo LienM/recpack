@@ -16,7 +16,7 @@ from recpack.data.data_source import DataSource
 
 from recpack.algorithms.true_baseline_algorithms import Popularity
 from recpack.algorithms.user_item_interactions_algorithms.nn_algorithms import ItemKNN, CosineSimilarity
-from recpack.algorithms.user_item_interactions_algorithms.shared_account import SharedAccount
+from recpack.algorithms.user_item_interactions_algorithms.shared_account import SharedAccount, Agg
 from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import EASE, EASE_AVG, EASE_Intercept, EASE_AVG_Int
 
 from recpack.metrics import NDCGK, RecallK, MeanReciprocalRankK
@@ -161,9 +161,9 @@ class SA_EASE(MLExperiment, cli.Command, mask=IExperiment):
 
 class SA_IKNN(MLExperiment, cli.Command, mask=IExperiment):
     @provider
-    def recommender(self, k: int = 200, p: float = 0.75, sum : bool = False, adjustment: bool = True, normalize: bool = False):
+    def recommender(self, k: int = 200, p: float = 0.75, agg: Agg = Agg.Adj, normalize: bool = False):
         alg = ItemKNN(K=k, normalize=normalize)
-        return SharedAccount(alg, p=p, sum=sum, adjustment=adjustment)
+        return SharedAccount(alg, p=p, agg=agg)
 
 
 cli.run()

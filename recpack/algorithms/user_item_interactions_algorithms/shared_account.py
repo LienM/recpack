@@ -1,3 +1,5 @@
+import enum
+
 import scipy.sparse
 import numpy as np
 
@@ -8,15 +10,33 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 )
 
 
+@enum.unique
+class Aggregator(enum.Enum):
+    Sum = "sum"
+    Avg = "avg"
+    Adj = "adj"
+
+    def __str__(self):
+        return self.value
+
+
+Agg = Aggregator
+
+
 class SharedAccount(SimilarityMatrixAlgorithm):
-    def __init__(self, algo: SimilarityMatrixAlgorithm, p=0.75, sum=False, adjustment=False):
+    """
+    Shared account algorithm by Koen Verstreepen et al.
+    Only the rescaling os scores is implemented for now.
+    The optimal set of explanations is found with the parameter `p` by dividing the sum of scores by the size of the set to the power `p`.
+    The final score can either be the sum, average or adjusted average (with denominator) depending on the `agg` param.
+    """
+
+
+    def __init__(self, algo: SimilarityMatrixAlgorithm, p=0.75, agg: Agg = Agg.Adj):
         super().__init__()
         self.algo = algo
         self.p = p
-        self.sum = sum
-        self.adjustment = adjustment
-        if sum and adjustment:
-            raise RuntimeError("Can't do sum and adjusted average")
+        self.agg = agg
 
     def fit(self, X: scipy.sparse.csr_matrix, y: scipy.sparse.csr_matrix=None):
         return self.algo.fit(X, y)
@@ -28,24 +48,24 @@ class SharedAccount(SimilarityMatrixAlgorithm):
         M = self.get_sim_matrix().toarray()
 
         X = X.toarray()
-        predictions = get_predictions(X, M, self.p, self.sum, self.adjustment)
+        predictions = get_predictions(X, M, self.p, self.agg)
 
         return predictions
 
 
 @numba.njit(parallel=True)
-def get_predictions(X, M, p, sum=False, adjustment=True):
+def get_predictions(X, M, p, agg):
     predictions = np.zeros(X.shape, dtype=np.float32)
     for u in numba.prange(X.shape[0]):
         indices = X[u]
         similarities = M[indices.astype(np.bool_), :]
-        predictions[u] = get_prediction_u(similarities, p, sum=sum, adjustment=adjustment)
+        predictions[u] = get_prediction_u(similarities, p, agg)
 
     return predictions
 
 
 @numba.njit()
-def get_prediction_u(similarities, p, sum=False, adjustment=False):
+def get_prediction_u(similarities, p, agg):
     predictions = np.zeros((similarities.shape[1]), dtype=np.float32)
     filtered = filter_best_subsets(similarities, p)
 
@@ -54,15 +74,17 @@ def get_prediction_u(similarities, p, sum=False, adjustment=False):
         # print("set size:", nonzero)
         if nonzero == 0:
             predictions[col] = 0
-        elif sum:
+        elif agg == Agg.Sum:
             # sum
             predictions[col] = np.sum(filtered[:, col])
-        elif adjustment:
+        elif agg == Agg.Adj:
             # adjusted average
             predictions[col] = np.sum(filtered[:, col]) / nonzero ** p
-        else:
+        elif agg == Agg.Avg:
             # average
             predictions[col] = np.sum(filtered[:, col]) / nonzero
+        else:
+            raise RuntimeError("Unknown aggragation method for SA algorithm")
 
     return predictions
 
