@@ -8,7 +8,6 @@ from tqdm.auto import tqdm
 from sklearn.linear_model import SGDRegressor
 from sklearn.utils.validation import check_is_fitted
 
-from recpack.utils.monitor import Monitor
 from recpack.algorithms.user_item_interactions_algorithms import (
     SimilarityMatrixAlgorithm,
 )
