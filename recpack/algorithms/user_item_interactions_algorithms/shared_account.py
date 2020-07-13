@@ -1,7 +1,6 @@
 import scipy.sparse
 import numpy as np
 
-from tqdm.auto import tqdm
 import numba
 
 from recpack.algorithms.user_item_interactions_algorithms import (
@@ -34,7 +33,6 @@ class SharedAccount(SimilarityMatrixAlgorithm):
         return predictions
 
 
-# @numba.njit()
 @numba.njit(parallel=True)
 def get_predictions(X, M, p, sum=False, adjustment=True):
     predictions = np.zeros(X.shape, dtype=np.float32)
@@ -51,11 +49,9 @@ def get_prediction_u(similarities, p, sum=False, adjustment=False):
     predictions = np.zeros((similarities.shape[1]), dtype=np.float32)
     filtered = filter_best_subsets(similarities, p)
 
-    # print("filtered", filtered)
     for col in range(filtered.shape[1]):
         nonzero = np.count_nonzero(filtered[:, col])
         # print("set size:", nonzero)
-        # tqdm.write(f"set size: {nonzero}")
         if nonzero == 0:
             predictions[col] = 0
         elif sum:
@@ -73,7 +69,6 @@ def get_prediction_u(similarities, p, sum=False, adjustment=False):
 
 @numba.njit()
 def filter_best_subsets(similarities, p):
-    # sort_indices = np.argsort(-similarities, axis=0)
     sort_indices = np.empty(similarities.shape, dtype=np.int32)
     for j in range(sort_indices.shape[1]):
         sort_indices[:, j] = np.argsort(-similarities[:, j])
@@ -92,8 +87,6 @@ def filter_best_subsets(similarities, p):
                 amount += 1
 
         similarities[order[amount:], col] = 0
-        # print("highest:", total)
-        # print("size:", amount)
 
     return similarities
 
