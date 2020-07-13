@@ -7,7 +7,7 @@ import scipy.sparse
 
 from tqdm.auto import tqdm
 
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 from recpack.utils import logger
 
 

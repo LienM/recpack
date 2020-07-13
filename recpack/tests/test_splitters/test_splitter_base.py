@@ -1,7 +1,4 @@
 import recpack.splitters.splitter_base as splitter_base
-from recpack.data_matrix import DataM
-import math
-import pandas as pd
 import pytest
 import numpy as np
 

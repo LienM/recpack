@@ -5,7 +5,7 @@ import scipy.sparse
 import numpy as np
 
 import recpack.preprocessing.helpers as helpers
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 from recpack.preprocessing.filters import Filter
 from recpack.utils import logger
 

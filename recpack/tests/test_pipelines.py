@@ -1,11 +1,10 @@
 import recpack
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 import recpack.metrics
 import recpack.pipelines
 import recpack.algorithms
 import recpack.splitters.scenarios as scenarios
 import pandas as pd
-import pytest
 
 
 def generate_data():
