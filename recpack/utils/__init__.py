@@ -1,12 +1,13 @@
 import sys
 import csv
-import logging.config
 from collections import defaultdict
 import logging
 
 import numpy as np
 import scipy.sparse
 import pandas as pd
+
+from recpack.utils.globals import USER_KEY, ITEM_KEY, VALUE_KEY
 
 logger = logging.getLogger("recpack")
 logger.setLevel(logging.INFO)
@@ -72,11 +73,6 @@ def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
     )
 
     return sparse_matrix
-
-
-USER_KEY = "user"
-ITEM_KEY = "item"
-VALUE_KEY = "value"
 
 
 class ItemCSVWriter(object):

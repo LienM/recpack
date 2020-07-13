@@ -1,5 +1,4 @@
 import random
-import csv
 import os
 import datetime
 
@@ -7,7 +6,6 @@ import numpy as np
 import scipy.sparse
 
 from sklearn.pipeline import Pipeline
-from recpack.preprocessing.preprocessors import DataFramePreprocessor
 from recpack.data.data_matrix import DataM
 
 from recpack.data.data_source import DataSource
@@ -19,16 +17,10 @@ from recpack.splitters.splitter_base import FoldIterator
 from tqdm.auto import tqdm
 import functools
 
-
-BASE_OUTPUT_DIR = "output/"
-
-PARAMS_FILE = "params.csv"
-STATISTICS_FILE = "statistics.csv"
-HISTORY_FILE = "history.csv"
-Y_TRUE_FILE = "y_true.csv"
-Y_PRED_FILE = "y_pred.csv"
-
-METRICS_FILE = "metrics.csv"
+from recpack.utils.globals import (
+    BASE_OUTPUT_DIR, PARAMS_FILE, STATISTICS_FILE, HISTORY_FILE, Y_TRUE_FILE, Y_PRED_FILE,
+    METRICS_FILE
+)
 
 
 def provider(f):

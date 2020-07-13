@@ -5,9 +5,9 @@ import pandas as pd
 import numpy as np
 
 from recpack.experiment.experiment import (
-    Experiment, IExperiment, provider, ISceneario, IEvaluator,
-    HISTORY_FILE, Y_PRED_FILE, Y_TRUE_FILE, METRICS_FILE
+    Experiment, IExperiment, provider, ISceneario, IEvaluator
 )
+from recpack.utils.globals import HISTORY_FILE, Y_TRUE_FILE, Y_PRED_FILE, METRICS_FILE
 from recpack.experiment.CLI import CLI
 from recpack.experiment.transform_predictions import NoRepeats
 from recpack.splitters.scenarios import StrongGeneralization
