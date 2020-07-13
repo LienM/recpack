@@ -16,12 +16,13 @@ from recpack.algorithms.user_item_interactions_algorithms import (
 
 class EASE(SimilarityMatrixAlgorithm):
     def __init__(self, l2=1e3, alpha=0):
+        """ l2 norm for regularization and alpha exponent to filter popularity bias. """
         super().__init__()
         self.l2 = l2
         self.alpha = alpha      # alpha exponent for filtering popularity bias
 
     def fit(self, X, y=None):
-        """Compute the closed form solution and then rescale using diagM(w)"""
+        """Compute the closed form solution, optionally rescalled to counter popularity bias (see param alpha). """
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
         # https://arxiv.org/pdf/1905.03375.pdf
@@ -32,6 +33,8 @@ class EASE(SimilarityMatrixAlgorithm):
         # Collaborative Filtering via High-Dimensional Regression from Steck
         # https://arxiv.org/pdf/1904.13033.pdf
         # Eq. 14 B_scaled = B * diagM(w)
+        if y is not None:
+            raise RuntimeError("Train EASE_XY.")
 
         # Compute P
         XTX = (X.T @ X).toarray()
@@ -71,7 +74,11 @@ class EASE(SimilarityMatrixAlgorithm):
 
 
 class EASE_Intercept(EASE):
-    """ Variation of EASE where we encode Y from X (no autoencoder). """
+    """
+    Variation of EASE where an item weight is learned in addition to the item-item weights.
+    See footnote of Collaborative Filtering via High-Dimensional Regression from Steck
+    https://arxiv.org/pdf/1904.13033.pdf
+    """
     def fit(self, X, y=None):
         if y is not None:
             raise RuntimeError("Train EASE_XY.")
@@ -130,7 +137,10 @@ def normalize(X):
 
 
 class EASE_AVG(EASE):
-    """ Variation of EASE where we encode Y from X (no autoencoder). """
+    """ Variation of EASE where we take the average of weights rather than the sum (unpublished). """
+    def __init__(self, l2=0.2):
+        super().__init__(l2, alpha=0)
+
     def fit(self, X, y=None):
         if y is not None:
             raise RuntimeError("Train EASE_XY for distinct y.")
@@ -153,8 +163,9 @@ class EASE_AVG(EASE):
         return super().predict(X, user_ids=user_ids)
 
 
-class EASE_AVG_Int(EASE):
-    """ Variation of EASE where we encode Y from X (no autoencoder). """
+class EASE_AVG_Int(EASE_AVG):
+    """ Variation of EASE where we take the average of weights rather than the sum (unpublished)
+    with unary weights for items. """
 
     def fit(self, X, y=None):
         if y is not None:
@@ -179,7 +190,6 @@ class EASE_AVG_Int(EASE):
 
     def predict(self, X, user_ids=None):
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
-        X = normalize(X)
         return super().predict(X, user_ids=user_ids)
 
 
