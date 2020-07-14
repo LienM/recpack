@@ -1,9 +1,13 @@
 from dataclasses import dataclass, field
-import logging
+from typing import List
 import pandas
 
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
 from recpack.preprocessing.filters import MinItemsPerUser, MinUsersPerItem
+from recpack.utils import get_logger
+
+logger = get_logger()
+
 class InputLoader:
     def load(self):
         pass
@@ -19,9 +23,9 @@ class CSVInteractionsLoader:
     dedupe: bool = field(default=True)
 
     def load(self):
-        logging.info(f"loading data from {self.file_name}")
+        logger.info(f"loading data from {self.file_name}")
         data = pandas.read_csv(self.file_name)
-        # data = data.sample(100_000)
+
         min_users_filter = MinUsersPerItem(self.min_users_per_item, self.user_col, self.item_col, self.timestamp_col)
         min_items_filter = MinItemsPerUser(self.min_items_per_user, self.user_col, self.item_col, self.timestamp_col)
 
@@ -31,5 +35,41 @@ class CSVInteractionsLoader:
         preprocessor = DataFramePreprocessor(self.item_col, self.user_col, self.timestamp_col, dedupe=self.dedupe)
         mat, = preprocessor.process(filt_data)
 
-        logging.info(f"Data loaded, matrix shape = {mat.shape}")
+        logger.info(f"Data loaded, matrix shape = {mat.shape}")
+        return mat
+
+@dataclass
+class CSVMetadataLoaderSimple:
+    """Loads a metadata csv, and uses a list of fields as index for the matrix, no preprocessing happens on the string values
+    This can be used for example to get a column per category / topic
+    """
+    file_name: str
+    fields: List[str]
+    item_col: str = field(default='item_id')
+    
+    
+
+    def load(self):
+        logger.info(f"loading metadata from {self.file_name}")
+        data = pandas.read_csv(self.file_name)
+
+        data.fillna("")
+        # We use the values of the fields columns as tokens (without any processing/splitting/...)
+        # and create a 'pseudo' interaction df, which we can process using the same methods we use for interactions.
+        dataframes = []
+        for field in self.fields:
+            t = data[[self.item_col, field]].rename(columns={field: 'metadata_token'})
+            dataframes.append(t)
+        
+        logger.info("constructing pseudo interactions")
+        psuedo_interactions = dataframes[0]
+        if len(dataframes) > 1:
+            for additional_data in dataframes[1:]:
+                psuedo_interactions = psuedo_interactions.append(additional_data)
+        return psuedo_interactions
+        
+        preprocessor = DataFramePreprocessor('metadata_token', self.item_col, dedupe=True)
+        mat, = preprocessor.process(psuedo_interactions)
+
+        logger.info(f"Data loaded, matrix shape = {mat.shape}")
         return mat

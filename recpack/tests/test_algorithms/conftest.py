@@ -50,4 +50,15 @@ def metadata():
     }
 
     return pd.DataFrame.from_dict(data_dict)
-    
+
+@pytest.fixture(scope="function")
+def metadata_tags_matrix():
+    """constructs a matrix, with 3 tags: sport, news and celeb encoded as columns 1, 2 and 3 in the matrix"""
+    items, tags, values = (
+        [0, 0, 1, 2, 3, 4],
+        [0, 1, 1, 0, 2, 1],
+        [1, 1, 1, 1, 1, 1],
+    )
+
+    mat = sp.csr_matrix((values, (items, tags)), shape=(5, 3))
+    return mat
