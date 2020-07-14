@@ -1,7 +1,6 @@
 from typing import List
 
 import pandas as pd
-import scipy.sparse
 import numpy as np
 
 import recpack.preprocessing.helpers as helpers
@@ -10,11 +9,14 @@ from recpack.preprocessing.filters import Filter
 from recpack.utils import logger
 
 from tqdm.auto import tqdm
+
 tqdm.pandas()
 
 
 class DataFramePreprocessor:
-    def __init__(self, item_id, user_id, value_id=None, timestamp_id=None, dedupe=False):
+    def __init__(
+        self, item_id, user_id, value_id=None, timestamp_id=None, dedupe=False
+    ):
         """
         Class to preprocess a Pandas Dataframe and turn it into a DataM object.
         All ID mappings are stored, so that processing of multiple DataFrames will lead to consistent mapped identifiers.
@@ -57,7 +59,9 @@ class DataFramePreprocessor:
             )
 
         user_id_mapping_array = np.arange(0, max(self.user_id_mapping.keys()) + 1)
-        user_id_mapping_array[list(self.user_id_mapping.keys())] = list(self.user_id_mapping.values())
+        user_id_mapping_array[list(self.user_id_mapping.keys())] = list(
+            self.user_id_mapping.values()
+        )
         res = user_id_mapping_array[df[self.user_id]]
         logger.debug("Done")
         return res
@@ -71,7 +75,9 @@ class DataFramePreprocessor:
             )
 
         item_id_mapping_array = np.arange(0, max(self.item_id_mapping.keys()) + 1)
-        item_id_mapping_array[list(self.item_id_mapping.keys())] = list(self.item_id_mapping.values())
+        item_id_mapping_array[list(self.item_id_mapping.keys())] = list(
+            self.item_id_mapping.values()
+        )
         res = item_id_mapping_array[df[self.item_id]]
         logger.debug("Done")
         return res
@@ -91,7 +97,7 @@ class DataFramePreprocessor:
         pass all of them to a single call of process to guarantee
         that their dimensions will match.
 
-        :return: A list of sparse matrices in the order they were passed as arguments. 
+        :return: A list of sparse matrices in the order they were passed as arguments.
         :rtype: List[scipy.sparse.csr_matrix]
         """
         dfs = list(dfs)

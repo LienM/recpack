@@ -33,10 +33,13 @@ def parfor(iterator, parallel=True, n_jobs=-1, **kwargs):
         time.sleep(1)
         print(i)
     """
+
     def decorator(body):
 
         if parallel:
-            data = Parallel(n_jobs=n_jobs, **kwargs)(delayed(body)(*to_tuple(args)) for args in iterator)
+            data = Parallel(n_jobs=n_jobs, **kwargs)(
+                delayed(body)(*to_tuple(args)) for args in iterator
+            )
             return data
         else:
             # could replace manually doing this with backend=sequential

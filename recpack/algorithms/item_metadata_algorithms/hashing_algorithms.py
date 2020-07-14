@@ -1,9 +1,9 @@
 import scipy.sparse
-import numpy
-import pandas
+import pandas as pd
 from snapy import MinHash, LSH
 
 # TODO Implement BaseEstimator interface.
+
 
 class LSHModel:
     """
@@ -19,13 +19,22 @@ class LSHModel:
 
     If you want to work on a combination of data fields: combine the fields in a string field to be used by this class.
     """
-    def __init__(self, data, shape=None, min_jaccard=0.3, n_gram=3, content_key='title', item_key='itemId'):
+
+    def __init__(
+        self,
+        data,
+        shape=None,
+        min_jaccard=0.3,
+        n_gram=3,
+        content_key="title",
+        item_key="itemId",
+    ):
         self.lsh_model = None
         self.data = data
 
         self.n_gram = n_gram
         self.min_jaccard = min_jaccard
-        
+
         self.shape = shape
         if shape is None:
             num_items = data[item_key].nunique()
@@ -36,7 +45,7 @@ class LSHModel:
 
         self.trained = False
 
-    def _train(self, df: pandas.DataFrame):
+    def _train(self, df: pd.DataFrame):
         if self.trained:
             return
 
@@ -44,14 +53,25 @@ class LSHModel:
         content = list(df_filter_empty[self.content_key])
         labels = list(df_filter_empty[self.item_key])
 
-        minhash = MinHash(content, n_gram=self.n_gram, n_gram_type='char', permutations=100, hash_bits=64)
+        minhash = MinHash(
+            content,
+            n_gram=self.n_gram,
+            n_gram_type="char",
+            permutations=100,
+            hash_bits=64,
+        )
         lsh = LSH(minhash, labels, no_of_bands=50)
 
         # Construct a scipy sparse Mutex prediction model
         x_ids = []
         y_ids = []
         values = []
-        tuples = [i for i in zip(*lsh.edge_list(min_jaccard=self.min_jaccard, jaccard_weighted=True))]
+        tuples = [
+            i
+            for i in zip(
+                *lsh.edge_list(min_jaccard=self.min_jaccard, jaccard_weighted=True)
+            )
+        ]
         if len(tuples) != 0:
             x_ids, y_ids, values = tuples
         # This will contain half of the similarity matrix
@@ -60,7 +80,9 @@ class LSHModel:
         total_y_ids = y_ids + x_ids
         values += values
 
-        self.lsh_model = scipy.sparse.csr_matrix((values, (total_x_ids, total_y_ids)), shape=self.shape)
+        self.lsh_model = scipy.sparse.csr_matrix(
+            (values, (total_x_ids, total_y_ids)), shape=self.shape
+        )
 
         self.trained = True
 

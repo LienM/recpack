@@ -17,7 +17,9 @@ def eclat(tidmap, prefix=[], minsup=1, size=3):
 
     progress = None
     if len(prefix) == 0:
-        progress = tqdm(desc='{' + ', '.join(map(str, prefix)) + '}', total=len(tidlist), leave=True)
+        progress = tqdm(
+            desc="{" + ", ".join(map(str, prefix)) + "}", total=len(tidlist), leave=True
+        )
 
     while tidlist:
         if progress:
@@ -37,7 +39,7 @@ def eclat(tidmap, prefix=[], minsup=1, size=3):
 
             suffix[other] = newtids
 
-        new_itemsets = eclat(suffix, prefix + [item], minsup=minsup, size=size-1)
+        new_itemsets = eclat(suffix, prefix + [item], minsup=minsup, size=size - 1)
         output.extend(new_itemsets)
 
     return output

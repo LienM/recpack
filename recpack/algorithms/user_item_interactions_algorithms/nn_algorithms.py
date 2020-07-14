@@ -3,7 +3,6 @@ import scipy
 from scipy.sparse import diags
 import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.user_item_interactions_algorithms import (
     SimilarityMatrixAlgorithm,
@@ -32,18 +31,24 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         # Get indices of top K items per item
         indices = [
             (i, j)
-            for i, best_items_row in enumerate(np.argpartition(self.item_cosine_similarities_.toarray(), -self.K))
+            for i, best_items_row in enumerate(
+                np.argpartition(self.item_cosine_similarities_.toarray(), -self.K)
+            )
             for j in best_items_row[-self.K:]
         ]
         # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
-        mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))))
+        mask = scipy.sparse.csr_matrix(
+            ([1 for i in range(len(indices))], (list(zip(*indices))))
+        )
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
 
         if self.normalize:
             # normalize per row
             row_sums = self.item_cosine_similarities_.sum(axis=1)
             self.item_cosine_similarities_ = self.item_cosine_similarities_ / row_sums
-            self.item_cosine_similarities_ = scipy.sparse.csr_matrix(self.item_cosine_similarities_)
+            self.item_cosine_similarities_ = scipy.sparse.csr_matrix(
+                self.item_cosine_similarities_
+            )
             self.item_cosine_similarities_.eliminate_zeros()
 
         return self
@@ -123,15 +128,18 @@ class NotItemKNN(SimilarityMatrixAlgorithm):
         # Get indices of top K items per item
         indices = [
             (i, j)
-            for i, best_items_row in enumerate(np.argpartition(self.item_cosine_similarities_.toarray(), -self.K))
+            for i, best_items_row in enumerate(
+                np.argpartition(self.item_cosine_similarities_.toarray(), -self.K)
+            )
             for j in best_items_row[-self.K:]
         ]
         # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
-        mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))))
+        mask = scipy.sparse.csr_matrix(
+            ([1 for i in range(len(indices))], (list(zip(*indices))))
+        )
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
         return self
 
     @property
     def sim_matrix(self):
         return self.item_cosine_similarities_
-

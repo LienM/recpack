@@ -18,14 +18,16 @@ class DataSource(object):
 
     def get_params(self):
         params = super().get_params() if hasattr(super(), "get_params") else dict()
-        params['data_source'] = self.data_name
+        params["data_source"] = self.data_name
         return params
 
     def load_df(self):
         raise NotImplementedError("Need to override `load_df` or `preprocess`")
 
     def get_preprocessor(self):
-        preprocessor = DataFramePreprocessor(self.item_id, self.user_id, self.value_id, self.timestamp_id, dedupe=True)
+        preprocessor = DataFramePreprocessor(
+            self.item_id, self.user_id, self.value_id, self.timestamp_id, dedupe=True
+        )
         return preprocessor
 
     def preprocess(self):

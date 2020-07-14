@@ -46,7 +46,10 @@ class DataM:
         c_timestamps = self._timestamps[func()]
 
         c_values = df_to_sparse(
-            c_timestamps.reset_index(), self.item_id, self.user_id, shape=self._values.shape
+            c_timestamps.reset_index(),
+            self.item_id,
+            self.user_id,
+            shape=self._values.shape,
         )
 
         logger.debug("Timestamp comparison done")
@@ -171,7 +174,13 @@ class DataM:
 
     @classmethod
     def create_from_dataframe(
-        cls, df: pd.DataFrame, item_ix: str, user_ix: str, value_ix: str=None, timestamp_ix=None, shape=None
+        cls,
+        df: pd.DataFrame,
+        item_ix: str,
+        user_ix: str,
+        value_ix: str = None,
+        timestamp_ix=None,
+        shape=None,
     ):
 
         sparse_matrix = df_to_sparse(df, item_ix, user_ix, value_ix, shape)
@@ -184,7 +193,9 @@ class DataM:
                     timestamp_ix: cls.timestamp_id,
                 }
             )
-            timestamps = df.set_index([cls.user_id, cls.item_id])[cls.timestamp_id].sort_index()
+            timestamps = df.set_index([cls.user_id, cls.item_id])[
+                cls.timestamp_id
+            ].sort_index()
         else:
             timestamps = None
 

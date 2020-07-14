@@ -3,8 +3,6 @@ import secrets
 import numpy as np
 import scipy.sparse
 
-from tqdm.auto import tqdm
-
 from sklearn.linear_model import SGDRegressor
 from sklearn.utils.validation import check_is_fitted
 
@@ -18,7 +16,7 @@ class EASE(SimilarityMatrixAlgorithm):
         """ l2 norm for regularization and alpha exponent to filter popularity bias. """
         super().__init__()
         self.l2 = l2
-        self.alpha = alpha      # alpha exponent for filtering popularity bias
+        self.alpha = alpha  # alpha exponent for filtering popularity bias
 
     def fit(self, X, y=None):
         """Compute the closed form solution, optionally rescalled to counter popularity bias (see param alpha). """
@@ -37,9 +35,7 @@ class EASE(SimilarityMatrixAlgorithm):
 
         # Compute P
         XTX = (X.T @ X).toarray()
-        P = np.linalg.inv(
-            XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32)
-        )
+        P = np.linalg.inv(XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
 
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))
@@ -79,6 +75,7 @@ class EASE_Intercept(EASE):
     See footnote of Collaborative Filtering via High-Dimensional Regression from Steck
     https://arxiv.org/pdf/1904.13033.pdf
     """
+
     def fit(self, X, y=None):
         if y is not None:
             raise RuntimeError("Train EASE_XY.")
@@ -94,7 +91,7 @@ class EASE_Intercept(EASE):
 
         D = np.diag(np.diag(B_rr) / np.diag(P)[:-1])
         B = B_rr
-        B[:-1,:] -= P[:-1,:-1] @ D
+        B[:-1, :] -= P[:-1, :-1] @ D
 
         if self.alpha != 0:
             w = 1 / np.diag(XTX)[:-1] ** self.alpha
@@ -111,9 +108,12 @@ class EASE_Intercept(EASE):
 
 class EASE_XY(EASE):
     """ Variation of EASE where we encode Y from X (no autoencoder). """
+
     def fit(self, X, y=None):
         if y is None:
-            raise RuntimeError("Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY.")
+            raise RuntimeError(
+                "Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY."
+            )
         XTX = X.T @ X
         G = XTX + self.l2 * np.identity(X.shape[1])
 
@@ -133,11 +133,12 @@ class EASE_XY(EASE):
 
 
 def normalize(X):
-    return scipy.sparse.csr_matrix(scipy.sparse.diags(1/np.sum(X, axis=1).A1) @ X)
+    return scipy.sparse.csr_matrix(scipy.sparse.diags(1 / np.sum(X, axis=1).A1) @ X)
 
 
 class EASE_AVG(EASE):
     """ Variation of EASE where we take the average of weights rather than the sum (unpublished). """
+
     def __init__(self, l2=0.2):
         super().__init__(l2, alpha=0)
 
@@ -146,7 +147,7 @@ class EASE_AVG(EASE):
             raise RuntimeError("Train EASE_XY for distinct y.")
         y = X
         X = normalize(y)
-        
+
         G = X.T @ X + self.l2 * np.identity(X.shape[1])
 
         P = np.linalg.inv(G)
@@ -182,7 +183,7 @@ class EASE_AVG_Int(EASE_AVG):
 
         D = np.diag(1 - np.diag(B_rr) / -np.diag(P)[:-1])
         B = B_rr
-        B[:-1,:] -= P[:-1,:-1] @ D
+        B[:-1, :] -= P[:-1, :-1] @ D
 
         self.B_ = scipy.sparse.csr_matrix(B)
 
