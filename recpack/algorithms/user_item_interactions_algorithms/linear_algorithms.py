@@ -49,6 +49,12 @@ class EASE(SimilarityMatrixAlgorithm):
 
         return self
 
+    def multiply(self, value: float):
+        self.B_ = self.B_.multiply(value)
+
+    def add(self, other):
+        self.B_ += other.B_
+
     @property
     def sim_matrix(self):
         return self.B_
@@ -82,6 +88,7 @@ class EASE_Intercept(EASE):
 
         y = X
         X = scipy.sparse.hstack((y, np.ones((X.shape[0], 1))))
+
 
         XTX = (X.T @ X).toarray()
         G = XTX + self.l2 * np.identity(X.shape[1])

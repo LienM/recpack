@@ -259,7 +259,7 @@ class MultVAE(Algorithm):
         tensorX_pred, _, _ = self.model_(tensorX)
 
         # [[0, 1, 2], [3, 4, 5]] -> [0, 1, 2, 3, 4, 5]
-        V = tensorX_pred.flatten().detach().numpy()  # Flattens row-major.
+        V = tensorX_pred.cpu().flatten().detach().numpy()  # Flattens row-major.
         # -> [1, 2] -> 1, 1, 1, 2, 2, 2 (2 users x 3 items)
         U = np.repeat(users, X.shape[1])
         # -> [1, 2, 3] -> 1, 2, 3, 1, 2, 3 (2 users x 3 items)
