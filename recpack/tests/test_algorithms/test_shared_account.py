@@ -70,4 +70,3 @@ def test_item_knn_sa():
     expected_out = [[0.5, 0.5, 4 / math.sqrt(6) / 2 ** 0.75]]
     result = algo.predict(_in)
     numpy.testing.assert_almost_equal(result, expected_out)
-

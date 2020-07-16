@@ -1,1 +1,1 @@
-from recpack.pipelines.pipelines import Pipeline, LoggingPipeline
+from recpack.pipelines.pipelines import Pipeline
