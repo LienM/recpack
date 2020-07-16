@@ -1,5 +1,6 @@
 import csv
 from collections import defaultdict
+import logging
 
 import numpy as np
 import scipy.sparse
@@ -7,7 +8,6 @@ import pandas as pd
 
 from recpack.utils.globals import USER_KEY, ITEM_KEY, VALUE_KEY
 
-import logging
 
 logger = logging.getLogger("recpack")
 
