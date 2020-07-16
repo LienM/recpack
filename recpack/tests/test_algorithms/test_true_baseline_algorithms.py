@@ -92,3 +92,20 @@ def test_popularity_add():
     algo.add(algo_2)
 
     assert algo.sorted_scores_[0] == (algo_2.sorted_scores_[0][0], 2*algo_2.sorted_scores_[0][1])
+
+def test_popularity_mult():
+    item_i = [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
+    user_i = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
+    values = [1] * 10
+    train_data = scipy.sparse.csr_matrix((values, (user_i, item_i)))
+    algo = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
+    algo_2 = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
+
+    algo.fit(train_data)
+    print(algo.sorted_scores_)
+    algo_2.fit(train_data)
+    print(algo_2.sorted_scores_)
+    
+    algo_2.multiply(2)
+
+    assert algo_2.sorted_scores_[0] == (algo.sorted_scores_[0][0], 2*algo.sorted_scores_[0][1])
