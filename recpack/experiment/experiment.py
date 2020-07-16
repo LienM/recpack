@@ -33,9 +33,7 @@ def provider(f):
     return wrapper
 
 
-
-
-class ISceneario(object):
+class IScenario(object):
     def __init__(self):
         super().__init__()
 
@@ -79,7 +77,7 @@ class IEvaluator(object):
         pass
 
 
-class IExperiment(DataSource, ISceneario, IEvaluator):
+class IExperiment(DataSource, IScenario, IEvaluator):
     """
     Extend from this class to create experiments from scratch. The Experiment class already has the basic functionallity.
     Every step of the process can be overriden individually to create a custom experiment structure.

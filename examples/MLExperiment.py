@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 from recpack.experiment.experiment import (
-    Experiment, IExperiment, provider, ISceneario, IEvaluator
+    Experiment, IExperiment, provider, IScenario, IEvaluator
 )
 from recpack.utils.globals import HISTORY_FILE, Y_TRUE_FILE, Y_PRED_FILE, METRICS_FILE
 from recpack.experiment.CLI import CLI
@@ -29,7 +29,7 @@ from recpack.utils import (
 logger.setLevel(logging.DEBUG)
 
 
-class StrongGeneralizationScenario(ISceneario):
+class StrongGeneralizationScenario(IScenario):
     @property
     def scenario_name(self):
         return "StrongGeneralization"
