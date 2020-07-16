@@ -18,15 +18,11 @@ class ML20MDataSource(DataSource):
         df = pd.read_csv(_path)
         return df
 
-    def get_preprocessor(self, min_iu=5):
-        preprocessor = super().get_preprocessor()
-        # preprocessor.add_filter(MinUsersPerItem(min_ui, self.user_id, self.item_id))
-        preprocessor.add_filter(MinItemsPerUser(min_iu, self.user_id, self.item_id))
-        return preprocessor
-
-    def preprocess(self, min_rating=4):
+    def preprocess(self, min_rating=4, min_iu=5):
         df = self.load_df()
         preferences = df[df[self.value_id] >= min_rating]
-        preprocessor = self.get_preprocessor()
-        viewData, = preprocessor.process(preferences)
-        return DataM(viewData.binary_values)
+        preprocessor = self.preprocessor
+        preprocessor.add_filter(MinItemsPerUser(min_iu, self.user_id, self.item_id))
+
+        view_data, = preprocessor.process(preferences)
+        return DataM(view_data.binary_values)
