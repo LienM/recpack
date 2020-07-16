@@ -67,6 +67,5 @@ class CSVMetadataLoaderSimple:
         psuedo_interactions = psuedo_interactions[psuedo_interactions['metadata_token']!= ""]
         mat, = self.preprocessor.process(psuedo_interactions)
 
-        print(f"Data loaded, matrix shape = {mat.shape}")
         return mat
 

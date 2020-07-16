@@ -85,9 +85,7 @@ def test_popularity_add():
     algo_2 = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
 
     algo.fit(train_data)
-    print(algo.sorted_scores_)
     algo_2.fit(train_data)
-    print(algo_2.sorted_scores_)
     
     algo.add(algo_2)
 
@@ -102,9 +100,7 @@ def test_popularity_mult():
     algo_2 = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
 
     algo.fit(train_data)
-    print(algo.sorted_scores_)
     algo_2.fit(train_data)
-    print(algo_2.sorted_scores_)
     
     algo_2.multiply(2)
 

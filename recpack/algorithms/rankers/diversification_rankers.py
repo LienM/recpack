@@ -1,15 +1,25 @@
 import scipy.sparse
 import numpy as np
-from recpack.algorithms.algorithm_base import Ranker
+from recpack.algorithms.algorithm_base import Ranker, Algorithm
 from recpack.algorithms.helpers import get_topK
 
 class GreedyIntraListDiversifier(Ranker):
-    def __init__(self, similarity_model, K=100, div_rate=0.1):
+    """ Diversify a list in a greedy fashion.
+    The top K output is computed iteratively, after adding an item to the top K, the other scores are discounted with their similarity to that item.
+
+    :param similarity_model: The model defining the similarities between items.
+    :type similarity_model: Algorithm
+    :param div_rate: The parameter specifying how strong the discount is applied. (Note, does not act linearly, a value of 0.1 already leads to strong diversification)
+    :type div_rate: float
+    :param K: The amount of items to iteratively select. The rest of the items are ordered by the score after discount after the last item K is added.
+    :type K: int
+    """
+    def __init__(self, similarity_model: Algorithm, K=100, div_rate=0.1):
         self.similarity_model = similarity_model
-        self.div_rate = 0.1
+        self.div_rate = div_rate
         self.K = K
 
-    def fit(self, X):
+    def fit(self, X: scipy.sparse.csr_matrix):
         self.similarity_model.fit(X)
 
     def rank(
@@ -33,10 +43,8 @@ class GreedyIntraListDiversifier(Ranker):
             topK_items += best_items
             topK_items[topK_items > 0] = 1 # Binarize the topK items matrix
 
-            # discount scores based on MRR equation with div_rate = 1-lambda
-
+            # discount scores based on MRR equation with div_rate
             working_scores = scores - self.similarity_model.predict(topK_items).multiply(self.div_rate)
-
             # remove topK from working scores
             working_scores = working_scores - working_scores.multiply(topK_items)
             working_scores[working_scores < 0] = 0
