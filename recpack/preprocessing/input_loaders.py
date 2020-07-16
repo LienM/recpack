@@ -46,30 +46,27 @@ class CSVMetadataLoaderSimple:
     file_name: str
     fields: List[str]
     item_col: str = field(default='item_id')
-    
-    
+        
+    def __post_init__(self):
+        self.preprocessor = DataFramePreprocessor('metadata_token', self.item_col, dedupe=True)
 
     def load(self):
-        logger.info(f"loading metadata from {self.file_name}")
         data = pandas.read_csv(self.file_name)
-
         data.fillna("")
-        # We use the values of the fields columns as tokens (without any processing/splitting/...)
+        # We use the values of the fields columns as tokens (without any processing/splitting/...)
         # and create a 'pseudo' interaction df, which we can process using the same methods we use for interactions.
         dataframes = []
         for field in self.fields:
             t = data[[self.item_col, field]].rename(columns={field: 'metadata_token'})
             dataframes.append(t)
         
-        logger.info("constructing pseudo interactions")
         psuedo_interactions = dataframes[0]
         if len(dataframes) > 1:
             for additional_data in dataframes[1:]:
                 psuedo_interactions = psuedo_interactions.append(additional_data)
-        return psuedo_interactions
-        
-        preprocessor = DataFramePreprocessor('metadata_token', self.item_col, dedupe=True)
-        mat, = preprocessor.process(psuedo_interactions)
+        psuedo_interactions = psuedo_interactions[psuedo_interactions['metadata_token']!= ""]
+        mat, = self.preprocessor.process(psuedo_interactions)
 
-        logger.info(f"Data loaded, matrix shape = {mat.shape}")
+        print(f"Data loaded, matrix shape = {mat.shape}")
         return mat
+
