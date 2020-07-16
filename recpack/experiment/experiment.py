@@ -1,6 +1,8 @@
 import random
 import os
-import datetime
+import time
+from datetime import timedelta
+from datetime import datetime
 
 import numpy as np
 import scipy.sparse
@@ -13,6 +15,7 @@ from recpack.data.data_source import DataSource
 from recpack.utils import to_tuple, dict_to_csv, InteractionsCSVWriter
 
 from recpack.splitters.splitter_base import FoldIterator
+from recpack.experiment.transform_predictions import FilterHistory
 
 from tqdm.auto import tqdm
 import functools
@@ -168,7 +171,7 @@ class Experiment(IExperiment):
         self.batch_size = _batch_size
 
         self.statistics = dict()
-        self.statistics["start_time"] = datetime.datetime.now().replace(microsecond=0)
+        self.statistics["start_time"] = datetime.now().replace(microsecond=0)
 
         self.output_path = os.path.join(BASE_OUTPUT_DIR, str(self.identifier), str(self.seed))
 
@@ -218,10 +221,10 @@ class Experiment(IExperiment):
         return dict()
 
     def fit(self, X, y=None):
-        start = datetime.datetime.now()
+        start = time.time()
         self.pipeline().fit(X, y, **self.fit_params())
-        end = datetime.datetime.now()
-        self.statistics["train_duration"] = end - start
+        end = time.time()
+        self.statistics["train_duration"] = timedelta(seconds=end - start)
 
     def predict_params(self):
         return dict()
@@ -245,17 +248,15 @@ class Experiment(IExperiment):
 
             yield user_ids, _in, _out, y_pred
 
-    def transform_predictions(self, batch_iterator):
+    def transform_predictions(self, batch_iterator, filter_history: bool = True):
         """
         Apply business rules after the recommendation step and before evaluation.
         These may influence the calculated performance.
-        Example:
-        def transform_predictions(self, user_iterator, no_repeats=False):
-            user_iterator = super().transform_predictions(user_iterator)
-            if no_repeats:
-                user_iterator = NoRepeats(user_iterator)
-            yield from user_iterator
+        filter_history indicates whether interactions in the training history should be filtered from the recommendations.
         """
+        batch_iterator = super().transform_predictions(batch_iterator)
+        if filter_history:
+            batch_iterator = FilterHistory(batch_iterator)
         yield from batch_iterator
 
     def generate_recommendations(self, y_pred, _max_k: int = 100):
@@ -323,7 +324,6 @@ class Experiment(IExperiment):
         dict_to_csv(data, self.get_output_file(METRICS_FILE))
 
 
-
 # TODO:
 #  - preprocessing options (binary values, etc)
 #  - auto generate sweep file
@@ -331,6 +331,3 @@ class Experiment(IExperiment):
 #  - allow to inject default values through functions (to override specific parts)
 #  - group parameters per class? (easier to derive unique name for algo and generate sweep file)
 #  - entry point for eval?
-
-
-

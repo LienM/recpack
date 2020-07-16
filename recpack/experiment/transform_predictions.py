@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def NoRepeats(batch_iterator):
+def FilterHistory(batch_iterator):
     """
     Example business rule to apply in transform_predictions
     Lower prediction scores of items in history by 10^10.
