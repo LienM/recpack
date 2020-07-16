@@ -58,47 +58,6 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         return self.item_cosine_similarities_
 
 
-class CosineSimilarity(SimilarityMatrixAlgorithm):
-    """ Item cosine similarity based on code of Olivier """
-
-    def __init__(self, normalize=False):
-        super().__init__()
-        self.normalize = normalize
-
-    def fit(self, X, y=None):
-        # Base similarity matrix (all dot products)
-        similarity = (X.T @ X).toarray()
-
-        # Squared magnitude of preference vectors (number of occurrences)
-        square_mag = np.diag(similarity)
-
-        # Inverse squared magnitude
-        inv_square_mag = 1 / square_mag
-        # If it doesn't occur, set it's inverse magnitude to zero (instead of inf)
-        inv_square_mag[np.isinf(inv_square_mag)] = 0
-
-        # inverse of the magnitude
-        inv_mag = np.sqrt(inv_square_mag)
-
-        # cosine similarity (elementwise multiply by inverse magnitudes)
-        cosine = similarity * inv_mag
-        cosine = cosine.T * inv_mag
-
-        np.fill_diagonal(cosine, 0)
-
-        if self.normalize:
-            # normalize per row
-            row_sums = cosine.sum(axis=1)
-            cosine = cosine / row_sums[:, np.newaxis]
-
-        self.item_cosine_similarities_ = cosine
-        return self
-
-    @property
-    def sim_matrix(self):
-        return self.item_cosine_similarities_
-
-
 class NotItemKNN(SimilarityMatrixAlgorithm):
     """
     TODO: Figure out what this code is actually implementing. It is not cosine similarity
