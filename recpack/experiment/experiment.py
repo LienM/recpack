@@ -1,6 +1,8 @@
 import random
 import os
-import datetime
+import time
+from datetime import timedelta
+from datetime import datetime
 
 import numpy as np
 import scipy.sparse
@@ -169,7 +171,7 @@ class Experiment(IExperiment):
         self.batch_size = _batch_size
 
         self.statistics = dict()
-        self.statistics["start_time"] = datetime.datetime.now().replace(microsecond=0)
+        self.statistics["start_time"] = datetime.now().replace(microsecond=0)
 
         self.output_path = os.path.join(BASE_OUTPUT_DIR, str(self.identifier), str(self.seed))
 
@@ -219,10 +221,10 @@ class Experiment(IExperiment):
         return dict()
 
     def fit(self, X, y=None):
-        start = datetime.datetime.now()
+        start = time.time()
         self.pipeline().fit(X, y, **self.fit_params())
-        end = datetime.datetime.now()
-        self.statistics["train_duration"] = end - start
+        end = time.time()
+        self.statistics["train_duration"] = timedelta(seconds=end - start)
 
     def predict_params(self):
         return dict()
