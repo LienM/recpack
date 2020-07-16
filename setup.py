@@ -19,7 +19,8 @@ setup(
         "torchtest==0.5",
         "tqdm==4.46.0",
         "dataclasses==0.6",
-        "joblib==0.14.1"
+        "joblib==0.14.1",
+        "numba==0.50.1"
     ]
     + ["pytest==5.4.1", "pytest-cov==2.8.1"],
     entry_points={

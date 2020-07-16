@@ -1,7 +1,4 @@
 import recpack.splitters.splitter_base as splitter_base
-from recpack.data_matrix import DataM
-import math
-import pandas as pd
 import pytest
 import numpy as np
 
@@ -200,10 +197,9 @@ def test_fold_iterator_correctness(data_m, batch_size):
 
     for fold_in, fold_out, users in fold_iterator:
         assert fold_in.nnz > 0
-        assert fold_out.nnz > 0
 
-        assert data_m_in.shape == fold_in.shape
-        assert data_m_out.shape == fold_out.shape
+        assert fold_in.shape[0] == len(users)
+        assert fold_out.shape[0] == len(users)
 
 
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
@@ -218,7 +214,7 @@ def test_fold_iterator_completeness(data_m, batch_size):
     for fold_in, fold_out, users in fold_iterator:
         assert (fold_in != fold_out).nnz == 0
 
-        users_in_batch = set(fold_in.nonzero()[0])
+        users_in_batch = set(users)
 
         all_batches = all_batches.union(users_in_batch)
 

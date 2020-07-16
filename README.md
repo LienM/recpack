@@ -15,7 +15,7 @@ Data is expected to be loaded into a pandas df.
 Then helper functions can be used to clean it up and turn it into an internal representation.
 
 ```python
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 import pandas as pd
 
 # Load data from CSV (assumes you have the data stored in the path provided)

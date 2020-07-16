@@ -14,8 +14,8 @@ class Algorithm(BaseEstimator):
 
     @property
     def identifier(self):
-        paramstring = "_".join((f"{k}_{v}" for k, v in self.get_params().items()))
-        return self.name + "__" + paramstring
+        paramstring = ",".join((f"{k}={v}" for k, v in self.get_params().items()))
+        return self.name + "(" + paramstring + ")"
 
     def __str__(self):
         return self.name

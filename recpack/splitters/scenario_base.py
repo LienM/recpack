@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple, Union
 
 import recpack.splitters.splitter_base as splitter_base
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 
 
 class Scenario(ABC):

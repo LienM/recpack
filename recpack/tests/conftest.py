@@ -1,5 +1,5 @@
 
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 import pandas as pd
 import pytest
 import numpy as np
@@ -24,7 +24,7 @@ def data_m():
 
     df = pd.DataFrame.from_dict(input_dict)
     df.drop_duplicates(["userId", "movieId"], inplace=True)
-    data = DataM.create_from_dataframe(df, "movieId", "userId", "timestamp")
+    data = DataM.create_from_dataframe(df, "movieId", "userId", timestamp_ix="timestamp")
     return data
 
 
@@ -40,5 +40,5 @@ def data_m_w_dups():
 
     df = pd.DataFrame.from_dict(input_dict)
     df.drop_duplicates(["userId", "movieId", "timestamp"], inplace=True)
-    data = DataM.create_from_dataframe(df, "movieId", "userId", "timestamp")
+    data = DataM.create_from_dataframe(df, "movieId", "userId", timestamp_ix="timestamp")
     return data

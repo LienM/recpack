@@ -5,7 +5,6 @@ import itertools
 
 from tqdm.auto import tqdm
 
-from recpack.utils.monitor import Monitor
 from recpack.utils import logger
 
 
@@ -18,7 +17,9 @@ def eclat(tidmap, prefix=[], minsup=1, size=3):
 
     progress = None
     if len(prefix) == 0:
-        progress = tqdm(desc='{' + ', '.join(map(str, prefix)) + '}', total=len(tidlist), leave=True)
+        progress = tqdm(
+            desc="{" + ", ".join(map(str, prefix)) + "}", total=len(tidlist), leave=True
+        )
 
     while tidlist:
         if progress:
@@ -38,7 +39,7 @@ def eclat(tidmap, prefix=[], minsup=1, size=3):
 
             suffix[other] = newtids
 
-        new_itemsets = eclat(suffix, prefix + [item], minsup=minsup, size=size-1)
+        new_itemsets = eclat(suffix, prefix + [item], minsup=minsup, size=size - 1)
         output.extend(new_itemsets)
 
     return output
@@ -66,23 +67,21 @@ def process_itemsets(tidmap, itemsets):
 
 
 def calculate_itemsets(X, minsup=2, amount=None):
-    monitor = Monitor("Itemsets")
-
-    monitor.update("tidmap")
+    logger.debug("tidmap")
     tidmap = defaultdict(set)
     rows, cols = X.nonzero()
     for row, col in zip(rows, cols):
         tidmap[col].add(row)
 
-    monitor.update("eclat")
+    logger.debug("eclat")
     itemsets = eclat(tidmap, minsup=minsup, size=3)
 
-    logger.debug("Amount of itemsets:", len(itemsets))
+    logger.debug(f"Amount of itemsets: {len(itemsets)}")
 
-    monitor.update("Calculate influence")
+    logger.debug("Calculate influence")
     itemsets = process_itemsets(tidmap, itemsets)
 
-    monitor.update("Sort and trim")
+    logger.debug("Sort and trim")
     ordered = sorted(itemsets, key=lambda x: x[1], reverse=True)
     trimmed = [i for i, s in ordered]
 

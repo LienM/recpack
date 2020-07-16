@@ -7,7 +7,7 @@ import scipy.sparse
 
 from tqdm.auto import tqdm
 
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 from recpack.utils import logger
 
 
@@ -264,8 +264,8 @@ class FoldIterator:
         self.data_m_in.eliminate_timestamps()
         self.data_m_out.eliminate_timestamps()
 
-        # Make sure that user has data in both history and predicted values
-        self.users = list(set(self.data_m_in.indices[0]).intersection(self.data_m_out.indices[0]))
+        # users need history, but absence of true labels is allowed (some metrics don't require true labels).
+        self.users = list(sorted(set(self.data_m_in.indices[0])))
 
     def __iter__(self):
         self.batch_generator = batch(self.users, self.batch_size)
@@ -273,9 +273,8 @@ class FoldIterator:
 
     def __next__(self):
         user_batch = np.array(next(self.batch_generator))
-
-        fold_in = self.data_m_in.users_in(user_batch).values
-        fold_out = self.data_m_out.users_in(user_batch).values
+        fold_in = self.data_m_in.values[user_batch, :]
+        fold_out = self.data_m_out.values[user_batch, :]
 
         return fold_in, fold_out, user_batch
 

@@ -2,7 +2,7 @@ import enum
 import numpy
 import scipy.sparse
 
-from recpack.metrics.basic_metrics import MetricK
+from recpack.metrics.metric import MetricK
 
 
 class PropensityType(enum.Enum):

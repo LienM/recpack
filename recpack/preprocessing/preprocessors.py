@@ -1,19 +1,22 @@
 from typing import List
 
 import pandas as pd
-import scipy.sparse
+import numpy as np
 
 import recpack.preprocessing.helpers as helpers
-from recpack.data_matrix import DataM
+from recpack.data.data_matrix import DataM
 from recpack.preprocessing.filters import Filter
 from recpack.utils import logger
 
 from tqdm.auto import tqdm
+
 tqdm.pandas()
 
 
 class DataFramePreprocessor:
-    def __init__(self, item_id, user_id, timestamp_id=None, dedupe=False):
+    def __init__(
+        self, item_id, user_id, value_id=None, timestamp_id=None, dedupe=False
+    ):
         """
         Class to preprocess a Pandas Dataframe and turn it into a DataM object.
         All ID mappings are stored, so that processing of multiple DataFrames will lead to consistent mapped identifiers.
@@ -22,15 +25,18 @@ class DataFramePreprocessor:
         :type item_id: str
         :param user_id: Column name of the User ID column
         :type user_id: str
+        :param value_id: Column name of the value column, defaults to None
+        :type value_id: str, optional
         :param timestamp_id: Column name of the timestamp column, defaults to None
         :type timestamp_id: str, optional
         :param dedupe: Deduplicate events, such that (user_id, item_id) pairs are unique, defaults to False
         :type dedupe: bool, optional
         """
-        self.item_id_mapping = {}
-        self.user_id_mapping = {}
+        self.item_id_mapping = dict()
+        self.user_id_mapping = dict()
         self.item_id = item_id
         self.user_id = user_id
+        self.value_id = value_id
         self.timestamp_id = timestamp_id
         self.dedupe = dedupe
         self.filters = []
@@ -52,7 +58,14 @@ class DataFramePreprocessor:
                 "User ID Mapping should be fit before attempting to map users"
             )
 
-        return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
+        user_id_mapping_array = np.arange(0, max(self.user_id_mapping.keys()) + 1)
+        user_id_mapping_array[list(self.user_id_mapping.keys())] = list(
+            self.user_id_mapping.values()
+        )
+        res = user_id_mapping_array[df[self.user_id]]
+        logger.debug("Done")
+        return res
+        # return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def map_items(self, df):
         logger.debug("Map items")
@@ -61,7 +74,14 @@ class DataFramePreprocessor:
                 "Item ID Mapping should be fit before attempting to map items"
             )
 
-        return df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
+        item_id_mapping_array = np.arange(0, max(self.item_id_mapping.keys()) + 1)
+        item_id_mapping_array[list(self.item_id_mapping.keys())] = list(
+            self.item_id_mapping.values()
+        )
+        res = item_id_mapping_array[df[self.item_id]]
+        logger.debug("Done")
+        return res
+        # res2 = df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
 
     @property
     def shape(self):
@@ -77,7 +97,7 @@ class DataFramePreprocessor:
         pass all of them to a single call of process to guarantee
         that their dimensions will match.
 
-        :return: A list of sparse matrices in the order they were passed as arguments. 
+        :return: A list of sparse matrices in the order they were passed as arguments.
         :rtype: List[scipy.sparse.csr_matrix]
         """
         dfs = list(dfs)
@@ -120,6 +140,7 @@ class DataFramePreprocessor:
                 df,
                 cleaned_item_id,
                 cleaned_user_id,
+                self.value_id,
                 self.timestamp_id,
                 shape=self.shape,
             )
