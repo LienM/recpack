@@ -24,7 +24,8 @@ class DataSource(object):
     def load_df(self):
         raise NotImplementedError("Need to override `load_df` or `preprocess`")
 
-    def get_preprocessor(self):
+    @property
+    def preprocessor(self):
         preprocessor = DataFramePreprocessor(
             self.item_id, self.user_id, self.value_id, self.timestamp_id, dedupe=True
         )
@@ -35,12 +36,13 @@ class DataSource(object):
         Return one or two datasets of type DataM
         """
         dfs = to_tuple(self.load_df())
-        preprocessor = self.get_preprocessor()
-        datasets = preprocessor.process(*dfs)
+        datasets = self.preprocessor.process(*dfs)
         return datasets
 
-    def get_item_id_mapping(self):
-        return self.get_preprocessor().item_id_mapping
+    @property
+    def item_id_mapping(self):
+        return self.preprocessor.item_id_mapping
 
-    def get_user_id_mapping(self):
-        return self.get_preprocessor().user_id_mapping
+    @property
+    def user_id_mapping(self):
+        return self.preprocessor.user_id_mapping
