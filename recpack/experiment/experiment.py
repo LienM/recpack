@@ -181,7 +181,6 @@ class Experiment(IExperiment):
     def name(self):
         return self.__class__.__name__
 
-    @functools.lru_cache(maxsize=None)
     def get_params(self):
         params = super().get_params()
         params['_seed'] = self.seed
