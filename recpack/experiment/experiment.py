@@ -137,7 +137,7 @@ class IExperiment(DataSource, IScenario, IEvaluator):
         raise NotImplementedError("Need to override Experiment.iter_predict")
 
     def transform_predictions(self, batch_iterator):
-        raise NotImplementedError("Need to override Experiment.transform_predictions")
+        return batch_iterator
 
     def generate_recommendations(self, y_pred):
         pass
@@ -286,7 +286,7 @@ class Experiment(IExperiment):
         dict_to_csv(self.statistics, self.get_output_file(STATISTICS_FILE))
 
         # save results
-        writer = InteractionsCSVWriter(user_id_mapping=self.get_user_id_mapping(), item_id_mapping=self.get_item_id_mapping())
+        writer = InteractionsCSVWriter(user_id_mapping=self.user_id_mapping, item_id_mapping=self.item_id_mapping)
         writer.sparse_to_csv(hist, self.get_output_file(HISTORY_FILE), values=False)
         writer.sparse_to_csv(y_true, self.get_output_file(Y_TRUE_FILE), values=False)
         writer.sparse_to_csv(y_pred, self.get_output_file(Y_PRED_FILE))
