@@ -120,7 +120,7 @@ class EASE_XY(EASE):
         P = np.linalg.inv(G)
         B_rr = P @ (X.T @ y).todense()
 
-        D = np.diag(np.diag(B_rr) / np.diag(P)[:-1])
+        D = np.diag(np.diag(B_rr) / np.diag(P))
         B = B_rr - P @ D
 
         if self.alpha != 0:
