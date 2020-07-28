@@ -1,8 +1,6 @@
 import numpy as np
 import scipy.sparse
 
-from sklearn.base import TransformerMixin
-
 import logging
 
 logger = logging.getLogger("recpack")
