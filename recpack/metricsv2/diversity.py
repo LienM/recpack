@@ -1,21 +1,18 @@
-from recpack.metricsv2.metric import FittableMetric, ListwiseMetric, MetricK
+from recpack.metricsv2.base import FittedMetric, ListwiseMetric, MetricTopK
 from scipy.spatial import distance
+from scipy.sparse import csr_matrix
 import pandas as pd
 
 
-class IntraListDiversity(FittableMetric, ListwiseMetric):
+class IntraListDiversity(FittedMetric, ListwiseMetric):
     def __init__(self):
-        FittableMetric.__init__(self)
+        FittedMetric.__init__(self)
         ListwiseMetric.__init__(self)
 
         self.X = None
         self.results_per_list = []
 
-    @property
-    def name(self):
-        return "intra_list_diversity"
-    
-    def fit(self, X):
+    def fit(self, X: csr_matrix) -> None:
         """X is an item to feature matrix, with features one hot encoded"""
         self.X = X
 
@@ -37,49 +34,45 @@ class IntraListDiversity(FittableMetric, ListwiseMetric):
         ild = (2 / (len(recommended_items)*(len(recommended_items)-1))) * t_distance
         return ild
 
-    def update(self, X_pred, X_true):
+    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         """ Only looks at the predicted items, does not care about the 'true' items.
         """
-        nonzero_users = list(set(X_pred.nonzero()[0]))
+        nonzero_users = list(set(y_pred.nonzero()[0]))
         
         for u in nonzero_users:
-            recommended_items = list(set(X_pred[u, :].nonzero()[1]))
+            recommended_items = list(set(y_pred[u, :].nonzero()[1]))
             if len(recommended_items) == 0:
                 continue
 
             self.results_per_list.append({"user": u, "diversity": self._get_ild(recommended_items)})
 
     @property
-    def value(self):
+    def value(self) -> float:
         """Returns the average diversity"""
         if len(self.results_per_list) == 0:
             return 0
         return (sum([x["diversity"] for x in self.results_per_list])/ len(self.results_per_list))
     
     @property
-    def results(self):
+    def results(self) -> pd.DataFrame:
         return pd.DataFrame.from_records(self.results_per_list)
 
 
-class IntraListDiversityK(IntraListDiversity, MetricK):
+class IntraListDiversityK(IntraListDiversity, MetricTopK):
     def __init__(self, K):
         IntraListDiversity.__init__(self)
-        MetricK.__init__(self, K)
+        MetricTopK.__init__(self, K)
     
-    @property
-    def name(self):
-        return f"intra_list_diversity_{self.K}"
-    
-    def update(self, X_pred, X_true):
+    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         """ Only looks at the predicted items, does not care about the 'true' items.
         """
         # resolve top K items per user
-        X_pred_top_K = self.get_topK(X_pred)
+        y_pred_top_K = self.get_topK(y_pred)
 
-        nonzero_users = list(set(X_pred_top_K.nonzero()[0]))
+        nonzero_users = list(set(y_pred_top_K.nonzero()[0]))
 
         for u in nonzero_users:
-            recommended_items = list(set(X_pred_top_K[u, :].nonzero()[1]))
+            recommended_items = list(set(y_pred_top_K[u, :].nonzero()[1]))
             if len(recommended_items) == 0:
                 continue
 

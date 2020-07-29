@@ -1,5 +1,5 @@
-from recpack.metricsv2.metric import ElementwiseMetric, ListwiseMetric, MetricK
-
+from recpack.metricsv2.base import ElementwiseMetric, ListwiseMetric, MetricTopK
+from scipy.sparse import csr_matrix
 import numpy as np
 import pandas as pd
 
@@ -14,17 +14,13 @@ class DCG(ElementwiseMetric):
 
         self.discount_template = lambda x: 1.0 / np.log2(x+2) # rank counter starts at 0
 
-    @property
-    def name(self):
-        return "DCG"
-
-    def update(self, X_pred, X_true):
-        nonzero_users = list(set(X_pred.nonzero()[0]))
+    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
+        nonzero_users = list(set(y_true.nonzero()[0]))
 
         for u in nonzero_users:
-            true_items = set(X_true[u, :].nonzero()[1])
-            recommended_items = X_pred[u, :].nonzero()[1]
-            item_scores = X_pred[u, recommended_items].toarray()[0]
+            true_items = set(y_true[u, :].nonzero()[1])
+            recommended_items = y_pred[u, :].nonzero()[1]
+            item_scores = y_pred[u, recommended_items].toarray()[0]
 
             arr_indices = np.argsort(item_scores)
 
@@ -48,24 +44,20 @@ class DCG(ElementwiseMetric):
         return pd.DataFrame.from_records(self.results_per_element)
 
 
-class DCGK(DCG, MetricK):
+class DCGK(DCG, MetricTopK):
     def __init__(self, K):
         DCG.__init__(self)
-        MetricK.__init__(self, K)
+        MetricTopK.__init__(self, K)
 
-    @property
-    def name(self):
-        return f"DCG_{self.K}"
+    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
+        y_pred_top_K = self.get_topK(y_pred)
 
-    def update(self, X_pred, X_true):
-        X_pred_top_K = self.get_topK(X_pred)
-
-        nonzero_users = list(set(X_pred.nonzero()[0]))
+        nonzero_users = list(set(y_true.nonzero()[0]))
 
         for u in nonzero_users:
-            true_items = set(X_true[u, :].nonzero()[1])
-            recommended_items = X_pred_top_K[u, :].nonzero()[1]
-            item_scores = X_pred_top_K[u, recommended_items].toarray()[0]
+            true_items = set(y_true[u, :].nonzero()[1])
+            recommended_items = y_pred_top_K[u, :].nonzero()[1]
+            item_scores = y_pred_top_K[u, recommended_items].toarray()[0]
 
             arr_indices = np.argsort(item_scores)
 
@@ -78,6 +70,7 @@ class DCGK(DCG, MetricK):
                 # TODO: if item not in true items -> do we need to add it to the results?
                 DCG = self.discount_template(rank) * (item in true_items)
                 self.results_per_element.append({"user": u, "item": item, "dcg": DCG, "rank": rank})
+        return
 
 # TODO implement NDCG
 # ? does it start from DCG? 

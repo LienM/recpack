@@ -1,25 +1,21 @@
-import scipy.sparse
+from scipy.sparse import csr_matrix
 import numpy as np
 import pandas as pd
 
-from recpack.metricsv2.metric import ListwiseMetric
+from recpack.metricsv2.base import ListwiseMetric
 
 class RR(ListwiseMetric):
     def __init__(self):
         self.results_per_list = []
 
-    @property
-    def name(self):
-        return "RR"
-
-    def update(self, X_pred: scipy.sparse.csr_matrix, X_true: scipy.sparse.csr_matrix):
+    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         # TODO: optimize this procedure
-        nonzero_users = list(set(X_pred.nonzero()[0]))
+        nonzero_users = list(set(y_pred.nonzero()[0]))
 
         for u in nonzero_users:
-            true_items = set(X_true[u, :].nonzero()[1])
-            recommended_items = X_pred[u, :].nonzero()[1]
-            item_scores = X_pred[u, recommended_items].toarray()[0]
+            true_items = set(y_true[u, :].nonzero()[1])
+            recommended_items = y_pred[u, :].nonzero()[1]
+            item_scores = y_pred[u, recommended_items].toarray()[0]
 
             arr_indices = np.argsort(item_scores)
 
@@ -31,13 +27,14 @@ class RR(ListwiseMetric):
                     break
 
     @property
-    def value(self):
+    def value(self) -> float:
+        # This gives MRR as value
         if len(self.results_per_list) == 0:
             return 0
         return sum([x['rr'] for x in self.results_per_list]) / len(self.results_per_list)
 
     @property
-    def results(self):
+    def results(self) -> pd.DataFrame:
         return pd.DataFrame.from_records(self.results_per_list)
 
 
