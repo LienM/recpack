@@ -74,7 +74,7 @@ class SNIPS(MetricK):
             # Compute the max possible hit score, as the sum of the propensities of recommended items.
             max_possible_hit_score = X_true_as_propensity[user].sum()
 
-            # Compute the user's actual number of interactions to normalise the metric.
+            # Compute the user's actual number of interactions to normalize the metric.
             # And take min with self.K since it will be impossible to hit all of the items if there are more than K
             number_true_interactions = X_true[user].sum()
 

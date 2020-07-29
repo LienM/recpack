@@ -41,7 +41,7 @@ def test_pipeline_ranker():
     scenario.split(data)
 
     algo = recpack.algorithms.algorithm_registry.get('popularity')(K=2)
-    sim_algo = recpack.algorithms.algorithm_registry.get('itemKNN')(K=2, normalise=True)
+    sim_algo = recpack.algorithms.algorithm_registry.get('itemKNN')(K=2, normalize=True)
     ranker = GreedyIntraListDiversifier(sim_algo, K=2, div_rate=0.5)
 
     p = recpack.pipelines.Pipeline([algo], ['NDCG', 'Recall'], [2], ranker=ranker)

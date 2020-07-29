@@ -19,7 +19,7 @@ class MetricRegistry:
     Register metrics here for clean showing later on.
     """
 
-    METRICS = {"NDCG": NDCGK, "Recall": RecallK, "MRR": MeanReciprocalRankK, "Coverage": Coverage}
+    METRICS = {"NDCG": NDCGK, "Recall": RecallK, "MRR": MeanReciprocalRankK}
 
     def __init__(self, algorithms, metric_names, K_values):
         self.registry = defaultdict(dict)

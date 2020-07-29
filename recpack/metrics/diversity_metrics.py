@@ -1,17 +1,24 @@
-from recpack.metrics.basic_metrics import MetricK
+from recpack.metrics.metric import MetricK
 from recpack.algorithms.algorithm_base import Algorithm
 import numpy as np
 import scipy.sparse
+from scipy.spatial import distance
 import logging
 
 class IntraListDistanceK(MetricK):
-    def __init__(self, sim_algo: Algorithm, K):
-        self.sim_algo = sim_algo
+    def __init__(self, K):
+        self.X = None
         self.K = K
-        self.number_of_users = 0
-        self.total_distance = 0
+        self.distances = []
 
-    def _get_idl(self, recommended_items, total_items):
+    def fit(self, X):
+        """X is an item to feature matrix, 1 hot encoded"""
+        self.X = X
+
+    def _get_distance(self, i, j):
+        return distance.jaccard(self.X[i].toarray()[0], self.X[j].toarray()[0])
+
+    def _get_ild(self, recommended_items, total_items):
         # Compute the IDL for this list
         # Sum part: SUM(d(i_k, i_l) for i_k in R and l < k)
         # We will compute this sum by constructing a sparse matrix with a 1 on each of the required i_k, i_l tuples
@@ -19,26 +26,12 @@ class IntraListDistanceK(MetricK):
             # If there are 1 or no items, the intra list distance is 0
             return 0
         coordinates = [(i_k, i_l) for i, i_k in enumerate(recommended_items) for i_l in recommended_items[:i]]
-        to_recommend = scipy.sparse.csr_matrix(
-            (
-                np.ones(len(recommended_items)), 
-                (recommended_items, recommended_items)
-            ),
-            shape=(total_items, total_items)
-        )
-        logging.debug("coordinates")
-        logging.debug(coordinates)
-        logging.debug("shape")
-        logging.debug(to_recommend.shape)
-        # predict gives similarities between 0 and 1 (this is a requirement), distances are computed using 1-sim
-        mask = scipy.sparse.csr_matrix((np.ones(len(coordinates)), list(zip(*coordinates))), shape=to_recommend.shape)
-        
-        similarities = self.sim_algo.predict(to_recommend).multiply(mask)
-        t_distance = (mask - similarities).sum()
+        distances = [self._get_distance(i, j) for i,j in coordinates]
 
-        idl = 2 / (len(recommended_items)*(len(recommended_items)-1)) * t_distance
-        return idl
+        t_distance = sum(distances)
 
+        ild = (2 / (len(recommended_items)*(len(recommended_items)-1))) * t_distance
+        return ild
 
     def update(self, X_pred, X_true):
         """ Only looks at the predicted items, does not care about the 'true' items.
@@ -56,11 +49,10 @@ class IntraListDistanceK(MetricK):
             if len(recommended_items) == 0:
                 continue
 
-            self.total_distance += self._get_idl(recommended_items, X_pred.shape[1])
-            self.number_of_users += 1
+            self.distances.append(self._get_ild(recommended_items, X_pred.shape[1]))
 
     @property
     def value(self):
-        if self.number_of_users == 0:
+        if len(self.distances) == 0:
             return 0
-        return self.total_distance/self.number_of_users
+        return sum(self.distances) / len(self.distances)

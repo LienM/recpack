@@ -3,6 +3,8 @@ import scipy.sparse
 
 import logging
 
+from recpack.data.data_matrix import DataM
+
 logger = logging.getLogger("recpack")
 
 
@@ -10,30 +12,51 @@ class Metric:
     def __init__(self):
         super().__init__()
 
-    @property
-    def name(self):
-        return ""
-
-    def fit(self, X, y=None):
-        """ X are predictions, y ground truth """
-        return self
-
-    def transform(self, X):
-        """ X are predictions """
-        raise NotImplementedError()
-
-
-class MetricK(Metric):
-    def __init__(self, K):
-        super().__init__()
-        self.K = K
-
     def __str__(self):
         return self.name
 
     @property
     def name(self):
-        return self.__class__.__name__ + "_" + str(self.K)
+        return ""
+
+    def update(self, X_pred: scipy.sparse.csr_matrix, X_true:scipy.sparse.csr_matrix):
+        """ X are predictions """
+        raise NotImplementedError()
+
+    @property
+    def value(self):
+        """Returns the aggregated metric over all samples"""
+        raise NotImplementedError()
+
+
+class GlobalMetric(Metric):
+    """Metric which produces a single value for all samples combined."""
+    pass
+
+class ListwiseMetric(Metric):
+    @property
+    def results(self):
+        """Returns a dataframe with the results of the metrics per list, to analyse the results in further detail."""
+        # TODO: 1 standard results generation? or per metric?
+        pass
+
+class ElementwiseMetric(Metric):
+    @property
+    def results(self):
+        """Returns a dataframe with the results of the metrics per element, to analyse the results in further detail."""
+        # TODO: 1 standard results generation? or per metric?
+        pass
+
+
+class MetricK(Metric):
+    """Adds the option to cuttoff the recommendations to a topK"""
+    def __init__(self, K):
+        super().__init__()
+        self.K = K
+
+    @property
+    def name(self):
+        return super().name + "_" + str(self.K)
 
     def get_topK(self, X_pred: scipy.sparse.csr_matrix) -> scipy.sparse.csr_matrix:
         # Get nonzero users
@@ -55,12 +78,12 @@ class MetricK(Metric):
 
         return X_pred_top_K
 
-    def fit(self, X, y=None):
-        self.y = y
-        return self
+class FittableMetric(Metric):
+    """Adds a fit method to the metrics, so they can capture information about the events / metadata"""
 
-    def transform(self, X):
-        raise NotImplementedError()
+    def fit(self, X: [DataM, scipy.sparse.csr_matrix]):
+        """Fit some information of the metric on the data"""
+        pass
 
 """
 Highest-level

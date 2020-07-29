@@ -4,9 +4,7 @@ import pandas
 
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
 from recpack.preprocessing.filters import MinItemsPerUser, MinUsersPerItem
-from recpack.utils import get_logger
-
-logger = get_logger()
+from recpack.utils import logger
 
 class InputLoader:
     def load(self):
