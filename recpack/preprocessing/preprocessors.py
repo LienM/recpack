@@ -57,14 +57,6 @@ class DataFramePreprocessor:
             raise RuntimeError(
                 "User ID Mapping should be fit before attempting to map users"
             )
-        # if type(self.user_id_mapping.keys()[0]) == int:
-        #     user_id_mapping_array = np.arange(0, max(self.user_id_mapping.keys()) + 1)
-        #     user_id_mapping_array[list(self.user_id_mapping.keys())] = list(
-        #         self.user_id_mapping.values()
-        #     )
-        #     res = user_id_mapping_array[df[self.user_id]]
-        #     logger.debug("Done")
-        #     return res
         return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def map_items(self, df):
@@ -73,14 +65,6 @@ class DataFramePreprocessor:
             raise RuntimeError(
                 "Item ID Mapping should be fit before attempting to map items"
             )
-        # if type(self.item_id_mapping.keys()[0]) == int:
-        #     item_id_mapping_array = np.arange(0, max(self.item_id_mapping.keys()) + 1)
-        #     item_id_mapping_array[list(self.item_id_mapping.keys())] = list(
-        #         self.item_id_mapping.values()
-        #     )
-        #     res = item_id_mapping_array[df[self.item_id]]
-        #     logger.debug("Done")
-        #     return res
         return df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
 
     @property
