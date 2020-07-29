@@ -14,7 +14,7 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item.
         
-        If normalize is True, the scores are divided by the max score.
+        If normalize is True, the scores are normalized per item.
         """
         super().__init__()
         self.K = K
