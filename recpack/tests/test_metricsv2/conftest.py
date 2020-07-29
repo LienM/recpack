@@ -54,3 +54,17 @@ def X_true_simplified():
     )
 
     return true_data
+
+
+@pytest.fixture(scope="function")
+def item_features():
+    items, features = [0, 1, 2, 3, 4], [0, 1, 0, 1, 0]
+
+    feature_mat = scipy.sparse.csr_matrix(
+        (
+            [1 for i in range(len(items))], 
+            (items, features)
+        ),
+        shape=(5, 2)
+    )
+    return feature_mat
