@@ -1,81 +1,55 @@
-from recpack.metricsv2.base import ElementwiseMetric, ListwiseMetric, MetricTopK
+import logging
+
+import scipy.sparse
 from scipy.sparse import csr_matrix
 import numpy as np
 import pandas as pd
 
-from recpack.utils import logger
 
-# TODO optimizations
-# TODO: results in a matrix rather than a list with dict?
+from recpack.metricsv2.base import ElementwiseMetric, ListwiseMetric, MetricTopK
+from recpack.metricsv2.util import sparse_divide_nonzero
 
-class DCG(ElementwiseMetric):
-    def __init__(self):
-        self.results_per_element = []
 
-        self.discount_template = lambda x: 1.0 / np.log2(x+2) # rank counter starts at 0
+logger = logging.getLogger("recpack")
+
+
+class DCGK(ElementwiseMetric, MetricTopK):
+    def __init__(self, K):
+        MetricTopK.__init__(self, K)
+
+        self.discount_template = 1.0 / np.log2(np.arange(2, K + 2))
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        nonzero_users = list(set(y_true.nonzero()[0]))
+        self.verify_shape(y_true, y_pred)
 
-        for u in nonzero_users:
-            true_items = set(y_true[u, :].nonzero()[1])
-            recommended_items = y_pred[u, :].nonzero()[1]
-            item_scores = y_pred[u, recommended_items].toarray()[0]
+        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
 
-            arr_indices = np.argsort(item_scores)
+        y_pred_top_K = self.get_top_K_ranks(y_pred)
 
-            M = len(true_items)
+        denominator = y_pred_top_K.multiply(y_true)
+        denominator.data = np.log2(denominator.data + 1)
+        # Binary relevance
+        numerator = y_true
 
-            if M == 0:
-                continue
-            
-            for rank, item in enumerate(reversed(recommended_items[arr_indices])):
-                # TODO: if item not in true items -> do we need to add it to the results?
-                DCG = self.discount_template(rank) * (item in true_items)
-                self.results_per_element.append({"user": u, "item": item, "dcg": DCG, "rank": rank})
+        dcg = sparse_divide_nonzero(numerator, denominator)
 
-    @property
-    def value(self):
-        # return average summed 
-        return self.results.groupby("user").sum().dcg.mean()
+        self.dcg_ = dcg
+
+        self._value = self.dcg_.sum(axis=1).mean()
+
+        return
 
     @property
     def results(self):
-        return pd.DataFrame.from_records(self.results_per_element)
+        # TODO Create dataframe with explicit zeros
+        hits = pd.DataFrame(dict(zip(self.col_names, scipy.sparse.find(self.scores_))))
 
-
-class DCGK(DCG, MetricTopK):
-    def __init__(self, K):
-        DCG.__init__(self)
-        MetricTopK.__init__(self, K)
-
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        y_pred_top_K = self.get_topK(y_pred)
-
-        nonzero_users = list(set(y_true.nonzero()[0]))
-
-        for u in nonzero_users:
-            true_items = set(y_true[u, :].nonzero()[1])
-            recommended_items = y_pred_top_K[u, :].nonzero()[1]
-            item_scores = y_pred_top_K[u, recommended_items].toarray()[0]
-
-            arr_indices = np.argsort(item_scores)
-
-            M = min(self.K, len(true_items))
-
-            if M == 0:
-                continue
-            
-            for rank, item in enumerate(reversed(recommended_items[arr_indices])):
-                # TODO: if item not in true items -> do we need to add it to the results?
-                DCG = self.discount_template(rank) * (item in true_items)
-                self.results_per_element.append({"user": u, "item": item, "dcg": DCG, "rank": rank})
-        return
+        return hits
 
 # TODO implement NDCG
-# ? does it start from DCG? 
+# ? does it start from DCG?
 #   -> Problem is that it is then both an elementwise and a listwise metric
-# Maybe give it a DCG member? and then IDCG template func, 
+# Maybe give it a DCG member? and then IDCG template func,
 # so that we can get the results and normalize them?
 # At that point it's almost easier to just implement it.
 class NDCG(ListwiseMetric):

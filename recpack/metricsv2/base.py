@@ -20,6 +20,8 @@ class Metric:
         self._num_items = 0
         self._value = 0
 
+        self.col_names = ["user_id", "item_id", "score"]
+
     @property
     def name(self):
         return str(self.__class__).lower()
@@ -52,6 +54,17 @@ class Metric:
         return self._num_users
 
     def verify_shape(self, y_true: csr_matrix, y_pred: csr_matrix) -> bool:
+        """
+        Make sure the dimensions of y_true and y_pred match.
+
+        :param y_true: True user-item interactions.
+        :type y_true: csr_matrix
+        :param y_pred: Predicted affinity of users for items.
+        :type y_pred: csr_matrix
+        :raises AssertionError: Shape mismatch between y_true and y_pred.
+        :return: True if dimensions match.
+        :rtype: bool
+        """
         check = y_true.shape == y_pred.shape
 
         if not check:
@@ -62,11 +75,22 @@ class Metric:
             # TODO Maybe this should be a separate method?
             self._num_users, self._num_items = y_true.shape
 
-        return True
+        return check
 
     def eliminate_empty_users(
         self, y_true: csr_matrix, y_pred: csr_matrix
     ) -> Tuple[csr_matrix, csr_matrix]:
+        """
+        Eliminate users that have no interactions, so
+        no prediction could ever be right.
+
+        :param y_true: True user-item interactions.
+        :type y_true: csr_matrix
+        :param y_pred: Predicted affinity of users for items.
+        :type y_pred: csr_matrix
+        :return: (y_true, y_pred), with zero users eliminated.
+        :rtype: Tuple[csr_matrix, csr_matrix]
+        """
         nonzero_users = list(set(y_true.nonzero()[0]))
 
         return y_true[nonzero_users, :], y_pred[nonzero_users, :]
@@ -119,8 +143,15 @@ class MetricTopK(Metric):
     def name(self):
         return f"{super().name}_{self.K}"
 
-    def get_top_K(self, y_pred):
-        """Return index of top n values in each row of a sparse matrix"""
+    def get_top_K_ranks(self, y_pred: csr_matrix) -> csr_matrix:
+        """
+        Return csr_matrix of top K item ranks for every user.
+
+        :param y_pred: Predicted affinity of users for items.
+        :type y_pred: csr_matrix
+        :return: Sparse matrix containing ranks of top K predictions.
+        :rtype: csr_matrix
+        """
         U, I, V = [], [], []
         # top_n_idx = []
         for row_ix, (le, ri) in enumerate(zip(y_pred.indptr[:-1], y_pred.indptr[1:])):

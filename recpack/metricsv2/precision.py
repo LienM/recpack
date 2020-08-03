@@ -12,7 +12,7 @@ from recpack.metricsv2.util import sparse_divide_nonzero
 logger = logging.getLogger("recpack")
 
 
-class RecallK(ElementwiseMetric, MetricTopK):
+class PrecisionK(ElementwiseMetric, MetricTopK):
     def __init__(self, K):
         ElementwiseMetric.__init__(self)
         MetricTopK.__init__(self, K)
@@ -32,7 +32,7 @@ class RecallK(ElementwiseMetric, MetricTopK):
 
         scores = scores.tocsr()
 
-        self.scores_ = sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1)))
+        self.scores_ = scores / self.K
         # self.scores_ = scores.tocsr()
 
         print(self.scores_.toarray())
@@ -44,6 +44,6 @@ class RecallK(ElementwiseMetric, MetricTopK):
     @property
     def results(self) -> pd.DataFrame:
         # TODO Create dataframe with explicit zeros
-        recall = pd.DataFrame(dict(zip(self.col_names, scipy.sparse.find(self.scores_))))
+        precision = pd.DataFrame(dict(zip(self.col_names, scipy.sparse.find(self.scores_))))
 
-        return recall
+        return precision
