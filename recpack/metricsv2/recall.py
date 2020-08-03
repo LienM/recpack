@@ -33,9 +33,6 @@ class RecallK(ElementwiseMetric, MetricTopK):
         scores = scores.tocsr()
 
         self.scores_ = sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1)))
-        # self.scores_ = scores.tocsr()
-
-        print(self.scores_.toarray())
 
         self._value = self.scores_.sum(axis=1).mean()
 

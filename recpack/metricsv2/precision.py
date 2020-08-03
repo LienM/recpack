@@ -33,9 +33,6 @@ class PrecisionK(ElementwiseMetric, MetricTopK):
         scores = scores.tocsr()
 
         self.scores_ = scores / self.K
-        # self.scores_ = scores.tocsr()
-
-        print(self.scores_.toarray())
 
         self._value = self.scores_.sum(axis=1).mean()
 
