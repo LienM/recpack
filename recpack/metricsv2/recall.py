@@ -1,63 +1,46 @@
-from recpack.metricsv2.base import ListwiseMetric, MetricTopK
+import logging
+
 import numpy as np
 import pandas as pd
+import scipy.sparse
 from scipy.sparse import csr_matrix
-from recpack.utils import logger
-# TODO: optimisations
 
-class Recall(ListwiseMetric):
-    def __init__(self):
-        ListwiseMetric.__init__(self)
+from recpack.metricsv2.base import ElementwiseMetric, MetricTopK
 
-        self.results_per_list = []
+
+logger = logging.getLogger("recpack")
+
+
+class RecallK(ElementwiseMetric, MetricTopK):
+    def __init__(self, K):
+        ElementwiseMetric.__init__(self)
+        MetricTopK.__init__(self, K)
+
+        self.col_names = ["user_id", "item_id", "score"]
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
 
-        nonzero_users = list(set(y_pred.nonzero()[0]))
+        self.verify_shape(y_true, y_pred)
 
-        for u in nonzero_users:
-            recommended_items = set(y_pred[u, :].nonzero()[1])
-            true_items = set(y_true[u, :].nonzero()[1])
+        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
 
-            self.results_per_list.append({"user": u, "recall": 0})
-            self.results_per_list[-1]["recall"] = len(recommended_items.intersection(true_items)) / len(true_items)
+        y_pred_top_K = self.get_top_K(y_pred)
 
-        logger.debug(f"Metric {self.name} updated")
+        scores = scipy.sparse.lil_matrix(y_pred.shape)
+
+        # Elementwise multiplication of top K predicts and true interactions
+        scores[y_pred_top_K.multiply(y_true).astype(np.bool)] = 1
+        self.scores_ = scores.tocsr()
+
+        self.y_true_ = y_true
+
+        self._value = (self.scores.sum(axis=1) / self.K).mean()
 
         return
-
-    @property
-    def value(self) -> float:
-        if len(self.results_per_list) == 0:
-            return 0
-        return sum([x['recall'] for x in self.results_per_list]) / len(self.results_per_list)
 
     @property
     def results(self) -> pd.DataFrame:
-        return pd.DataFrame.from_records(self.results_per_list)
+        # TODO Create dataframe with explicit zeros
+        hits = pd.DataFrame(dict(zip(self.col_names, scipy.sparse.find(self.scores_))))
 
-
-class RecallK(Recall, MetricTopK):
-    def __init__(self, K):
-        Recall.__init__(self)
-        MetricTopK.__init__(self, K)
-
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        # resolve top K items per user
-        # Get indices of top K items per user
-
-        # Per user get a set of the topK predicted items
-        y_pred_top_K = self.get_topK(y_pred)
-
-        nonzero_users = list(set(y_pred.nonzero()[0]))
-
-        for u in nonzero_users:
-            recommended_items = set(y_pred_top_K[u, :].nonzero()[1])
-            true_items = set(y_true[u, :].nonzero()[1])
-
-            self.results_per_list.append({"user": u, "recall": 0})
-            self.results_per_list[-1]["recall"] =\
-                len(recommended_items.intersection(true_items)) / min(self.K, len(true_items))
-
-        logger.debug(f"Metric {self.name} updated")
-        return
+        return hits

@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 from scipy.sparse import csr_matrix
 import pandas as pd
@@ -12,7 +14,6 @@ logger = logging.getLogger("recpack")
 
 
 class Metric:
-
     def __init__(self):
         super().__init__()
         self._num_users = 0
@@ -54,12 +55,21 @@ class Metric:
         check = y_true.shape == y_pred.shape
 
         if not check:
-            raise AssertionError(f"Shape mismatch between y_true: {y_true.shape} and y_pred: {y_pred.shape}")
+            raise AssertionError(
+                f"Shape mismatch between y_true: {y_true.shape} and y_pred: {y_pred.shape}"
+            )
         else:
             # TODO Maybe this should be a separate method?
             self._num_users, self._num_items = y_true.shape
 
         return True
+
+    def eliminate_empty_users(
+        self, y_true: csr_matrix, y_pred: csr_matrix
+    ) -> Tuple[csr_matrix, csr_matrix]:
+        nonzero_users = list(set(y_true.nonzero()[0]))
+
+        return y_true[nonzero_users, :], y_pred[nonzero_users, :]
 
 
 class ElementwiseMetric(Metric):
@@ -69,6 +79,7 @@ class ElementwiseMetric(Metric):
 
     Examples are: DCG, HR
     """
+
     pass
 
 
@@ -79,6 +90,7 @@ class ListwiseMetric(Metric):
 
     Examples are: Diversity, nDCG, RR, Recall
     """
+
     pass
 
 
@@ -89,6 +101,7 @@ class GlobalMetric(Metric):
 
     Examples are: Coverage.
     """
+
     pass
 
 
@@ -96,7 +109,8 @@ class MetricTopK(Metric):
     """
     Base class for any metric computed on the TopK items for a user.
     """
-    #TODO Verify if this should be a Mixin
+
+    # TODO Verify if this should be a Mixin
     def __init__(self, K):
         super().__init__()
         self.K = K
@@ -105,23 +119,22 @@ class MetricTopK(Metric):
     def name(self):
         return f"{super().name}_{self.K}"
 
-    def get_topK(self, y_pred: csr_matrix) -> csr_matrix:
-        # Get nonzero users
-        nonzero_users = sorted(list(set(y_pred.nonzero()[0])))
-        X = y_pred[nonzero_users, :].toarray()
-
-        items = np.argpartition(X, -self.K)[:, -self.K :]
-
+    def get_top_K(self, y_pred):
+        """Return index of top n values in each row of a sparse matrix"""
         U, I, V = [], [], []
+        # top_n_idx = []
+        for row_ix, (le, ri) in enumerate(zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
+            K_row_pick = min(self.K, ri - le)
+            top_k_row = y_pred.indices[
+                le + np.argpartition(y_pred.data[le:ri], -K_row_pick)[-K_row_pick:]
+            ]
 
-        for ix, user in enumerate(nonzero_users):
-            U.extend([user] * self.K)
-            I.extend(items[ix])
-            V.extend(X[ix, items[ix]])
+            for rank, col_ix in enumerate(reversed(top_k_row)):
+                U.append(row_ix)
+                I.append(col_ix)
+                V.append(rank + 1)
 
-        y_pred_top_K = csr_matrix((V, (U, I)), dtype=y_pred.dtype, shape=y_pred.shape)
-
-        return y_pred_top_K
+        return csr_matrix((V, (U, I)), shape=y_pred.shape)
 
 
 class FittedMetric(Metric, BaseEstimator):
