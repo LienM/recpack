@@ -6,13 +6,11 @@ from sklearn.utils.validation import check_is_fitted
 
 
 class UserItemInteractionsAlgorithm(Algorithm):
-
-    def fit(self, X: scipy.sparse.csr_matrix, y: scipy.sparse.csr_matrix=None):
+    def fit(self, X: scipy.sparse.csr_matrix, y: scipy.sparse.csr_matrix = None):
         pass
 
 
 class SimilarityMatrixAlgorithm(UserItemInteractionsAlgorithm):
-
     @property
     def sim_matrix(self):
         raise NotImplementedError()

@@ -1,8 +1,6 @@
 import numpy
-import pytest
-import scipy.sparse
 
-from recpack.metricsv2.recall import RecallK
+from recpack.metrics.recall import RecallK
 
 
 def test_recallK(X_pred, X_true):

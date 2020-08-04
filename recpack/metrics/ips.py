@@ -1,9 +1,9 @@
-from recpack.metricsv2.base import Metric, MetricTopK, FittedMetric, ElementwiseMetric
-from recpack.algorithms.helpers import get_topK
+from recpack.metrics.base import FittedMetric, ElementwiseMetricK
 import pandas as pd
 import scipy.sparse
 from scipy.sparse import csr_matrix
 import numpy as np
+
 
 def compute_hits(y_true, y_pred):
     # Compute hits matrix:
@@ -13,9 +13,8 @@ def compute_hits(y_true, y_pred):
 
     return hits
 
-class IPSMetric(FittedMetric):
 
-    
+class IPSMetric(FittedMetric):
 
     """IPS metrics are a class of metrics, where the user interaction probability is taken into account.
 
@@ -25,7 +24,7 @@ class IPSMetric(FittedMetric):
     """
 
     def __init__(self, ip_cap=10000):
-        FittedMetric.__init__(self)
+        super().__init__()
         self.item_prob_ = None
         self.ip_cap = ip_cap
 
@@ -50,20 +49,18 @@ class IPSMetric(FittedMetric):
         self.inverse_propensities[self.inverse_propensities > self.ip_cap] = self.ip_cap
 
 
-class IPSHitRateK(IPSMetric, ElementwiseMetric, MetricTopK):
-    """Computes a weighted hits per user metric.
-    
+class IPSHitRateK(ElementwiseMetricK, IPSMetric):
+    """
+    Computes a weighted hits per user metric.
+
     Each hit is weighted with the item's inverse propensity.
     The value is aggregated by summing per user, and taking the average
     """
+
     def __init__(self, K):
-        MetricTopK.__init__(self, K)
-        IPSMetric.__init__(self)
-        ElementwiseMetric.__init__(self)
-        
+        super().__init__(K)
         self.weighted_hits = None
-        self.col_names = ["user_id", "item_id", "score"]
-    
+
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         assert self.item_prob_ is not None
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
@@ -73,37 +70,39 @@ class IPSHitRateK(IPSMetric, ElementwiseMetric, MetricTopK):
         y_pred_top_K = self.get_top_K_ranks(y_pred)
 
         hits = compute_hits(y_true, y_pred_top_K)
-        
+
         self.weighted_hits = hits.multiply(self.inverse_propensities)
 
-        self._value = self.weighted_hits.sum() / (self.num_users)
+        self.value_ = self.weighted_hits.sum() / (self.num_users)
 
     @property
     def results(self) -> pd.DataFrame:
-        return pd.DataFrame(dict(zip(self.col_names, scipy.sparse.find(self.weighted_hits))))
+        return pd.DataFrame(
+            dict(zip(self.col_names, scipy.sparse.find(self.weighted_hits)))
+        )
 
 
 class SNIPSHitRateK(IPSHitRateK):
-    """Self Normalizing IPS hit rate.
-    
+    """
+    Self Normalizing IPS hit rate.
+
     each weight per item is normalised by the maximal possible score for the user.
 
-    The reason this is done, 
+    The reason this is done,
     is that the IPS metric can create a bias towards infrequently shown items,
     by normalizing this bias can be removed.
     """
+
     def __init__(self, K):
         super().__init__(K)
-    
+
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         assert self.item_prob_ is not None
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
         self.verify_shape(y_true, y_pred)
-        
 
         # Per user get a set of the topK predicted items
         y_pred_top_K = self.get_top_K_ranks(y_pred)
-
 
         hits = compute_hits(y_true, y_pred_top_K)
 
@@ -117,12 +116,14 @@ class SNIPSHitRateK(IPSHitRateK):
 
         m = max_prop_possible.sum(axis=1)
 
-        # We can safely take the inverse, 
+        # We can safely take the inverse,
         # because none of the hits should ever have propensity 0 if properly computed
-        self.weighted_hits = hits.multiply(self.inverse_propensities).multiply(1/m)
+        self.weighted_hits = hits.multiply(self.inverse_propensities).multiply(1 / m)
 
-        self._value = self.weighted_hits.sum() / (self.num_users)
+        self.value_ = self.weighted_hits.sum() / (self.num_users)
 
     @property
     def results(self) -> pd.DataFrame:
-        return pd.DataFrame(dict(zip(self.col_names, scipy.sparse.find(self.weighted_hits))))
+        return pd.DataFrame(
+            dict(zip(self.col_names, scipy.sparse.find(self.weighted_hits)))
+        )

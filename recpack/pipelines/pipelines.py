@@ -1,17 +1,18 @@
+import logging
 from collections import defaultdict
 from typing import Tuple, Union
 
 import scipy.sparse
-
 from tqdm.auto import tqdm
 
 from recpack.metrics.recall import RecallK
-from recpack.metrics.mrr import MeanReciprocalRankK
-from recpack.metrics.ndcg import NDCGK
-from recpack.utils import logger
+from recpack.metrics.reciprocal_rank import RRK
+from recpack.metrics.dcg import NDCGK
 from recpack.data.data_matrix import DataM
-import recpack.experiment as experiment
 from recpack.splitters.splitter_base import FoldIterator
+
+
+logger = logging.getLogger("recpack")
 
 
 class MetricRegistry:
@@ -19,7 +20,7 @@ class MetricRegistry:
     Register metrics here for clean showing later on.
     """
 
-    METRICS = {"NDCG": NDCGK, "Recall": RecallK, "MRR": MeanReciprocalRankK}
+    METRICS = {"NDCG": NDCGK, "Recall": RecallK, "MRR": RRK}
 
     def __init__(self, algorithms, metric_names, K_values):
         self.registry = defaultdict(dict)
@@ -130,24 +131,21 @@ class Pipeline(object):
             else:
                 algo.fit(X)
 
-    def eval(self, data_in, data_out, batch_size):
-        for _in, _out, user_ids in tqdm(FoldIterator(data_in, data_out, batch_size=batch_size)):
-            logger.debug(f"start evaluation batch")
-            for algo in self.algorithms:
-                metrics = self.metric_registry[algo.identifier]
+    def eval(self, data_m_in, data_m_out, batch_size):
 
-                logger.debug(f"predicting batch with algo {algo.identifier}")
-                X_pred = algo.predict(_in, user_ids=user_ids)
+        for algo in self.algorithms:
+            metrics = self.metric_registry[algo.identifier]
 
-                if not scipy.sparse.issparse(X_pred):
-                    X_pred = scipy.sparse.csr_matrix(X_pred)
+            X_pred = data_m_in.values
+            y_pred = algo.predict(X_pred)
 
-                logger.debug(f"finished predicting batch with algo {algo.identifier}")
+            if not scipy.sparse.issparse(y_pred):
+                y_pred = scipy.sparse.csr_matrix(y_pred)
 
-                for metric in metrics.values():
-                    metric.update(X_pred, _out)
+            y_true = data_m_out.binary_values
 
-            logger.debug(f"end evaluation batch")
+            for metric in metrics.values():
+                metric.calculate(y_true, y_pred)
 
     def get(self):
         return self.metric_registry.metrics
