@@ -59,7 +59,6 @@ class IPSHitRateK(ElementwiseMetricK, IPSMetric):
 
     def __init__(self, K):
         super().__init__(K)
-        self.weighted_hits = None
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         assert self.item_prob_ is not None
@@ -71,15 +70,9 @@ class IPSHitRateK(ElementwiseMetricK, IPSMetric):
 
         hits = compute_hits(y_true, y_pred_top_K)
 
-        self.weighted_hits = hits.multiply(self.inverse_propensities)
+        self.scores_ = hits.multiply(self.inverse_propensities)
 
-        self.value_ = self.weighted_hits.sum() / (self.num_users)
-
-    @property
-    def results(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            dict(zip(self.col_names, scipy.sparse.find(self.weighted_hits)))
-        )
+        self.value_ = self.scores_.sum() / (self.num_users)
 
 
 class SNIPSHitRateK(IPSHitRateK):
@@ -118,12 +111,6 @@ class SNIPSHitRateK(IPSHitRateK):
 
         # We can safely take the inverse,
         # because none of the hits should ever have propensity 0 if properly computed
-        self.weighted_hits = hits.multiply(self.inverse_propensities).multiply(1 / m)
+        self.scores_ = hits.multiply(self.inverse_propensities).multiply(1 / m)
 
-        self.value_ = self.weighted_hits.sum() / (self.num_users)
-
-    @property
-    def results(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            dict(zip(self.col_names, scipy.sparse.find(self.weighted_hits)))
-        )
+        self.value_ = self.scores_.sum() / (self.num_users)
