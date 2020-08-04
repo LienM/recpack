@@ -9,7 +9,7 @@ setup(
     install_requires=[
         "click==7.1.1",
         "numpy==1.18.2",
-        "scipy==1.4.1",
+        "scipy==1.5.2",
         "scikit-learn==0.22.2.post1",
         "pandas==1.0.3",
         "PyYAML==5.3.1",
