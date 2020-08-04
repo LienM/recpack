@@ -153,7 +153,6 @@ class MetricTopK(Metric):
         :rtype: csr_matrix
         """
         U, I, V = [], [], []
-        # top_n_idx = []
         for row_ix, (le, ri) in enumerate(zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
             K_row_pick = min(self.K, ri - le)
             top_k_row = y_pred.indices[
