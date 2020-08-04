@@ -1,5 +1,5 @@
 import scipy.sparse
-
+import numpy as np
 import pytest
 
 
@@ -55,6 +55,10 @@ def X_true_simplified():
 
     return true_data
 
+@pytest.fixture(scope="function")
+def X_lots_of_items():
+    true_data = scipy.sparse.diags(np.ones(100_000))
+    return true_data
 
 @pytest.fixture(scope="function")
 def item_features():
