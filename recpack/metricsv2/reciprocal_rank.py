@@ -1,41 +1,34 @@
+import scipy.sparse
 from scipy.sparse import csr_matrix
 import numpy as np
 import pandas as pd
 
-from recpack.metricsv2.base import ListwiseMetric
+from recpack.metricsv2.base import ListwiseMetric, MetricTopK
+from recpack.metricsv2.util import sparse_inverse_nonzero
+class RRK(ListwiseMetric, MetricTopK):
+    def __init__(self, K):
+        MetricTopK.__init__(self, K)
 
-class RR(ListwiseMetric):
-    def __init__(self):
-        self.results_per_list = []
+        self.col_names = ["user", "score"]
+        self.rr = None
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        # TODO: optimize this procedure
-        nonzero_users = list(set(y_pred.nonzero()[0]))
+        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
+        self.verify_shape(y_true, y_pred)
 
-        for u in nonzero_users:
-            true_items = set(y_true[u, :].nonzero()[1])
-            recommended_items = y_pred[u, :].nonzero()[1]
-            item_scores = y_pred[u, recommended_items].toarray()[0]
+        # resolve top K items per user
+        y_pred_top_K = self.get_top_K_ranks(y_pred)
 
-            arr_indices = np.argsort(item_scores)
-
-            self.results_per_list.append({"user": u, "rr": 0})
-            for ix, item in enumerate(reversed(recommended_items[arr_indices])):
-                if item in true_items:
-                    # Update the last entry in the results per list
-                    self.results_per_list[-1]["rr"] = 1 / (ix + 1)
-                    break
-
-    @property
-    def value(self) -> float:
-        # This gives MRR as value
-        if len(self.results_per_list) == 0:
-            return 0
-        return sum([x['rr'] for x in self.results_per_list]) / len(self.results_per_list)
+        # compute hits
+        hits = y_pred_top_K.multiply(y_true)
+        # Invert hit ranks
+        inverse_ranks = sparse_inverse_nonzero(hits)
+        # per user compute the max inverted rank of a hit
+        self.scores_ = inverse_ranks.max(axis=1)
+        
+        # MRR
+        self._value = self.scores_.mean()
 
     @property
     def results(self) -> pd.DataFrame:
-        return pd.DataFrame.from_records(self.results_per_list)
-
-
-# TODO: does a RR@K make sense?
+        return pd.DataFrame(dict(zip(self.col_names, scipy.sparse.find(self.scores_))))

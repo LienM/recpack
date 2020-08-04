@@ -15,6 +15,7 @@ class Coverage(GlobalMetric, FittedMetric):
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         # add all nonzero items are covered in this prediction
         self.covered_items = self.covered_items.union(set(y_pred.nonzero()[1]))
+
         return
 
     @property
@@ -29,7 +30,7 @@ class CoverageK(Coverage, MetricTopK):
         MetricTopK.__init__(self, K)
     
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        top_k = self.get_topK(y_pred)
+        top_k = self.get_top_K_ranks(y_pred)
         # add all nonzero items are covered in this prediction
         self.covered_items = self.covered_items.union(set(top_k.nonzero()[1]))
         return
