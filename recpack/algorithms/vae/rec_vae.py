@@ -15,7 +15,7 @@ from copy import deepcopy
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.splitters.splitter_base import batch
-from recpack.algorithms.vae.base import VAE
+from recpack.algorithms.vae.base import VAE, VAETorch
 from recpack.algorithms.vae.util import (
     swish,
     log_norm_pdf,
@@ -296,7 +296,7 @@ class Encoder(nn.Module):
         return self.fc_mu(h5), self.fc_logvar(h5)
 
 
-class RecVAETorch(nn.Module):
+class RecVAETorch(VAETorch):
     def __init__(self, dim_hidden_layer, dim_bottleneck_layer, dim_input_layer, gamma=1, beta=None, dropout_rate=0.5):
         """RecVAE torch module.
 
