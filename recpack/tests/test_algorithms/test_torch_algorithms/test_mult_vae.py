@@ -1,4 +1,3 @@
-
 from unittest.mock import MagicMock
 from typing import Callable
 
@@ -9,49 +8,12 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from recpack.algorithms.torch_algorithms.vaes import (
+from recpack.algorithms.torch_algorithms.mult_vae import (
     MultiVAETorch,
     MultVAE,
     vae_loss_function,
 )
-
-# Inspiration for these tests came from:
-# https://medium.com/@keeper6928/how-to-unit-test-machine-learning-code-57cf6fd81765
-
-INPUT_SIZE = 1000
-
-
-@pytest.fixture(scope="function")
-def inputs():
-    torch.manual_seed(400)
-    return Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
-
-
-@pytest.fixture(scope="function")
-def targets():
-    torch.manual_seed(400)
-    return Variable(torch.randint(0, 2, (INPUT_SIZE,))).long()
-
-
-@pytest.fixture(scope="function")
-def larger_matrix():
-    num_interactions = 2000
-    num_users = 500
-    num_items = 500
-
-    np.random.seed(400)
-
-    pv_users, pv_items, pv_values = (
-        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        [1] * num_interactions,
-    )
-
-    pv = scipy.sparse.csr_matrix(
-        (pv_values, (pv_users, pv_items)), shape=(num_users + 200, num_items)
-    )
-
-    return pv
+from utils import assert_changed, assert_same
 
 
 @pytest.fixture(scope="function")
@@ -71,19 +33,6 @@ def mult_vae():
     mult.save = MagicMock(return_value=True)
 
     return mult
-
-
-def assert_changed(params_before, params_after, device):
-    # check if variables have changed
-    for (_, p0), (_, p1) in zip(params_before, params_after):
-        assert not torch.equal(p0.to(device), p1.to(device))
-
-
-def assert_same(params_before, params_after, device):
-    # check if variables have changed
-    for (_, p0), (_, p1) in zip(params_before, params_after):
-        assert torch.equal(p0.to(device), p1.to(device))
-
 
 def _training_step(model: nn.Module, loss_fn: Callable, optim: torch.optim.Optimizer, inputs: Variable, targets: Variable, device: torch.device):
 
@@ -153,8 +102,8 @@ def test_predict(mult_vae, larger_matrix):
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
 
 
-def test_multi_vae_forward(inputs, targets):
-    mult_vae = MultiVAETorch(dim_input_layer=INPUT_SIZE)
+def test_multi_vae_forward(input_size, inputs, targets):
+    mult_vae = MultiVAETorch(dim_input_layer=input_size)
 
     params = [np for np in mult_vae.named_parameters() if np[1].requires_grad]
 
