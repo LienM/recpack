@@ -8,10 +8,10 @@ setup(
     # tests_require=["pytest"],
     install_requires=[
         "click==7.1.1",
-        "numpy==1.18.2",
+        "numpy==1.19.1",
         "scipy==1.5.2",
-        "scikit-learn==0.22.2.post1",
-        "pandas==1.0.3",
+        "scikit-learn==0.23.2",
+        "pandas==1.1.0",
         "PyYAML==5.3.1",
         "snapy==1.0.2",
         "mmh3==2.5.1",
