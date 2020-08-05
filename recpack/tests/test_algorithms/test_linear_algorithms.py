@@ -1,7 +1,7 @@
 import scipy.sparse
 import numpy
 
-from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import (
+from recpack.algorithms.similarity.linear import (
     EASE
 )
 

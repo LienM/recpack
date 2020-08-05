@@ -14,10 +14,10 @@ from recpack.splitters.scenarios import StrongGeneralization
 from recpack.data.datasets.movielens import ML20MDataSource
 from recpack.data.data_source import DataSource
 
-from recpack.algorithms.true_baseline_algorithms import Popularity
-from recpack.algorithms.user_item_interactions_algorithms.nn_algorithms import ItemKNN, CosineSimilarity
-from recpack.algorithms.user_item_interactions_algorithms.shared_account import SharedAccount, Agg
-from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import EASE, EASE_AVG, EASE_Intercept, EASE_AVG_Int
+from recpack.algorithms.baseline import Popularity
+from recpack.algorithms.similarity.nearest_neighbour import ItemKNN, CosineSimilarity
+from recpack.algorithms.similarity.shared_account import SharedAccount, Agg
+from recpack.algorithms.similarity.linear import EASE, EASE_AVG, EASE_Intercept, EASE_AVG_Int
 
 from recpack.metrics import NDCGK, RecallK, MeanReciprocalRankK
 

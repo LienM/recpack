@@ -6,7 +6,7 @@ import scipy.sparse
 from sklearn.linear_model import SGDRegressor
 from sklearn.utils.validation import check_is_fitted
 
-from recpack.algorithms.user_item_interactions_algorithms import (
+from recpack.algorithms.similarity.base import (
     SimilarityMatrixAlgorithm,
 )
 
@@ -56,7 +56,7 @@ class EASE(SimilarityMatrixAlgorithm):
         self.B_ += other.B_
 
     @property
-    def sim_matrix(self):
+    def similarity_matrix_(self):
         return self.B_
 
     def load(self, filename):
@@ -283,5 +283,5 @@ class SLIM(SimilarityMatrixAlgorithm):
         return self
 
     @property
-    def sim_matrix(self):
+    def similarity_matrix_(self):
         return self.similarity_matrix_

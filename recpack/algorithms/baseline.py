@@ -94,4 +94,3 @@ class Popularity(Algorithm):
         self.sorted_scores_ = sorted(
             addition_map.items(), key=lambda x: x[1], reverse=True
         )
-
