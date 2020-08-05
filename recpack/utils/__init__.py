@@ -6,11 +6,12 @@ import numpy as np
 import scipy.sparse
 import pandas as pd
 
-from recpack.utils.globals import USER_KEY, ITEM_KEY, VALUE_KEY
+from recpack.experiment.globals import USER_KEY, ITEM_KEY, VALUE_KEY
 
 
 logger = logging.getLogger("recpack")
 
+# TODO Move to more appropriate place. 
 
 def groupby2(keys, values):
     """ A group by of separate lists where order doesn't matter. """

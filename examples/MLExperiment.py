@@ -7,7 +7,7 @@ import numpy as np
 from recpack.experiment.experiment import (
     Experiment, IExperiment, provider, IScenario, IEvaluator
 )
-from recpack.utils.globals import HISTORY_FILE, Y_TRUE_FILE, Y_PRED_FILE, METRICS_FILE
+from recpack.experiment.globals import HISTORY_FILE, Y_TRUE_FILE, Y_PRED_FILE, METRICS_FILE
 from recpack.experiment.CLI import CLI
 from recpack.experiment.transform_predictions import NoRepeats
 from recpack.splitters.scenarios import StrongGeneralization
