@@ -1,4 +1,4 @@
-from recpack.algorithms.torch_algorithms.vaes import VAE
+from recpack.algorithms.torch_algorithms.vaes import VAE, VAETorch
 from recpack.algorithms.torch_algorithms.utils import StoppingCriterion, naive_sparse2tensor
 from recpack.splitters.splitter_base import batch
 
@@ -117,7 +117,8 @@ class MultVAE(VAE):
 
             # Clear gradients
             self.optimizer.zero_grad()
-            _, loss = self._compute_pred_and_loss(X)
+            X_pred, mu, logvar = self.model_(X)
+            loss = self._compute_loss(X, X_pred, mu, logvar)
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
@@ -131,40 +132,28 @@ class MultVAE(VAE):
         )
 
 
-    def _compute_pred(self, val_X: torch.Tensor) -> torch.Tensor:
-        """Compute just the predicted output.
+    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        """Compute the prediction loss.
 
-        Used in the prediction step.
-        Overwrite this function with the right way to compute the prediction
+        More info on the loss function in the paper
 
-
-        :param val_X: input data
-        :type val_X: torch.Tensor        
-        :return: The recommendations as a tensor.
+        :param X: input data
+        :type X: torch.Tensor
+        :param X_pred: output data
+        :type X_pred: torch.Tensor
+        :param mu: the mean tensor
+        :type mu: torch.Tensor
+        :param logvar: the variance tensor
+        :type logvar: torch.Tensor
+        :return: the loss tensor
         :rtype: torch.Tensor
         """
-        val_X_pred, _, _ = self.model_(val_X)
+        loss = self.criterion(X_pred, mu, logvar, X, anneal=self._beta)
 
-        return val_X_pred
-
-    def _compute_pred_and_loss(self, val_X: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute the prediction and the loss of that prediction.
-
-        Function used in training.
-        Overwrite this function with the right way to compute the loss and prediction
-
-        :param val_X: input data
-        :type val_X: torch.Tensor
-        :return: a tuple with the first element the predictions as a tensor, the second element is the loss.
-        :rtype: Tuple[torch.Tensor, torch.Tensor]
-        """
-        val_X_pred, mu, logvar = self.model_(val_X)
-        loss = self.criterion(val_X_pred, mu, logvar, val_X, anneal=self._beta)
-
-        return val_X_pred, loss
+        return loss
 
 
-class MultiVAETorch(nn.Module):
+class MultiVAETorch(VAETorch):
     """
     Container module for Multi-VAE.
     Multi-VAE : Variational Autoencoder with Multinomial Likelihood

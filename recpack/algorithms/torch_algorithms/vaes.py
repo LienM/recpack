@@ -73,30 +73,22 @@ class VAE(Algorithm):
         self.model_.train()
         raise NotImplementedError()
 
-    def _compute_pred(self, val_X: torch.Tensor) -> torch.Tensor:
-        """Compute just the predicted output.
-
-        Used in the prediction step.
-        Overwrite this function with the right way to compute the prediction
-
-
-        :param val_X: input data
-        :type val_X: torch.Tensor        
-        :return: The recommendations as a tensor.
-        :rtype: torch.Tensor
-        """
-        raise NotImplementedError()
-
-    def _compute_pred_and_loss(self, val_X: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute the prediction and the loss of that prediction.
+    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        """Compute the prediction loss.
 
         Function used in training.
-        Overwrite this function with the right way to compute the loss and prediction
+        Overwrite this function with the right way to compute the loss
 
-        :param val_X: input data
-        :type val_X: torch.Tensor
-        :return: a tuple with the first element the predictions as a tensor, the second element is the loss.
-        :rtype: Tuple[torch.Tensor, torch.Tensor]
+        :param X: input data
+        :type X: torch.Tensor
+        :param X_pred: output data
+        :type X_pred: torch.Tensor
+        :param mu: the mean tensor
+        :type mu: torch.Tensor
+        :param logvar: the variance tensor
+        :type logvar: torch.Tensor
+        :return: the loss tensor
+        :rtype: torch.Tensor
         """
         raise NotImplementedError()
 
@@ -147,15 +139,16 @@ class VAE(Algorithm):
         self.model_.eval()
 
         with torch.no_grad():
-            val_X = naive_sparse2tensor(val_in).to(self.device)
+            X = naive_sparse2tensor(val_in).to(self.device)
 
-            val_X_pred, loss = self._compute_pred_and_loss(val_X)
+            X_pred, mu, logvar = self.model_(X)
+            loss = self._compute_loss(X, X_pred, mu, logvar)
             val_loss += loss.item()
 
-            val_X_pred_cpu = csr_matrix(val_X_pred.cpu())
-            val_X_true = val_out
+            X_pred_cpu = csr_matrix(X_pred.cpu())
+            X_true = val_out
 
-            self.stopping_criterion.calculate(val_X_true, val_X_pred_cpu)
+            self.stopping_criterion.calculate(X_true, X_pred_cpu)
 
         logger.info(
             f"Evaluation Loss = {val_loss}, NDCG@100 = {self.stopping_criterion.value}"
@@ -186,7 +179,7 @@ class VAE(Algorithm):
 
         tensorX = naive_sparse2tensor(X[users, :]).to(self.device)
 
-        tensorX_pred = self._compute_pred(tensorX)
+        tensorX_pred, _, _ = self.model_(tensorX)
 
         # [[0, 1, 2], [3, 4, 5]] -> [0, 1, 2, 3, 4, 5]
         V = tensorX_pred.cpu().flatten().detach().numpy()  # Flattens row-major.
@@ -199,3 +192,26 @@ class VAE(Algorithm):
 
         return X_pred
 
+
+class VAETorch(nn.Module):
+    """
+    Base class for building torch modules.
+    """
+
+    def __init__(
+        self
+    ):
+        super().__init__()
+
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Pass the input through the network, and return result.
+
+        :param x: input tensor
+        :type x: torch.Tensor
+        :return: A tuple with (predicted output value, mean values, average values)
+        :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        """
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        x_recon = self.decode(z)
+        return x_recon, mu, logvar

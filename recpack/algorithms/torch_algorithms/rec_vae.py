@@ -101,36 +101,35 @@ class RecVAE(VAE):
         self.enc_optimizer = optim.Adam(self.model_.encoder.parameters(), lr=self.learning_rate)
         self.dec_optimizer = optim.Adam(self.model_.decoder.parameters(), lr=self.learning_rate)
 
-    def _compute_pred(self, val_X: torch.Tensor) -> torch.Tensor:
-        """Compute just the predicted output.
+    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        """Compute the prediction loss.
 
-        Used in the prediction step.
-        Overwrite this function with the right way to compute the prediction
+        More info on the loss function in the paper
 
-
-        :param val_X: input data
-        :type val_X: torch.Tensor        
-        :return: The recommendations as a tensor.
+        :param X: input data
+        :type X: torch.Tensor
+        :param X_pred: output data
+        :type X_pred: torch.Tensor
+        :param mu: the mean tensor
+        :type mu: torch.Tensor
+        :param logvar: the variance tensor
+        :type logvar: torch.Tensor
+        :return: the loss tensor
         :rtype: torch.Tensor
         """
-        val_X_pred, _ = self.model_(val_X)
+        if self.gamma:
+            norm = X.sum(dim=-1)
+            kl_weight = self.gamma * norm
+        elif self.beta:
+            kl_weight = self.beta
 
-        return val_X_pred
+        mll = (F.log_softmax(X_pred, dim=-1) * X).sum(dim=-1).mean()
 
-    def _compute_pred_and_loss(self, val_X: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Compute the prediction and the loss of that prediction.
+        z = self.model_.reparameterize(mu, logvar)
+        kld = (log_norm_pdf(z, mu, logvar) - self.model_.prior(X, z)).sum(dim=-1).mul(kl_weight).mean()
+        negative_elbo = -(mll - kld)
 
-        Function used in training.
-        Overwrite this function with the right way to compute the loss and prediction
-
-        :param val_X: input data
-        :type val_X: torch.Tensor
-        :return: a tuple with the first element the predictions as a tensor, the second element is the loss.
-        :rtype: Tuple[torch.Tensor, torch.Tensor]
-        """
-        val_X_pred, loss = self.model_(val_X)
-
-        return val_X_pred, loss
+        return negative_elbo
 
     def _train_encoder_or_decoder(self, train_data, users, train_encoder=True):
         """Helper function to do the alternating training proposed in the paper
@@ -151,7 +150,8 @@ class RecVAE(VAE):
                 self.dec_optimizer.zero_grad()
 
             # Optimize 
-            _, loss = self._compute_pred_and_loss(X)
+            X_pred, mu, logvar = self.model_(X)
+            loss = self._compute_loss(X, X_pred, mu, logvar)
             loss.backward()
 
             train_loss += loss.item()
@@ -183,7 +183,7 @@ class RecVAE(VAE):
 
         for _ in range(self.n_enc_epochs):
             self._train_encoder_or_decoder(train_data, users, train_encoder=True)
-        
+
         self.model_.update_prior()
 
         for _ in range(self.n_dec_epochs):
@@ -344,26 +344,19 @@ class RecVAETorch(nn.Module):
         else:
             return mu
 
-    def forward(self, user_ratings) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, X) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Use the encoder and decoder to return the predicted autoencoded result.
 
-        If calculate loss is true, the output is not returned, but the loss is. Otherwise the output is returned.
-
-        :param user_ratings: input tensor of the user ratings.
-        :type user_ratings: [type]
-        :return: A tuple, which if training is enabled, computes the loss value and returns it as second value,
-                 If not training, second value is None
-        :rtype: Tuple[torch.Tensor, torch.Tensor]
+        :param X: input tensor of the user ratings.
+        :type X: torch.Tensor
+        :return: A tuple, with predictions, averages and variances.
+        :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
         """
-        mu, logvar = self.encoder(user_ratings, dropout_rate=self.dropout_rate)
+        mu, logvar = self.encoder(X, dropout_rate=self.dropout_rate)
         z = self.reparameterize(mu, logvar)
         x_pred = self.decoder(z)
         
-        if self.train:
-            # Compute loss and return it as second part of the return value
-            loss = self.loss_function(z, x_pred, mu, logvar, user_ratings)
-            return x_pred, loss
-        return x_pred, None
+        return x_pred, mu, logvar
 
     def update_prior(self):
         """The encoder in the prior is updated to the current encoder state.
@@ -386,14 +379,3 @@ class RecVAETorch(nn.Module):
         :return: the negative ELBO value
         :rtype: float
         """
-        if self.gamma:
-            norm = x.sum(dim=-1)
-            kl_weight = self.gamma * norm
-        elif self.beta:
-            kl_weight = self.beta
-
-        mll = (F.log_softmax(x_pred, dim=-1) * x).sum(dim=-1).mean()
-        kld = (log_norm_pdf(z, mu, logvar) - self.prior(x, z)).sum(dim=-1).mul(kl_weight).mean()
-        negative_elbo = -(mll - kld)
-        
-        return negative_elbo

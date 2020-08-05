@@ -33,26 +33,6 @@ def rec_vae():
     return mult
 
 
-def _training_step(model: nn.Module, optim: torch.optim.Optimizer, inputs: Variable, targets: Variable, device: torch.device):
-
-    # put model in train mode
-    model.train()
-    model.to(device)
-
-    #  run one forward + backward step
-    # clear gradient
-    optim.zero_grad()
-    # move data to device
-    inputs = inputs.to(device)
-    targets = targets.to(device)
-    # forward
-    _, loss = model(inputs)
-    # backward
-    loss.backward()
-    # optimization step
-    optim.step()
-
-
 def test_training_epoch(rec_vae, larger_matrix):
     rec_vae._init_model(larger_matrix.shape[1])
 
@@ -95,20 +75,3 @@ def test_predict(rec_vae, larger_matrix):
     assert isinstance(X_pred, scipy.sparse.csr_matrix)
 
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
-
-
-def test_multi_vae_forward(input_size, inputs, targets):
-    rec_vae = RecVAETorch(600, 200, dim_input_layer=input_size)
-
-    params = [np for np in rec_vae.named_parameters() if np[1].requires_grad]
-
-    # take a copy
-    params_before = [(name, p.clone()) for (name, p) in params]
-
-    device = torch.device("cpu")
-
-    _training_step(rec_vae, torch.optim.Adam(rec_vae.parameters()), inputs, targets, device)
-    # do they change after a training step?
-    #  let's run a train step and see
-
-    assert_changed(params_before, params, device)
