@@ -61,7 +61,7 @@ Should you want to implement a new algorithm which we do not yet support you sho
 Here is the code for a popularity algorithm
 
 ```python
-from recpack.algorithms.algorithm_base import Algorithm
+from recpack.algorithms.base import Algorithm
 from collections import Counter
 
 import numpy as np
