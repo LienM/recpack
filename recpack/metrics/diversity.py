@@ -38,7 +38,7 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
         return ild
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """ Only looks at the predicted items, does not care about the 'true' items.
+        """ Compute the diversity of the predicted user preferences.
         """
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
         self.verify_shape(y_true, y_pred)
