@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 import pandas as pd
@@ -6,11 +7,13 @@ import numpy as np
 import recpack.preprocessing.util as util
 from recpack.data.data_matrix import DataM
 from recpack.preprocessing.filters import Filter
-from recpack.utils import logger
 
 from tqdm.auto import tqdm
 
 tqdm.pandas()
+
+
+logger = logging.getLogger("recpack")
 
 
 class DataFramePreprocessor:

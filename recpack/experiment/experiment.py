@@ -12,7 +12,8 @@ from recpack.data.data_matrix import DataM
 
 from recpack.data.data_source import DataSource
 
-from recpack.utils import to_tuple, dict_to_csv, InteractionsCSVWriter
+from recpack.util import to_tuple
+from recpack.experiments.util import dict_to_csv, InteractionsCSVWriter
 
 from recpack.splitters.splitter_base import FoldIterator
 from recpack.experiment.transform_predictions import FilterHistory

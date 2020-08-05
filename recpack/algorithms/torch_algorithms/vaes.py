@@ -1,5 +1,6 @@
 import time
 from typing import List
+import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,7 +15,9 @@ from recpack.splitters.splitter_base import batch
 from recpack.algorithms.base import Algorithm
 
 from recpack.metrics.dcg import NDCGK
-from recpack.utils import logger
+
+
+logger = logging.getLogger("recpack")
 
 
 class StoppingCriterion(NDCGK):

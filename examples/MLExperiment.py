@@ -5,9 +5,18 @@ import pandas as pd
 import numpy as np
 
 from recpack.experiment.experiment import (
-    Experiment, IExperiment, provider, IScenario, IEvaluator
+    Experiment,
+    IExperiment,
+    provider,
+    IScenario,
+    IEvaluator,
 )
-from recpack.experiment.globals import HISTORY_FILE, Y_TRUE_FILE, Y_PRED_FILE, METRICS_FILE
+from recpack.experiment.globals import (
+    HISTORY_FILE,
+    Y_TRUE_FILE,
+    Y_PRED_FILE,
+    METRICS_FILE,
+)
 from recpack.experiment.CLI import CLI
 from recpack.experiment.transform_predictions import NoRepeats
 from recpack.splitters.scenarios import StrongGeneralization
@@ -17,14 +26,23 @@ from recpack.data.data_source import DataSource
 from recpack.algorithms.baseline import Popularity
 from recpack.algorithms.similarity.nearest_neighbour import ItemKNN, CosineSimilarity
 from recpack.algorithms.similarity.shared_account import SharedAccount, Agg
-from recpack.algorithms.similarity.linear import EASE, EASE_AVG, EASE_Intercept, EASE_AVG_Int
+from recpack.algorithms.similarity.linear import (
+    EASE,
+    EASE_AVG,
+    EASE_Intercept,
+    EASE_AVG_Int,
+)
 
 from recpack.metrics import NDCGK, RecallK, MeanReciprocalRankK
 
-from recpack.utils import (
-    logger, csv_to_sparse, dict_to_csv,
-    USER_KEY, ITEM_KEY, VALUE_KEY
+from recpack.experiment.globals import USER_KEY, ITEM_KEY, VALUE_KEY
+
+from recpack.experiment.util import (
+    csv_to_sparse,
+    dict_to_csv,
 )
+
+logger = logging.getLogger("recpack")
 
 logger.setLevel(logging.DEBUG)
 
@@ -60,9 +78,7 @@ class Evaluator(IEvaluator):
 
     @provider
     def k_values(self):
-        return [
-            1, 5, 20, 50, 100
-        ]
+        return [1, 5, 20, 50, 100]
 
     @provider
     def _metrics(self):
@@ -106,7 +122,9 @@ class Eval(Evaluator, DataSource, cli.Command, mask=IEvaluator):
         dict_to_csv(data, os.path.join(self.path, METRICS_FILE))
 
 
-class MLExperiment(ML20MDataSource, StrongGeneralizationScenario, Evaluator, Experiment):
+class MLExperiment(
+    ML20MDataSource, StrongGeneralizationScenario, Evaluator, Experiment
+):
     pass
 
 
@@ -154,14 +172,16 @@ class EaseAvgInt(MLExperiment, cli.Command, mask=IExperiment):
 
 class SA_EASE(MLExperiment, cli.Command, mask=IExperiment):
     @provider
-    def recommender(self, l2: float = 500, p: float=0.75):
+    def recommender(self, l2: float = 500, p: float = 0.75):
         alg = EASE(l2=l2)
         return SharedAccount(alg, p=p)
 
 
 class SA_IKNN(MLExperiment, cli.Command, mask=IExperiment):
     @provider
-    def recommender(self, k: int = 200, p: float = 0.75, agg: Agg = Agg.Adj, normalize: bool = False):
+    def recommender(
+        self, k: int = 200, p: float = 0.75, agg: Agg = Agg.Adj, normalize: bool = False
+    ):
         alg = ItemKNN(K=k, normalize=normalize)
         return SharedAccount(alg, p=p, agg=agg)
 

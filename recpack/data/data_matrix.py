@@ -1,10 +1,15 @@
+import logging
 from typing import List, Tuple
+
 import pandas as pd
 import numpy as np
 
 import scipy.sparse
 
-from recpack.utils import logger, groupby2, df_to_sparse
+from recpack.util import groupby2, df_to_sparse
+
+
+logger = logging.getLogger("recpack")
 
 
 class DataM:
