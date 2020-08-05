@@ -1,12 +1,13 @@
 from collections import Counter, defaultdict
+import random
 
 import numpy as np
 import scipy.sparse
 import numpy.random
-import random
-from .base import Algorithm
-
 from sklearn.utils.validation import check_is_fitted
+
+
+from recpack.algorithms.base import Algorithm
 
 
 class Random(Algorithm):
@@ -55,7 +56,9 @@ class Popularity(Algorithm):
     def fit(self, X, y=None):
         items = list(X.nonzero()[1])
         sorted_scores = Counter(items).most_common()
-        self.sorted_scores_ = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
+        self.sorted_scores_ = [
+            (item, score / sorted_scores[0][1]) for item, score in sorted_scores
+        ]
         return self
 
     def predict(self, X, user_ids=None):
@@ -77,14 +80,18 @@ class Popularity(Algorithm):
         return score_matrix
 
     def multiply(self, value: float):
-        self.sorted_scores_ = [(item, score*value) for item, score in self.sorted_scores_]
+        self.sorted_scores_ = [
+            (item, score * value) for item, score in self.sorted_scores_
+        ]
 
     def add(self, other):
         addition_map = defaultdict(float)
         for item, score in self.sorted_scores_:
             addition_map[item] += score
-        
+
         for item, score in other.sorted_scores_:
             addition_map[item] += score
-        
-        self.sorted_scores_ = sorted(addition_map.items(), key=lambda x: x[1], reverse=True)
+        self.sorted_scores_ = sorted(
+            addition_map.items(), key=lambda x: x[1], reverse=True
+        )
+
