@@ -1,13 +1,9 @@
-import csv
 from collections import defaultdict
 import logging
 
 from joblib import Parallel, delayed
 import numpy as np
 import scipy.sparse
-import pandas as pd
-
-from recpack.experiment.globals import USER_KEY, ITEM_KEY, VALUE_KEY
 
 
 logger = logging.getLogger("recpack")
@@ -77,13 +73,16 @@ def parfor(iterator, parallel=True, n_jobs=-1, **kwargs):
 
     return decorator
 
+
 def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
     if value_ix is not None and value_ix in df:
         values = df[value_ix]
     else:
         if value_ix is not None:
             # value_ix provided, but not in df
-            logger.warning(f"Value column {value_ix} not found in dataframe. Using ones instead.")
+            logger.warning(
+                f"Value column {value_ix} not found in dataframe. Using ones instead."
+            )
 
         num_entries = df.shape[0]
         # Scipy sums up the entries when an index-pair occurs more than once,

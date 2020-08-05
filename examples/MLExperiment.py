@@ -4,21 +4,21 @@ import os.path
 import pandas as pd
 import numpy as np
 
-from recpack.experiment.experiment import (
+from recpack.experiments.experiment import (
     Experiment,
     IExperiment,
     provider,
     IScenario,
     IEvaluator,
 )
-from recpack.experiment.globals import (
+from recpack.experiments.globals import (
     HISTORY_FILE,
     Y_TRUE_FILE,
     Y_PRED_FILE,
     METRICS_FILE,
 )
-from recpack.experiment.CLI import CLI
-from recpack.experiment.transform_predictions import NoRepeats
+from recpack.experiments.CLI import CLI
+from recpack.experiments.transform_predictions import NoRepeats
 from recpack.splitters.scenarios import StrongGeneralization
 from recpack.data.datasets.movielens import ML20MDataSource
 from recpack.data.data_source import DataSource
@@ -35,9 +35,9 @@ from recpack.algorithms.similarity.linear import (
 
 from recpack.metrics import NDCGK, RecallK, MeanReciprocalRankK
 
-from recpack.experiment.globals import USER_KEY, ITEM_KEY, VALUE_KEY
+from recpack.experiments.globals import USER_KEY, ITEM_KEY, VALUE_KEY
 
-from recpack.experiment.util import (
+from recpack.experiments.util import (
     csv_to_sparse,
     dict_to_csv,
 )

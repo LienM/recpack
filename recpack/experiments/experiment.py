@@ -16,12 +16,12 @@ from recpack.util import to_tuple
 from recpack.experiments.util import dict_to_csv, InteractionsCSVWriter
 
 from recpack.splitters.splitter_base import FoldIterator
-from recpack.experiment.transform_predictions import FilterHistory
+from recpack.experiments.transform_predictions import FilterHistory
 
 from tqdm.auto import tqdm
 import functools
 
-from recpack.experiment.globals import (
+from recpack.experiments.globals import (
     BASE_OUTPUT_DIR,
     PARAMS_FILE,
     STATISTICS_FILE,
