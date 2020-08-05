@@ -12,27 +12,35 @@ from recpack.data.data_matrix import DataM
 
 from recpack.data.data_source import DataSource
 
-from recpack.utils import to_tuple, dict_to_csv, InteractionsCSVWriter
+from recpack.util import to_tuple
+from recpack.experiments.util import dict_to_csv, InteractionsCSVWriter
 
 from recpack.splitters.splitter_base import FoldIterator
-from recpack.experiment.transform_predictions import FilterHistory
+from recpack.experiments.transform_predictions import FilterHistory
 
 from tqdm.auto import tqdm
 import functools
 
-from recpack.utils.globals import (
-    BASE_OUTPUT_DIR, PARAMS_FILE, STATISTICS_FILE, HISTORY_FILE, Y_TRUE_FILE, Y_PRED_FILE,
-    METRICS_FILE
+from recpack.experiments.globals import (
+    BASE_OUTPUT_DIR,
+    PARAMS_FILE,
+    STATISTICS_FILE,
+    HISTORY_FILE,
+    Y_TRUE_FILE,
+    Y_PRED_FILE,
+    METRICS_FILE,
 )
 
 
 def provider(f):
     cache = dict()
+
     @functools.wraps(f)
     def wrapper(self, **kwargs):
         if self not in cache:
             cache[self] = f(self, **kwargs)
         return cache[self]
+
     return wrapper
 
 
@@ -46,7 +54,7 @@ class IScenario(object):
 
     def get_params(self):
         params = super().get_params() if hasattr(super(), "get_params") else dict()
-        params['scenario'] = self.scenario_name
+        params["scenario"] = self.scenario_name
         return params
 
     def split(self, X, y=None):
@@ -91,6 +99,7 @@ class IExperiment(DataSource, IScenario, IEvaluator):
     Parameters starting with underscore are not included in the identifier, but can still be supplied through the
     command line and are still logged as parameters.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -101,8 +110,12 @@ class IExperiment(DataSource, IScenario, IEvaluator):
     @property
     def identifier(self):
         # TODO: decouple from parameters (join identifier of algo, scenario and datasource)
-        identifying_params = {k: v for k, v in self.get_params().items() if not k[0] == "_"}
-        paramstring = "_".join((f"{k}_{v}" for k, v in sorted(identifying_params.items())))
+        identifying_params = {
+            k: v for k, v in self.get_params().items() if not k[0] == "_"
+        }
+        paramstring = "_".join(
+            (f"{k}_{v}" for k, v in sorted(identifying_params.items()))
+        )
         return self.name + "__" + paramstring
 
     def get_output_file(self, filename):
@@ -163,9 +176,10 @@ class Experiment(IExperiment):
     Parameters starting with underscore are not included in the identifier, but can still be supplied through the
     command line and are still logged as parameters.
     """
+
     def __init__(self, _seed: int = None, _batch_size: int = 1000):
         super().__init__()
-        self.seed = random.randint(0, 2**32-1) if _seed is None else _seed
+        self.seed = random.randint(0, 2 ** 32 - 1) if _seed is None else _seed
         random.seed(self.seed)
         np.random.seed(self.seed)
         self.batch_size = _batch_size
@@ -173,7 +187,9 @@ class Experiment(IExperiment):
         self.statistics = dict()
         self.statistics["start_time"] = datetime.now().replace(microsecond=0)
 
-        self.output_path = os.path.join(BASE_OUTPUT_DIR, str(self.identifier), str(self.seed))
+        self.output_path = os.path.join(
+            BASE_OUTPUT_DIR, str(self.identifier), str(self.seed)
+        )
 
         os.makedirs(self.output_path)
 
@@ -183,17 +199,15 @@ class Experiment(IExperiment):
 
     def get_params(self):
         params = super().get_params()
-        params['_seed'] = self.seed
-        params['algorithm'] = self.algorithm_name
+        params["_seed"] = self.seed
+        params["algorithm"] = self.algorithm_name
         return params
 
     @provider
     def pipeline(self, _cache=False):
         return Pipeline(
-            steps=self.transformers() + [
-                ("recommender", self.recommender()),
-            ],
-            memory="cache" if _cache else None
+            steps=self.transformers() + [("recommender", self.recommender()),],
+            memory="cache" if _cache else None,
         )
 
     @provider
@@ -236,7 +250,9 @@ class Experiment(IExperiment):
         for _, name, transform in self.pipeline()._iter(with_final=False):
             Xt = transform.transform(Xt)
 
-        for _in, _out, user_ids in tqdm(FoldIterator(Xt, y, batch_size=self.batch_size)):
+        for _in, _out, user_ids in tqdm(
+            FoldIterator(Xt, y, batch_size=self.batch_size)
+        ):
             y_pred = self.pipeline().steps[-1][-1].predict(_in, **predict_params)
             if scipy.sparse.issparse(y_pred):
                 # to dense format
@@ -278,14 +294,18 @@ class Experiment(IExperiment):
 
     def save(self, hist, y_true, y_pred):
         # save params
-        cleaned_params = {k[1:] if k[0] == "_" else k: v for k, v in self.get_params().items()}
+        cleaned_params = {
+            k[1:] if k[0] == "_" else k: v for k, v in self.get_params().items()
+        }
         dict_to_csv(cleaned_params, self.get_output_file(PARAMS_FILE))
 
         # save statistics
         dict_to_csv(self.statistics, self.get_output_file(STATISTICS_FILE))
 
         # save results
-        writer = InteractionsCSVWriter(user_id_mapping=self.user_id_mapping, item_id_mapping=self.item_id_mapping)
+        writer = InteractionsCSVWriter(
+            user_id_mapping=self.user_id_mapping, item_id_mapping=self.item_id_mapping
+        )
         writer.sparse_to_csv(hist, self.get_output_file(HISTORY_FILE), values=False)
         writer.sparse_to_csv(y_true, self.get_output_file(Y_TRUE_FILE), values=False)
         writer.sparse_to_csv(y_pred, self.get_output_file(Y_PRED_FILE))

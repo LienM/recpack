@@ -5,7 +5,7 @@ import numpy as np
 
 import numba
 
-from recpack.algorithms.user_item_interactions_algorithms import (
+from recpack.algorithms.similarity.base import (
     SimilarityMatrixAlgorithm,
 )
 
@@ -41,11 +41,11 @@ class SharedAccount(SimilarityMatrixAlgorithm):
         return self.algo.fit(X, y)
 
     @property
-    def sim_matrix(self):
-        return self.algo.sim_matrix
+    def similarity_matrix_(self):
+        return self.algo.similarity_matrix_
 
     def predict(self, X, user_ids=None):
-        M = self.sim_matrix.toarray()
+        M = self.similarity_matrix_.toarray()
 
         X = X.toarray()
         predictions = get_predictions(X, M, self.p, self.agg)

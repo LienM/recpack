@@ -23,10 +23,10 @@ class IPSMetric(FittedMetric):
     :type ip_cap: int
     """
 
-    def __init__(self, ip_cap=10000):
+    def __init__(self):
         super().__init__()
         self.item_prob_ = None
-        self.ip_cap = ip_cap
+        self.ip_cap = 10000
 
     def fit(self, X: csr_matrix):
         """Fit the propensities for the X dataset

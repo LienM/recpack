@@ -1,5 +1,5 @@
-from recpack.algorithms.user_item_interactions_algorithms.shared_account import SharedAccount
-from recpack.algorithms.user_item_interactions_algorithms.nn_algorithms import ItemKNN
+from recpack.algorithms.similarity.shared_account import SharedAccount
+from recpack.algorithms.similarity.nearest_neighbour import ItemKNN
 import scipy.sparse
 import math
 import numpy
@@ -23,7 +23,7 @@ def test_item_knn_sa_is_iknn():
         ]
     )
     numpy.testing.assert_almost_equal(
-        algo.sim_matrix.toarray(), expected_similarities
+        algo.similarity_matrix_.toarray(), expected_similarities
     )
 
     # Make sure the similarities recommended are the cosine similarities as computed.
