@@ -28,8 +28,8 @@ dataframe = pd.read_csv(
 # Which makes training faster and avoids unneeded 0 rows or collumns
 item_ids = list(dataframe['movieId'].unique())
 user_ids = list(dataframe['userId'].unique())
-item_id_mapping = recpack.preprocessing.helpers.rescale_id_space(item_ids)
-user_id_mapping = recpack.preprocessing.helpers.rescale_id_space(user_ids)
+item_id_mapping = recpack.preprocessing.util.rescale_id_space(item_ids)
+user_id_mapping = recpack.preprocessing.util.rescale_id_space(user_ids)
 
 dataframe['iid'] = dataframe['movieId'].map(lambda x: item_id_mapping[x])
 dataframe['uid'] = dataframe['userId'].map(lambda x: user_id_mapping[x])
