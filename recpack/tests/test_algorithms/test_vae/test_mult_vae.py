@@ -8,12 +8,12 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from recpack.algorithms.torch_algorithms.mult_vae import (
+from recpack.algorithms.vae.mult_vae import (
     MultiVAETorch,
     MultVAE,
     vae_loss_function,
 )
-from utils import assert_changed, assert_same
+from util import assert_changed, assert_same
 
 
 @pytest.fixture(scope="function")

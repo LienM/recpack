@@ -9,12 +9,12 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from recpack.algorithms.torch_algorithms.rec_vae import (
+from recpack.algorithms.vae.rec_vae import (
     RecVAETorch,
     RecVAE
 )
 
-from utils import assert_changed, assert_same
+from util import assert_changed, assert_same
 
 @pytest.fixture(scope="function")
 def rec_vae():

@@ -1,4 +1,4 @@
-from recpack.algorithms.torch_algorithms.utils import StoppingCriterion
+from recpack.algorithms.vae.util import StoppingCriterion
 
 def test_stopping_criterion(larger_matrix):
     crit = StoppingCriterion(100)

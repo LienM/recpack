@@ -1,7 +1,3 @@
-from recpack.algorithms.torch_algorithms.vaes import VAE, VAETorch
-from recpack.algorithms.torch_algorithms.utils import StoppingCriterion, naive_sparse2tensor
-from recpack.splitters.splitter_base import batch
-
 from typing import List, Tuple
 
 import torch.nn as nn
@@ -12,6 +8,10 @@ from scipy.sparse import csr_matrix
 import numpy as np
 import time
 import logging
+
+from recpack.algorithms.vae.base import VAE, VAETorch
+from recpack.algorithms.vae.util import StoppingCriterion, naive_sparse2tensor
+from recpack.splitters.splitter_base import batch
 
 logger = logging.getLogger('recpack')
 

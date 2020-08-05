@@ -1,10 +1,12 @@
 import time
+import logging
 from typing import List, Tuple
 
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torch.optim as optim
+
 import numpy as np
 from scipy.sparse import csr_matrix
 
@@ -13,12 +15,15 @@ from copy import deepcopy
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.splitters.splitter_base import batch
-from recpack.algorithms.torch_algorithms.vaes import VAE
+from recpack.algorithms.vae.base import VAE
+from recpack.algorithms.vae.util import (
+    swish,
+    log_norm_pdf,
+    naive_sparse2tensor,
+    StoppingCriterion
+)
 
-from recpack.utils import logger
-
-from recpack.algorithms.torch_algorithms.utils import swish, log_norm_pdf, naive_sparse2tensor, StoppingCriterion
-
+logger = logging.getLogger('recpack')
 
 class RecVAE(VAE):
     def __init__(

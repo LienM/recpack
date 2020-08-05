@@ -15,7 +15,10 @@ import logging
 from recpack.splitters.splitter_base import batch
 from recpack.algorithms.algorithm_base import Algorithm
 
-from recpack.algorithms.torch_algorithms.utils import naive_sparse2tensor, StoppingCriterion
+from recpack.algorithms.vae.util import (
+    naive_sparse2tensor,
+    StoppingCriterion
+)
 
 logger = logging.getLogger('recpack')
 
