@@ -1,11 +1,12 @@
 """ Utilities for pattern mining (used by HO-EASE) """
-
+import logging
 from collections import defaultdict
 import itertools
 
 from tqdm.auto import tqdm
 
-from recpack.utils import logger
+
+logger = logging.getLogger("recpack")
 
 
 def eclat(tidmap, prefix=[], minsup=1, size=3):
