@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse
 import numpy.random
 import random
-from .algorithm_base import Algorithm
+from .base import Algorithm
 
 from sklearn.utils.validation import check_is_fitted
 

@@ -1,6 +1,6 @@
 import scipy.sparse
 
-from recpack.algorithms.algorithm_base import Algorithm
+from recpack.algorithms.base import Algorithm
 
 from sklearn.utils.validation import check_is_fitted
 

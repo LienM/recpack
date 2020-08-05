@@ -1,4 +1,4 @@
-from recpack.algorithms.algorithm_base import Algorithm
+from recpack.algorithms.base import Algorithm
 from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import (
     EASE,
     SLIM,
