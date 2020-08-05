@@ -22,7 +22,6 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
     def _get_ild(self, recommended_items):
         # Compute the ILD for this list
         #  Sum part: SUM(d(i_k, i_l) for i_k in R and l < k)
-        #  We will compute this sum by constructing a sparse matrix with a 1 on each of the required i_k, i_l tuples
         if len(recommended_items) <= 1:
             # If there are 1 or no items, the intra list distance is 0
             return 0
@@ -39,7 +38,7 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
         return ild
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """ Only looks at the predicted items, does not care about the 'true' items.
+        """ Compute the diversity of the predicted user preferences.
         """
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
         self.verify_shape(y_true, y_pred)
