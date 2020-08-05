@@ -25,7 +25,7 @@ from recpack.data.data_source import DataSource
 
 from recpack.algorithms.baseline import Popularity
 from recpack.algorithms.similarity.nearest_neighbour import ItemKNN, CosineSimilarity
-from recpack.algorithms.similarity.shared_account import SharedAccount, Agg
+from recpack.algorithms.similarity.shared_account import DAMIBCover, Agg
 from recpack.algorithms.similarity.linear import (
     EASE,
     EASE_AVG,
@@ -174,7 +174,7 @@ class SA_EASE(MLExperiment, cli.Command, mask=IExperiment):
     @provider
     def recommender(self, l2: float = 500, p: float = 0.75):
         alg = EASE(l2=l2)
-        return SharedAccount(alg, p=p)
+        return DAMIBCover(alg, p=p)
 
 
 class SA_IKNN(MLExperiment, cli.Command, mask=IExperiment):
@@ -183,7 +183,7 @@ class SA_IKNN(MLExperiment, cli.Command, mask=IExperiment):
         self, k: int = 200, p: float = 0.75, agg: Agg = Agg.Adj, normalize: bool = False
     ):
         alg = ItemKNN(K=k, normalize=normalize)
-        return SharedAccount(alg, p=p, agg=agg)
+        return DAMIBCover(alg, p=p, agg=agg)
 
 
 cli.run()
