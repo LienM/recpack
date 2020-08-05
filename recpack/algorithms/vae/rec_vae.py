@@ -22,6 +22,7 @@ from recpack.algorithms.vae.util import (
     naive_sparse2tensor,
     StoppingCriterion
 )
+from recpack.metrics import NDCGK
 
 logger = logging.getLogger('recpack')
 
@@ -38,7 +39,7 @@ class RecVAE(VAE):
         dim_hidden_layer=600,
         gamma=1,
         beta=None,
-        dropout=0.5,
+        dropout=0.5
     ):
         """
         RecVAE Algorithm as first discussed in
@@ -68,7 +69,13 @@ class RecVAE(VAE):
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
         """
-        super().__init__(batch_size, max_epochs, seed, learning_rate)
+        super().__init__(
+            batch_size,
+            max_epochs,
+            seed,
+            learning_rate,
+            StoppingCriterion(NDCGK, K=100)
+        )
 
         self.n_enc_epochs = n_enc_epochs
         self.n_dec_epochs = n_dec_epochs

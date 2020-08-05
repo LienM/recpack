@@ -15,10 +15,7 @@ import logging
 from recpack.splitters.splitter_base import batch
 from recpack.algorithms.base import Algorithm
 
-from recpack.algorithms.vae.util import (
-    naive_sparse2tensor,
-    StoppingCriterion
-)
+from recpack.algorithms.vae.util import naive_sparse2tensor
 
 logger = logging.getLogger('recpack')
 
@@ -28,7 +25,8 @@ class VAE(Algorithm):
         batch_size,
         max_epochs,
         seed,
-        learning_rate
+        learning_rate,
+        stopping_criterion
     ):
         self.batch_size = (
             batch_size  # TODO * torch.cuda.device_count() if cuda else batch_size
@@ -42,7 +40,7 @@ class VAE(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.stopping_criterion = StoppingCriterion(100)
+        self.stopping_criterion = stopping_criterion
 
     #######
     # FUNCTIONS TO OVERWRITE FOR EACH VAE

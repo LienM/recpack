@@ -14,6 +14,7 @@ import logging
 from recpack.algorithms.vae.base import VAE, VAETorch
 from recpack.algorithms.vae.util import StoppingCriterion, naive_sparse2tensor
 from recpack.splitters.splitter_base import batch
+from recpack.metrics import NDCGK
 
 logger = logging.getLogger('recpack')
 
@@ -54,7 +55,13 @@ class MultVAE(VAE):
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
         """
-        super().__init__(batch_size, max_epochs, seed, learning_rate)
+        super().__init__(
+            batch_size,
+            max_epochs,
+            seed,
+            learning_rate,
+            StoppingCriterion(NDCGK, K=100)
+        )
         
         self.dim_hidden_layer = dim_hidden_layer
         self.dim_bottleneck_layer = dim_bottleneck_layer
@@ -66,7 +73,7 @@ class MultVAE(VAE):
         self.dropout = dropout
 
         self.optimizer = None
-        self.criterion = vae_loss_function
+        self.loss_function = vae_loss_function
 
     @property
     def _beta(self):
@@ -150,7 +157,7 @@ class MultVAE(VAE):
         :return: the loss tensor
         :rtype: torch.Tensor
         """
-        loss = self.criterion(X_pred, mu, logvar, X, anneal=self._beta)
+        loss = self.loss_function(X_pred, mu, logvar, X, anneal=self._beta)
 
         return loss
 

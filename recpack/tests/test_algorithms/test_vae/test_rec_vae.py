@@ -33,6 +33,45 @@ def rec_vae():
     return mult
 
 
+def test_encoder_training(rec_vae, larger_matrix):
+    rec_vae._init_model(larger_matrix.shape[1])
+
+    users = list(set(larger_matrix.nonzero()[1]))
+    encoder_params = [np for np in rec_vae.model_.encoder.named_parameters() if np[1].requires_grad]
+    decoder_params = [np for np in rec_vae.model_.decoder.named_parameters() if np[1].requires_grad]
+
+    # take a copy
+    encoder_params_before = [(name, p.clone()) for (name, p) in encoder_params]
+    decoder_params_before = [(name, p.clone()) for (name, p) in decoder_params]
+    
+    # run a training step
+    rec_vae._train_encoder_or_decoder(larger_matrix, users, train_encoder=True)
+
+    device = rec_vae.device
+
+    assert_changed(encoder_params_before, encoder_params, device)
+    assert_same(decoder_params_before, decoder_params, device)
+
+def test_decoder_training(rec_vae, larger_matrix):
+    rec_vae._init_model(larger_matrix.shape[1])
+
+    users = list(set(larger_matrix.nonzero()[1]))
+    encoder_params = [np for np in rec_vae.model_.encoder.named_parameters() if np[1].requires_grad]
+    decoder_params = [np for np in rec_vae.model_.decoder.named_parameters() if np[1].requires_grad]
+
+    # take a copy
+    encoder_params_before = [(name, p.clone()) for (name, p) in encoder_params]
+    decoder_params_before = [(name, p.clone()) for (name, p) in decoder_params]
+    
+    # run a training step
+    rec_vae._train_encoder_or_decoder(larger_matrix, users, train_encoder=False)
+
+    device = rec_vae.device
+
+    assert_same(encoder_params_before, encoder_params, device)
+    assert_changed(decoder_params_before, decoder_params, device)
+
+
 def test_training_epoch(rec_vae, larger_matrix):
     rec_vae._init_model(larger_matrix.shape[1])
 
