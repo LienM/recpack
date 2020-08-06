@@ -31,12 +31,3 @@ class Algorithm(BaseEstimator):
 
     def load(self, filename):
         pass
-
-    def multiply(self, value: float):
-        """Update the model by multiplying with a constant.
-        """
-        pass
-
-    def add(self, other):
-        """Combine 2 models of the same class by adding them together.
-        """

@@ -78,19 +78,3 @@ class Popularity(Algorithm):
 
         score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
         return score_matrix
-
-    def multiply(self, value: float):
-        self.sorted_scores_ = [
-            (item, score * value) for item, score in self.sorted_scores_
-        ]
-
-    def add(self, other):
-        addition_map = defaultdict(float)
-        for item, score in self.sorted_scores_:
-            addition_map[item] += score
-
-        for item, score in other.sorted_scores_:
-            addition_map[item] += score
-        self.sorted_scores_ = sorted(
-            addition_map.items(), key=lambda x: x[1], reverse=True
-        )

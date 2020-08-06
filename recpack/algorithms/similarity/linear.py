@@ -49,11 +49,6 @@ class EASE(SimilarityMatrixAlgorithm):
 
         return self
 
-    def multiply(self, value: float):
-        self.B_ = self.B_.multiply(value)
-
-    def add(self, other):
-        self.B_ += other.B_
 
     @property
     def similarity_matrix_(self):
