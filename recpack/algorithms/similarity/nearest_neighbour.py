@@ -4,7 +4,7 @@ from scipy.sparse import diags
 import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
 
-from recpack.algorithms.user_item_interactions_algorithms import (
+from recpack.algorithms.similarity.base import (
     SimilarityMatrixAlgorithm,
 )
 
@@ -13,7 +13,7 @@ class ItemKNN(SimilarityMatrixAlgorithm):
     def __init__(self, K=200, normalize=False):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item.
-        
+
         If normalize is True, the scores are normalized per item.
         """
         super().__init__()
@@ -43,9 +43,9 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         mask = scipy.sparse.csr_matrix(
             ([1 for i in range(len(indices))], (list(zip(*indices))))
         )
-        
+
         self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
-        
+
         if self.normalize:
             # normalize per row
             row_sums = self.item_cosine_similarities_.sum(axis=1)
@@ -57,7 +57,7 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         return self
 
     @property
-    def sim_matrix(self):
+    def similarity_matrix_(self):
         return self.item_cosine_similarities_
 
 
@@ -103,5 +103,5 @@ class NotItemKNN(SimilarityMatrixAlgorithm):
         return self
 
     @property
-    def sim_matrix(self):
+    def similarity_matrix_(self):
         return self.item_cosine_similarities_

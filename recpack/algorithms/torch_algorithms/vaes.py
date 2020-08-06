@@ -1,5 +1,6 @@
 import time
 from typing import List
+import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,10 +12,12 @@ from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.splitters.splitter_base import batch
-from recpack.algorithms.algorithm_base import Algorithm
+from recpack.algorithms.base import Algorithm
 
 from recpack.metrics.dcg import NDCGK
-from recpack.utils import logger
+
+
+logger = logging.getLogger("recpack")
 
 
 class StoppingCriterion(NDCGK):

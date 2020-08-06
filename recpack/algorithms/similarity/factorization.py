@@ -3,32 +3,12 @@ import sklearn.decomposition
 
 from sklearn.utils.validation import check_is_fitted
 
-from recpack.algorithms.user_item_interactions_algorithms import (
-    UserItemInteractionsAlgorithm,
+from recpack.algorithms.similarity.base import (
+    SimilarityMatrixAlgorithm,
 )
 
 
-class MF(UserItemInteractionsAlgorithm):
-    def __init__(self, K=100):
-        super().__init__()
-        self.K = K
-
-    def fit(self, X):
-        pass
-
-    def predict(self, X, user_ids=None):
-        check_is_fitted(self)
-
-        # TODO again the same similarity approach
-        scores = X @ self.similarity_matrix_
-
-        if not isinstance(scores, scipy.sparse.csr_matrix):
-            scores = scipy.sparse.csr_matrix(scores)
-
-        return scores
-
-
-class NMF(MF):
+class NMF(SimilarityMatrixAlgorithm):
     # TODO check params NMF to see which ones are useful.
 
     def fit(self, X):
@@ -45,7 +25,7 @@ class NMF(MF):
         return self
 
 
-class SVD(MF):
+class SVD(SimilarityMatrixAlgorithm):
 
     def fit(self, X):
         # TODO use other parameter options?

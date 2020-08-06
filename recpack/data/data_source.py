@@ -1,6 +1,6 @@
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
 
-from recpack.utils import to_tuple
+from recpack.util import to_tuple
 
 
 class DataSource(object):

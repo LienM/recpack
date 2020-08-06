@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Tuple
 import math
@@ -8,7 +9,9 @@ import scipy.sparse
 from tqdm.auto import tqdm
 
 from recpack.data.data_matrix import DataM
-from recpack.utils import logger
+
+
+logger = logging.getLogger("recpack")
 
 
 class Splitter(ABC):
