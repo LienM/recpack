@@ -6,7 +6,8 @@ import torch.nn.functional as F
 import torch
 import torch.optim as optim
 import numpy as np
-from scipy.sparse import csr_matrix
+from math import ceil
+from scipy.sparse import csr_matrix, lil_matrix
 
 from sklearn.utils.validation import check_is_fitted
 
@@ -15,9 +16,21 @@ import logging
 from recpack.splitters.splitter_base import batch
 from recpack.algorithms.base import Algorithm
 
-from recpack.algorithms.vae.util import naive_sparse2tensor
+from recpack.algorithms.vae.util import naive_sparse2tensor, naive_tensor2sparse
 
 logger = logging.getLogger('recpack')
+
+#######
+# Helper functions for batch computation
+#######
+def get_users(data):
+    return list(set(data.nonzero()[0]))
+
+def get_batches(users, batch_size=1000):
+    return [
+        users[i*batch_size : min((i*batch_size) + batch_size, len(users))] 
+        for i in range(ceil(len(users)/batch_size))
+    ]
 
 class VAE(Algorithm):
     def __init__(
@@ -133,33 +146,75 @@ class VAE(Algorithm):
 
         return
 
+    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+        """Helper function to batch the prediction, to avoid going out of RAM on the GPU
+
+        Will batch the nonzero users into batches of self.batch_size.
+
+        :param X: The input user interaction matrix
+        :type X: csr_matrix
+        :return: The predicted affinity of users for items.
+        :rtype: csr_matrix
+        """
+        results = lil_matrix(X.shape)
+        for batch in get_batches(get_users(X), batch_size=self.batch_size):
+            in_ = X[batch]
+            in_tensor = naive_sparse2tensor(in_).to(self.device)
+
+            out_tensor, _, _ = self.model_(in_tensor)
+            results[batch] = naive_tensor2sparse(out_tensor.cpu())
+        
+        return results.tocsr()
+
+
+    def _batch_predict_and_loss(self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
+        """Helper function to batch the prediction and loss computation,
+        to avoid going out of RAM on the GPU.
+
+        Will batch the nonzero users into batches of self.batch_size.
+        The loss is accumulated by taking the sum.
+
+        :param X: The input user interaction matrix
+        :type X: csr_matrix
+        :return: The predicted affinity of users for items and the accumulated loss.
+        :rtype: Tuple[csr_matrix, torch.Tensor]
+        """
+
+        results = lil_matrix(X.shape)
+        loss = 0
+        for batch in get_batches(get_users(X), batch_size=self.batch_size):
+            in_ = X[batch]
+            in_tensor = naive_sparse2tensor(in_).to(self.device)
+
+            out_tensor, mu, logvar = self.model_(in_tensor)
+            loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
+            results[batch] = naive_tensor2sparse(out_tensor.cpu())
+        
+        return results.tocsr(), loss
+
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix, users: List[int]):
-        val_loss = 0.0
         # Set to evaluation
         self.model_.eval()
 
         with torch.no_grad():
-            X = naive_sparse2tensor(val_in).to(self.device)
+            # Evaluate batched
+            X_pred_cpu, loss = self._batch_predict_and_loss(val_in)
 
-            X_pred, mu, logvar = self.model_(X)
-            loss = self._compute_loss(X, X_pred, mu, logvar)
-            val_loss += loss.item()
-
-            X_pred_cpu = csr_matrix(X_pred.cpu())
+            val_loss = loss.item()
             X_true = val_out
 
             self.stopping_criterion.calculate(X_true, X_pred_cpu)
 
-        logger.info(
-            f"Evaluation Loss = {val_loss}, NDCG@100 = {self.stopping_criterion.value}"
-        )
+            logger.info(
+                f"Evaluation Loss = {val_loss}, NDCG@100 = {self.stopping_criterion.value}"
+            )
 
-        if self.stopping_criterion.is_best:
-            logger.info("Model improved. Storing better model.")
-            self.save()
+            if self.stopping_criterion.is_best:
+                logger.info("Model improved. Storing better model.")
+                self.save()
 
-        self.stopping_criterion.reset()
+            self.stopping_criterion.reset()
 
     def load(self, value):
         # TODO Give better names
@@ -176,20 +231,8 @@ class VAE(Algorithm):
         check_is_fitted(self)
         self.model_.eval()
 
-        users = list(set(X.nonzero()[0]))
-
-        tensorX = naive_sparse2tensor(X[users, :]).to(self.device)
-
-        tensorX_pred, _, _ = self.model_(tensorX)
-
-        # [[0, 1, 2], [3, 4, 5]] -> [0, 1, 2, 3, 4, 5]
-        V = tensorX_pred.cpu().flatten().detach().numpy()  # Flattens row-major.
-        # -> [1, 2] -> 1, 1, 1, 2, 2, 2 (2 users x 3 items)
-        U = np.repeat(users, X.shape[1])
-        # -> [1, 2, 3] -> 1, 2, 3, 1, 2, 3 (2 users x 3 items)
-        I = list(range(0, X.shape[1])) * len(users)
-
-        X_pred = csr_matrix((V, (U, I)), shape=X.shape)
+        # Compute the result in batches.
+        X_pred = self._batch_predict(X)
 
         return X_pred
 

@@ -16,24 +16,6 @@ from recpack.algorithms.vae.mult_vae import (
 from util import assert_changed, assert_same
 
 
-@pytest.fixture(scope="function")
-def mult_vae():
-    mult = MultVAE(
-        batch_size=500,
-        max_epochs=2,
-        seed=42,
-        learning_rate=1e-2,
-        dim_bottleneck_layer=200,
-        dim_hidden_layer=600,
-        max_beta=0.2,
-        anneal_steps=20,
-        dropout=0.5,
-    )
-
-    mult.save = MagicMock(return_value=True)
-
-    return mult
-
 def _training_step(model: nn.Module, loss_fn: Callable, optim: torch.optim.Optimizer, inputs: Variable, targets: Variable, device: torch.device):
 
     # put model in train mode

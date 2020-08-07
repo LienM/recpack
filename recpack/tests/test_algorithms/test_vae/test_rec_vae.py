@@ -16,22 +16,6 @@ from recpack.algorithms.vae.rec_vae import (
 
 from util import assert_changed, assert_same
 
-@pytest.fixture(scope="function")
-def rec_vae():
-    mult = RecVAE(
-        batch_size=500,
-        max_epochs=2,
-        seed=42,
-        learning_rate=1e-2,
-        dim_bottleneck_layer=200,
-        dim_hidden_layer=600,
-        dropout=0.5,
-    )
-
-    mult.save = MagicMock(return_value=True)
-
-    return mult
-
 
 def test_encoder_training(rec_vae, larger_matrix):
     rec_vae._init_model(larger_matrix.shape[1])

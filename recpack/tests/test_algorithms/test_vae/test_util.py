@@ -1,5 +1,12 @@
-from recpack.algorithms.vae.util import StoppingCriterion
+from recpack.algorithms.vae.util import (
+    StoppingCriterion,
+    naive_sparse2tensor,
+    naive_tensor2sparse
+)
 from recpack.metrics import NDCGK
+
+from scipy.sparse import csr_matrix
+from torch import Tensor
 import pytest
 
 def test_stopping_criterion(larger_matrix):
@@ -25,3 +32,13 @@ def test_stopping_criterion(larger_matrix):
 
     assert crit.value != 0
     assert crit.value == v # Should be a deterministic metric
+
+
+def test_csr_tensor_conversions(larger_matrix):
+    assert type(larger_matrix) == csr_matrix
+    tensor = naive_sparse2tensor(larger_matrix)
+    assert type(tensor) == Tensor
+
+    csr_again = naive_tensor2sparse(tensor)
+
+    assert type(csr_again) == csr_matrix
