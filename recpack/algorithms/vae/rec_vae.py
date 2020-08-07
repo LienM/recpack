@@ -37,7 +37,7 @@ class RecVAE(VAE):
         learning_rate=5e-4,
         dim_bottleneck_layer=200,
         dim_hidden_layer=600,
-        gamma=1,
+        gamma=0.005,
         beta=None,
         dropout=0.5
     ):
