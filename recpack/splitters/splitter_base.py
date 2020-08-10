@@ -9,7 +9,6 @@ import scipy.sparse
 from tqdm.auto import tqdm
 
 from recpack.data.data_matrix import DataM
-from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
