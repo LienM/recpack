@@ -93,13 +93,22 @@ class Metric:
         """
         nonzero_users = list(set(y_true.nonzero()[0]))
 
+        self.user_id_map_ = np.array(nonzero_users)
+
         return y_true[nonzero_users, :], y_pred[nonzero_users, :]
+
+    def map_users(self, users):
+        if hasattr(self, "user_id_map_"):
+            return self.user_id_map_[users]
+        else:
+            return users
 
 
 class MetricTopK(Metric):
     """
     Base class for any metric computed on the TopK items for a user.
     """
+
     def __init__(self, K):
         super().__init__()
         self.K = K
@@ -157,8 +166,10 @@ class ElementwiseMetricK(MetricTopK):
     def results(self):
         scores = self.scores_.toarray()
 
-        users, items = self.indices
-        values = scores[users, items]
+        int_users, items = self.indices
+        values = scores[int_users, items]
+
+        users = self.map_users(int_users)
 
         return pd.DataFrame(dict(zip(self.col_names, (users, items, values))))
 
@@ -192,8 +203,10 @@ class ListwiseMetricK(MetricTopK):
     def results(self):
         scores = self.scores_.toarray()
 
-        users, items = self.indices
-        values = scores[users, items]
+        int_users, items = self.indices
+        values = scores[int_users, items]
+
+        users = self.map_users(int_users)
 
         return pd.DataFrame(dict(zip(self.col_names, (users, values))))
 
@@ -212,7 +225,11 @@ class GlobalMetricK(MetricTopK):
 
     Examples are: Coverage.
     """
-    pass
+
+    @property
+    def results(self):
+
+        return pd.DataFrame({"score": self.value})
 
 
 class FittedMetric(Metric, BaseEstimator):
