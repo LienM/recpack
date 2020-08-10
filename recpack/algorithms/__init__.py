@@ -1,11 +1,11 @@
-from recpack.algorithms.algorithm_base import Algorithm
-from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import (
+from recpack.algorithms.base import Algorithm
+from recpack.algorithms.similarity.linear import (
     EASE,
     SLIM,
 )
-from recpack.algorithms.true_baseline_algorithms import Popularity, Random
-from recpack.algorithms.user_item_interactions_algorithms.nn_algorithms import ItemKNN
-from recpack.algorithms.user_item_interactions_algorithms.matrix_factorization_algorithms import (
+from recpack.algorithms.baseline import Popularity, Random
+from recpack.algorithms.similarity.nearest_neighbour import ItemKNN
+from recpack.algorithms.similarity.factorization import (
     NMF,
     SVD,
 )

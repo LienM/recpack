@@ -1,12 +1,13 @@
-from collections import Counter
+from collections import Counter, defaultdict
+import random
 
 import numpy as np
 import scipy.sparse
 import numpy.random
-import random
-from .algorithm_base import Algorithm
-
 from sklearn.utils.validation import check_is_fitted
+
+
+from recpack.algorithms.base import Algorithm
 
 
 class Random(Algorithm):
@@ -55,7 +56,9 @@ class Popularity(Algorithm):
     def fit(self, X, y=None):
         items = list(X.nonzero()[1])
         sorted_scores = Counter(items).most_common()
-        self.sorted_scores_ = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
+        self.sorted_scores_ = [
+            (item, score / sorted_scores[0][1]) for item, score in sorted_scores
+        ]
         return self
 
     def predict(self, X, user_ids=None):

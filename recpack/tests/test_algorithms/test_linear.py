@@ -1,9 +1,7 @@
 import scipy.sparse
 import numpy
 
-from recpack.algorithms.user_item_interactions_algorithms.linear_algorithms import (
-    EASE
-)
+from recpack.algorithms.similarity.linear import EASE
 
 
 def test_ease():
@@ -36,5 +34,3 @@ def test_ease():
 
     numpy.testing.assert_almost_equal(result[2, 0], 1, decimal=1)
     numpy.testing.assert_almost_equal(result[0, 2], 1, decimal=1)
-
-

@@ -39,6 +39,19 @@ def test_item_knn():
     numpy.testing.assert_almost_equal(result.toarray(), expected_out)
 
 
+def test_item_knn_normalize():
+    values = [1] * 7
+    users = [0, 0, 1, 1, 2, 2, 2]
+    items = [1, 2, 0, 2, 0, 1, 2]
+    data = scipy.sparse.csr_matrix((values, (users, items)), shape=(4, 3))
+
+    algo = recpack.algorithms.algorithm_registry.get("itemKNN")(K=2, normalize=True)
+
+    algo.fit(data)
+
+    numpy.testing.assert_array_almost_equal(algo.item_cosine_similarities_.sum(axis=1), 1)
+
+
 def test_item_knn_empty_col():
     values = [1] * 5
     users = [0, 0, 1, 1, 2]

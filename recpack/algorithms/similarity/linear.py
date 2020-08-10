@@ -6,7 +6,7 @@ import scipy.sparse
 from sklearn.linear_model import SGDRegressor
 from sklearn.utils.validation import check_is_fitted
 
-from recpack.algorithms.user_item_interactions_algorithms import (
+from recpack.algorithms.similarity.base import (
     SimilarityMatrixAlgorithm,
 )
 
@@ -49,8 +49,9 @@ class EASE(SimilarityMatrixAlgorithm):
 
         return self
 
+
     @property
-    def sim_matrix(self):
+    def similarity_matrix_(self):
         return self.B_
 
     def load(self, filename):
@@ -82,6 +83,7 @@ class EASE_Intercept(EASE):
 
         y = X
         X = scipy.sparse.hstack((y, np.ones((X.shape[0], 1))))
+
 
         XTX = (X.T @ X).toarray()
         G = XTX + self.l2 * np.identity(X.shape[1])
@@ -276,5 +278,5 @@ class SLIM(SimilarityMatrixAlgorithm):
         return self
 
     @property
-    def sim_matrix(self):
+    def similarity_matrix_(self):
         return self.similarity_matrix_

@@ -1,16 +1,19 @@
+import logging
 from typing import List
 
 import pandas as pd
 import numpy as np
 
-import recpack.preprocessing.helpers as helpers
+import recpack.preprocessing.util as util
 from recpack.data.data_matrix import DataM
 from recpack.preprocessing.filters import Filter
-from recpack.utils import logger
 
 from tqdm.auto import tqdm
 
 tqdm.pandas()
+
+
+logger = logging.getLogger("recpack")
 
 
 class DataFramePreprocessor:
@@ -57,15 +60,7 @@ class DataFramePreprocessor:
             raise RuntimeError(
                 "User ID Mapping should be fit before attempting to map users"
             )
-
-        user_id_mapping_array = np.arange(0, max(self.user_id_mapping.keys()) + 1)
-        user_id_mapping_array[list(self.user_id_mapping.keys())] = list(
-            self.user_id_mapping.values()
-        )
-        res = user_id_mapping_array[df[self.user_id]]
-        logger.debug("Done")
-        return res
-        # return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
+        return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def map_items(self, df):
         logger.debug("Map items")
@@ -73,15 +68,7 @@ class DataFramePreprocessor:
             raise RuntimeError(
                 "Item ID Mapping should be fit before attempting to map items"
             )
-
-        item_id_mapping_array = np.arange(0, max(self.item_id_mapping.keys()) + 1)
-        item_id_mapping_array[list(self.item_id_mapping.keys())] = list(
-            self.item_id_mapping.values()
-        )
-        res = item_id_mapping_array[df[self.item_id]]
-        logger.debug("Done")
-        return res
-        # res2 = df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
+        return df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
 
     @property
     def shape(self):
@@ -159,10 +146,10 @@ class DataFramePreprocessor:
         item_ids = list(df[self.item_id].unique())
         user_ids = list(df[self.user_id].unique())
 
-        self.user_id_mapping = helpers.rescale_id_space(
+        self.user_id_mapping = util.rescale_id_space(
             user_ids, id_mapping=self.user_id_mapping
         )
-        self.item_id_mapping = helpers.rescale_id_space(
+        self.item_id_mapping = util.rescale_id_space(
             item_ids, id_mapping=self.item_id_mapping
         )
 

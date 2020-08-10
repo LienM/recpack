@@ -1,18 +1,16 @@
 import logging
 
 import numpy as np
-import pandas as pd
 import scipy.sparse
 from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import ElementwiseMetricK
-from recpack.metrics.util import sparse_divide_nonzero
 
 
 logger = logging.getLogger("recpack")
 
 
-class RecallK(ElementwiseMetricK):
+class PrecisionK(ElementwiseMetricK):
     def __init__(self, K):
         super().__init__(K)
 
@@ -29,6 +27,6 @@ class RecallK(ElementwiseMetricK):
 
         scores = scores.tocsr()
 
-        self.scores_ = sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1)))
+        self.scores_ = scores / self.K
 
         return

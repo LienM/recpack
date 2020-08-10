@@ -1,5 +1,6 @@
 import time
 from typing import List
+import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,10 +12,12 @@ from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.splitters.splitter_base import batch
-from recpack.algorithms.algorithm_base import Algorithm
+from recpack.algorithms.base import Algorithm
 
-from recpack.metrics.ndcg import NDCGK
-from recpack.utils import logger
+from recpack.metrics.dcg import NDCGK
+
+
+logger = logging.getLogger("recpack")
 
 
 class StoppingCriterion(NDCGK):
@@ -38,8 +41,8 @@ class StoppingCriterion(NDCGK):
         # Then stopping criterion can inherit from metric. BOOM!
         if self.is_best:
             self.best_value = self.value
-        self.NDCG = 0
-        self.num_users = 0
+        self.value_ = 0
+        self.num_users_ = 0
 
     @property
     def is_best(self):
@@ -215,18 +218,17 @@ class MultVAE(Algorithm):
         self.model_.eval()
 
         with torch.no_grad():
-            for batch_idx, user_batch in enumerate(batch(users, self.batch_size)):
-                val_X = naive_sparse2tensor(val_in[user_batch, :]).to(self.device)
-                # Get value for parameter Beta
+            val_X = naive_sparse2tensor(val_in).to(self.device)
+            # Get value for parameter Beta
 
-                val_X_pred, mu, logvar = self.model_(val_X)
-                loss = self.criterion(val_X_pred, mu, logvar, val_X, anneal=self._beta)
-                val_loss += loss.item()
+            val_X_pred, mu, logvar = self.model_(val_X)
+            loss = self.criterion(val_X_pred, mu, logvar, val_X, anneal=self._beta)
+            val_loss += loss.item()
 
-                val_X_pred_cpu = csr_matrix(val_X_pred.cpu())
-                val_X_true = val_out[user_batch, :]
+            val_X_pred_cpu = csr_matrix(val_X_pred.cpu())
+            val_X_true = val_out
 
-                self.stopping_criterion.update(val_X_pred_cpu, val_X_true)
+            self.stopping_criterion.calculate(val_X_true, val_X_pred_cpu)
 
         logger.info(
             f"Evaluation Loss = {val_loss}, NDCG@100 = {self.stopping_criterion.value}"
@@ -259,7 +261,7 @@ class MultVAE(Algorithm):
         tensorX_pred, _, _ = self.model_(tensorX)
 
         # [[0, 1, 2], [3, 4, 5]] -> [0, 1, 2, 3, 4, 5]
-        V = tensorX_pred.flatten().detach().numpy()  # Flattens row-major.
+        V = tensorX_pred.cpu().flatten().detach().numpy()  # Flattens row-major.
         # -> [1, 2] -> 1, 1, 1, 2, 2, 2 (2 users x 3 items)
         U = np.repeat(users, X.shape[1])
         # -> [1, 2, 3] -> 1, 2, 3, 1, 2, 3 (2 users x 3 items)

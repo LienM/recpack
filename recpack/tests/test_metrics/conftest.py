@@ -1,5 +1,5 @@
 import scipy.sparse
-
+import numpy as np
 import pytest
 
 
@@ -14,7 +14,7 @@ def data():
 
     matrix = scipy.sparse.csr_matrix(
         (input_dict["values"], (input_dict["userId"], input_dict["movieId"])),
-        shape=(10, 5)
+        shape=(10, 5),
     )
     return matrix
 
@@ -54,3 +54,19 @@ def X_true_simplified():
     )
 
     return true_data
+
+
+@pytest.fixture(scope="function")
+def X_lots_of_items():
+    true_data = scipy.sparse.diags(np.ones(100_000))
+    return true_data
+
+
+@pytest.fixture(scope="function")
+def item_features():
+    items, features = [0, 1, 2, 3, 4], [0, 1, 0, 1, 0]
+
+    feature_mat = scipy.sparse.csr_matrix(
+        ([1 for i in range(len(items))], (items, features)), shape=(5, 2)
+    )
+    return feature_mat
