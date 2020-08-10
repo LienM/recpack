@@ -24,15 +24,15 @@ class StrongGeneralization(Scenario):
         self.interaction_split = splitter_base.PercentageInteractionSplitter(perc_interactions_in)
 
     def split(self, data):
-        self.train_X, val_te_data = self.strong_gen.split(data)
+        train_val_data, test_data = self.strong_gen.split(data)
 
         if self.validation:
-            val_data, te_data = self.validation_splitter.split(val_te_data)
-            self.validation_data_in, self.validation_data_out = self.interaction_split.split(val_data)
+            self.train_X, validation_data = self.validation_splitter.split(train_val_data)
+            self.validation_data_in, self.validation_data_out = self.interaction_split.split(validation_data)
         else:
-            te_data = val_te_data
+            self.train_X = train_val_data
 
-        self.test_data_in, self.test_data_out = self.interaction_split.split(te_data)
+        self.test_data_in, self.test_data_out = self.interaction_split.split(test_data)
 
         self.validate()
 
@@ -60,17 +60,19 @@ class TrainingInTestOutTimed(Scenario):
         self.t_delta = t_delta
         self.t_alpha = t_alpha
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.llo_spl = splitter_base.LeaveLastOneOutSplitter()
 
     def split(self, data):
-        self.train_X, val_te_data_out = self.timestamp_spl.split(data)
+        lt_t, gt_t = self.timestamp_spl.split(data)
 
         if self.validation:
-            self.validation_data_in = self.train_X
-            self.validation_data_out, self.test_data_out = self.validation_splitter.split(val_te_data_out)
+            self.train_X, validation_data = self.validation_splitter.split(lt_t)
+            self.validation_data_in, self.validation_data_out = self.llo_spl.split(validation_data)
         else:
-            self.test_data_out = val_te_data_out
+            self.train_X = lt_t
 
-        self.test_data_in = self.train_X
+        self.test_data_in = lt_t
+        self.test_data_out = gt_t
 
         self.validate()
 
@@ -93,18 +95,19 @@ class StrongGeneralizationTimed(Scenario):
 
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
         self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_in)
+        self.llo_spl = splitter_base.LeaveLastOneOutSplitter()
 
     def split(self, data):
         # Split across user dimension
-        tr_data, val_te_data = self.strong_gen.split(data)
-        # Make sure only interactions before t are used for training
-        self.train_X, _ = self.timestamp_spl.split(tr_data)
+        tr_val_data, te_data = self.strong_gen.split(data)
+        # Make sure only interactions before t are used for training / validation
+        tr_val_data, _ = self.timestamp_spl.split(tr_val_data)
 
         if self.validation:
-            val_data, te_data = self.validation_splitter.split(val_te_data)
-            self.validation_data_in, self.validation_data_out = self.timestamp_spl.split(val_data)
+            self.train_X, validation_data = self.validation_splitter.split(tr_val_data)
+            self.validation_data_in, self.validation_data_out = self.llo_spl.split(validation_data)
         else:
-            te_data = val_te_data
+            self.train_X = tr_val_data
 
         self.test_data_in, self.test_data_out = self.timestamp_spl.split(te_data)
 
@@ -123,7 +126,7 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
     test_data_out = data_2 & timestamp > t
     """
     # TODO Make this more standard.
-
+    # TODO: Validation changes, could not figure out exactly how to manage it.
     def __init__(self, t, t_alpha=None, t_delta=None, validation=False):
         super().__init__(validation=validation)
         self.t = t
