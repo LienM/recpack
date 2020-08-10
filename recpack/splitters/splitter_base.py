@@ -9,7 +9,7 @@ import scipy.sparse
 from tqdm.auto import tqdm
 
 from recpack.data.data_matrix import DataM
-
+from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
@@ -240,6 +240,30 @@ class TimestampSplitter(Splitter):
         logger.debug(f"{self.name} - Split successful")
 
         return tr_data, te_data
+
+
+class LeaveLastOneOutSplitter(Splitter):
+    """For each user, the last item is kept as out and the rest as in.
+    """
+
+    @property
+    def name(self):
+        return "leave_last_one_out_splitter"
+    
+    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+        # Get the ranks of interactions, from last to first. 
+        ranked_by_ts = data.timestamps.groupby('uid').rank(ascending=False, method='first')
+        # the input dataframe is all except the last one
+        in_df = ranked_by_ts[ranked_by_ts != 1].reset_index()
+        in_indices = list(zip(*in_df.loc[:, ['uid', 'iid']].values))
+
+        # The output dataframe is the last interaction
+        out_df = ranked_by_ts[ranked_by_ts == 1].reset_index()
+        out_indices = list(zip(*out_df.loc[:, ['uid', 'iid']].values))
+
+        in_ = data.indices_in(in_indices)
+        out_ = data.indices_in(out_indices)
+        return in_, out_
 
 
 def batch(iterable, n=1):

@@ -97,7 +97,7 @@ class DataM:
 
         return self._timestamp_comparator(func, inplace=inplace)
 
-    def users_in(self, U, inplace=False):
+    def users_in(self, U: List[int], inplace=False):
         logger.debug("Performing users_in comparison")
 
         mask_values = np.ones(len(U))
@@ -155,6 +155,11 @@ class DataM:
     @property
     def user_history(self):
         return groupby2(*self.indices)
+
+    @property
+    def active_users(self):
+        U, _ = self.indices
+        return set(U)
 
     @property
     def active_user_count(self):
