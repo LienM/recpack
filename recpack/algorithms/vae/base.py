@@ -23,14 +23,18 @@ logger = logging.getLogger('recpack')
 #######
 # Helper functions for batch computation
 #######
+
+
 def get_users(data):
     return list(set(data.nonzero()[0]))
 
+
 def get_batches(users, batch_size=1000):
     return [
-        users[i*batch_size : min((i*batch_size) + batch_size, len(users))] 
-        for i in range(ceil(len(users)/batch_size))
+        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
+        for i in range(ceil(len(users) / batch_size))
     ]
+
 
 class VAE(Algorithm):
     def __init__(
@@ -58,7 +62,7 @@ class VAE(Algorithm):
     #######
     # FUNCTIONS TO OVERWRITE FOR EACH VAE
     #######
- 
+
     def _init_model(self, dim_input_layer: int) -> None:
         """Initialize self.model_ based on the size of the input.
         Also initialize the optimizer(s)
@@ -72,7 +76,7 @@ class VAE(Algorithm):
 
         self.model_ = None
         raise NotImplementedError()
-    
+
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
         """Perform one training epoch.
 
@@ -87,7 +91,8 @@ class VAE(Algorithm):
         self.model_.train()
         raise NotImplementedError()
 
-    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,
+                      mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """Compute the prediction loss.
 
         Function used in training.
@@ -110,7 +115,8 @@ class VAE(Algorithm):
     # STANDARD FUNCTIONS
     # DO NOT OVERWRITE UNLESS ABSOLUTELY NECESSARY
     #######
-    def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]) -> None:
+    def fit(self, X: csr_matrix,
+            validation_data: Tuple[csr_matrix, csr_matrix]) -> None:
         """Fit the model on the interaction matrix, validation of the parameters is done with the validation data tuple.
 
         At the end of this function, the self.model_ should be ready for use.
@@ -163,11 +169,11 @@ class VAE(Algorithm):
 
             out_tensor, _, _ = self.model_(in_tensor)
             results[batch] = naive_tensor2sparse(out_tensor.cpu())
-        
+
         return results.tocsr()
 
-
-    def _batch_predict_and_loss(self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
+    def _batch_predict_and_loss(
+            self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
         """Helper function to batch the prediction and loss computation,
         to avoid going out of RAM on the GPU.
 
@@ -189,11 +195,11 @@ class VAE(Algorithm):
             out_tensor, mu, logvar = self.model_(in_tensor)
             loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
             results[batch] = naive_tensor2sparse(out_tensor.cpu())
-        
+
         return results.tocsr(), loss
 
-
-    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix, users: List[int]):
+    def _evaluate(self, val_in: csr_matrix,
+                  val_out: csr_matrix, users: List[int]):
         # Set to evaluation
         self.model_.eval()
 
@@ -247,7 +253,8 @@ class VAETorch(nn.Module):
     ):
         super().__init__()
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(
+            self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Pass the input through the network, and return result.
 
         :param x: input tensor

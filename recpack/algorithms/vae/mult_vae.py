@@ -18,6 +18,7 @@ from recpack.metrics import NDCGK
 
 logger = logging.getLogger('recpack')
 
+
 class MultVAE(VAE):
     def __init__(
         self,
@@ -48,7 +49,8 @@ class MultVAE(VAE):
         :type dim_bottleneck_layer: int, optional
         :param dim_hidden_layer: Dimension of the hidden layer, defaults to 600
         :type dim_hidden_layer: int, optional
-        :param max_beta: Regularization parameter, annealed over {anneal_steps} until it reaches max_beta, defaults to 0.2
+        :param max_beta: Regularization parameter, annealed over {anneal_steps}
+                        until it reaches max_beta, defaults to 0.2
         :type max_beta: float, optional
         :param anneal_steps: Number of steps to anneal beta to {max_beta}, defaults to 200000
         :type anneal_steps: int, optional
@@ -62,7 +64,7 @@ class MultVAE(VAE):
             learning_rate,
             StoppingCriterion(NDCGK, K=100)
         )
-        
+
         self.dim_hidden_layer = dim_hidden_layer
         self.dim_bottleneck_layer = dim_bottleneck_layer
 
@@ -102,7 +104,8 @@ class MultVAE(VAE):
             dropout=self.dropout,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
         """
@@ -140,8 +143,8 @@ class MultVAE(VAE):
             f"Processed one batch in {end_time-start_time} s. Training Loss = {train_loss}"
         )
 
-
-    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,
+                      mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """Compute the prediction loss.
 
         More info on the loss function in the paper
@@ -189,7 +192,8 @@ class MultiVAETorch(VAETorch):
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.
-        self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
+        self.q_hid_bn_layer = nn.Linear(
+            dim_hidden_layer, dim_bottleneck_layer * 2)
 
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
@@ -215,7 +219,8 @@ class MultiVAETorch(VAETorch):
     def encode(self, x):
         h = F.normalize(x)
 
-        # Torch will only do the dropout if the model is supposed to be training
+        # Torch will only do the dropout if the model is supposed to be
+        # training
         h = self.drop(h)
 
         h = self.q_in_hid_layer(h)
@@ -254,6 +259,7 @@ class MultiVAETorch(VAETorch):
 
 def vae_loss_function(recon_x, mu, logvar, x, anneal=1.0):
     BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
+                                      mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD

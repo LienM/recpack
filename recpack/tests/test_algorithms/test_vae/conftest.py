@@ -15,9 +15,11 @@ from recpack.algorithms import RecVAE, MultVAE
 
 INPUT_SIZE = 1000
 
+
 @pytest.fixture(scope="function")
 def input_size():
     return INPUT_SIZE
+
 
 @pytest.fixture(scope="function")
 def inputs():
@@ -86,4 +88,3 @@ def rec_vae():
     rec.save = MagicMock(return_value=True)
 
     return rec
-
