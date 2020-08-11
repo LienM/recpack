@@ -60,6 +60,9 @@ class TrainingInTestOutTimed(Scenario):
         self.t_delta = t_delta
         self.t_alpha = t_alpha
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        # TODO: does it make sense to use the LLO split.
+        # Given that you want the validation to be similar to test
+        # Now you only have 1 item to predict.
         self.llo_spl = splitter_base.LeaveLastOneOutSplitter()
 
     def split(self, data):
@@ -126,7 +129,6 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
     test_data_out = data_2 & timestamp > t
     """
     # TODO Make this more standard.
-    # TODO: Validation changes, could not figure out exactly how to manage it.
     def __init__(self, t, t_alpha=None, t_delta=None, validation=False):
         super().__init__(validation=validation)
         self.t = t
@@ -134,17 +136,18 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
         self.t_alpha = t_alpha
 
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.llo_spl = splitter_base.LeaveLastOneOutSplitter()
 
     def split(self, data, data_2):
-        self.train_X, _ = self.timestamp_spl.split(data)
+        d_1_lt, _ = self.timestamp_spl.split(data) 
+        d_2_lt, d_2_gt = self.timestamp_spl.split(data_2)
+
+        self.test_data_in, self.test_data_out = (d_1_lt, d_2_gt)
+        # TODO: do we need a strong generalization split in train and validation users?
+        self.train_X = d_1_lt
 
         if self.validation:
-            val_data, te_data = self.validation_splitter.split(data_2)
-            self.validation_data_in, self.validation_data_out = self.timestamp_spl.split(val_data)
-        else:
-            te_data = data_2
-
-        self.test_data_in, self.test_data_out = self.timestamp_spl.split(te_data)
+            self.validation_data_in, self.validation_data_out = self.llo_spl.split(d_2_lt)
 
         self.validate()
 
@@ -165,19 +168,22 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
         self.t_alpha = t_alpha
 
         self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.llo_spl = splitter_base.LeaveLastOneOutSplitter()
 
     def split(self, data, data_2):
-        self.train_X, _ = self.timestamp_spl.split(data)
+        d_1_lt, _ = self.timestamp_spl.split(data) 
+        d_2_lt, d_2_gt = self.timestamp_spl.split(data_2)
 
+        self.test_data_in, self.test_data_out = (d_1_lt, d_2_gt)
+        
         if self.validation:
-            val_data, te_data = self.validation_splitter.split(data_2)
-            _, self.validation_data_out = self.timestamp_spl.split(val_data)
-            self.validation_data_in = self.train_X
-        else:
-            te_data = data_2
+            self.train_X, self.validation_data_in = self.validation_splitter.split(d_1_lt)
+            val_users = list(set(self.validation_data_in.indices[0]))
 
-        _, self.test_data_out = self.timestamp_spl.split(te_data)
-        self.test_data_in = self.train_X
+            # Get last data 2 element as validation out
+            _, self.validation_data_out = self.llo_spl.split(d_2_lt.users_in(val_users))
+        else:
+            self.train_X = d_1_lt
 
         self.validate()
 
@@ -190,15 +196,22 @@ class TrainInTimedOutOfDomainWithLabelsEvaluate(TrainInTimedOutOfDomainEvaluate)
         super().__init__(t, t_alpha, t_delta, validation=validation)
 
     def split(self, data, data_2):
-        self.train_X, _ = self.timestamp_spl.split(data)
+        d_1_lt, _ = self.timestamp_spl.split(data) 
+        d_2_lt, d_2_gt = self.timestamp_spl.split(data_2)
 
+        self.test_data_in, self.test_data_out = (d_1_lt, d_2_gt)
+        
         if self.validation:
-            self.train_y, test_val_data_out = self.timestamp_spl.split(data_2)
-            self.validation_data_out, self.test_data_out = self.validation_splitter.split(test_val_data_out)
-            self.validation_data_in = self.train_X
-            self.test_data_in = self.train_X
+            self.train_X, self.validation_data_in = self.validation_splitter.split(d_1_lt)
+            val_users = list(set(self.validation_data_in.indices[0]))
+
+            # Get last data 2 element as validation out
+            _, self.validation_data_out = self.llo_spl.split(d_2_lt.users_in(val_users))
+
+            train_users = list(set(self.train_X.indices[0]))
+            self.train_y = d_2_lt.users_in(train_users)
         else:
-            self.train_y, self.test_data_out = self.timestamp_spl.split(data_2)
-            self.test_data_in = self.train_X
+            self.train_X = d_1_lt
+            self.train_y = d_2_lt
 
         self.validate()

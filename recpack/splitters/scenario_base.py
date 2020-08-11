@@ -16,7 +16,7 @@ class Scenario(ABC):
         """
         self.validation = validation
         if validation:
-            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.5)
+            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8)
 
     @abstractmethod
     def split(self, *data_ms: DataM):
