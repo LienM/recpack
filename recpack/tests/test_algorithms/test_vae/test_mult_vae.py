@@ -1,8 +1,5 @@
-from unittest.mock import MagicMock
 from typing import Callable
 
-import pytest
-import numpy as np
 import scipy.sparse
 import torch
 import torch.nn as nn
@@ -10,14 +7,19 @@ from torch.autograd import Variable
 
 from recpack.algorithms.vae.mult_vae import (
     MultiVAETorch,
-    MultVAE,
     vae_loss_function,
 )
 from util import assert_changed, assert_same
 
 
-def _training_step(model: nn.Module, loss_fn: Callable, optim: torch.optim.Optimizer,
-                   inputs: Variable, targets: Variable, device: torch.device):
+def _training_step(
+    model: nn.Module,
+    loss_fn: Callable,
+    optim: torch.optim.Optimizer,
+    inputs: Variable,
+    targets: Variable,
+    device: torch.device
+):
 
     # put model in train mode
     model.train()

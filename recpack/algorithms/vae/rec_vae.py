@@ -12,8 +12,6 @@ from scipy.sparse import csr_matrix
 
 from copy import deepcopy
 
-from sklearn.utils.validation import check_is_fitted
-
 from recpack.splitters.splitter_base import batch
 from recpack.algorithms.vae.base import VAE, VAETorch
 from recpack.algorithms.vae.util import (
@@ -44,32 +42,39 @@ class RecVAE(VAE):
     ):
         """
         RecVAE Algorithm as first discussed in
-        'RecVAE: a New Variational Autoencoder for Top-NRecommendations with Implicit Feedback',
+        'RecVAE: a New Variational Autoencoder for
+        Top-NRecommendations with Implicit Feedback',
         I. Shenbin et al. @ WSDM2020
         Default values were taken from the paper.
 
         :param batch_size: Batch size for SGD, defaults to 500
         :type batch_size: int, optional
-        :param max_epochs: Maximum number of epochs (iterations), defaults to 200
+        :param max_epochs: Maximum number of epochs (iterations),
+                            defaults to 200
         :type max_epochs: int, optional
         :param n_enc_epochs: The training happens alternating,
                              in every epoch this amount of optimizations happen
                              for the encoder network
         :type n_enc_epochs: int
-        :param n_dec_epochs: The number of times to optimize the decoder network each epoch.
+        :param n_dec_epochs: The number of times to optimize
+                             the decoder network each epoch.
         :type n_dec_epochs: int
-        :param seed: Random seed for Torch, provided for reproducibility, defaults to 42.
+        :param seed: Random seed for Torch, provided for reproducibility,
+                     defaults to 42.
         :type seed: int, optional
         :param learning_rate: Learning rate, defaults to 1e-4
         :type learning_rate: float, optional
-        :param dim_bottleneck_layer: Size of the latent representation, defaults to 200
+        :param dim_bottleneck_layer: Size of the latent representation,
+                                     defaults to 200
         :type dim_bottleneck_layer: int, optional
         :param dim_hidden_layer: Dimension of the hidden layer, defaults to 600
         :type dim_hidden_layer: int, optional
-        :param gamma: Parameter defining regularization of the KL loss together with the norm of the output,
+        :param gamma: Parameter defining regularization of the KL loss
+                      together with the norm of the output,
                       defaults to 1
         :type gamm: float, optional
-        :param beta: Regularization parameter of the KL loss, only used if gamma = None, defaults to None
+        :param beta: Regularization parameter of the KL loss,
+                     only used if gamma = None, defaults to None
         :type beta: float, optional
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
@@ -103,7 +108,8 @@ class RecVAE(VAE):
         """
         Initialize Torch model and optimizer.
 
-        :param dim_input_layer: Dimension of the input layer (corresponds to number of items)
+        :param dim_input_layer: Dimension of the input layer
+                                (corresponds to number of items)
         :type dim_input_layer: int
         """
         self.model_ = RecVAETorch(
@@ -153,7 +159,8 @@ class RecVAE(VAE):
         return negative_elbo
 
     def _train_partial(self, train_data, users, optimizer):
-        """Part of the train mathod, optimizes a single part of the combined Neural network.
+        """Part of the train mathod,
+        optimizes a single part of the combined Neural network.
         The optimizer should be passed in the argument.
         """
 
@@ -180,7 +187,8 @@ class RecVAE(VAE):
         end_time = time.time()
 
         logger.info(
-            f"Processed one batch in {end_time-start_time} s. Training Loss = {train_loss}"
+            f"Processed one batch in {end_time-start_time} s."
+            " Training Loss = {train_loss}"
         )
 
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
@@ -206,9 +214,15 @@ class RecVAE(VAE):
 
 
 class CompositePrior(nn.Module):
-    def __init__(self, dim_hidden_layer: int, dim_bottleneck_layer: int,
-                 dim_input_layer: int, mixture_weights=[3 / 20, 3 / 4, 1 / 10]):
-        """Composite prior, based on a gaussian prior, a uniform prior and the posterior of the previously trained model.
+    def __init__(
+        self,
+        dim_hidden_layer: int,
+        dim_bottleneck_layer: int,
+        dim_input_layer: int,
+        mixture_weights=[3 / 20, 3 / 4, 1 / 10]
+    ):
+        """Composite prior, based on a gaussian prior, a uniform prior and
+            the posterior of the previously trained model.
 
         :param dim_hidden_layer: The size of the hidden dimensions
         :type dim_hidden_layer: int
@@ -216,7 +230,9 @@ class CompositePrior(nn.Module):
         :type dim_bottleneck_layer: int
         :param dim_input_layer: The number of features in the input
         :type dim_input_layer: int
-        :param mixture_weights: the weights to combine the priors with. In order: standard prior, post_prior and uniform prior, defaults to [3/20, 3/4, 1/10]
+        :param mixture_weights: the weights to combine the priors with.
+            In order: standard prior, post_prior and uniform prior,
+            defaults to [3/20, 3/4, 1/10]
         :type mixture_weights: list, optional
         """
         super(CompositePrior, self).__init__()
@@ -258,9 +274,11 @@ class CompositePrior(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, dim_hidden_layer: int, dim_bottleneck_layer: int,
                  dim_input_layer: int, eps: float = 1e-1):
-        """Encode part of the Neural network, takes data from the input, passes it through 5 hidden layers to get a latent representation.
+        """Encode part of the Neural network, takes data from the input,
+            passes it through 5 hidden layers to get a latent representation.
 
-        All hidden layers have the same dimension, the latent layer and input layer can have any dimeensions needed.
+        All hidden layers have the same dimension,
+        the latent layer and input layer can have any dimensions needed.
 
         :param dim_hidden_layer: The number of hidden dimensions
         :type dim_hidden_layer: int
@@ -268,7 +286,8 @@ class Encoder(nn.Module):
         :type dim_bottleneck_layer: int
         :param dim_input_layer: The number of features in the input
         :type dim_input_layer: int
-        :param eps: stabilization value for normalization of the hidden layers, defaults to 1e-1
+        :param eps: stabilization value for normalization of the hidden layers,
+                    defaults to 1e-1
         :type eps: float, optional
         """
         super(Encoder, self).__init__()
@@ -290,13 +309,17 @@ class Encoder(nn.Module):
         self.fc_logvar = nn.Linear(dim_hidden_layer, dim_bottleneck_layer)
 
     def forward(self, x, dropout_rate):
-        """encode the data in x to the latent dimension, randomly dropping some values, to add noise, which makes the encoder more robust.
+        """encode the data in x to the latent dimension,
+        randomly dropping some values, to add noise,
+        which makes the encoder more robust.
 
         :param x: the input
         :type x: torch.tensor
-        :param dropout_rate: the rate with which to drop values from the input in order to add noise.
+        :param dropout_rate: the rate with which to drop values from the input
+                             in order to add noise.
         :type dropout_rate: float
-        :return: tuple of encoded values for x, both in the latent dimension. 1st is average, 2nd logarithmic variance?
+        :return: tuple of encoded values for x, both in the latent dimension.
+                 1st is average, 2nd logarithmic variance?
         :rtype: tuple[torch.tensor, torch.tensor]
         """
         norm = x.pow(2).sum(dim=-1).sqrt()
@@ -319,7 +342,10 @@ class RecVAETorch(VAETorch):
                  dim_input_layer, gamma=1, beta=None, dropout_rate=0.5):
         """RecVAE torch module.
 
-        The recVAE network consists of a separate encoder and decoder structure. Where the encoder is a deeper neural network, with several layers, the decoder is a single layer.
+        The recVAE network consists of a separate encoder
+        and decoder structure.
+        Where the encoder is a deeper neural network, with several layers,
+        the decoder is a single layer.
 
         The prior is a composite prior, used to compute a better loss function.
 
@@ -329,11 +355,15 @@ class RecVAETorch(VAETorch):
         :type dim_bottleneck_layer: int
         :param dim_input_layer: The number of features in the input
         :type dim_input_layer: int
-        :param gamma: mutually exclusive with beta. If Gamma is used weigh the KL loss based on gamma * norm (this is 'beta'), defaults to 1
+        :param gamma: mutually exclusive with beta.
+            If Gamma is used weigh the KL loss based on gamma * norm,
+            defaults to 1
         :type gamma: int, optional
-        :param beta: Beta weighting parameter in the KL loss, defaults to None. If Gamma is set, this will never be used.
+        :param beta: Beta weighting parameter in the KL loss, defaults to None.
+                     If Gamma is set, this will never be used.
         :type beta: float, optional
-        :param dropout_rate: the fraction of interactions to drop when training, defaults to 0.5
+        :param dropout_rate: the fraction of interactions to drop
+                             when training, defaults to 0.5
         :type dropout_rate: float, optional
         """
         super(RecVAETorch, self).__init__()
@@ -354,13 +384,18 @@ class RecVAETorch(VAETorch):
         self.dropout_rate = dropout_rate
 
     def reparameterize(self, mu, logvar):
-        """During training we don't use the mean values, but we use the variance to sample a score based on a normal distribution around the average.
+        """During training we don't use the mean values,
+            but we use the variance to sample a score
+            based on a normal distribution around the average.
 
         :param mu: tensor with mean values for each latent feature
         :type mu: torch.tensor
-        :param logvar: tensor with the logvariance of the latent feature values.
+        :param logvar: tensor with the logvariance
+                       of the latent feature values.
         :type logvar: torch.tensor
-        :return: a single tensor with the latent encoding. If not training this is just the average, when training, sampled around the mean.
+        :return: a single tensor with the latent encoding.
+                 If not training this is just the average,
+                 when training, sampled around the mean.
         :rtype: [type]
         """
         if self.training:

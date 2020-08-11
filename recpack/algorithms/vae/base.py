@@ -1,11 +1,7 @@
-import time
 from typing import List, Tuple
 
 import torch.nn as nn
-import torch.nn.functional as F
 import torch
-import torch.optim as optim
-import numpy as np
 from math import ceil
 from scipy.sparse import csr_matrix, lil_matrix
 
@@ -13,15 +9,17 @@ from sklearn.utils.validation import check_is_fitted
 
 import logging
 
-from recpack.splitters.splitter_base import batch
 from recpack.algorithms.base import Algorithm
 
-from recpack.algorithms.vae.util import naive_sparse2tensor, naive_tensor2sparse
+from recpack.algorithms.vae.util import (
+    naive_sparse2tensor,
+    naive_tensor2sparse
+)
 
 logger = logging.getLogger('recpack')
 
 #######
-# Helper functions for batch computation
+#  Helper functions for batch computation
 #######
 
 
@@ -46,7 +44,8 @@ class VAE(Algorithm):
         stopping_criterion
     ):
         self.batch_size = (
-            batch_size  # TODO * torch.cuda.device_count() if cuda else batch_size
+            # TODO * torch.cuda.device_count() if cuda else batch_size
+            batch_size
         )
         self.max_epochs = max_epochs
         self.seed = seed
@@ -67,7 +66,8 @@ class VAE(Algorithm):
         """Initialize self.model_ based on the size of the input.
         Also initialize the optimizer(s)
 
-        At the end of this function, the model used in this VAE should be initialized
+        At the end of this function,
+        the model used in this VAE should be initialized
         and the optimizers used to tune the parameters are initialized.
 
         :param dim_input_layer: the number of features in the input layer.
@@ -80,7 +80,8 @@ class VAE(Algorithm):
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
         """Perform one training epoch.
 
-        Overwrite this function with the concrete implementation of the training step.
+        Overwrite this function with the concrete implementation
+        of the training step.
 
         :param train_data: Training data (UxI)
         :type train_data: [type]
@@ -117,10 +118,12 @@ class VAE(Algorithm):
     #######
     def fit(self, X: csr_matrix,
             validation_data: Tuple[csr_matrix, csr_matrix]) -> None:
-        """Fit the model on the interaction matrix, validation of the parameters is done with the validation data tuple.
+        """Fit the model on the interaction matrix,
+        validation of the parameters is done with the validation data tuple.
 
         At the end of this function, the self.model_ should be ready for use.
-        There is typically no need to change this function when inheritting from the base class.
+        There is typically no need to change this function when
+        inheritting from the base class.
 
         :param X: user interactions to train on
         :type X: csr_matrix
@@ -153,7 +156,8 @@ class VAE(Algorithm):
         return
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
-        """Helper function to batch the prediction, to avoid going out of RAM on the GPU
+        """Helper function to batch the prediction,
+        to avoid going out of RAM on the GPU
 
         Will batch the nonzero users into batches of self.batch_size.
 
@@ -182,7 +186,8 @@ class VAE(Algorithm):
 
         :param X: The input user interaction matrix
         :type X: csr_matrix
-        :return: The predicted affinity of users for items and the accumulated loss.
+        :return: The predicted affinity of users for items
+                 and the accumulated loss.
         :rtype: Tuple[csr_matrix, torch.Tensor]
         """
 
@@ -213,7 +218,8 @@ class VAE(Algorithm):
             self.stopping_criterion.calculate(X_true, X_pred_cpu)
 
             logger.info(
-                f"Evaluation Loss = {val_loss}, NDCG@100 = {self.stopping_criterion.value}"
+                f"Evaluation Loss = {val_loss}"
+                ", NDCG@100 = {self.stopping_criterion.value}"
             )
 
             if self.stopping_criterion.is_best:
@@ -254,12 +260,14 @@ class VAETorch(nn.Module):
         super().__init__()
 
     def forward(
-            self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            self, x: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Pass the input through the network, and return result.
 
         :param x: input tensor
         :type x: torch.Tensor
-        :return: A tuple with (predicted output value, mean values, average values)
+        :return: A tuple with
+                (predicted output value, mean values, average values)
         :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
         """
         mu, logvar = self.encode(x)

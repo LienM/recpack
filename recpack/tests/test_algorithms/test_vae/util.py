@@ -1,8 +1,5 @@
 import torch
-from typing import Callable
-import torch.nn as nn
 import torch.optim
-from torch.autograd import Variable
 
 
 def assert_changed(params_before, params_after, device):
