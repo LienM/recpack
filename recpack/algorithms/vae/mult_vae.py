@@ -215,9 +215,8 @@ class MultiVAETorch(VAETorch):
     def encode(self, x):
         h = F.normalize(x)
 
-        # Only drop if training
-        if self.training:
-            h = self.drop(h)
+        # Torch will only do the dropout if the model is supposed to be training
+        h = self.drop(h)
 
         h = self.q_in_hid_layer(h)
         h = self.tanh(h)
