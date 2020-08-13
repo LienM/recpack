@@ -1,10 +1,9 @@
 from typing import List, Tuple
-import time
 
 import torch.nn as nn
 import torch
 from math import ceil
-from scipy.sparse import csr_matrix, coo_matrix
+from scipy.sparse import csr_matrix
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
@@ -13,8 +12,7 @@ import logging
 from recpack.algorithms.base import Algorithm
 
 from recpack.algorithms.vae.util import (
-    naive_sparse2tensor,
-    naive_tensor2sparse
+    naive_sparse2tensor
 )
 
 logger = logging.getLogger('recpack')
@@ -211,36 +209,20 @@ class VAE(Algorithm):
         self.model_.eval()
 
         with torch.no_grad():
-            t1 = time.time()
             # Evaluate batched
             X_pred_cpu, loss = self._batch_predict_and_loss(val_in)
-            t2 = time.time()
             val_loss = loss.item()
             X_true = val_out
-            t3 = time.time()
 
             self.stopping_criterion.calculate(X_true, X_pred_cpu)
-            t4 = time.time()
             logger.info(
                 f"Evaluation Loss = {val_loss}"
                 f", NDCG@100 = {self.stopping_criterion.value}"
             )
-            t5 = time.time()
             if self.stopping_criterion.is_best:
                 logger.info("Model improved. Storing better model.")
                 self.save()
-            t6 = time.time()
             self.stopping_criterion.reset()
-            t7 = time.time()
-
-            logger.info("TIMINGS OF EVALUATE FUNCTION")
-            logger.info(f"prediction took {t2-t1} s")
-            logger.info(f"getting loss and true value took {t3-t2} s")
-            logger.info(f"computing stopping criterion took {t4-t3} s")
-            logger.info(f"logging output took {t5-t4} s")
-            logger.info(f"saving model took {t6-t5} s")
-            logger.info(f"resetting stopping criterion took {t7-t6} s")
-            logger.info(f"total time: {t7-t1}s")
 
     def load(self, value):
         # TODO Give better names
