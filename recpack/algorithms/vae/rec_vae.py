@@ -188,7 +188,7 @@ class RecVAE(VAE):
 
         logger.info(
             f"Processed one batch in {end_time-start_time} s."
-            " Training Loss = {train_loss}"
+            f" Training Loss = {train_loss}"
         )
 
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):

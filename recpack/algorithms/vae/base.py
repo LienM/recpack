@@ -1,10 +1,11 @@
 from typing import List, Tuple
+import time
 
 import torch.nn as nn
 import torch
 from math import ceil
-from scipy.sparse import csr_matrix, lil_matrix
-
+from scipy.sparse import csr_matrix, coo_matrix
+import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
 import logging
@@ -166,15 +167,15 @@ class VAE(Algorithm):
         :return: The predicted affinity of users for items.
         :rtype: csr_matrix
         """
-        results = lil_matrix(X.shape)
+        results = np.zeros(X.shape)
         for batch in get_batches(get_users(X), batch_size=self.batch_size):
             in_ = X[batch]
             in_tensor = naive_sparse2tensor(in_).to(self.device)
 
             out_tensor, _, _ = self.model_(in_tensor)
-            results[batch] = naive_tensor2sparse(out_tensor.cpu())
+            results[batch] = out_tensor.detach().numpy()
 
-        return results.tocsr()
+        return csr_matrix(results)
 
     def _batch_predict_and_loss(
             self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
@@ -191,7 +192,7 @@ class VAE(Algorithm):
         :rtype: Tuple[csr_matrix, torch.Tensor]
         """
 
-        results = lil_matrix(X.shape)
+        results = np.zeros(X.shape)
         loss = 0
         for batch in get_batches(get_users(X), batch_size=self.batch_size):
             in_ = X[batch]
@@ -199,9 +200,10 @@ class VAE(Algorithm):
 
             out_tensor, mu, logvar = self.model_(in_tensor)
             loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
-            results[batch] = naive_tensor2sparse(out_tensor.cpu())
 
-        return results.tocsr(), loss
+            results[batch] = out_tensor.detach().numpy()
+
+        return csr_matrix(results), loss
 
     def _evaluate(self, val_in: csr_matrix,
                   val_out: csr_matrix, users: List[int]):
@@ -209,24 +211,36 @@ class VAE(Algorithm):
         self.model_.eval()
 
         with torch.no_grad():
+            t1 = time.time()
             # Evaluate batched
             X_pred_cpu, loss = self._batch_predict_and_loss(val_in)
-
+            t2 = time.time()
             val_loss = loss.item()
             X_true = val_out
+            t3 = time.time()
 
             self.stopping_criterion.calculate(X_true, X_pred_cpu)
-
+            t4 = time.time()
             logger.info(
                 f"Evaluation Loss = {val_loss}"
-                ", NDCG@100 = {self.stopping_criterion.value}"
+                f", NDCG@100 = {self.stopping_criterion.value}"
             )
-
+            t5 = time.time()
             if self.stopping_criterion.is_best:
                 logger.info("Model improved. Storing better model.")
                 self.save()
-
+            t6 = time.time()
             self.stopping_criterion.reset()
+            t7 = time.time()
+
+            logger.info("TIMINGS OF EVALUATE FUNCTION")
+            logger.info(f"prediction took {t2-t1} s")
+            logger.info(f"getting loss and true value took {t3-t2} s")
+            logger.info(f"computing stopping criterion took {t4-t3} s")
+            logger.info(f"logging output took {t5-t4} s")
+            logger.info(f"saving model took {t6-t5} s")
+            logger.info(f"resetting stopping criterion took {t7-t6} s")
+            logger.info(f"total time: {t7-t1}s")
 
     def load(self, value):
         # TODO Give better names
