@@ -1,11 +1,9 @@
 from unittest.mock import MagicMock
-from typing import Callable
 
 import pytest
 import numpy as np
 import scipy.sparse
 import torch
-import torch.nn as nn
 from torch.autograd import Variable
 
 from recpack.algorithms import RecVAE, MultVAE
@@ -15,9 +13,11 @@ from recpack.algorithms import RecVAE, MultVAE
 
 INPUT_SIZE = 1000
 
+
 @pytest.fixture(scope="function")
 def input_size():
     return INPUT_SIZE
+
 
 @pytest.fixture(scope="function")
 def inputs():
@@ -86,4 +86,3 @@ def rec_vae():
     rec.save = MagicMock(return_value=True)
 
     return rec
-

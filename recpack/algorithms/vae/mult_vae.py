@@ -8,8 +8,6 @@ import torch
 import torch.optim as optim
 from scipy.sparse import csr_matrix
 import numpy as np
-import time
-import logging
 
 from recpack.algorithms.vae.base import VAE, VAETorch
 from recpack.algorithms.vae.util import StoppingCriterion, naive_sparse2tensor
@@ -17,6 +15,7 @@ from recpack.splitters.splitter_base import batch
 from recpack.metrics import NDCGK
 
 logger = logging.getLogger('recpack')
+
 
 class MultVAE(VAE):
     def __init__(
@@ -33,24 +32,31 @@ class MultVAE(VAE):
     ):
         """
         MultVAE Algorithm as first discussed in
-        'Variational Autoencoders for Collaborative Filtering', D. Liang et al. @ KDD2018
+        'Variational Autoencoders for Collaborative Filtering',
+        D. Liang et al. @ KDD2018
         Default values were taken from the paper.
 
-        :param batch_size: Batch size for SGD, defaults to 500
+        :param batch_size: Batch size for SGD,
+                           defaults to 500
         :type batch_size: int, optional
-        :param max_epochs: Maximum number of epochs (iterations), defaults to 200
+        :param max_epochs: Maximum number of epochs (iterations),
+                           defaults to 200
         :type max_epochs: int, optional
-        :param seed: Random seed for Torch, provided for reproducibility, defaults to 42.
+        :param seed: Random seed for Torch, provided for reproducibility,
+                     defaults to 42.
         :type seed: int, optional
         :param learning_rate: Learning rate, defaults to 1e-4
         :type learning_rate: [type], optional
-        :param dim_bottleneck_layer: Size of the latent representation, defaults to 200
+        :param dim_bottleneck_layer: Size of the latent representation,
+                                     defaults to 200
         :type dim_bottleneck_layer: int, optional
         :param dim_hidden_layer: Dimension of the hidden layer, defaults to 600
         :type dim_hidden_layer: int, optional
-        :param max_beta: Regularization parameter, annealed over {anneal_steps} until it reaches max_beta, defaults to 0.2
+        :param max_beta: Regularization parameter, annealed over {anneal_steps}
+                        until it reaches max_beta, defaults to 0.2
         :type max_beta: float, optional
-        :param anneal_steps: Number of steps to anneal beta to {max_beta}, defaults to 200000
+        :param anneal_steps: Number of steps to anneal beta to {max_beta},
+                             defaults to 200000
         :type anneal_steps: int, optional
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
@@ -62,7 +68,7 @@ class MultVAE(VAE):
             learning_rate,
             StoppingCriterion(NDCGK, K=100)
         )
-        
+
         self.dim_hidden_layer = dim_hidden_layer
         self.dim_bottleneck_layer = dim_bottleneck_layer
 
@@ -78,8 +84,8 @@ class MultVAE(VAE):
     @property
     def _beta(self):
         """
-        As discussed in the paper, Beta is a regularization parameter that controls
-        the importance of the KL-divergence term.
+        As discussed in the paper, Beta is a regularization parameter
+        that controls the importance of the KL-divergence term.
         It is slowly annealed from 0 to self.max_beta over self.anneal_steps.
         """
         return (
@@ -92,7 +98,8 @@ class MultVAE(VAE):
         """
         Initialize Torch model and optimizer.
 
-        :param dim_input_layer: Dimension of the input layer (corresponds to number of items)
+        :param dim_input_layer: Dimension of the input layer
+                                (corresponds to number of items)
         :type dim_input_layer: int
         """
         self.model_ = MultiVAETorch(
@@ -102,7 +109,8 @@ class MultVAE(VAE):
             dropout=self.dropout,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
         """
@@ -137,11 +145,12 @@ class MultVAE(VAE):
         end_time = time.time()
 
         logger.info(
-            f"Processed one batch in {end_time-start_time} s. Training Loss = {train_loss}"
+            f"Processed one batch in {end_time-start_time} s."
+            " Training Loss = {train_loss}"
         )
 
-
-    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,
+                      mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """Compute the prediction loss.
 
         More info on the loss function in the paper
@@ -189,7 +198,8 @@ class MultiVAETorch(VAETorch):
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.
-        self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
+        self.q_hid_bn_layer = nn.Linear(
+            dim_hidden_layer, dim_bottleneck_layer * 2)
 
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
@@ -215,9 +225,9 @@ class MultiVAETorch(VAETorch):
     def encode(self, x):
         h = F.normalize(x)
 
-        # Only drop if training
-        if self.training:
-            h = self.drop(h)
+        # Torch will only do the dropout if the model is supposed to be
+        # training
+        h = self.drop(h)
 
         h = self.q_in_hid_layer(h)
         h = self.tanh(h)
@@ -255,6 +265,7 @@ class MultiVAETorch(VAETorch):
 
 def vae_loss_function(recon_x, mu, logvar, x, anneal=1.0):
     BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
+                                      mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD
