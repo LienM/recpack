@@ -173,7 +173,7 @@ class VAE(Algorithm):
             in_tensor = naive_sparse2tensor(in_).to(self.device)
 
             out_tensor, _, _ = self.model_(in_tensor)
-            results[batch] = out_tensor.detach().numpy()
+            results[batch] = out_tensor.detach().cpu().numpy()
 
         return csr_matrix(results)
 
@@ -201,7 +201,7 @@ class VAE(Algorithm):
             out_tensor, mu, logvar = self.model_(in_tensor)
             loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
 
-            results[batch] = out_tensor.detach().numpy()
+            results[batch] = out_tensor.detach().cpu().numpy()
 
         return csr_matrix(results), loss
 
