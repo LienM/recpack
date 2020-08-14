@@ -173,6 +173,8 @@ class VAE(Algorithm):
             out_tensor, _, _ = self.model_(in_tensor)
             results[batch] = out_tensor.detach().cpu().numpy()
 
+        logger.info(f"shape of response ({results.shape})")
+
         return csr_matrix(results)
 
     def _batch_predict_and_loss(
