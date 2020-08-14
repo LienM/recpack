@@ -40,7 +40,8 @@ class VAE(Algorithm):
         max_epochs,
         seed,
         learning_rate,
-        stopping_criterion
+        stopping_criterion,
+        drop_negative_recommendations=True,
     ):
         self.batch_size = (
             # TODO * torch.cuda.device_count() if cuda else batch_size
@@ -56,6 +57,8 @@ class VAE(Algorithm):
         self.device = torch.device("cuda" if cuda else "cpu")
 
         self.stopping_criterion = stopping_criterion
+
+        self.drop_negative_recommendations = drop_negative_recommendations
 
     #######
     # FUNCTIONS TO OVERWRITE FOR EACH VAE
@@ -175,6 +178,9 @@ class VAE(Algorithm):
 
         logger.info(f"shape of response ({results.shape})")
 
+        if self.drop_negative_recommendations:
+            results[results < 0] = 0
+
         return coo_matrix(results).tocsr()
 
     def _batch_predict_and_loss(
@@ -202,6 +208,9 @@ class VAE(Algorithm):
             loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
 
             results[batch] = out_tensor.detach().cpu().numpy()
+
+        if self.drop_negative_recommendations:
+            results[results < 0] = 0
 
         return csr_matrix(results), loss
 
