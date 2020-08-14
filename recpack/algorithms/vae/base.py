@@ -3,7 +3,7 @@ from typing import List, Tuple
 import torch.nn as nn
 import torch
 from math import ceil
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
@@ -175,7 +175,7 @@ class VAE(Algorithm):
 
         logger.info(f"shape of response ({results.shape})")
 
-        return csr_matrix(results)
+        return coo_matrix(results).tocsr()
 
     def _batch_predict_and_loss(
             self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
