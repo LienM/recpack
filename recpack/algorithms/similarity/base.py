@@ -28,4 +28,4 @@ class TopKSimilarityMatrixAlgorithm(SimilarityMatrixAlgorithm):
 
     def __init__(self, K):
         super().__init__()
-        self.K
+        self.K = K
