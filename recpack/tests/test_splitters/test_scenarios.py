@@ -16,10 +16,14 @@ def test_timed_split(data_m, t):
     assert (tr.timestamps < t).all()
     assert (te_data_in.timestamps < t).all()
     assert (te_data_out.timestamps >= t).all()
+    assert te_data_out.active_users == te_data_in.active_users
 
 
 @pytest.mark.parametrize("t", [50, 75, 40])
 def test_timed_split_validation(data_m, t):
+    # Make sure exception is thrown if the validation timestamp is not provided
+    with pytest.raises(Exception):
+        scenarios.Timed(t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.Timed(t, t_validation=t_validation, validation=True)
@@ -35,6 +39,9 @@ def test_timed_split_validation(data_m, t):
     assert (val_data_in.timestamps < t_validation).all()
     assert (val_data_out.timestamps >= t_validation).all()
     assert (val_data_out.timestamps < t).all()
+
+    assert val_data_out.active_users == val_data_in.active_users
+    assert te_data_out.active_users == te_data_in.active_users
 
 
 @pytest.mark.parametrize("perc_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
@@ -52,11 +59,15 @@ def test_strong_generalization_timed_split(data_m, perc_users_in, t):
     assert (tr.timestamps < t).all()
     assert (te_data_in.timestamps < t).all()
     assert (te_data_out.timestamps >= t).all()
+    assert te_data_out.active_users == te_data_in.active_users
 
 
 @pytest.mark.parametrize("perc_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
 def test_strong_generalization_timed_split_validation(
         data_m, perc_users_in, t):
+    # Make sure exception is thrown if the validation timestamp is not provided
+    with pytest.raises(Exception):
+        scenarios.StrongGeneralizationTimed(t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.StrongGeneralizationTimed(
@@ -78,6 +89,9 @@ def test_strong_generalization_timed_split_validation(
     assert (val_data_out.timestamps < t).all()
     assert (val_data_out.timestamps >= t_validation).all()
 
+    assert val_data_out.active_users == val_data_in.active_users
+    assert te_data_out.active_users == te_data_in.active_users
+
 
 @pytest.mark.parametrize("t", [50, 75, 40])
 def test_timed_out_of_domain_split(data_m, t):
@@ -92,9 +106,14 @@ def test_timed_out_of_domain_split(data_m, t):
     assert (te_data_in.timestamps < t).all()
     assert (te_data_out.timestamps >= t).all()
 
+    assert te_data_out.active_users == te_data_in.active_users
+
 
 @pytest.mark.parametrize("t", [50, 75, 40])
 def test_timed_out_of_domain_split_validation(data_m, t):
+    # Make sure exception is thrown if the validation timestamp is not provided
+    with pytest.raises(Exception):
+        scenarios.TimedOutOfDomainPredictAndEvaluate(t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.TimedOutOfDomainPredictAndEvaluate(
@@ -111,6 +130,9 @@ def test_timed_out_of_domain_split_validation(data_m, t):
     assert (val_data_in.timestamps < t_validation).all()
     assert (val_data_out.timestamps < t).all()
     assert (val_data_out.timestamps >= t_validation).all()
+
+    assert val_data_out.active_users == val_data_in.active_users
+    assert te_data_out.active_users == te_data_in.active_users
 
 
 @pytest.mark.parametrize("t", [50, 75, 40])
@@ -130,9 +152,14 @@ def test_timed_out_of_domain_evaluate(data_m, t):
     assert (tr.values.nonzero()[0] == te_data_in.values.nonzero()[0]).all()
     assert (tr.values.nonzero()[1] == te_data_in.values.nonzero()[1]).all()
 
+    assert te_data_out.active_users == te_data_in.active_users
+
 
 @pytest.mark.parametrize("t", [50, 75, 40])
 def test_timed_out_of_domain_evaluate_validate(data_m, t):
+    # Make sure exception is thrown if the validation timestamp is not provided
+    with pytest.raises(Exception):
+        scenarios.TrainInTimedOutOfDomainEvaluate(t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.TrainInTimedOutOfDomainEvaluate(
@@ -150,25 +177,8 @@ def test_timed_out_of_domain_evaluate_validate(data_m, t):
     assert (val_data_out.timestamps < t).all()
     assert (val_data_out.timestamps >= t_validation).all()
 
-    # This should be guaranteed given that data_1 and data_2 are identical
-    # TODO enable
-    # assert set(val_data_in.indices[0]) == set(val_data_out.indices[0])
-
-    # Union of Training and validation_out is completely input for test
-    assert sorted(
-        list(
-            tr.values.nonzero()[0]) +
-        list(
-            val_data_out.values.nonzero()[0])) == sorted(
-                list(
-                    te_data_in.values.nonzero()[0]))
-    assert sorted(
-        list(
-            tr.values.nonzero()[1]) +
-        list(
-            val_data_out.values.nonzero()[1])) == sorted(
-                list(
-                    te_data_in.values.nonzero()[1]))
+    assert val_data_out.active_users == val_data_in.active_users
+    assert te_data_out.active_users == te_data_in.active_users
 
 
 @pytest.mark.parametrize("t", [50, 75, 40])
@@ -189,9 +199,14 @@ def test_timed_out_of_domain_evaluate_labels(data_m, t):
     assert (tr.values.nonzero()[0] == te_data_in.values.nonzero()[0]).all()
     assert (tr.values.nonzero()[1] == te_data_in.values.nonzero()[1]).all()
 
+    assert te_data_out.active_users == te_data_in.active_users
+
 
 @pytest.mark.parametrize("t", [50, 75, 40])
 def test_timed_out_of_domain_evaluate_labels_validate(data_m, t):
+    # Make sure exception is thrown if the validation timestamp is not provided
+    with pytest.raises(Exception):
+        scenarios.TrainInTimedOutOfDomainWithLabelsEvaluate(t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.TrainInTimedOutOfDomainWithLabelsEvaluate(
@@ -211,28 +226,15 @@ def test_timed_out_of_domain_evaluate_labels_validate(data_m, t):
     assert (val_data_out.timestamps >= t_validation).all()
 
     # This should be guaranteed given that data_1 and data_2 are identical
-    # TODO: enable again
-    # assert set(val_data_in.indices[0]) == set(val_data_out.indices[0])
 
-    # Union of Training and validation_out is completely input for test
-    assert sorted(
-        list(
-            tr.values.nonzero()[0]) +
-        list(
-            val_data_out.values.nonzero()[0])) == sorted(
-                list(
-                    te_data_in.values.nonzero()[0]))
-    assert sorted(
-        list(
-            tr.values.nonzero()[1]) +
-        list(
-            val_data_out.values.nonzero()[1])) == sorted(
-                list(
-                    te_data_in.values.nonzero()[1]))
+    assert set(val_data_in.indices[0]) == set(val_data_out.indices[0])
+
+    assert val_data_out.active_users == val_data_in.active_users
+    assert te_data_out.active_users == te_data_in.active_users
 
 
 @pytest.mark.parametrize("perc_users_train, perc_interactions_in",
-                         [(0.7, 0.5), (0, 0.5), (0.3, 0)])
+                         [(0.7, 0.5), (0, 0.5)])
 def test_strong_generalization_split(
         data_m, perc_users_train, perc_interactions_in):
 
@@ -267,6 +269,8 @@ def test_strong_generalization_split(
                (len(te_in_interactions) +
                 len(te_out_interactions)) -
                perc_interactions_in) < diff_allowed
+
+    assert te_data_out.active_users == te_data_in.active_users
 
 
 @pytest.mark.parametrize("perc_users_train, perc_interactions_in",
@@ -313,3 +317,6 @@ def test_strong_generalization_split_validation(
     tr_and_val_to_te_perc = (len(tr_users) + len(val_in_users)) / \
         (len(tr_users) + len(val_in_users) + len(te_in_users))
     assert abs(tr_and_val_to_te_perc - perc_users_train) < diff_allowed
+
+    assert val_data_out.active_users == val_data_in.active_users
+    assert te_data_out.active_users == te_data_in.active_users

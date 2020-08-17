@@ -51,8 +51,18 @@ class Scenario(ABC):
         :rtype: Tuple[DataM, DataM]
         """
         # TODO: make sure the users in and out match (Here? or elsewhere?)
-        return (self.validation_data_in,
-                self.validation_data_out) if self.validation_data_in else None
+        if not self.validation_data_in:
+            return None
+
+        # make sure users match both.
+        in_users = self.validation_data_in.active_users
+        out_users = self.validation_data_out.active_users
+
+        matching = list(in_users.intersection(out_users))
+        self.validation_data_in.users_in(matching, inplace=True)
+        self.validation_data_out.users_in(matching, inplace=True)
+
+        return (self.validation_data_in, self.validation_data_out)
 
     @property
     def test_data(self) -> Tuple[DataM, DataM]:
@@ -62,7 +72,14 @@ class Scenario(ABC):
         :return: Test data matrices as DataM in, DataM out.
         :rtype: Tuple[DataM, DataM]
         """
-        # TODO: make sure the users in and out match (Here? or elsewhere?)
+        # make sure users match.
+        in_users = self.test_data_in.active_users
+        out_users = self.test_data_out.active_users
+
+        matching = list(in_users.intersection(out_users))
+        self.test_data_in.users_in(matching, inplace=True)
+        self.test_data_out.users_in(matching, inplace=True)
+
         return (self.test_data_in, self.test_data_out)
 
     def validate(self):
