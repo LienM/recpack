@@ -205,7 +205,8 @@ def test_fold_iterator_correctness(data_m, batch_size):
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
 def test_fold_iterator_completeness(data_m, batch_size):
 
-    fold_iterator = splitter_base.FoldIterator(data_m, data_m, batch_size=batch_size)
+    fold_iterator = splitter_base.FoldIterator(
+        data_m, data_m, batch_size=batch_size)
 
     nonzero_users = set(data_m.indices[0])
 
@@ -223,21 +224,3 @@ def test_fold_iterator_completeness(data_m, batch_size):
         )
 
     assert len(all_batches) == len(nonzero_users)
-
-def test_leave_last_one_out_splitter(data_m):
-    splitter = splitter_base.LeaveLastOneOutSplitter()
-
-    # Filter a bit in the data_m, so we only have users with at least 2 interactions.
-    events_per_user = data_m.binary_values.sum(axis=1)
-    events_per_user[events_per_user == 1] = 0   # Users with only a single interaction -> NAY
-    users = set(events_per_user.nonzero()[0])
-    data_m.users_in(list(users), inplace=True)
-
-    # Split the data
-    in_, out_ = splitter.split(data_m)
-    # All active users should have at least 1 event in both.
-    assert in_.active_users == out_.active_users
-    # Out should have 1 event per user
-    assert out_.binary_values.sum() == out_.active_user_count
-    # All events but one should be in in_
-    assert in_.binary_values.sum() == events_per_user.sum() - out_.active_user_count
