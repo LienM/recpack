@@ -3,7 +3,7 @@ from typing import List, Tuple
 import torch.nn as nn
 import torch
 from math import ceil
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
@@ -40,7 +40,8 @@ class VAE(Algorithm):
         max_epochs,
         seed,
         learning_rate,
-        stopping_criterion
+        stopping_criterion,
+        drop_negative_recommendations=True,
     ):
         self.batch_size = (
             # TODO * torch.cuda.device_count() if cuda else batch_size
@@ -56,6 +57,8 @@ class VAE(Algorithm):
         self.device = torch.device("cuda" if cuda else "cpu")
 
         self.stopping_criterion = stopping_criterion
+
+        self.drop_negative_recommendations = drop_negative_recommendations
 
     #######
     # FUNCTIONS TO OVERWRITE FOR EACH VAE
@@ -173,7 +176,12 @@ class VAE(Algorithm):
             out_tensor, _, _ = self.model_(in_tensor)
             results[batch] = out_tensor.detach().cpu().numpy()
 
-        return csr_matrix(results)
+        logger.info(f"shape of response ({results.shape})")
+
+        if self.drop_negative_recommendations:
+            results[results < 0] = 0
+
+        return coo_matrix(results).tocsr()
 
     def _batch_predict_and_loss(
             self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
@@ -200,6 +208,9 @@ class VAE(Algorithm):
             loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
 
             results[batch] = out_tensor.detach().cpu().numpy()
+
+        if self.drop_negative_recommendations:
+            results[results < 0] = 0
 
         return csr_matrix(results), loss
 
