@@ -6,10 +6,6 @@ from recpack.algorithms.base import Algorithm
 
 class SimilarityMatrixAlgorithm(Algorithm):
 
-    @property
-    def similarity_matrix_(self):
-        raise NotImplementedError()
-
     def fit(self, X: csr_matrix, y: csr_matrix = None):
         pass
 
@@ -22,3 +18,10 @@ class SimilarityMatrixAlgorithm(Algorithm):
             scores = csr_matrix(scores)
 
         return scores
+
+
+class TopKSimilarityMatrixAlgorithm(SimilarityMatrixAlgorithm):
+
+    def __init__(self, K):
+        super().__init__()
+        self.K = K
