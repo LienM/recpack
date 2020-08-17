@@ -1,8 +1,6 @@
 import scipy.sparse
 import sklearn.decomposition
 
-from sklearn.utils.validation import check_is_fitted
-
 from recpack.algorithms.similarity.base import (
     TopKSimilarityMatrixAlgorithm,
 )
