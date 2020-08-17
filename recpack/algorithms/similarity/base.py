@@ -22,3 +22,10 @@ class SimilarityMatrixAlgorithm(Algorithm):
             scores = csr_matrix(scores)
 
         return scores
+
+
+class TopKSimilarityMatrixAlgorithm(SimilarityMatrixAlgorithm):
+
+    def __init__(self, K):
+        super().__init__()
+        self.K

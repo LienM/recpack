@@ -4,11 +4,11 @@ import sklearn.decomposition
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.similarity.base import (
-    SimilarityMatrixAlgorithm,
+    TopKSimilarityMatrixAlgorithm,
 )
 
 
-class NMF(SimilarityMatrixAlgorithm):
+class NMF(TopKSimilarityMatrixAlgorithm):
     # TODO check params NMF to see which ones are useful.
 
     def fit(self, X):
@@ -25,7 +25,7 @@ class NMF(SimilarityMatrixAlgorithm):
         return self
 
 
-class SVD(SimilarityMatrixAlgorithm):
+class SVD(TopKSimilarityMatrixAlgorithm):
 
     def fit(self, X):
         # TODO use other parameter options?

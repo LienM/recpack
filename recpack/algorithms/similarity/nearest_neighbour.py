@@ -5,19 +5,19 @@ import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
 
 from recpack.algorithms.similarity.base import (
-    SimilarityMatrixAlgorithm,
+    TopKSimilarityMatrixAlgorithm,
 )
 
 
-class ItemKNN(SimilarityMatrixAlgorithm):
+class ItemKNN(TopKSimilarityMatrixAlgorithm):
+
     def __init__(self, K=200, normalize=False):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item.
 
         If normalize is True, the scores are normalized per item.
         """
-        super().__init__()
-        self.K = K
+        super().__init__(K)
         self.normalize = normalize
 
     def fit(self, X, y=None):
@@ -61,17 +61,13 @@ class ItemKNN(SimilarityMatrixAlgorithm):
         return self.item_cosine_similarities_
 
 
-class NotItemKNN(SimilarityMatrixAlgorithm):
+class NotItemKNN(TopKSimilarityMatrixAlgorithm):
     """
     TODO: Figure out what this code is actually implementing. It is not cosine similarity
     It does seem to work fine though.
     """
-
-    def __init__(self, K=200):
-        """Construct an ItemKNN model. Before use make sure to fit the model.
-        The K parameter defines the how much best neighbours are kept for each item."""
-        super().__init__()
-        self.K = K
+    """Construct an ItemKNN model. Before use make sure to fit the model.
+    The K parameter defines the how much best neighbours are kept for each item."""
 
     def fit(self, X):
         """Fit a cosine similarity matrix from item to item"""
