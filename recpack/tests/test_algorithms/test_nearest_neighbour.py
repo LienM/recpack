@@ -22,7 +22,7 @@ def test_item_knn():
         ]
     )
     numpy.testing.assert_almost_equal(
-        algo.item_cosine_similarities_.toarray(), expected_similarities
+        algo.similarity_matrix_.toarray(), expected_similarities
     )
 
     # Make sure the similarities recommended are the cosine similarities as computed.
@@ -49,7 +49,7 @@ def test_item_knn_normalize():
 
     algo.fit(data)
 
-    numpy.testing.assert_array_almost_equal(algo.item_cosine_similarities_.sum(axis=1), 1)
+    numpy.testing.assert_array_almost_equal(algo.similarity_matrix_.sum(axis=1), 1)
 
 
 def test_item_knn_empty_col():
@@ -64,5 +64,5 @@ def test_item_knn_empty_col():
         [[0.0, 0.0, 0.0], [0.0, 0, 2 / math.sqrt(6)], [0.0, 2 / math.sqrt(6), 0]]
     )
     numpy.testing.assert_almost_equal(
-        algo.item_cosine_similarities_.toarray(), expected_similarities
+        algo.similarity_matrix_.toarray(), expected_similarities
     )
