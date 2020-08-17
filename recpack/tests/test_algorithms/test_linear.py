@@ -1,9 +1,7 @@
 import scipy.sparse
 import numpy
 
-from recpack.algorithms.similarity.linear import (
-    EASE
-)
+from recpack.algorithms.similarity.linear import EASE
 
 
 def test_ease():
@@ -36,40 +34,3 @@ def test_ease():
 
     numpy.testing.assert_almost_equal(result[2, 0], 1, decimal=1)
     numpy.testing.assert_almost_equal(result[0, 2], 1, decimal=1)
-
-
-def test_ease_add():
-    """ Check that adding 2 identical models together correctly doubles the values in the matrix
-    """
-    values = [1] * 9
-    users = [0, 0, 1, 1, 2, 2, 2, 3, 3]
-    items = [0, 2, 0, 2, 0, 1, 2, 0, 2]
-    data = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 3))
-
-    algo = EASE(l2=0.03)
-    algo_2 = EASE(l2=0.03)
-
-    algo.fit(data)
-    algo_2.fit(data)
-
-    algo.add(algo_2)
-
-    numpy.testing.assert_array_equal(algo.B_.toarray(), algo_2.B_.multiply(2).toarray())
-
-def test_ease_mult():
-    """ Check that when multiplying a model, it's B_ get's updated correctly.
-    """
-    values = [1] * 9
-    users = [0, 0, 1, 1, 2, 2, 2, 3, 3]
-    items = [0, 2, 0, 2, 0, 1, 2, 0, 2]
-    data = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 3))
-
-    algo = EASE(l2=0.03)
-    algo_2 = EASE(l2=0.03)
-
-    algo.fit(data)
-    algo_2.fit(data)
-
-    algo.multiply(2)
-
-    numpy.testing.assert_array_equal(algo.B_.toarray(), algo_2.B_.multiply(2).toarray())

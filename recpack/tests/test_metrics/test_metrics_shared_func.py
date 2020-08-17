@@ -34,6 +34,13 @@ def test_results_elementwise_topK(metric_cls, X_true, X_pred):
     # TODO verify something about the shape
     np.testing.assert_array_equal(results.columns, ["user_id", "item_id", "score"])
 
+    assert 2 in results["user_id"].unique()
+    assert 1 not in results["user_id"].unique()
+
+    assert results.shape[0] == metric.num_users_ * K  # K interactions for each user
+    assert metric.num_users_ == X_pred.sum(axis=1)[:, 0].nonzero()[0].shape[0]
+    assert metric.num_items_ == X_pred.shape[1]
+
 
 @pytest.mark.parametrize("metric_cls", [NDCGK, RRK, IntraListDiversityK])
 def test_results_listwise_topK(metric_cls, X_true, X_pred):
@@ -50,6 +57,13 @@ def test_results_listwise_topK(metric_cls, X_true, X_pred):
 
     results = metric.results
     np.testing.assert_array_equal(results.columns, ["user_id", "score"])
+
+    assert 2 in results["user_id"].unique()
+    assert 1 not in results["user_id"].unique()
+
+    assert results.shape[0] == metric.num_users_  # One entry for each user
+    assert metric.num_users_ == X_pred.sum(axis=1)[:, 0].nonzero()[0].shape[0]
+    assert metric.num_items_ == X_pred.shape[1]
 
 
 def test_eliminate_zeros(X_true, X_pred):

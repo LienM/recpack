@@ -58,6 +58,10 @@ class VAE(Algorithm):
 
         self.stopping_criterion = stopping_criterion
 
+        # if drop_negative recommendations is true,
+        # we remove all negative scores in the response.
+        # We need to do this to avoid blowing up RAM usage
+        # converting the dense recommendation response to sparse
         self.drop_negative_recommendations = drop_negative_recommendations
 
     #######
