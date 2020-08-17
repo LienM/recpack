@@ -24,6 +24,10 @@ def test_timed_split_validation(data_m, t):
     # Make sure exception is thrown if the validation timestamp is not provided
     with pytest.raises(Exception):
         scenarios.Timed(t, validation=True)
+    # Make sure t_validation < t
+    with pytest.raises(AssertionError):
+        scenarios.Timed(
+            t, t_validation=t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.Timed(t, t_validation=t_validation, validation=True)
@@ -67,7 +71,11 @@ def test_strong_generalization_timed_split_validation(
         data_m, perc_users_in, t):
     # Make sure exception is thrown if the validation timestamp is not provided
     with pytest.raises(Exception):
-        scenarios.StrongGeneralizationTimed(t, validation=True)
+        scenarios.StrongGeneralizationTimed(perc_users_in, t, validation=True)
+    # Make sure t_validation < t
+    with pytest.raises(AssertionError):
+        scenarios.StrongGeneralizationTimed(perc_users_in,
+                                            t, t_validation=t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.StrongGeneralizationTimed(
@@ -114,6 +122,10 @@ def test_timed_out_of_domain_split_validation(data_m, t):
     # Make sure exception is thrown if the validation timestamp is not provided
     with pytest.raises(Exception):
         scenarios.TimedOutOfDomainPredictAndEvaluate(t, validation=True)
+    # Make sure t_validation < t
+    with pytest.raises(AssertionError):
+        scenarios.TimedOutOfDomainPredictAndEvaluate(
+            t, t_validation=t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.TimedOutOfDomainPredictAndEvaluate(
@@ -160,6 +172,10 @@ def test_timed_out_of_domain_evaluate_validate(data_m, t):
     # Make sure exception is thrown if the validation timestamp is not provided
     with pytest.raises(Exception):
         scenarios.TrainInTimedOutOfDomainEvaluate(t, validation=True)
+    # Make sure t_validation < t
+    with pytest.raises(AssertionError):
+        scenarios.TrainInTimedOutOfDomainEvaluate(
+            t, t_validation=t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.TrainInTimedOutOfDomainEvaluate(
@@ -207,6 +223,10 @@ def test_timed_out_of_domain_evaluate_labels_validate(data_m, t):
     # Make sure exception is thrown if the validation timestamp is not provided
     with pytest.raises(Exception):
         scenarios.TrainInTimedOutOfDomainWithLabelsEvaluate(t, validation=True)
+    # Make sure t_validation < t
+    with pytest.raises(AssertionError):
+        scenarios.TrainInTimedOutOfDomainWithLabelsEvaluate(
+            t, t_validation=t, validation=True)
 
     t_validation = t - 10
     scenario = scenarios.TrainInTimedOutOfDomainWithLabelsEvaluate(

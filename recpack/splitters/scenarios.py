@@ -88,6 +88,7 @@ class Timed(Scenario):
             t, t_delta, t_alpha)
 
         if self.validation:
+            assert self.t_validation < self.t
             # Override the validation splitter to a timed splitter.
             self.validation_time_splitter = splitter_base.TimestampSplitter(
                 t_validation, t_delta, t_alpha
@@ -183,6 +184,7 @@ class StrongGeneralizationTimed(Scenario):
             perc_users_in)
 
         if self.validation:
+            assert self.t_validation < self.t
             self.validation_time_splitter = splitter_base.TimestampSplitter(
                 t_validation, t_delta, t_alpha
             )
@@ -240,6 +242,7 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
             t, t_delta, t_alpha)
 
         if self.validation:
+            assert self.t_validation < self.t
             self.validation_time_splitter = splitter_base.TimestampSplitter(
                 t_validation, t_delta, t_alpha
             )
@@ -288,6 +291,7 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
             t, t_delta, t_alpha)
 
         if self.validation:
+            assert self.t_validation < self.t
             self.validation_time_splitter = splitter_base.TimestampSplitter(
                 t_validation, t_delta, t_alpha
             )
