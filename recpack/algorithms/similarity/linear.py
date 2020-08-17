@@ -45,17 +45,12 @@ class EASE(SimilarityMatrixAlgorithm):
             w = 1 / np.diag(XTX) ** self.alpha
             B = B @ np.diag(w)
 
-        self.B_ = scipy.sparse.csr_matrix(B)
+        self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         return self
 
-
-    @property
-    def similarity_matrix_(self):
-        return self.B_
-
     def load(self, filename):
-        self.B_ = np.load(filename)
+        self.similarity_matrix_ = np.load(filename)
 
         return self.B_
 
@@ -99,7 +94,7 @@ class EASE_Intercept(EASE):
             w = 1 / np.diag(XTX)[:-1] ** self.alpha
             B = B @ np.diag(w)
 
-        self.B_ = scipy.sparse.csr_matrix(B)
+        self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         return self
 
@@ -129,7 +124,7 @@ class EASE_XY(EASE):
             w = 1 / np.diag(XTX) ** self.alpha
             B = B @ np.diag(w)
 
-        self.B_ = scipy.sparse.csr_matrix(B)
+        self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         return self
 
@@ -157,7 +152,7 @@ class EASE_AVG(EASE):
 
         D = np.diag((1 - np.diag(B_rr)) / -np.diag(P))
         B = B_rr - P @ D
-        self.B_ = scipy.sparse.csr_matrix(B)
+        self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         return self
 
@@ -187,7 +182,7 @@ class EASE_AVG_Int(EASE_AVG):
         B = B_rr
         B[:-1, :] -= P[:-1, :-1] @ D
 
-        self.B_ = scipy.sparse.csr_matrix(B)
+        self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         return self
 
@@ -276,7 +271,3 @@ class SLIM(SimilarityMatrixAlgorithm):
             (data, (row, col)), shape=(X.shape[1], X.shape[1])
         )
         return self
-
-    @property
-    def similarity_matrix_(self):
-        return self.similarity_matrix_

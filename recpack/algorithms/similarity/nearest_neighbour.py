@@ -25,9 +25,9 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
         # Do the cosine similarity computation here, this way we can set the diagonal to zero
         # to avoid self recommendation
         # X.T otherwise we are doing a user KNN
-        self.item_cosine_similarities_ = cosine_similarity(X.T, dense_output=False)
+        item_cosine_similarities_ = cosine_similarity(X.T, dense_output=False)
 
-        self.item_cosine_similarities_.setdiag(0)
+        item_cosine_similarities_.setdiag(0)
         # Set diagonal to 0, because we don't want to support self similarity
 
         # resolve top K per item
@@ -35,7 +35,7 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
         indices = [
             (i, j)
             for i, best_items_row in enumerate(
-                np.argpartition(self.item_cosine_similarities_.toarray(), -self.K)
+                np.argpartition(item_cosine_similarities_.toarray(), -self.K)
             )
             for j in best_items_row[-self.K:]
         ]
@@ -44,21 +44,19 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
             ([1 for i in range(len(indices))], (list(zip(*indices))))
         )
 
-        self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
+        item_cosine_similarities_ = item_cosine_similarities_.multiply(mask)
 
         if self.normalize:
             # normalize per row
-            row_sums = self.item_cosine_similarities_.sum(axis=1)
-            self.item_cosine_similarities_ = self.item_cosine_similarities_ / row_sums
-            self.item_cosine_similarities_ = scipy.sparse.csr_matrix(
-                self.item_cosine_similarities_
+            row_sums = item_cosine_similarities_.sum(axis=1)
+            item_cosine_similarities_ = item_cosine_similarities_ / row_sums
+            item_cosine_similarities_ = scipy.sparse.csr_matrix(
+                item_cosine_similarities_
             )
 
-        return self
+        self.similarity_matrix_ = item_cosine_similarities_
 
-    @property
-    def similarity_matrix_(self):
-        return self.item_cosine_similarities_
+        return self
 
 
 class NotItemKNN(TopKSimilarityMatrixAlgorithm):
@@ -77,17 +75,17 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
         A = diags(1 / co_mat.diagonal())
 
         # This has all item-cosine similarities. Now we should probably set N-K to zero
-        self.item_cosine_similarities_ = A @ co_mat
+        item_cosine_similarities_ = A @ co_mat
 
         # Set diagonal to 0, because we don't support self similarity
-        self.item_cosine_similarities_.setdiag(0)
+        item_cosine_similarities_.setdiag(0)
 
         # resolve top K per item
         # Get indices of top K items per item
         indices = [
             (i, j)
             for i, best_items_row in enumerate(
-                np.argpartition(self.item_cosine_similarities_.toarray(), -self.K)
+                np.argpartition(item_cosine_similarities_.toarray(), -self.K)
             )
             for j in best_items_row[-self.K:]
         ]
@@ -95,9 +93,8 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
         mask = scipy.sparse.csr_matrix(
             ([1 for i in range(len(indices))], (list(zip(*indices))))
         )
-        self.item_cosine_similarities_ = self.item_cosine_similarities_.multiply(mask)
-        return self
+        item_cosine_similarities_ = item_cosine_similarities_.multiply(mask)
 
-    @property
-    def similarity_matrix_(self):
-        return self.item_cosine_similarities_
+        self.similarity_matrix_ = item_cosine_similarities_
+
+        return self
