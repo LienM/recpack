@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+import numpy.random
+import scipy.sparse
 
 from recpack.metrics import (
     NDCGK,
@@ -10,13 +12,21 @@ from recpack.metrics import (
     IPSHitRateK,
     PrecisionK,
     IntraListDiversityK,
-    SNIPSHitRateK
+    SNIPSHitRateK,
 )
 
-from recpack.metrics.base import ListwiseMetricK, ElementwiseMetricK, GlobalMetricK, MetricTopK, FittedMetric
+from recpack.metrics.base import (
+    ListwiseMetricK,
+    ElementwiseMetricK,
+    GlobalMetricK,
+    MetricTopK,
+    FittedMetric,
+)
 
 
-@pytest.mark.parametrize("metric_cls", [DCGK, RecallK, PrecisionK, IPSHitRateK, SNIPSHitRateK])
+@pytest.mark.parametrize(
+    "metric_cls", [DCGK, RecallK, PrecisionK, IPSHitRateK, SNIPSHitRateK]
+)
 def test_results_elementwise_topK(metric_cls, X_true, X_pred):
     K = 2
 
@@ -64,6 +74,22 @@ def test_results_listwise_topK(metric_cls, X_true, X_pred):
     assert results.shape[0] == metric.num_users_  # One entry for each user
     assert metric.num_users_ == X_pred.sum(axis=1)[:, 0].nonzero()[0].shape[0]
     assert metric.num_items_ == X_pred.shape[1]
+
+
+def test_get_topK_ranks():
+    state = np.random.RandomState(13940)
+
+    mat = scipy.sparse.random(2, 100, density=0.10, random_state=state).tocsr()
+
+    metric = MetricTopK(20)
+
+    top_k_ranks = metric.get_top_K_ranks(mat)
+
+    max_ix_row_0 = np.argmax(mat[0, :])
+    assert top_k_ranks[0, max_ix_row_0] == 1
+
+    max_ix_row_1 = np.argmax(mat[1, :])
+    assert top_k_ranks[1, max_ix_row_1] == 1
 
 
 def test_eliminate_zeros(X_true, X_pred):
