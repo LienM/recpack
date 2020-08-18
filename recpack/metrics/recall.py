@@ -13,6 +13,10 @@ logger = logging.getLogger("recpack")
 
 
 class RecallK(ElementwiseMetricK):
+    """
+    Calculates the recall as follows:
+    Recall@K = #relevant in top K / #relevant
+    """
     def __init__(self, K):
         super().__init__(K)
 
@@ -35,6 +39,13 @@ class RecallK(ElementwiseMetricK):
 
 
 class CalibratedRecallK(ElementwiseMetricK):
+    """
+    Calculates the recall as follows:
+    Recall@K = #relevant in top K / min(K, #relevant)
+
+    This differs from normal recall in that it accounts for when K < #relevant,
+    resulting in the value being normalized to the range [0, 1].
+    """
     def __init__(self, K):
         super().__init__(K)
 
