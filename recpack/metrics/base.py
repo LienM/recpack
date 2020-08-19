@@ -2,7 +2,6 @@ import logging
 from typing import Tuple
 
 import numpy as np
-import scipy.sparse
 from scipy.sparse import csr_matrix
 import pandas as pd
 from sklearn.base import BaseEstimator
@@ -129,8 +128,12 @@ class MetricTopK(Metric):
         U, I, V = [], [], []
         for row_ix, (le, ri) in enumerate(zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
             K_row_pick = min(self.K, ri - le)
+
             top_k_row = y_pred.indices[
-                le + np.argpartition(y_pred.data[le:ri], -K_row_pick)[-K_row_pick:]
+                le
+                + np.argpartition(y_pred.data[le:ri], list(range(-K_row_pick, 0)))[
+                    -K_row_pick:
+                ]
             ]
 
             for rank, col_ix in enumerate(reversed(top_k_row)):
