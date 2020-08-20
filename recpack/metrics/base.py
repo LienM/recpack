@@ -126,20 +126,23 @@ class MetricTopK(Metric):
         :rtype: csr_matrix
         """
         U, I, V = [], [], []
-        for row_ix, (le, ri) in enumerate(zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
+        for row_ix, (le, ri) in enumerate(
+                zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
             K_row_pick = min(self.K, ri - le)
 
-            top_k_row = y_pred.indices[
-                le
-                + np.argpartition(y_pred.data[le:ri], list(range(-K_row_pick, 0)))[
-                    -K_row_pick:
-                ]
-            ]
+            if K_row_pick != 0:
 
-            for rank, col_ix in enumerate(reversed(top_k_row)):
-                U.append(row_ix)
-                I.append(col_ix)
-                V.append(rank + 1)
+                top_k_row = y_pred.indices[
+                    le
+                    + np.argpartition(y_pred.data[le:ri], list(range(-K_row_pick, 0)))[
+                        -K_row_pick:
+                    ]
+                ]
+
+                for rank, col_ix in enumerate(reversed(top_k_row)):
+                    U.append(row_ix)
+                    I.append(col_ix)
+                    V.append(rank + 1)
 
         y_pred_top_K = csr_matrix((V, (U, I)), shape=y_pred.shape)
 
