@@ -169,11 +169,32 @@ class ElementwiseMetricK(MetricTopK):
         return ["user_id", "item_id", "score"]
 
     @property
-    def results(self):
+    def results(self) -> pd.DataFrame:
+        """Get the results for this metric.
+
+        If there is a user with 0 recommendations,
+        the output dataframe will contain K rows for
+        that user, with item NaN and score 0
+
+        :return: The results dataframe. With columns user, item, score
+        :rtype: pd.DataFrame
+        """
         scores = self.scores_.toarray()
 
+        all_users = set(range(self.scores_.shape[0]))
         int_users, items = self.indices
         values = scores[int_users, items]
+
+        # For all users in all_users but not in int_users,
+        # add K items np.nan with value = 0
+        missing_users = all_users.difference(set(int_users))
+
+        # This should barely occur, so it's not too bad to append np arrays.
+        for u in list(missing_users):
+            for i in range(self.K):
+                int_users = np.append(int_users, u)
+                values = np.append(values, 0)
+                items = np.append(items, np.nan)
 
         users = self.map_users(int_users)
 

@@ -34,7 +34,8 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
 
         t_distance = sum(distances)
 
-        ild = (2 / (len(recommended_items) * (len(recommended_items) - 1))) * t_distance
+        ild = (2 / (len(recommended_items) *
+                    (len(recommended_items) - 1))) * t_distance
         return ild
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
@@ -42,7 +43,6 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
         """
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
         self.verify_shape(y_true, y_pred)
-
         # resolve top K items per user
         y_pred_top_K = self.get_top_K_ranks(y_pred)
 

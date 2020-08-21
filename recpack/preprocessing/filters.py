@@ -5,7 +5,8 @@ import pandas as pd
 
 # TODO Integrate into CLI
 
-# TODO Improve interface so that arguments known to the Preprocessor don't have to be duplidated.
+# TODO Improve interface so that arguments known to the Preprocessor don't
+# have to be duplidated.
 
 
 class Filter(ABC):
@@ -40,7 +41,8 @@ class Filter(ABC):
 
 class MinUsersPerItem(Filter):
 
-    def __init__(self, min_users_per_item: int, user_id: str, item_id: str, timestamp_id=None):
+    def __init__(self, min_users_per_item: int, user_id: str,
+                 item_id: str, timestamp_id=None):
         """
         Require that a minimum number of users has interacted with an item.
 
@@ -59,7 +61,8 @@ class MinUsersPerItem(Filter):
 
     def apply(self, df):
         cnt_users_per_item = df[self.item_id].value_counts()
-        items_of_interest = list(cnt_users_per_item[cnt_users_per_item >= self.min_ui].index)
+        items_of_interest = list(
+            cnt_users_per_item[cnt_users_per_item >= self.min_ui].index)
 
         return df[df[self.item_id].isin(items_of_interest)]
 
@@ -83,7 +86,8 @@ class NMostPopular(Filter):
         super().__init__(user_id, item_id, timestamp_id)
 
     def apply(self, df):
-        cnt_users_per_item = df[self.item_id].value_counts(sort=True, ascending=False)
+        cnt_users_per_item = df[self.item_id].value_counts(
+            sort=True, ascending=False)
 
         items_of_interest = list(cnt_users_per_item[0:self.N].index)
 
@@ -96,7 +100,8 @@ class EventsSince(Filter):
 
 class MinItemsPerUser(Filter):
 
-    def __init__(self, min_items_per_user: int, user_id: str, item_id: str, timestamp_id=None):
+    def __init__(self, min_items_per_user: int, user_id: str,
+                 item_id: str, timestamp_id=None):
         """
         Require that a user has interacted with a minimum number of item.
 
@@ -115,6 +120,7 @@ class MinItemsPerUser(Filter):
 
     def apply(self, df):
         cnt_items_per_user = df[self.user_id].value_counts()
-        users_of_interest = list(cnt_items_per_user[cnt_items_per_user >= self.min_iu].index)
+        users_of_interest = list(
+            cnt_items_per_user[cnt_items_per_user >= self.min_iu].index)
 
         return df[df[self.user_id].isin(users_of_interest)]

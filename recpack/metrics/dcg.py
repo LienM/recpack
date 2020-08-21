@@ -41,9 +41,11 @@ class NDCGK(ListwiseMetricK):
         super().__init__(K)
 
         self.discount_template = 1.0 / np.log2(np.arange(2, K + 2))
-        # Calculate IDCG values by creating a list of partial sums (the functional way)
+        # Calculate IDCG values by creating a list of partial sums (the
+        # functional way)
         self.IDCG_cache = np.array(
-            [1] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y))
+            [1] + list(itertools.accumulate(self.discount_template,
+                                            lambda x, y: x + y))
         )
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:

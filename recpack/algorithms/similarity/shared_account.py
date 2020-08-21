@@ -31,13 +31,15 @@ class SharedAccount(SimilarityMatrixAlgorithm):
     The final score can either be the sum, average or adjusted average (with denominator) depending on the `agg` param.
     """
 
-    def __init__(self, algo: SimilarityMatrixAlgorithm, p=0.75, agg: Agg = Agg.Adj):
+    def __init__(self, algo: SimilarityMatrixAlgorithm,
+                 p=0.75, agg: Agg = Agg.Adj):
         super().__init__()
         self.algo = algo
         self.p = p
         self.agg = agg
 
-    def fit(self, X: scipy.sparse.csr_matrix, y: scipy.sparse.csr_matrix = None):
+    def fit(self, X: scipy.sparse.csr_matrix,
+            y: scipy.sparse.csr_matrix = None):
         return self.algo.fit(X, y)
 
     @property
@@ -50,6 +52,7 @@ class SharedAccount(SimilarityMatrixAlgorithm):
         X = X.toarray()
         predictions = get_predictions(X, M, self.p, self.agg)
 
+        self._check_prediction(predictions, X)
         return predictions
 
 

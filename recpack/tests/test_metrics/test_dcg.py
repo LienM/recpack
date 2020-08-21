@@ -9,7 +9,8 @@ def test_dcgk_simple(X_pred, X_true_simplified):
 
     metric.calculate(X_true_simplified, X_pred)
 
-    expected_value = ((1 / np.log2(2 + 1)) + 1) / 2  # rank 1  # rank 0  # 2 users
+    # rank 1  # rank 0  # 2 users
+    expected_value = ((1 / np.log2(2 + 1)) + 1) / 2
 
     np.testing.assert_almost_equal(metric.value, expected_value)
 
@@ -37,12 +38,14 @@ def test_dcgk(X_pred, X_true):
 
     metric.calculate(X_true, X_pred)
 
-    # user 0 has 2 correct items, user 2 has two correct items
+    # user 0 has 2 correct items, user 2 has two correct items, user 3 has no
+    # predictions
 
     expected_value = (
         (1 / np.log2(2 + 1))
-        + (1 + (1 / np.log2(2 + 1)))  # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
-    ) / 2  # 2 users
+        # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
+        + (1 + (1 / np.log2(2 + 1)))
+    ) / 3  # 3 users
 
     np.testing.assert_almost_equal(metric.value, expected_value)
 
@@ -60,11 +63,12 @@ def test_ndcg(X_pred, X_true):
 
     expected_value = (
         (1 / np.log2(2 + 1)) / IDCG2
-        + (1 + (1 / np.log2(2 + 1)))  # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
+        # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
+        + (1 + (1 / np.log2(2 + 1)))
         / IDCG2
-    ) / 2  # 2 users
+    ) / 3  # 3 users
 
-    assert metric.num_users == 2
+    assert metric.num_users == 3
     np.testing.assert_almost_equal(metric.value, expected_value)
 
 
@@ -76,9 +80,10 @@ def test_dcgk_3(X_pred, X_true):
 
     # user 0 has 2 correct items, user 2 has 2 correct items
     expected_value = (
-        (1 / np.log2(2 + 1) + 1 / np.log2(3 + 1))  # user 2 rank 1  # user 2 rank 2
+        # user 2 rank 1  # user 2 rank 2
+        (1 / np.log2(2 + 1) + 1 / np.log2(3 + 1))
         + (1 + (1 / np.log2(2 + 1)))  # user 0 rank 0  # user 0 rank 1
-    ) / 2  # 2 users
+    ) / 3  # 3 users
 
     np.testing.assert_almost_equal(metric.value, expected_value)
 
@@ -96,8 +101,9 @@ def test_ndcg_k3(X_pred, X_true):
 
     expected_value = (
         (1 + (1 / np.log2(3))) / IDCG2  # user 0 rank 0  # user 0 rank 1
-        + (1 / np.log2(3) + 1 / np.log2(4)) / IDCG3  # user 2 rank 1  # user 2 rank 2
-    ) / 2  # 2 users
+        + (1 / np.log2(3) + 1 / np.log2(4)) / \
+        IDCG3  # user 2 rank 1  # user 2 rank 2
+    ) / 3  # 3 users
 
-    assert metric.num_users == 2
+    assert metric.num_users == 3
     np.testing.assert_almost_equal(metric.value, expected_value)

@@ -39,7 +39,8 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
             )
             for j in best_items_row[-self.K:]
         ]
-        # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
+        # Create a mask matrix which will be pointwise multiplied with the
+        # similarity matrix.
         mask = scipy.sparse.csr_matrix(
             ([1 for i in range(len(indices))], (list(zip(*indices))))
         )
@@ -55,7 +56,7 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
             )
 
         self.similarity_matrix_ = item_cosine_similarities_
-
+        self.check_fit_complete()
         return self
 
 
@@ -74,7 +75,8 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
         # to avoid self recommendation
         A = diags(1 / co_mat.diagonal())
 
-        # This has all item-cosine similarities. Now we should probably set N-K to zero
+        # This has all item-cosine similarities. Now we should probably set N-K
+        # to zero
         item_cosine_similarities_ = A @ co_mat
 
         # Set diagonal to 0, because we don't support self similarity
@@ -89,12 +91,13 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
             )
             for j in best_items_row[-self.K:]
         ]
-        # Create a mask matrix which will be pointwise multiplied with the similarity matrix.
+        # Create a mask matrix which will be pointwise multiplied with the
+        # similarity matrix.
         mask = scipy.sparse.csr_matrix(
             ([1 for i in range(len(indices))], (list(zip(*indices))))
         )
         item_cosine_similarities_ = item_cosine_similarities_.multiply(mask)
 
         self.similarity_matrix_ = item_cosine_similarities_
-
+        self.check_fit_complete()
         return self

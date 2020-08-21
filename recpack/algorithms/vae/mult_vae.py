@@ -146,7 +146,7 @@ class MultVAE(VAE):
 
         logger.info(
             f"Processed one batch in {end_time-start_time} s."
-            " Training Loss = {train_loss}"
+            f" Training Loss = {train_loss}"
         )
 
     def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,

@@ -10,4 +10,4 @@ def test_ildK(X_true, X_pred, item_features):
 
     metric.calculate(X_true, X_pred)
 
-    np.testing.assert_almost_equal(metric.value, 0.5)
+    np.testing.assert_almost_equal(metric.value, 1 / 3)

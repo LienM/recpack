@@ -17,6 +17,7 @@ class RecallK(ElementwiseMetricK):
     Calculates the recall as follows:
     Recall@K = #relevant in top K / #relevant
     """
+
     def __init__(self, K):
         super().__init__(K)
 
@@ -33,7 +34,8 @@ class RecallK(ElementwiseMetricK):
 
         scores = scores.tocsr()
 
-        self.scores_ = sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1)))
+        self.scores_ = sparse_divide_nonzero(
+            scores, csr_matrix(y_true.sum(axis=1)))
 
         return
 
@@ -46,6 +48,7 @@ class CalibratedRecallK(ElementwiseMetricK):
     This differs from normal recall in that it accounts for when K < #relevant,
     resulting in the value being normalized to the range [0, 1].
     """
+
     def __init__(self, K):
         super().__init__(K)
 

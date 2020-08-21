@@ -11,4 +11,4 @@ def test_precisionK(X_pred, X_true):
 
     metric.calculate(X_true, X_pred)
 
-    numpy.testing.assert_almost_equal(metric.value, 0.75)
+    numpy.testing.assert_almost_equal(metric.value, 2 / 4)
