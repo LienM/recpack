@@ -5,9 +5,7 @@ import numpy as np
 
 import numba
 
-from recpack.algorithms.similarity.base import (
-    SimilarityMatrixAlgorithm,
-)
+from recpack.algorithms.similarity.base import SimilarityMatrixAlgorithm
 
 
 @enum.unique
@@ -23,9 +21,9 @@ class Aggregator(enum.Enum):
 Agg = Aggregator
 
 
-class SharedAccount(SimilarityMatrixAlgorithm):
+class DAMIBCover(SimilarityMatrixAlgorithm):
     """
-    Shared account algorithm by Koen Verstreepen et al.
+    DAMIB-Cover Algorithm by Koen Verstrepen et al.
     Only the rescaling os scores is implemented for now.
     The optimal set of explanations is found with the parameter `p` by dividing the sum of scores by the size of the set to the power `p`.
     The final score can either be the sum, average or adjusted average (with denominator) depending on the `agg` param.
@@ -45,20 +43,21 @@ class SharedAccount(SimilarityMatrixAlgorithm):
         return self.algo.similarity_matrix_
 
     def predict(self, X, user_ids=None):
-        M = self.similarity_matrix_.toarray()
-
-        X = X.toarray()
-        predictions = get_predictions(X, M, self.p, self.agg)
+        predictions = get_predictions(X, self.similarity_matrix_, self.p, self.agg)
 
         return predictions
 
 
-@numba.njit(parallel=True)
+# @numba.njit(parallel=True)
 def get_predictions(X, M, p, agg):
     predictions = np.zeros(X.shape, dtype=np.float32)
-    for u in numba.prange(X.shape[0]):
-        indices = X[u]
-        similarities = M[indices.astype(np.bool_), :]
+    # For every user
+    # for u in numba.prange(X.shape[0]):
+    for u in set(X.nonzero()[0]):
+        # Items this user has interacted with [0, 1, 0] -> indices = 2
+        indices = X[u].toarray()[0]
+        # [[0 1], [1 0]] (sim) * [0 2] (u)
+        similarities = M[indices.astype(np.bool_), :].toarray()
         predictions[u] = get_prediction_u(similarities, p, agg)
 
     return predictions
@@ -71,7 +70,6 @@ def get_prediction_u(similarities, p, agg):
 
     for col in range(filtered.shape[1]):
         nonzero = np.count_nonzero(filtered[:, col])
-        # print("set size:", nonzero)
         if nonzero == 0:
             predictions[col] = 0
         elif agg == Agg.Sum:
@@ -102,7 +100,6 @@ def filter_best_subsets(similarities, p):
         for index in order:
             tmp = (total + similarities[index, col]) / (amount + 1) ** p
             if tmp < total:
-                # print("ignore", len(order) - amount, "/", len(order))
                 break
             else:
                 total = tmp

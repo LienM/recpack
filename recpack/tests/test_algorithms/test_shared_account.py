@@ -1,4 +1,4 @@
-from recpack.algorithms.similarity.shared_account import SharedAccount
+from recpack.algorithms.similarity.shared_account import DAMIBCover
 from recpack.algorithms.similarity.nearest_neighbour import ItemKNN
 import scipy.sparse
 import math
@@ -11,7 +11,7 @@ def test_item_knn_sa_is_iknn():
     items = [1, 2, 0, 2, 0, 1, 2]
     data = scipy.sparse.csr_matrix((values, (users, items)), shape=(4, 3))
 
-    algo = SharedAccount(algo=ItemKNN(K=2), p=0)
+    algo = DAMIBCover(algo=ItemKNN(K=2), p=0)
 
     algo.fit(data)
 
@@ -46,7 +46,7 @@ def test_item_knn_sa():
     items = [1, 2, 0, 2, 0, 1, 2]
     data = scipy.sparse.csr_matrix((values, (users, items)), shape=(4, 3))
 
-    algo = SharedAccount(algo=ItemKNN(K=2), p=0.75)
+    algo = DAMIBCover(algo=ItemKNN(K=2), p=0.75)
 
     algo.fit(data)
 
