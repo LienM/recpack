@@ -45,7 +45,7 @@ def test_dcgk(X_pred, X_true):
         (1 / np.log2(2 + 1))
         # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
         + (1 + (1 / np.log2(2 + 1)))
-    ) / 3  # 3 users
+    ) / 2  # 2 users
 
     np.testing.assert_almost_equal(metric.value, expected_value)
 
@@ -66,9 +66,9 @@ def test_ndcg(X_pred, X_true):
         # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
         + (1 + (1 / np.log2(2 + 1)))
         / IDCG2
-    ) / 3  # 3 users
+    ) / 2  # 2 users
 
-    assert metric.num_users == 3
+    assert metric.num_users == 2
     np.testing.assert_almost_equal(metric.value, expected_value)
 
 
@@ -83,7 +83,7 @@ def test_dcgk_3(X_pred, X_true):
         # user 2 rank 1  # user 2 rank 2
         (1 / np.log2(2 + 1) + 1 / np.log2(3 + 1))
         + (1 + (1 / np.log2(2 + 1)))  # user 0 rank 0  # user 0 rank 1
-    ) / 3  # 3 users
+    ) / 2  # 2 users
 
     np.testing.assert_almost_equal(metric.value, expected_value)
 
@@ -103,6 +103,46 @@ def test_ndcg_k3(X_pred, X_true):
         (1 + (1 / np.log2(3))) / IDCG2  # user 0 rank 0  # user 0 rank 1
         + (1 / np.log2(3) + 1 / np.log2(4)) / \
         IDCG3  # user 2 rank 1  # user 2 rank 2
+    ) / 2  # 2 users
+
+    assert metric.num_users == 2
+    np.testing.assert_almost_equal(metric.value, expected_value)
+
+
+def test_dcgk_empty_reco(X_pred, X_true_unrecommended_user):
+    K = 2
+    metric = DCGK(K)
+
+    metric.calculate(X_true_unrecommended_user, X_pred)
+
+    # user 0 has 2 correct items, user 2 has two correct items, user 3 has no
+    # predictions
+
+    expected_value = (
+        (1 / np.log2(2 + 1))
+        # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
+        + (1 + (1 / np.log2(2 + 1)))
+    ) / 3  # 3 users
+
+    np.testing.assert_almost_equal(metric.value, expected_value)
+
+
+def test_ndcg_empty_reco(X_pred, X_true_unrecommended_user):
+    K = 2
+    metric = NDCGK(K)
+
+    metric.calculate(X_true_unrecommended_user, X_pred)
+
+    # user 0 has 2 correct items, user 2 has three correct items
+    # however, K is 2 so ideal for user 2 is IDCG2
+    IDCG1 = 1
+    IDCG2 = IDCG1 + 1 / np.log2(3)
+
+    expected_value = (
+        (1 / np.log2(2 + 1)) / IDCG2
+        # user 0 rank 1  # user 2 rank 0  # user 2 rank 1
+        + (1 + (1 / np.log2(2 + 1)))
+        / IDCG2
     ) / 3  # 3 users
 
     assert metric.num_users == 3
