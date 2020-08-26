@@ -24,7 +24,7 @@ class NMF(TopKSimilarityMatrixAlgorithm):
         # latent factors.
         self.similarity_matrix_ = H.T @ H
 
-        self.check_fit_complete()
+        self._check_fit_complete()
         return self
 
 
@@ -42,5 +42,5 @@ class SVD(TopKSimilarityMatrixAlgorithm):
         sigma = scipy.sparse.diags(model.singular_values_)
         self.similarity_matrix_ = V.T @ sigma @ V
 
-        self.check_fit_complete()
+        self._check_fit_complete()
         return self

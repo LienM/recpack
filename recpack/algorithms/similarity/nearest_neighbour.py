@@ -56,7 +56,7 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
             )
 
         self.similarity_matrix_ = item_cosine_similarities_
-        self.check_fit_complete()
+        self._check_fit_complete()
         return self
 
 
@@ -99,5 +99,5 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
         item_cosine_similarities_ = item_cosine_similarities_.multiply(mask)
 
         self.similarity_matrix_ = item_cosine_similarities_
-        self.check_fit_complete()
+        self._check_fit_complete()
         return self

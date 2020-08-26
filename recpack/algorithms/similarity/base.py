@@ -22,7 +22,7 @@ class SimilarityMatrixAlgorithm(Algorithm):
 
         return scores
 
-    def check_fit_complete(self):
+    def _check_fit_complete(self):
         """Checks if the fitted matrix, contains a similarity for each item.
         Uses warnings to push this info to the customer.
         """

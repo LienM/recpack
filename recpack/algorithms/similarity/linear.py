@@ -50,7 +50,7 @@ class EASE(SimilarityMatrixAlgorithm):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
-        self.check_fit_complete()
+        self._check_fit_complete()
         return self
 
     def load(self, filename):
@@ -99,7 +99,7 @@ class EASE_Intercept(EASE):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
-        self.check_fit_complete()
+        self._check_fit_complete()
 
         return self
 
@@ -131,7 +131,7 @@ class EASE_XY(EASE):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
-        self.check_fit_complete()
+        self._check_fit_complete()
 
         return self
 
@@ -162,7 +162,7 @@ class EASE_AVG(EASE):
         B = B_rr - P @ D
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
-        self.check_fit_complete()
+        self._check_fit_complete()
 
         return self
 
@@ -193,7 +193,7 @@ class EASE_AVG_Int(EASE_AVG):
         B[:-1, :] -= P[:-1, :-1] @ D
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
-        self.check_fit_complete()
+        self._check_fit_complete()
         return self
 
     def predict(self, X, user_ids=None):
@@ -282,6 +282,6 @@ class SLIM(SimilarityMatrixAlgorithm):
             (data, (row, col)), shape=(X.shape[1], X.shape[1])
         )
 
-        self.check_fit_complete()
+        self._check_fit_complete()
 
         return self
