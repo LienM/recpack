@@ -57,6 +57,17 @@ def X_true_simplified():
 
 
 @pytest.fixture(scope="function")
+def X_true_unrecommended_user():
+    true_users, true_items = [0, 0, 2, 2, 2, 3], [0, 2, 0, 1, 3, 1]
+
+    true_data = scipy.sparse.csr_matrix(
+        ([1 for i in range(len(true_users))], (true_users, true_items)), shape=(10, 5)
+    )
+
+    return true_data
+
+
+@pytest.fixture(scope="function")
 def X_lots_of_items():
     true_data = scipy.sparse.diags(np.ones(100_000))
     return true_data

@@ -16,7 +16,8 @@ class Scenario(ABC):
         """
         self.validation = validation
         if validation:
-            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.5)
+            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(
+                0.8)
 
     @abstractmethod
     def split(self, *data_ms: DataM):
@@ -49,7 +50,19 @@ class Scenario(ABC):
         :return: Validation data matrices as DataM in, DataM out.
         :rtype: Tuple[DataM, DataM]
         """
-        return (self.validation_data_in, self.validation_data_out) if self.validation_data_in else None
+        # TODO: make sure the users in and out match (Here? or elsewhere?)
+        if not self._validation_data_in:
+            return None
+
+        # make sure users match both.
+        in_users = self._validation_data_in.active_users
+        out_users = self._validation_data_out.active_users
+
+        matching = list(in_users.intersection(out_users))
+        self._validation_data_in.users_in(matching, inplace=True)
+        self._validation_data_out.users_in(matching, inplace=True)
+
+        return (self._validation_data_in, self._validation_data_out)
 
     @property
     def test_data(self) -> Tuple[DataM, DataM]:
@@ -59,14 +72,25 @@ class Scenario(ABC):
         :return: Test data matrices as DataM in, DataM out.
         :rtype: Tuple[DataM, DataM]
         """
+        # make sure users match.
+        in_users = self.test_data_in.active_users
+        out_users = self.test_data_out.active_users
+
+        matching = list(in_users.intersection(out_users))
+        self.test_data_in.users_in(matching, inplace=True)
+        self.test_data_out.users_in(matching, inplace=True)
+
         return (self.test_data_in, self.test_data_out)
 
     def validate(self):
         # TODO Test presency of train_y
         assert hasattr(self, "train_X") and self.train_X is not None
         if self.validation:
-            assert hasattr(self, "validation_data_in") and self.validation_data_in is not None
-            assert hasattr(self, "validation_data_out") and self.validation_data_out is not None
+            assert hasattr(self, "_validation_data_in") \
+                and self._validation_data_in is not None
+            assert hasattr(self, "_validation_data_out") \
+                and self._validation_data_out is not None
 
         assert hasattr(self, "test_data_in") and self.test_data_in is not None
-        assert hasattr(self, "test_data_out") and self.test_data_out is not None
+        assert hasattr(
+            self, "test_data_out") and self.test_data_out is not None

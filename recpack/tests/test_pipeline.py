@@ -27,7 +27,7 @@ def generate_data():
 
 def test_pipeline():
     data = generate_data()
-    scenario = scenarios.TrainingInTestOutTimed(20)
+    scenario = scenarios.Timed(20)
     scenario.split(data)
 
     algo = recpack.algorithms.algorithm_registry.get("popularity")(K=2)

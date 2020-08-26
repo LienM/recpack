@@ -45,6 +45,7 @@ class Random(Algorithm):
         score_matrix = scipy.sparse.csr_matrix(
             (scores, (user_idxs, item_idxs)), shape=X.shape
         )
+        self._check_prediction(score_matrix, X)
         return score_matrix
 
 
@@ -77,4 +78,5 @@ class Popularity(Algorithm):
             V.extend(values)
 
         score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
+        self._check_prediction(score_matrix, X)
         return score_matrix

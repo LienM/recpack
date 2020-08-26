@@ -257,6 +257,8 @@ class VAE(Algorithm):
         # Compute the result in batches.
         X_pred = self._batch_predict(X)
 
+        self._check_prediction(X_pred, X)
+
         return X_pred
 
 

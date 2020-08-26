@@ -12,14 +12,19 @@ class NMF(TopKSimilarityMatrixAlgorithm):
     def fit(self, X):
         # Using Sklearn NMF implementation. For info and parameters:
         # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
-        model = sklearn.decomposition.NMF(n_components=self.K, init='random', random_state=0)
+        model = sklearn.decomposition.NMF(
+            n_components=self.K, init='random', random_state=0)
 
-        # Factorization is W * H. Where W contains user latent vectors, and H contains item latent vectors
+        # Factorization is W * H. Where W contains user latent vectors, and H
+        # contains item latent vectors
         _ = model.fit_transform(X)
         H = model.components_
 
-        # Compute an item to item similarity matrix by self multiplying the latent factors.
+        # Compute an item to item similarity matrix by self multiplying the
+        # latent factors.
         self.similarity_matrix_ = H.T @ H
+
+        self._check_fit_complete()
         return self
 
 
@@ -27,7 +32,8 @@ class SVD(TopKSimilarityMatrixAlgorithm):
 
     def fit(self, X):
         # TODO use other parameter options?
-        model = sklearn.decomposition.TruncatedSVD(n_components=self.K, n_iter=7, random_state=42)
+        model = sklearn.decomposition.TruncatedSVD(
+            n_components=self.K, n_iter=7, random_state=42)
         model.fit(X)
 
         # Factorization computes U x Sigma x V
@@ -35,4 +41,6 @@ class SVD(TopKSimilarityMatrixAlgorithm):
         V = model.components_
         sigma = scipy.sparse.diags(model.singular_values_)
         self.similarity_matrix_ = V.T @ sigma @ V
+
+        self._check_fit_complete()
         return self

@@ -11,8 +11,6 @@ def test_batched_prediction(larger_matrix, mult_vae):
 
     X_pred_batched = mult_vae_1._batch_predict(larger_matrix)
 
-    print(len(set(larger_matrix.nonzero()[0])))
-
     input_users = set(larger_matrix.nonzero()[0])
     batched_users = set(X_pred_batched.nonzero()[0])
 

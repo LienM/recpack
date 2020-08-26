@@ -33,7 +33,12 @@ class EASE(SimilarityMatrixAlgorithm):
 
         # Compute P
         XTX = (X.T @ X).toarray()
-        P = np.linalg.inv(XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
+        P = np.linalg.inv(
+            XTX +
+            self.l2 *
+            np.identity(
+                (X.shape[1]),
+                dtype=np.float32))
 
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))
@@ -45,6 +50,7 @@ class EASE(SimilarityMatrixAlgorithm):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
+        self._check_fit_complete()
         return self
 
     def load(self, filename):
@@ -93,6 +99,8 @@ class EASE_Intercept(EASE):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
+        self._check_fit_complete()
+
         return self
 
     def predict(self, X, user_ids=None):
@@ -123,11 +131,14 @@ class EASE_XY(EASE):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
+        self._check_fit_complete()
+
         return self
 
 
 def normalize(X):
-    return scipy.sparse.csr_matrix(scipy.sparse.diags(1 / np.sum(X, axis=1).A1) @ X)
+    return scipy.sparse.csr_matrix(
+        scipy.sparse.diags(1 / np.sum(X, axis=1).A1) @ X)
 
 
 class EASE_AVG(EASE):
@@ -150,6 +161,8 @@ class EASE_AVG(EASE):
         D = np.diag((1 - np.diag(B_rr)) / -np.diag(P))
         B = B_rr - P @ D
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
+
+        self._check_fit_complete()
 
         return self
 
@@ -180,7 +193,7 @@ class EASE_AVG_Int(EASE_AVG):
         B[:-1, :] -= P[:-1, :-1] @ D
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
-
+        self._check_fit_complete()
         return self
 
     def predict(self, X, user_ids=None):
@@ -253,7 +266,8 @@ class SLIM(SimilarityMatrixAlgorithm):
         col = []
         # Loop over all items
         for j in range(X.shape[1]):
-            # Compute the contribution values of all other items for the item j using linear regression
+            # Compute the contribution values of all other items for the item j
+            # using linear regression
             w = self._compute_similarities(X, j)
             # Update sparse repr. inputs.
             # w[i,j] = the contribution of item i to predicting item j
@@ -267,4 +281,7 @@ class SLIM(SimilarityMatrixAlgorithm):
         self.similarity_matrix_ = scipy.sparse.csr_matrix(
             (data, (row, col)), shape=(X.shape[1], X.shape[1])
         )
+
+        self._check_fit_complete()
+
         return self

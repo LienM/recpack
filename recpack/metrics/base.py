@@ -126,20 +126,23 @@ class MetricTopK(Metric):
         :rtype: csr_matrix
         """
         U, I, V = [], [], []
-        for row_ix, (le, ri) in enumerate(zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
+        for row_ix, (le, ri) in enumerate(
+                zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
             K_row_pick = min(self.K, ri - le)
 
-            top_k_row = y_pred.indices[
-                le
-                + np.argpartition(y_pred.data[le:ri], list(range(-K_row_pick, 0)))[
-                    -K_row_pick:
-                ]
-            ]
+            if K_row_pick != 0:
 
-            for rank, col_ix in enumerate(reversed(top_k_row)):
-                U.append(row_ix)
-                I.append(col_ix)
-                V.append(rank + 1)
+                top_k_row = y_pred.indices[
+                    le
+                    + np.argpartition(y_pred.data[le:ri], list(range(-K_row_pick, 0)))[
+                        -K_row_pick:
+                    ]
+                ]
+
+                for rank, col_ix in enumerate(reversed(top_k_row)):
+                    U.append(row_ix)
+                    I.append(col_ix)
+                    V.append(rank + 1)
 
         y_pred_top_K = csr_matrix((V, (U, I)), shape=y_pred.shape)
 
@@ -166,11 +169,32 @@ class ElementwiseMetricK(MetricTopK):
         return ["user_id", "item_id", "score"]
 
     @property
-    def results(self):
+    def results(self) -> pd.DataFrame:
+        """Get the results for this metric.
+
+        If there is a user with 0 recommendations,
+        the output dataframe will contain K rows for
+        that user, with item NaN and score 0
+
+        :return: The results dataframe. With columns user, item, score
+        :rtype: pd.DataFrame
+        """
         scores = self.scores_.toarray()
 
+        all_users = set(range(self.scores_.shape[0]))
         int_users, items = self.indices
         values = scores[int_users, items]
+
+        # For all users in all_users but not in int_users,
+        # add K items np.nan with value = 0
+        missing_users = all_users.difference(set(int_users))
+
+        # This should barely occur, so it's not too bad to append np arrays.
+        for u in list(missing_users):
+            for i in range(self.K):
+                int_users = np.append(int_users, u)
+                values = np.append(values, 0)
+                items = np.append(items, np.nan)
 
         users = self.map_users(int_users)
 

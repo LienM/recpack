@@ -10,7 +10,6 @@ from tqdm.auto import tqdm
 
 from recpack.data.data_matrix import DataM
 
-
 logger = logging.getLogger("recpack")
 
 
@@ -120,13 +119,15 @@ class StrongGeneralizationSplitter(Splitter):
 
             real_perc = data_in_cnt / total_interactions
 
-            within_margin = np.isclose(real_perc, self.in_perc, atol=self.error_margin)
+            within_margin = np.isclose(
+                real_perc, self.in_perc, atol=self.error_margin)
 
             if within_margin:
                 logger.debug(f"{self.name} - Iteration {i} - Within margin")
                 break
             else:
-                logger.debug(f"{self.name} - Iteration {i} - Not within margin")
+                logger.debug(
+                    f"{self.name} - Iteration {i} - Not within margin")
 
         u_splitter = UserSplitter(users_in, users_out)
 
@@ -160,7 +161,8 @@ class PercentageInteractionSplitter(Splitter):
         tr_u, tr_i = [], []
         te_u, te_i = [], []
 
-        for u, user_history in tqdm(data.user_history, desc="split user ratings"):
+        for u, user_history in tqdm(
+                data.user_history, desc="split user ratings"):
             rstate = np.random.RandomState(self.seed + u)
 
             rstate.shuffle(user_history)
@@ -228,14 +230,18 @@ class TimestampSplitter(Splitter):
             tr_data = data.timestamps_lt(self.t)
         else:
             # Holds indices in interval: t-t_alpha =< timestamp < t
-            tr_data = data.timestamps_lt(self.t).timestamps_gte(self.t - self.t_alpha)
+            tr_data = data.timestamps_lt(
+                self.t).timestamps_gte(
+                self.t - self.t_alpha)
 
         if self.t_delta is None:
             # Holds indices where timestamp >= t
             te_data = data.timestamps_gte(self.t)
         else:
             # Get indices where timestamp >= t and timestamp < t + t_delta
-            te_data = data.timestamps_gte(self.t).timestamps_lt(self.t + self.t_delta)
+            te_data = data.timestamps_gte(
+                self.t).timestamps_lt(
+                self.t + self.t_delta)
 
         logger.debug(f"{self.name} - Split successful")
 
@@ -267,7 +273,8 @@ class FoldIterator:
         self.data_m_in.eliminate_timestamps()
         self.data_m_out.eliminate_timestamps()
 
-        # users need history, but absence of true labels is allowed (some metrics don't require true labels).
+        # users need history, but absence of true labels is allowed (some
+        # metrics don't require true labels).
         self.users = list(sorted(set(self.data_m_in.indices[0])))
 
     def __iter__(self):

@@ -205,7 +205,8 @@ def test_fold_iterator_correctness(data_m, batch_size):
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
 def test_fold_iterator_completeness(data_m, batch_size):
 
-    fold_iterator = splitter_base.FoldIterator(data_m, data_m, batch_size=batch_size)
+    fold_iterator = splitter_base.FoldIterator(
+        data_m, data_m, batch_size=batch_size)
 
     nonzero_users = set(data_m.indices[0])
 
