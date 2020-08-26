@@ -51,18 +51,18 @@ class Scenario(ABC):
         :rtype: Tuple[DataM, DataM]
         """
         # TODO: make sure the users in and out match (Here? or elsewhere?)
-        if not self.validation_data_in:
+        if not self._validation_data_in:
             return None
 
         # make sure users match both.
-        in_users = self.validation_data_in.active_users
-        out_users = self.validation_data_out.active_users
+        in_users = self._validation_data_in.active_users
+        out_users = self._validation_data_out.active_users
 
         matching = list(in_users.intersection(out_users))
-        self.validation_data_in.users_in(matching, inplace=True)
-        self.validation_data_out.users_in(matching, inplace=True)
+        self._validation_data_in.users_in(matching, inplace=True)
+        self._validation_data_out.users_in(matching, inplace=True)
 
-        return (self.validation_data_in, self.validation_data_out)
+        return (self._validation_data_in, self._validation_data_out)
 
     @property
     def test_data(self) -> Tuple[DataM, DataM]:
@@ -86,10 +86,10 @@ class Scenario(ABC):
         # TODO Test presency of train_y
         assert hasattr(self, "train_X") and self.train_X is not None
         if self.validation:
-            assert hasattr(self, "validation_data_in") \
-                and self.validation_data_in is not None
-            assert hasattr(self, "validation_data_out") \
-                and self.validation_data_out is not None
+            assert hasattr(self, "_validation_data_in") \
+                and self._validation_data_in is not None
+            assert hasattr(self, "_validation_data_out") \
+                and self._validation_data_out is not None
 
         assert hasattr(self, "test_data_in") and self.test_data_in is not None
         assert hasattr(

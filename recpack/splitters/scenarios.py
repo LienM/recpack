@@ -32,7 +32,7 @@ class StrongGeneralization(Scenario):
         if self.validation:
             self.train_X, validation_data = self.validation_splitter.split(
                 train_val_data)
-            self.validation_data_in, self.validation_data_out = self.interaction_split.split(
+            self._validation_data_in, self._validation_data_out = self.interaction_split.split(
                 validation_data)
         else:
             self.train_X = train_val_data
@@ -98,9 +98,9 @@ class Timed(Scenario):
         lt_t, gt_t = self.timestamp_spl.split(data)
 
         if self.validation:
-            self.train_X, self.validation_data_out = \
+            self.train_X, self._validation_data_out = \
                 self.validation_time_splitter.split(lt_t)
-            self.validation_data_in = self.train_X
+            self._validation_data_in = self.train_X
         else:
             self.train_X = lt_t
 
@@ -201,7 +201,7 @@ class StrongGeneralizationTimed(Scenario):
             train_data, validation_data = self.validation_splitter.split(
                 tr_val_data)
             # Split validation data into input and output on t_validation
-            self.validation_data_in, self.validation_data_out = \
+            self._validation_data_in, self._validation_data_out = \
                 self.validation_time_splitter.split(validation_data)
             # select the right train data.
             self.train_X, _ = self.validation_time_splitter.split(train_data)
@@ -259,7 +259,7 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
                 d_2_lt)
             self.train_X = d_1_lt_val
 
-            self.validation_data_in, self.validation_data_out = (
+            self._validation_data_in, self._validation_data_out = (
                 d_2_lt_val, d_2_gt_val)
         else:
             self.train_X = d_1_lt
@@ -308,7 +308,7 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
                 d_2_lt)
             self.train_X = d_1_lt_val
 
-            self.validation_data_in, self.validation_data_out = (
+            self._validation_data_in, self._validation_data_out = (
                 d_1_lt_val, d_2_gt_val)
         else:
             self.train_X = d_1_lt
@@ -339,7 +339,7 @@ class TrainInTimedOutOfDomainWithLabelsEvaluate(
                 d_2_lt)
             self.train_X = d_1_lt_val
 
-            self.validation_data_in, self.validation_data_out = (
+            self._validation_data_in, self._validation_data_out = (
                 d_1_lt_val, d_2_gt_val)
 
             train_users = list(self.train_X.active_users)
