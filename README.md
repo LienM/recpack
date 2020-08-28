@@ -1,4 +1,4 @@
-# recpack
+# RecPack
 Python package for easy experimentation with recsys algorithms
 
 ## Installation
@@ -7,53 +7,67 @@ Python package for easy experimentation with recsys algorithms
 2. In repository run `pip install .`
 
 ## Usage
-Recpack can be used as a repository of algorithms in which case you should use just the algorithms module.
-We also provide a pipeline to make testing algorithms easy. When using a pipeline you go through following steps
+RecPack provides a framework for experimentation with recommendation algorithms. 
+It comes pre-packed with a number of commonly used evaluation scenarios (splitters),
+evaluation metrics (metrics) and state-of-the-art algorithm implementations (algorithms).
+New algorithms and evaluation scenarios can be added easily, by subclassing the appropriate base classes. 
+A number of lower level data splitters are provided that can be used to build up more complex evaluation scenario's.
 
-### Load data
-Data is expected to be loaded into a pandas df.
-Then helper functions can be used to clean it up and turn it into an internal representation.
+Users can choose between the Experiment and Pipeline interface for running experiments. 
+Use Experiment if you want full control over hyperparameters and want to optimize a single algorithm. 
+Pipelines allow easy comparison between algorithms. 
+
+
+### Load and preprocess data
+
+At the core of RecPack is the DataM object. 
+This DataM object represents your data. 
+It provides a number of easy, heavily optimized operations for indexing into and slicing your data. 
+
+Currently RecPack provides an easy to use Preprocessor to transform a Pandas DataFrame into a DataM.  
+If for some reason you are unable to load your data into a Pandas DataFrame, you can extend the Preprocessor base class. 
+Under the hood, this DataFramePreprocessor maps user and item indices to a sequence of consecutive integers.
+This is required by many algorithms to allow for easy computation and avoid singularity. 
+
 
 ```python
-from recpack.data.data_matrix import DataM
 import pandas as pd
 
-# Load data from CSV (assumes you have the data stored in the path provided)
-dataframe = pd.read_csv(
-    'datasets/ML_100K/u.data'
-)
+from recpack.preprocessing.preprocessors import DataFramePreprocessor
+from recpack.data.data_matrix import DataM
 
-# clean up data
-# This is to create a continuous user and item space.
-# Which makes training faster and avoids unneeded 0 rows or collumns
-item_ids = list(dataframe['movieId'].unique())
-user_ids = list(dataframe['userId'].unique())
-item_id_mapping = recpack.preprocessing.util.rescale_id_space(item_ids)
-user_id_mapping = recpack.preprocessing.util.rescale_id_space(user_ids)
+pv_frame = pd.read_csv("pageviews.csv")
+pur_frame = pd.read_csv("purchases.csv")
 
-dataframe['iid'] = dataframe['movieId'].map(lambda x: item_id_mapping[x])
-dataframe['uid'] = dataframe['userId'].map(lambda x: user_id_mapping[x])
+prep = DataFramePreprocessor("itemId", "userId")
+pv_m, pur_m = prep.process(pv_frame, pur_frame) # Transform to DataM objects.
 
-# Drop the non continuous id columns (not really necessary, but frees up space)
-df = dataframe.drop(['userId', 'itemId'], axis=1)
-# Convert data into internal representation
-data = DataM.create_from_dataframe(df, 'iid', 'uid', 'timestamp')
 ```
 
-### Select algorithms
-Recpack provides a set of algorithms to use in pipelines.
+Important to note is that when you use multiple data inputs as in the example above, you want to process them together, so that all resulting DataM objects have the same size. 
+
+### Using an algorithm
+
+RecPack provides a number of state-of-the-art algorithm implementations. 
+
 To get the list of all algorithms use:
 ```python
 import recpack.algorithms
 recpack.algorithms.algorithm_registry.list()
 ```
-This will give you a list of algorithm you can use.
+This will give you a list of algorithms available for immediate use.
 
-To create an algorithm instance use:
+To create an algorithm instance use one of:
+
 ```python
-algo = recpack.algorithms.algorithm_registry.get('ease')()
+import recpack.algorithms
+from recpack.algorithms import EASE
+
+ease1 = recpack.algorithms.algorithm_registry.get('ease')(lambda=1000)
+
+ease2 = EASE(lambda=1000)
 ```
-You can add parameters in the constructor. For information on which parameters can be used for which algorithm see the docs.
+For information on which parameters can be used for which algorithm see their individual docstrings.
 
 #### Implementing a new algorithm
 Should you want to implement a new algorithm which we do not yet support you should create a subclass of the `Algorithm` base class
@@ -61,34 +75,37 @@ Should you want to implement a new algorithm which we do not yet support you sho
 Here is the code for a popularity algorithm
 
 ```python
-from recpack.algorithms.base import Algorithm
 from collections import Counter
-
 import numpy as np
+from scipy.sparse import csr_matrix
+
+from recpack.algorithms.base import Algorithm
 
 class Popularity(Algorithm):
 
     def __init__(self, K=200):
-        self.sorted_scores = None
+        self.sorted_scores_ = None
         self.K = K
 
     def fit(self, X):
         items = list(X.nonzero()[1])
-        self.sorted_scores = Counter(items).most_common()
+        self.sorted_scores_ = Counter(items).most_common()
 
     def predict(self, X):
         """For each user predict the K most popular items"""
         score_list = np.zeros((X.shape[1]))
         for i, s in self.sorted_scores[:self.K]:
             score_list[i] = s
-        return np.repeat([score_list], X.shape[0], axis=0)
+        return csr_matrix(np.repeat([score_list], X.shape[0], axis=0))
 
     @property
     def name(self):
         return f"popularity_{self.K}"
 ```
 
-### Selecting a splitter
+// TODO Elaborate on conventions when developing new algorithms 
+
+### Selecting a scenario
 The splitter class will take the input data and split it into 3 data objects:
 * train
 * validation
