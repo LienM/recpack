@@ -1,5 +1,5 @@
 # RecPack
-Python package for easy experimentation with recsys algorithms
+Python package for easy experimentation with recsys algorithms.
 
 ## Installation
 
@@ -11,11 +11,11 @@ RecPack provides a framework for experimentation with recommendation algorithms.
 It comes pre-packed with a number of commonly used evaluation scenarios (splitters),
 evaluation metrics (metrics) and state-of-the-art algorithm implementations (algorithms).
 New algorithms and evaluation scenarios can be added easily, by subclassing the appropriate base classes. 
-A number of lower level data splitters are provided that can be used to build up more complex evaluation scenario's.
+A number of lower level data splitters are provided that can be used to build up more complex evaluation scenarios.
 
 Users can choose between the Experiment and Pipeline interface for running experiments. 
 Use Experiment if you want full control over hyperparameters and want to optimize a single algorithm. 
-Pipelines allow easy comparison between algorithms. 
+Pipelines then allow easy comparison between algorithms. 
 
 
 ### Load and preprocess data
@@ -106,37 +106,30 @@ class Popularity(Algorithm):
 // TODO Elaborate on conventions when developing new algorithms 
 
 ### Selecting a scenario
-The splitter class will take the input data and split it into 3 data objects:
-* train
-* validation
-* test
+To evaluate the merits of your algorithms, you use them in specific evaluation scenarios: This is what Scenarios are used for. 
+RecPack has implementations for the most commonly used evaluation scenarios:
+StrongGeneralization: How well does my algorithm generalize to unseen users? 
+Timed: How well does my algorithm predict future interactions for this user?
+WeakGeneralization: How well can my algorithm predict a random set of interactions of this user, based on all other interactions?
 
-These will be used further in the pipeline to train models, and evaluate the models.
 
 ```python
-import recpack.splits
+from recpack.splitters.scenarios import StrongGeneralization
 # Construct a splitter object which uses strong generalization to split the data into
 # three data objects. Train will contain 50% of the users, validation 20% and test 30%
 # The seed parameter is useful for creating reproducible results.
-splitter = recpack.splits.StrongGeneralizationSplit(0.5, 0.2, seed=42)
+scenario = StrongGeneralizationSplit(0.5, 0.2, seed=42)
+scenario.split(pur_m)
+
+scenario.training_data.binary_values  # Training Data, as binary values csr_matrix
+validation_data_in, validation_data_out = scenario.validation_data  # Validation Data: Split across historical interactions -> interactions to predict
+test_data_in, test_data_Out = scenario.test_data  # Test Data: Split across historical interactions -> interactions to predict
 ```
 
-### Selecting an evaluator
-The evaluator class takes the 3 data objects and generate in and output matrices.
-The input matrix will be passed as input to the predict method of the algorithm, the out matrix is the true output and will be used by the metrics.
-
-```python
-import recpack.evaluate
-# Construct a fold in evaluator.
-# this evaluator will take the test data, and for each user add 40% of their interactions
-# to the in_ matrix and 60% to the out_ matrix.
-# Seed again for reproducability.
-evaluator = recpack.evaluate.FoldInPercentageEvaluator(0.4, seed=42)
-```
+// TODO Write about metrics
 
 ### Creating the pipeline
 When creating the pipeline you will connect all the components and select metrics which the pipeline will compute.
-For the metrics we support three at the moment: `NDCG`, `Recall`, `MRR`. Each of these will be computed for each K value passed in the K_values list parameter.
 
 ```python
 import recpack.pipelines
