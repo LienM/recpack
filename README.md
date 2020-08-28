@@ -142,5 +142,4 @@ p = recpack.pipelines.Pipeline(splitter, [algo], evaluator, ['NDCG', 'Recall'], 
 p.get()
 ```
 
-## More information on the pipeline
-![alt text](images/pipeline.png "pipeline structure")
+Draw a new diagram
