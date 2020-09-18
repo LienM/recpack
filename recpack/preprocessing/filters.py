@@ -70,6 +70,8 @@ class NMostPopular(Filter):
     def __init__(self, N: int, item_id: str, user_id: str, timestamp_id=None):
         """
         Retain only the N most popular items.
+        Note: All interactions count, also if a user interacted with the same item
+        1000 times.
 
         :param N: Number of items to retain.
         :type N: int
@@ -86,8 +88,6 @@ class NMostPopular(Filter):
 
     def apply(self, df):
         cnt_users_per_item = df[self.item_id].value_counts(sort=True, ascending=False)
-
-        # TODO What to do if items are equally popular? 
 
         items_of_interest = list(cnt_users_per_item[0:self.N].index)
 

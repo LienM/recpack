@@ -1,5 +1,3 @@
-import pandas as pd
-
 import recpack.preprocessing.filters as filters
 
 
@@ -46,6 +44,7 @@ def test_nmost_popular(dataframe):
 
     assert 0 in filtered_iids
     assert 1 in filtered_iids
-    assert 2 in filtered_iids
+    assert 2 not in filtered_iids
     assert 3 not in filtered_iids
     assert 4 not in filtered_iids
+    assert 5 in filtered_iids
