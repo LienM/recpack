@@ -9,7 +9,17 @@ class CML(Algorithm):
 
     Version without features, referred to as CML in the paper.
     """
-    pass
+
+    def __init__(
+        self,
+        embedding_dim,
+        margin,
+        learning_rate,
+        clip_norm,
+        use_rank_weight,
+        use_cov_loss,
+    ):
+        pass
 
 
 class CMLWithFeatures(Algorithm):
@@ -20,11 +30,25 @@ class CMLWithFeatures(Algorithm):
 
     Version with features, referred to as CML+F in the paper.
     """
-    pass
+
+    def __init__(
+        self,
+        embedding_dim,
+        margin,
+        learning_rate,
+        clip_norm,
+        use_rank_weight,
+        use_cov_loss,
+        hidden_layer_dim,
+        feature_l2_reg,
+        feature_proj_scaling_factor
+    ):
+        pass
 
 
 class RandomNegativeSampler:
     """
     Sample random negative samples for this user uniformly. 
     """
+
     pass
