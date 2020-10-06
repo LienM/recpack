@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as t_data
 
-from scipy.sparse import csr_matrix, coo_matrix
+from scipy.sparse import csr_matrix
 import logging
 import numpy as np
 
@@ -112,14 +112,14 @@ class BPRMF(Algorithm):
         dataloader = t_data.DataLoader(samples, batch_size=100, shuffle=True)
         for d in tqdm(dataloader):
             users = d[:, 0]
-            items_i = d[:, 1]
-            items_j = d[:, 2]
+            target_items = d[:, 1]
+            negative_items = d[:, 2]
 
             self.optimizer.zero_grad()
-            i_sim = self.model_.forward(users, items_i)
-            j_sim = self.model_.forward(users, items_j)
-            # print(u, i, j, i_sim, j_sim)
-            loss = self._compute_loss(i_sim, j_sim)
+            target_sim = self.model_.forward(users, target_items)
+            negative_sim = self.model_.forward(users, negative_items)
+            # print(u, i, j, target_sim, negative_sim)
+            loss = self._compute_loss(target_sim, negative_sim)
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
@@ -127,21 +127,21 @@ class BPRMF(Algorithm):
             self.steps += 1
         return train_loss
 
-    def _compute_loss(self, i_sim, j_sim):
+    def _compute_loss(self, target_sim, negative_sim):
         """Computes BPR loss
 
-        :param i_sim: [description]
-        :type i_sim: [type]
-        :param j_sim: [description]
-        :type j_sim: [type]
+        :param target_sim: [description]
+        :type target_sim: [type]
+        :param negative_sim: [description]
+        :type negative_sim: [type]
         :return: [description]
         :rtype: [type]
         """
 
         # .sum makes this also usable for lists of similarities.
-        # TODO: I'm a bit unclear why the minus sign is supposed to be here
-        # It is used in the daisyRec implementation, but feels weird.
-        bpr_loss = -(i_sim - j_sim).sigmoid().log().sum()
+        # the minus sign, is because torch does minimization,
+        # and the BPR-OPT criterion is defined as a maximisation target.
+        bpr_loss = -(target_sim - negative_sim).sigmoid().log().sum()
 
         #  Add regularization
         return bpr_loss + self.reg * (
@@ -179,7 +179,7 @@ class BPRMF(Algorithm):
 
         result = np.zeros(X.shape)
         result[users] = mult_M.detach().cpu().numpy()
-        return coo_matrix(result).tocsr()
+        return csr_matrix(result)
 
 
 # TODO: in a recommendation context, component is maybe not so clear,
