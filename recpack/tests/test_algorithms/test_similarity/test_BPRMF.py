@@ -10,7 +10,7 @@ def test_bprmf(pageviews):
     a2 = BPRMF(num_components=2, reg=0.01)
     a2.fit(pageviews)
 
-    print(a.model_.user_embedding.weight)
+    # print(a.model_.user_embedding.weight)
 
     pred = a.predict(pageviews)
 
@@ -29,17 +29,18 @@ def test_pairwise_ranking(pageviews_for_pairwise):
 
     assert pred[2, 2] > pred[2, 4]
 
-    a = BPRMF(num_components=2, reg=0.0001, learning_rate=0.0001, num_epochs=50)
+    # TODO Don't run 50 epochs in a test
+    # a = BPRMF(num_components=2, reg=0.0001, learning_rate=0.0001, num_epochs=50)
 
     a.fit(pageviews_for_pairwise)
-    print(pageviews_for_pairwise.toarray())
+    # print(pageviews_for_pairwise.toarray())
     pred = a.predict(pageviews_for_pairwise)
 
     # Users should be the exact same.
     assert set(pred.nonzero()[0]) == set(pageviews_for_pairwise.nonzero()[0])
 
-    print(a.model_.user_embedding.weight)
-    print(a.model_.item_embedding.weight)
+    # print(a.model_.user_embedding.weight)
+    # print(a.model_.item_embedding.weight)
 
     assert pred[2, 2] > pred[2, 4]
 

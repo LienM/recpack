@@ -129,7 +129,7 @@ class VAE(Algorithm):
 
         At the end of this function, the self.model_ should be ready for use.
         There is typically no need to change this function when
-        inheritting from the base class.
+        inheriting from the base class.
 
         :param X: user interactions to train on
         :type X: csr_matrix
@@ -185,7 +185,7 @@ class VAE(Algorithm):
         if self.drop_negative_recommendations:
             results[results < 0] = 0
 
-        return coo_matrix(results).tocsr()
+        return csr_matrix(results)
 
     def _batch_predict_and_loss(
             self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:

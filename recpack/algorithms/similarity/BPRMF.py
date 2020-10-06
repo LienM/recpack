@@ -1,28 +1,27 @@
-"""Code loosely based on DaisyRec implementation
-at https://github.com/AmazingDD/daisyRec/
-"""
-from recpack.algorithms.base import Algorithm
+import logging
+
+import numpy as np
+from scipy.sparse import csr_matrix
+from tqdm import tqdm
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as t_data
 
-from scipy.sparse import csr_matrix
-import logging
-import numpy as np
+from recpack.algorithms.base import Algorithm
 
-from tqdm import tqdm
 
 logger = logging.getLogger("recpack")
 
+# TODO
+# Implement Bootstrap sampling
+# Make sure samples are supplied in a completely random order
+# Check loss function, minimize
+# Implement the different lambda's instead of the one lambda
+# Implement some kind of positive to negative ratio?
 
-# TODO: Move to util file
-def int_to_tensor(x: int):
-    return torch.LongTensor([x])
 
-
-# TODO: compare with VAE base class,
-# and see if it makes sense to combine into a different inheritance hierarchy
 # TODO: early stop parameter and use.
 class BPRMF(Algorithm):
     """Implements Matrix Factorization by using the BPR-OPT objective
@@ -55,7 +54,7 @@ class BPRMF(Algorithm):
         reg=0.0,
         num_epochs=20,
         learning_rate=0.01,
-        weight_decay=0.0001,
+        # weight_decay=0.0001, Shouldn't be used, this a L2 penalty, but this is part of the loss function already
         seed=None,
     ):
 
@@ -63,7 +62,6 @@ class BPRMF(Algorithm):
         self.reg = reg
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
 
         self.seed = seed
         if self.seed:
@@ -83,107 +81,62 @@ class BPRMF(Algorithm):
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
-        self.optimizer = optim.SGD(
-            self.model_.parameters(),
-            lr=self.learning_rate,
-            weight_decay=self.weight_decay,
-        )
+        self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
         self.steps = 0
 
-    def _generate_samples(self, train_data: csr_matrix):
-        # TODO: this is a silly naive implementation,
-        # so please update to a smarter version :D
+    def fit(self, X: csr_matrix):
+        # TODO Store the best model, like in VAE
 
-        negatives = np.ones(train_data.shape) - train_data
-        users, items = train_data.nonzero()
-        for u, i in zip(users, items):
-            # sample y from negatives
-            j = np.random.choice(negatives[u, :].nonzero()[1])
-            yield (u, i, j)
+        self._init_model(X.shape[0], X.shape[1])
+
+        last_loss = 0.0
+        for epoch in range(self.num_epochs):
+            self._train_epoch(X)
+
+            # TODO Validation loss/some form of early stopping?
+
+            # TODO: early stopping
+            # delta_loss = float(train_loss - last_loss)
+            # if (abs(delta_loss) < 1e-5) and self.early_stop:
+            #     print('Satisfy early stop mechanism')
+            #   break
+
+    def predict(self, X: csr_matrix):
+        # TODO: We can make it so that we can recommend for unknown users by giving them an embedding equal to the sum of all items viewed previously.
+        # TODO Or raise an error
+        users = list(set(X.nonzero()[0]))
+
+        U = torch.LongTensor(users)
+        I = torch.arange(X.shape[1])
+
+        result = np.zeros(X.shape)
+        result[users] = self.model_.forward(U, I).detach().cpu().numpy()
+        return csr_matrix(result)
 
     def _train_epoch(self, train_data: csr_matrix):
+        # TODO Don't we need to pass users as an argument as well?
         train_loss = 0.0
         self.model_.train()
 
-        # create random samples of user, item, item
-        samples = torch.LongTensor(list(self._generate_samples(train_data)))
-        # Construct a dataloader
-        # TODO check parameters for their use
-        dataloader = t_data.DataLoader(samples, batch_size=100, shuffle=True)
-        for d in tqdm(dataloader):
+        for d in tqdm(bootstrap_sample_pairs(train_data, batch_size=1_000, sample_size=10_000)):
             users = d[:, 0]
             target_items = d[:, 1]
             negative_items = d[:, 2]
 
             self.optimizer.zero_grad()
+            # TODO Maybe rename?
             target_sim = self.model_.forward(users, target_items)
             negative_sim = self.model_.forward(users, negative_items)
-            # print(u, i, j, target_sim, negative_sim)
             loss = self._compute_loss(target_sim, negative_sim)
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
 
             self.steps += 1
-        return train_loss
 
-    def _compute_loss(self, target_sim, negative_sim):
-        """Computes BPR loss
-
-        :param target_sim: [description]
-        :type target_sim: [type]
-        :param negative_sim: [description]
-        :type negative_sim: [type]
-        :return: [description]
-        :rtype: [type]
-        """
-
-        # .sum makes this also usable for lists of similarities.
-        # the minus sign, is because torch does minimization,
-        # and the BPR-OPT criterion is defined as a maximisation target.
-        bpr_loss = -(target_sim - negative_sim).sigmoid().log().sum()
-
-        #  Add regularization
-        return bpr_loss + self.reg * (
-            self.model_.item_embedding.weight.norm()
-            + self.model_.user_embedding.weight.norm()
-        )
-
-    # TODO: check if validation data is necessary?
-    def fit(self, X: csr_matrix):
-
-        self._init_model(X.shape[0], X.shape[1])
-
-        last_loss = 0.0
-        for epoch in range(self.num_epochs):
-            train_loss = self._train_epoch(X)
-            logger.info(f"training loss = {train_loss}")
-
-            # TODO: early stopping
-            # delta_loss = float(train_loss - last_loss)
-            # if (abs(delta_loss) < 1e-5) and self.early_stop:
-            #     print('Satisfy early stop mechanism')
-            #     break
-
-            last_loss = train_loss
-
-        logger.info(f"finished training, final loss = {last_loss}")
-
-    def predict(self, X: csr_matrix):
-        # TODO: this is super naive, because the X is only used to find users.
-        users = list(set(X.nonzero()[0]))
-        mult_M = (
-            self.model_.user_embedding.weight[users]
-            @ self.model_.item_embedding.weight.T
-        )
-
-        result = np.zeros(X.shape)
-        result[users] = mult_M.detach().cpu().numpy()
-        return csr_matrix(result)
+        logger.info(f"training loss = {train_loss}")
 
 
-# TODO: in a recommendation context, component is maybe not so clear,
-# and all MF algorithms should use num_factors?
 class MFModule(nn.Module):
     def __init__(self, num_users, num_items, num_components=100):
         super().__init__()
@@ -192,22 +145,85 @@ class MFModule(nn.Module):
         self.num_users = num_users
         self.num_items = num_items
 
-        self.user_embedding = nn.Embedding(num_users, num_components)
-        self.item_embedding = nn.Embedding(num_items, num_components)
+        self.W = nn.Embedding(num_users, num_components)  # User embedding
+        self.H = nn.Embedding(num_items, num_components)  # Item embedding
 
         # Initialise embeddings to a random start
-        nn.init.normal_(self.user_embedding.weight, std=0.1)
-        nn.init.normal_(self.item_embedding.weight, std=0.1)
+        nn.init.normal_(self.W.weight, std=0.1)
+        nn.init.normal_(self.H.weight, std=0.1)
 
-    def forward(self, u, i):
-        """Generate similarity u and i
-
-        :param u: [description]
-        :type u: [type]
-        :param i: [description]
-        :type i: [type]
+    def forward(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
         """
-        ue = self.user_embedding(u)
-        ie = self.item_embedding(i)
+        Compute dot-product of user embedding (w_u) and item embedding (h_i)
+        for every user and item pair in U and I.
 
-        return (ue * ie).sum(dim=-1)
+        :param U: [description]
+        :type U: [type]
+        :param I: [description]
+        :type I: [type]
+        """
+        w_U = self.W(U)
+        h_I = self.H(I)
+
+        return w_U.matmul(h_I)
+
+
+def bootstrap_sample_pairs(X, batch_size=100, sample_size=10000):
+    # Need positive and negative pair. Requires the existence of a positive for this item.
+    positives = np.array(X.nonzero()).T  # As a (num_interactions, 2) numpy array
+    num_positives = positives.shape[1]
+    np.random.shuffle(positives)
+    # Pick interactions at random, with replacement
+    samples = np.random.choice(num_positives, size=(sample_size,), replace=True)
+
+    # TODO Could be better to only yield this when required, to keep the memory footprint low.
+    possible_negatives = np.random.randint(0, X.shape[1], size=(sample_size,))
+
+    for start in range(0, sample_size, batch_size):
+        sample_batch = samples[start: start + batch_size]
+        positives_batch = positives[sample_batch]
+        negatives_batch = possible_negatives[start: start + batch_size]
+
+        while True:
+            # Fix the negatives that are equal to the positives, if there are any
+            mask = positives_batch[:, 1] == negatives_batch
+            num_incorrect = np.sum(mask)
+            print(num_incorrect)
+
+
+            if num_incorrect > 0:
+                new_negatives = np.random.randint(0, X.shape[1], size=(num_incorrect,))
+                broadcast_negatives = np.zeros(negatives_batch.shape)
+                broadcast_negatives[0:num_incorrect] = new_negatives
+                # print(broadcast_negatives.shape, mask.shape, negatives_batch.shape)
+                negatives_batch = np.where(~mask, negatives_batch, broadcast_negatives)
+            else:
+                # Exit the while loop
+                break
+
+        sample_pairs_batch = positives_batch
+        sample_pairs_batch[:, 3] = negatives_batch
+        yield sample_pairs_batch
+
+
+def bpr_loss(self, target_sim, negative_sim):
+    """Computes BPR loss
+
+    :param target_sim: [description]
+    :type target_sim: [type]
+    :param negative_sim: [description]
+    :type negative_sim: [type]
+    :return: [description]
+    :rtype: [type]
+    """
+
+    # .sum makes this also usable for lists of similarities.
+    # the minus sign, is because torch does minimization,
+    # and the BPR-OPT criterion is defined as a maximisation target.
+    bpr_loss = -(target_sim - negative_sim).sigmoid().log().sum()
+
+    #  Add regularization
+    return bpr_loss + self.reg * (
+        self.model_.item_embedding.weight.norm()
+        + self.model_.user_embedding.weight.norm()
+    )
