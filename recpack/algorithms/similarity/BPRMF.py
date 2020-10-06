@@ -5,10 +5,13 @@ from recpack.algorithms.base import Algorithm
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.utils.data as t_data
 
 from scipy.sparse import csr_matrix, coo_matrix
 import logging
 import numpy as np
+
+from tqdm import tqdm
 
 logger = logging.getLogger("recpack")
 
@@ -103,16 +106,18 @@ class BPRMF(Algorithm):
         self.model_.train()
 
         # create random samples of user, item, item
-        samples = self._generate_samples(train_data)
-        for u, i, j in samples:
-            # TODO: to tensor
-            user = int_to_tensor(u).to(self.device)
-            item_i = int_to_tensor(i).to(self.device)
-            item_j = int_to_tensor(j).to(self.device)
+        samples = torch.LongTensor(list(self._generate_samples(train_data)))
+        # Construct a dataloader
+        # TODO check parameters for their use
+        dataloader = t_data.DataLoader(samples, batch_size=100, shuffle=True)
+        for d in tqdm(dataloader):
+            users = d[:, 0]
+            items_i = d[:, 1]
+            items_j = d[:, 2]
 
             self.optimizer.zero_grad()
-            i_sim = self.model_.forward(user, item_i)
-            j_sim = self.model_.forward(user, item_j)
+            i_sim = self.model_.forward(users, items_i)
+            j_sim = self.model_.forward(users, items_j)
             # print(u, i, j, i_sim, j_sim)
             loss = self._compute_loss(i_sim, j_sim)
             loss.backward()
@@ -134,6 +139,8 @@ class BPRMF(Algorithm):
         """
 
         # .sum makes this also usable for lists of similarities.
+        # TODO: I'm a bit unclear why the minus sign is supposed to be here
+        # It is used in the daisyRec implementation, but feels weird.
         bpr_loss = -(i_sim - j_sim).sigmoid().log().sum()
 
         #  Add regularization
