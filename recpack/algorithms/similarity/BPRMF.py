@@ -140,6 +140,7 @@ class BPRMF(Algorithm):
             self.steps += 1
 
         logger.info(f"training loss = {train_loss}")
+        return train_loss
 
     def _compute_loss(self, positive_sim, negative_sim):
         distance = positive_sim - negative_sim
@@ -148,7 +149,9 @@ class BPRMF(Algorithm):
         bpr_loss = -elementwise_bpr_loss.sum()
 
         #  Add regularization
-        return (bpr_loss + self.lambda_h * self.model_.H.weight.norm()
+        return (
+            bpr_loss
+            + self.lambda_h * self.model_.H.weight.norm()
             + self.lambda_w * self.model_.W.weight.norm()
         )
 
@@ -165,8 +168,8 @@ class MFModule(nn.Module):
         self.H = nn.Embedding(num_items, num_components)  # Item embedding
 
         # Initialise embeddings to a random start
-        nn.init.normal_(self.W.weight, std=0.1)
-        nn.init.normal_(self.H.weight, std=0.1)
+        nn.init.normal_(self.W.weight, std=0.01)
+        nn.init.normal_(self.H.weight, std=0.01)
 
     def forward(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
         """
@@ -187,8 +190,9 @@ class MFModule(nn.Module):
 def bootstrap_sample_pairs(X, batch_size=100, sample_size=10000):
     # Need positive and negative pair. Requires the existence of a positive for this item.
     positives = np.array(X.nonzero()).T  # As a (num_interactions, 2) numpy array
-    num_positives = positives.shape[1]
+    num_positives = positives.shape[0]
     np.random.shuffle(positives)
+
     # Pick interactions at random, with replacement
     samples = np.random.choice(num_positives, size=(sample_size,), replace=True)
 
@@ -199,7 +203,6 @@ def bootstrap_sample_pairs(X, batch_size=100, sample_size=10000):
         sample_batch = samples[start : start + batch_size]
         positives_batch = positives[sample_batch]
         negatives_batch = possible_negatives[start : start + batch_size]
-
         while True:
             # Fix the negatives that are equal to the positives, if there are any
             mask = positives_batch[:, 1] == negatives_batch
@@ -207,9 +210,7 @@ def bootstrap_sample_pairs(X, batch_size=100, sample_size=10000):
 
             if num_incorrect > 0:
                 new_negatives = np.random.randint(0, X.shape[1], size=(num_incorrect,))
-                broadcast_negatives = np.zeros(negatives_batch.shape)
-                broadcast_negatives[0:num_incorrect] = new_negatives
-                negatives_batch = np.where(~mask, negatives_batch, broadcast_negatives)
+                negatives_batch[mask] = new_negatives
             else:
                 # Exit the while loop
                 break
