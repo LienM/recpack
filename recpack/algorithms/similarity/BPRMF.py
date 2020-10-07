@@ -148,8 +148,8 @@ class BPRMF(Algorithm):
         bpr_loss = -elementwise_bpr_loss.sum()
 
         #  Add regularization
-        return (bpr_loss + self.lambda_h * self.model_.item_embedding.weight.norm()
-            + self.lambda_w * self.model_.user_embedding.weight.norm()
+        return (bpr_loss + self.lambda_h * self.model_.H.weight.norm()
+            + self.lambda_w * self.model_.W.weight.norm()
         )
 
 
@@ -181,7 +181,7 @@ class MFModule(nn.Module):
         w_U = self.W(U)
         h_I = self.H(I)
 
-        return w_U.matmul(h_I)
+        return w_U.matmul(h_I.T)
 
 
 def bootstrap_sample_pairs(X, batch_size=100, sample_size=10000):
