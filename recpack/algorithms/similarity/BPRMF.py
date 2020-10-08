@@ -10,6 +10,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from typing import Tuple
+
 from recpack.algorithms.base import Algorithm
 
 
@@ -110,7 +112,7 @@ class BPRMF(Algorithm):
         ) as f:
             torch.save(self.model_, f)
 
-    def fit(self, X: csr_matrix, validation_data: csr_matrix):
+    def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]):
         """Fit the model on the X dataset, and evaluate model quality on validation_data.
 
         :param X: The training data matrix.
@@ -118,12 +120,13 @@ class BPRMF(Algorithm):
         :param validation_data: The validation data matrix, should have same dimensions as X
         :type validation_data: csr_matrix
         """
-        assert X.shape == validation_data.shape
+        X_validation = validation_data[0]
+        assert X.shape == X_validation.shape
 
         self._init_model(X.shape[0], X.shape[1])
         for epoch in range(self.num_epochs):
             self._train_epoch(X)
-            self._evaluate(validation_data)
+            self._evaluate(X_validation)
 
         # Load the best of the models during training.
         self.load(self.stopping_criterion.best_value)
