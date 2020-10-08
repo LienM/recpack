@@ -9,7 +9,7 @@ from recpack.algorithms.similarity.factorization import (
     NMF,
     SVD,
 )
-from recpack.similarity.BPRMF import BPRMF
+from recpack.algorithms.similarity.BPRMF import BPRMF
 from recpack.algorithms.vae.mult_vae import MultVAE
 from recpack.algorithms.vae.rec_vae import RecVAE
 
