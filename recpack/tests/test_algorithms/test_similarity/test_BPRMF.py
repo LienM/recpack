@@ -19,7 +19,14 @@ def test_bprmf(pageviews):
 def test_pairwise_ranking(pageviews_for_pairwise, seed):
     """Tests that the pairwise ranking of 2 items is correctly computed."""
 
-    a = BPRMF(num_components=4, num_epochs=3, sample_size=500, batch_size=1, seed=seed)
+    a = BPRMF(
+        num_components=4,
+        num_epochs=3,
+        sample_size=200,
+        batch_size=1,
+        seed=seed,
+        learning_rate=0.05,
+    )
 
     a.fit(pageviews_for_pairwise, pageviews_for_pairwise)
     pred = a.predict(pageviews_for_pairwise)
