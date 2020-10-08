@@ -9,7 +9,7 @@ from recpack.algorithms.similarity.factorization import (
     NMF,
     SVD,
 )
-
+from recpack.similarity.BPRMF import BPRMF
 from recpack.algorithms.vae.mult_vae import MultVAE
 from recpack.algorithms.vae.rec_vae import RecVAE
 
@@ -26,7 +26,8 @@ class AlgorithmRegistry:
         "SVD": SVD,
         "slim": SLIM,
         "mult_vae": MultVAE,
-        "rec_vae": RecVAE
+        "rec_vae": RecVAE,
+        "BPRMF": BPRMF,
     }
 
     @classmethod
