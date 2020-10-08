@@ -110,20 +110,20 @@ class BPRMF(Algorithm):
         ) as f:
             torch.save(self.model_, f)
 
-    def fit(self, X: csr_matrix, X_validation: csr_matrix):
-        """Fit the model on the X dataset, and evaluate model quality on X_validation.
+    def fit(self, X: csr_matrix, validation_data: csr_matrix):
+        """Fit the model on the X dataset, and evaluate model quality on validation_data.
 
         :param X: The training data matrix.
         :type X: csr_matrix
-        :param X_validation: The validation data matrix, should have same dimensions as X
-        :type X_validation: csr_matrix
+        :param validation_data: The validation data matrix, should have same dimensions as X
+        :type validation_data: csr_matrix
         """
-        assert X.shape == X_validation.shape
+        assert X.shape == validation_data.shape
 
         self._init_model(X.shape[0], X.shape[1])
         for epoch in range(self.num_epochs):
             self._train_epoch(X)
-            self._evaluate(X_validation)
+            self._evaluate(validation_data)
 
         # Load the best of the models during training.
         self.load(self.stopping_criterion.best_value)
