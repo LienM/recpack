@@ -8,26 +8,26 @@ from recpack.algorithms.similarity.base import (
 
 class NMF(SimilarityMatrixAlgorithm):
     # TODO check params NMF to see which ones are useful.
-    def __init__(self, n_components, random_state=42):
+    def __init__(self, num_components, random_state=42):
         """NMF factorization, where the item features
             are used to compute an item to item similarity matrix
             user features are not used, this avoids needing users as input.
-        :param n_components: The size of the latent dimension
-        :type n_components: int
+        :param num_components: The size of the latent dimension
+        :type num_components: int
 
         :param random_state: The seed for the random state to allow for comparison,
                              defaults to 42
         :type random_state: int, optional
         """
         super().__init__()
-        self.n_components = n_components
+        self.num_components = num_components
         self.random_state = random_state
 
     def fit(self, X):
         # Using Sklearn NMF implementation. For info and parameters:
         # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
         model = sklearn.decomposition.NMF(
-            n_components=self.n_components, init="random", random_state=0
+            n_components=self.num_components, init="random", random_state=0
         )
 
         # Factorization is W * H. Where W contains user latent vectors, and H
@@ -49,23 +49,23 @@ class SVD(SimilarityMatrixAlgorithm):
     User latent matrix is discarded, instead the item to item similarity is computed,
     based on the item's latent features. (By using dot product of the 2 vectors)
 
-    :param n_components: The size of the latent dimension
-    :type n_components: int
+    :param num_components: The size of the latent dimension
+    :type num_components: int
 
     :param random_state: The seed for the random state to allow for comparison
     :type random_state: int
     """
 
-    def __init__(self, n_components, random_state=42):
+    def __init__(self, num_components, random_state=42):
         super().__init__()
 
-        self.n_components = n_components
-        self.random_state = 42
+        self.num_components = num_components
+        self.random_state = random_state
 
     def fit(self, X):
         # TODO use other parameter options?
         model = sklearn.decomposition.TruncatedSVD(
-            n_components=self.n_components, n_iter=7, random_state=self.random_state
+            n_components=self.num_components, n_iter=7, random_state=self.random_state
         )
         model.fit(X)
 
