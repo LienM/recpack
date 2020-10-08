@@ -1,17 +1,31 @@
+import numpy as np
 import scipy.sparse
 import sklearn.decomposition
+from sklearn.utils.validation import check_is_fitted
 
-from recpack.algorithms.similarity.base import (
-    SimilarityMatrixAlgorithm,
-)
+from recpack.algorithms.similarity.base import Algorithm, SimilarityMatrixAlgorithm
 
 
-class NMF(SimilarityMatrixAlgorithm):
+class FactorizationAlgorithm(Algorithm):
+    """Just a simple wrapper, for readability?
+
+    :param Algorithm: [description]
+    :type Algorithm: [type]
+    """
+
+    def predict(self, X):
+        check_is_fitted(self)
+        assert X.shape == (self.W_.shape[0], self.H_.shape[1])
+        users = list(set(X.nonzero()[0]))
+        result = np.zeros(X.shape)
+        result[users] = self.W_[users] @ self.H_
+        return scipy.sparse.csr_matrix(result)
+
+
+class NMF(FactorizationAlgorithm):
     # TODO check params NMF to see which ones are useful.
-    def __init__(self, num_components, random_state=42):
-        """NMF factorization, where the item features
-            are used to compute an item to item similarity matrix
-            user features are not used, this avoids needing users as input.
+    def __init__(self, num_components=100, random_state=42):
+        """NMF factorization implemented using the sklearn library.
         :param num_components: The size of the latent dimension
         :type num_components: int
 
@@ -32,22 +46,33 @@ class NMF(SimilarityMatrixAlgorithm):
 
         # Factorization is W * H. Where W contains user latent vectors, and H
         # contains item latent vectors
-        _ = model.fit_transform(X)
-        H = model.components_
+        self.W_ = model.fit_transform(X)
+        self.H_ = model.components_
 
-        # Compute an item to item similarity matrix by computing the dot product
-        # between the 2 item latent vectors
-        self.similarity_matrix_ = H.T @ H
+        # Post conditions
+        assert self.W_.shape == (X.shape[0], self.num_components)
+        assert self.H_.shape == (self.num_components, X.shape[1])
 
-        self._check_fit_complete()
         return self
 
 
-class SVD(SimilarityMatrixAlgorithm):
-    """Singular Value Decomposition as dimension reduction recommendation algorithm.
+class NMFItemToItem(SimilarityMatrixAlgorithm):
+    def __init__(self, num_components=100, random_state=42):
+        super().__init__()
+        self.num_components = num_components
+        self.random_state = random_state
 
-    User latent matrix is discarded, instead the item to item similarity is computed,
-    based on the item's latent features. (By using dot product of the 2 vectors)
+    def fit(self, X):
+        self.model_ = NMF(self.num_components, self.random_state)
+        self.model_.fit(X)
+
+        self.similarity_matrix_ = self.model_.H_.T @ self.model_.H_
+
+        self._check_fit_complete()
+
+
+class SVD(FactorizationAlgorithm):
+    """Singular Value Decomposition as dimension reduction recommendation algorithm.
 
     :param num_components: The size of the latent dimension
     :type num_components: int
@@ -56,7 +81,7 @@ class SVD(SimilarityMatrixAlgorithm):
     :type random_state: int
     """
 
-    def __init__(self, num_components, random_state=42):
+    def __init__(self, num_components=100, random_state=42):
         super().__init__()
 
         self.num_components = num_components
@@ -67,18 +92,32 @@ class SVD(SimilarityMatrixAlgorithm):
         model = sklearn.decomposition.TruncatedSVD(
             n_components=self.num_components, n_iter=7, random_state=self.random_state
         )
-        model.fit(X)
-
         # Factorization computes U x Sigma x V
+        # U are the user features,
+        # Sigma x V are the item features.
+        self.W_ = model.fit_transform(X)
 
-        # In this implementation we avoid having to store the user features,
-        # and compute an item to item similarity matrix based on the SVD output
-        # Item similarity is computed as (Sigma * V).T * (sigma * V)
-        # The dot product between the item latent feature vectors.
         V = model.components_
         sigma = scipy.sparse.diags(model.singular_values_)
-        V_s = sigma @ V
-        self.similarity_matrix_ = V_s.T @ V_s
+        self.H_ = sigma @ V
+
+        # Post conditions
+        assert self.W_.shape == (X.shape[0], self.num_components)
+        assert self.H_.shape == (self.num_components, X.shape[1])
+
+        return self
+
+
+class SVDItemToItem(SimilarityMatrixAlgorithm):
+    def __init__(self, num_components=100, random_state=42):
+        super().__init__()
+        self.num_components = num_components
+        self.random_state = random_state
+
+    def fit(self, X):
+        self.model_ = SVD(self.num_components, self.random_state)
+        self.model_.fit(X)
+
+        self.similarity_matrix_ = self.model_.H_.T @ self.model_.H_
 
         self._check_fit_complete()
-        return self

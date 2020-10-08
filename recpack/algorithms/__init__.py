@@ -8,6 +8,8 @@ from recpack.algorithms.similarity.nearest_neighbour import ItemKNN
 from recpack.algorithms.similarity.factorization import (
     NMF,
     SVD,
+    NMFItemToItem,
+    SVDItemToItem,
 )
 from recpack.algorithms.similarity.BPRMF import BPRMF
 from recpack.algorithms.vae.mult_vae import MultVAE
@@ -24,6 +26,8 @@ class AlgorithmRegistry:
         "itemKNN": ItemKNN,
         "NMF": NMF,
         "SVD": SVD,
+        "NMFItemToItem": NMFItemToItem,
+        "SVDItemToItem": SVDItemToItem,
         "slim": SLIM,
         "mult_vae": MultVAE,
         "rec_vae": RecVAE,
