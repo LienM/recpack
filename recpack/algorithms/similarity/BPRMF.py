@@ -90,7 +90,7 @@ class BPRMF(Algorithm):
         # placeholders, will get initialized in _init_model
         self.optimizer = None
         self.model_ = None
-        self.steps = 0
+        self.steps = None
 
     def _init_model(self, num_users, num_items):
         self.model_ = MFModule(
@@ -98,7 +98,6 @@ class BPRMF(Algorithm):
         ).to(self.device)
 
         self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
-        # TODO We initialize this twice, kinda weird
         self.steps = 0
 
     def load(self, value):
@@ -146,8 +145,8 @@ class BPRMF(Algorithm):
         assert X.shape == (self.model_.num_users, self.model_.num_items)
         users = list(set(X.nonzero()[0]))
 
-        U = torch.LongTensor(users)
-        I = torch.arange(X.shape[1])
+        U = torch.LongTensor(users).to(self.device)
+        I = torch.arange(X.shape[1]).to(self.device)
 
         result = np.zeros(X.shape)
         result[users] = self.model_.forward(U, I).detach().cpu().numpy()
@@ -169,9 +168,9 @@ class BPRMF(Algorithm):
                 train_data, batch_size=self.batch_size, sample_size=self.sample_size
             )
         ):
-            users = d[:, 0]
-            target_items = d[:, 1]
-            negative_items = d[:, 2]
+            users = d[:, 0].to(self.device)
+            target_items = d[:, 1].to(self.device)
+            negative_items = d[:, 2].to(self.device)
 
             self.optimizer.zero_grad()
             # TODO Maybe rename?
@@ -205,9 +204,9 @@ class BPRMF(Algorithm):
                 batch_size=self.batch_size,
                 sample_size=math.floor(self.sample_size * 0.2),
             ):
-                users = d[:, 0]
-                target_items = d[:, 1]
-                negative_items = d[:, 2]
+                users = d[:, 0].to(self.device)
+                target_items = d[:, 1].to(self.device)
+                negative_items = d[:, 2].to(self.device)
 
                 # TODO Maybe rename?
                 positive_sim = self.model_.forward(users, target_items)
