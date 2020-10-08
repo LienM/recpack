@@ -41,7 +41,9 @@ class NMF(FactorizationAlgorithm):
         # Using Sklearn NMF implementation. For info and parameters:
         # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
         model = sklearn.decomposition.NMF(
-            n_components=self.num_components, init="random", random_state=0
+            n_components=self.num_components,
+            init="random",
+            random_state=self.random_state,
         )
 
         # Factorization is W * H. Where W contains user latent vectors, and H
