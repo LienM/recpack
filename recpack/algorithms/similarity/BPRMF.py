@@ -68,7 +68,6 @@ class BPRMF(Algorithm):
         lambda_w=0.0,
         num_epochs=20,
         learning_rate=0.01,
-        sample_size=10_000,
         batch_size=1_000,
         seed=None,
     ):
@@ -78,7 +77,6 @@ class BPRMF(Algorithm):
         self.lambda_w = lambda_w
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
-        self.sample_size = sample_size
         self.batch_size = batch_size
         self.seed = seed
         if self.seed:
@@ -153,7 +151,7 @@ class BPRMF(Algorithm):
         return csr_matrix(result)
 
     def _train_epoch(self, train_data: csr_matrix):
-        """train a single epoch. Uses sampler to generate self.sample_size samples,
+        """train a single epoch. Uses sampler to generate samples,
         and loop through them in batches of self.batch_size.
         After each batch, update the parameters according to gradients.
 
@@ -165,7 +163,7 @@ class BPRMF(Algorithm):
 
         for d in tqdm(
             bootstrap_sample_pairs(
-                train_data, batch_size=self.batch_size, sample_size=self.sample_size
+                train_data, batch_size=self.batch_size, sample_size=train_data.nnz
             )
         ):
             users = d[:, 0].to(self.device)
@@ -186,7 +184,7 @@ class BPRMF(Algorithm):
         logger.info(f"training loss = {train_loss}")
 
     def _evaluate(self, validation_data: csr_matrix):
-        """Perform evaluation step, sample 20% of self.sample_size
+        """Perform evaluation step, samples get drawn
         from the validation data, and compute loss.
 
         If loss improved over previous epoch, store the model, and update best value.
@@ -202,7 +200,7 @@ class BPRMF(Algorithm):
             for d in bootstrap_sample_pairs(
                 validation_data,
                 batch_size=self.batch_size,
-                sample_size=math.floor(self.sample_size * 0.2),
+                sample_size=validation_data.nnz,
             ):
                 users = d[:, 0].to(self.device)
                 target_items = d[:, 1].to(self.device)
