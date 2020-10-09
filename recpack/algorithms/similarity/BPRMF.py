@@ -4,6 +4,8 @@ import math
 
 import numpy as np
 from scipy.sparse import csr_matrix
+from sklearn.utils.validation import check_is_fitted
+
 from tqdm import tqdm
 
 import torch
@@ -87,10 +89,6 @@ class BPRMF(Algorithm):
         self.device = torch.device("cuda" if cuda else "cpu")
 
         self.stopping_criterion = StoppingCriterion()
-        # placeholders, will get initialized in _init_model
-        self.optimizer = None
-        self.model_ = None
-        self.steps = None
 
     def _init_model(self, num_users, num_items):
         self.model_ = MFModule(
@@ -140,6 +138,7 @@ class BPRMF(Algorithm):
         :return: csr matrix of same shape, with recommendations.
         :rtype: [type]
         """
+        check_is_fitted(self)
         # TODO We can make it so that we can recommend for unknown users by giving them an embedding equal to the sum of all items viewed previously.
         # TODO Or raise an error
         assert X.shape == (self.model_.num_users, self.model_.num_items)
