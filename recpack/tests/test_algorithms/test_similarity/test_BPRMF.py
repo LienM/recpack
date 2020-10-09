@@ -1,8 +1,9 @@
 import pytest
 import sklearn
+import torch
 
-from recpack.algorithms.similarity.BPRMF import BPRMF, bootstrap_sample_pairs
-from recpack.algorithms import SVD
+from recpack.algorithms.similarity.BPRMF import MFModule, bootstrap_sample_pairs
+from recpack.algorithms import BPRMF
 
 
 def test_bprmf(pageviews):
@@ -16,7 +17,7 @@ def test_bprmf(pageviews):
     assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
 
 
-@pytest.mark.parametrize("seed", list(range(1, 50)))
+@pytest.mark.parametrize("seed", list(range(1, 25)))
 def test_pairwise_ranking(pageviews_for_pairwise, seed):
     """Tests that the pairwise ranking of 2 items is correctly computed."""
 
@@ -71,3 +72,18 @@ def test_bootstrap_sampling(pageviews_for_pairwise, batch_size, sample_size):
         target_size = batch_size
 
     assert b == target_size
+
+
+def test_forward(pageviews_for_pairwise):
+    a = MFModule(3, 3, 2)
+
+    U = torch.LongTensor([0, 1])
+    I = torch.LongTensor([0, 2])
+
+    res_1 = a.forward(U, I)
+    print(res_1)
+
+    res_2 = a.forward(U[1], I[1])
+    print(res_2)
+
+    assert res_2 == res_1[1, 1]
