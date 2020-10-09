@@ -117,7 +117,8 @@ class BPRMF(Algorithm):
         :param validation_data: The validation data matrix, should have same dimensions as X
         :type validation_data: csr_matrix
         """
-        X_validation = validation_data[0]
+        # The target for prediction is the validation data.
+        X_validation = validation_data[1]
         assert X.shape == X_validation.shape
 
         self._init_model(X.shape[0], X.shape[1])
