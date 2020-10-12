@@ -172,8 +172,13 @@ class BPRMF(Algorithm):
 
             self.optimizer.zero_grad()
             # TODO Maybe rename?
-            positive_sim = self.model_.forward(users, target_items)
-            negative_sim = self.model_.forward(users, negative_items)
+            positive_sim = self.model_.forward(users, target_items).diag()
+            negative_sim = self.model_.forward(users, negative_items).diag()
+
+            # Checks to make sure the shapes are correct.
+            assert negative_sim.shape == positive_sim.shape
+            assert positive_sim.shape[0] == users.shape[0]
+
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
             train_loss += loss.item()
@@ -207,8 +212,8 @@ class BPRMF(Algorithm):
                 negative_items = d[:, 2].to(self.device)
 
                 # TODO Maybe rename?
-                positive_sim = self.model_.forward(users, target_items)
-                negative_sim = self.model_.forward(users, negative_items)
+                positive_sim = self.model_.forward(users, target_items).diag()
+                negative_sim = self.model_.forward(users, negative_items).diag()
                 loss = self._compute_loss(positive_sim, negative_sim)
                 val_loss += loss.item()
 

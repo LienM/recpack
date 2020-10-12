@@ -23,8 +23,8 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
 
     a = BPRMF(
         num_components=4,
-        num_epochs=100,
-        batch_size=1,
+        num_epochs=40,
+        batch_size=2,
         seed=seed,
         learning_rate=0.05,
     )
