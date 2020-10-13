@@ -11,29 +11,14 @@ import torch.nn as nn
 import torch.optim as optim
 
 from sklearn.utils.validation import check_is_fitted
+from sklearn.metrics import recall_score
 
 from recpack.algorithms.base import Algorithm
+from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
 
 # TODO I decided to remove "use_rank_weight" because they always use it...
 
 logger = logging.getLogger("recpack")
-
-
-class StoppingCriterion:
-    def __init__(self):
-        self.best_value = np.inf
-        self.converged = False
-
-    def update(self, validation_loss):
-        delta = self.best_value - validation_loss
-        EPSILON = 1e-5
-        if abs(delta) < EPSILON:
-            # The scores are so close to the best solution
-            # We assume convergence.
-            self.converged = True
-
-        if self.best_value > validation_loss:
-            self.best_value = validation_loss
 
 
 class CML(Algorithm):
@@ -53,14 +38,20 @@ class CML(Algorithm):
         clip_norm,
         use_cov_loss,
         num_epochs,
-        batch_size,
         seed,
+        batch_size=50000,
+        U=20,
     ):
+        # TODO Figure out clip_norm?
         self.num_components = num_components
-        self.num_epochs = num_epochs
+        self.margin = margin
         self.learning_rate = learning_rate
+        self.clip_norm = clip_norm
+        self.use_cov_loss = use_cov_loss
+        self.num_epochs = num_epochs
         self.batch_size = batch_size
         self.seed = seed
+        self.U = U
         if self.seed:
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
@@ -68,26 +59,24 @@ class CML(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.stopping_criterion = StoppingCriterion()
+        # TODO Make this configurable
+        self.stopping_criterion = StoppingCriterion(
+            recall_score, minimize=False, stop_early=False
+        )
 
     def _init_model(self, num_users, num_items):
         self.model_ = CMLTorch(
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
-        # TODO FIx optimizer
-        self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
-        self.steps = 0
+        self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
-    def load(self, value):
-        # TODO Give better names
-        with open(f"{self.name}_loss_{value}.trch", "rb") as f:
+    def load(self, validation_loss):
+        with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
-    def save(self):
-        with open(
-            f"{self.name}_loss_{self.stopping_criterion.best_value}.trch", "wb"
-        ) as f:
+    def save(self, validation_loss):
+        with open(f"{self.name}_loss_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
     def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]):
@@ -98,14 +87,14 @@ class CML(Algorithm):
         :param validation_data: The validation data matrix, should have same dimensions as X
         :type validation_data: csr_matrix
         """
-        # The target for prediction is the validation data.
-        X_validation = validation_data[1]
-        assert X.shape == X_validation.shape
 
         self._init_model(X.shape[0], X.shape[1])
-        for epoch in range(self.num_epochs):
-            self._train_epoch(X)
-            self._evaluate(X_validation)
+        try:
+            for epoch in range(self.num_epochs):
+                self._train_epoch(X)
+                self._evaluate(validation_data)
+        except EarlyStoppingException:
+            pass
 
         # Load the best of the models during training.
         self.load(self.stopping_criterion.best_value)
@@ -126,13 +115,15 @@ class CML(Algorithm):
         assert X.shape == (self.model_.num_users, self.model_.num_items)
         users = list(set(X.nonzero()[0]))
 
-        U = torch.LongTensor(users).to(self.device)
-        I = torch.arange(X.shape[1]).to(self.device)
+        # TODO Implement
+
+        # U = torch.LongTensor(users).to(self.device)
+        # I = torch.arange(X.shape[1]).to(self.device)
 
         # TODO Make this more efficient
-        result = np.zeros(X.shape)
-        result[users] = self.model_.forward(U, I).detach().cpu().numpy()
-        return csr_matrix(result)
+        # result = np.zeros(X.shape)
+        # result[users] = self.model_.forward(U, I).detach().cpu().numpy()
+        # return csr_matrix(result)
 
     def _train_epoch(self, train_data: csr_matrix):
         """train a single epoch. Uses sampler to generate samples,
@@ -145,33 +136,25 @@ class CML(Algorithm):
         train_loss = 0.0
         self.model_.train()
 
-        U = 10
-
         for users, positives_batch, negatives_batch in tqdm(
-            warp_sample_pairs(
-                # TODO Make U a parameter
-                train_data,
-                U=U,
-                batch_size=self.batch_size,
-            )
+            warp_sample_pairs(train_data, U=self.U, batch_size=self.batch_size,)
         ):
             users = users.to(self.device)
             positives_batch = positives_batch.to(self.device)
             negatives_batch = negatives_batch.to(self.device)
 
             self.optimizer.zero_grad()
-            # TODO Maybe rename?
+
             dist_pos_interaction = self.model_.forward(users, positives_batch)
-            dist_neg_interaction = self.model_.forward(
-                users.repeat_interleave(U),
-                negatives_batch.reshape(self.batch_size * U, 1),
+            dist_neg_interaction_flat = self.model_.forward(
+                users.repeat_interleave(self.U),
+                negatives_batch.reshape(self.batch_size * self.U, 1),
             )
+            dist_neg_interaction = dist_neg_interaction_flat.reshape(self.batch_size, -1)
             loss = self._compute_loss(dist_pos_interaction, dist_neg_interaction)
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
-
-            self.steps += 1
 
         logger.info(f"training loss = {train_loss}")
 
@@ -184,33 +167,52 @@ class CML(Algorithm):
         :param validation_data: validation data interaction matrix.
         :type validation_data: csr_matrix
         """
-        # TODO, quite a bit of code dupe from train epoch, check if we can consolidate.
+        # TODO Implement
         val_loss = 0.0
         self.model_.eval()
         with torch.no_grad():
-            # Bootstrap 20% of the number of training samples from validation data.
-            for d in bootstrap_sample_pairs(
-                validation_data,
-                batch_size=self.batch_size,
-                sample_size=validation_data.nnz,
-            ):
-                users = d[:, 0].to(self.device)
-                target_items = d[:, 1].to(self.device)
-                negative_items = d[:, 2].to(self.device)
+            #     # Bootstrap 20% of the number of training samples from validation data.
+            #     for d in warp_sample_pairs(
+            #         validation_data,
+            #         batch_size=self.batch_size,
+            #         sample_size=validation_data.nnz,
+            #     ):
+            #         users = d[:, 0].to(self.device)
+            #         target_items = d[:, 1].to(self.device)
+            #         negative_items = d[:, 2].to(self.device)
 
-                # TODO Maybe rename?
-                positive_sim = self.model_.forward(users, target_items)
-                negative_sim = self.model_.forward(users, negative_items)
-                loss = self._compute_loss(positive_sim, negative_sim)
-                val_loss += loss.item()
-
+            #         # TODO Maybe rename?
+            #         positive_sim = self.model_.forward(users, target_items)
+            #         negative_sim = self.model_.forward(users, negative_items)
+            #         loss = self._compute_loss(positive_sim, negative_sim)
+            #         val_loss += loss.item()
             logger.info(f"validation loss = {val_loss}")
-            self.stopping_criterion.update(val_loss)
-            if val_loss == self.stopping_criterion.best_value:
+            better = self.stopping_criterion.update(val_loss)
+
+            if better:
                 self.save()
 
-    def _compute_loss(self, positive_sim, negative_sim):
+    def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
+        # TODO Implement loss function
         pass
+
+def covariance_loss():
+    # Their implementation really confuses me
+    # X = tf.concat((self.item_embeddings, self.user_embeddings), 0)
+    # n_rows = tf.cast(tf.shape(X)[0], tf.float32)
+    # X = X - (tf.reduce_mean(X, axis=0))
+    # cov = tf.matmul(X, X, transpose_a=True) / n_rows
+
+    # return tf.reduce_sum(tf.matrix_set_diag(cov, tf.zeros(self.embed_dim, tf.float32))) * self.cov_loss_weight
+    return 0
+
+
+def warp_loss(dist_pos_interaction, dist_neg_interaction, margin):
+    min_dist_neg_interaction, indices = dist_neg_interaction.min(dim=-1)
+
+    pairwise_loss = margin + dist_pos_interaction - min_dist_neg_interaction
+
+    # Implement the rank thingy
 
 
 class CMLTorch(nn.Module):

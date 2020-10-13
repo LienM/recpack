@@ -239,14 +239,14 @@ class VAE(Algorithm):
                 self.save()
             self.stopping_criterion.reset()
 
-    def load(self, value):
+    def load(self, validation_loss):
         # TODO Give better names
-        with open(f"{self.name}_ndcg_100_{value}.trch", "rb") as f:
+        with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
-    def save(self):
+    def save(self, validation_loss):
         with open(
-            f"{self.name}_ndcg_100_{self.stopping_criterion.value}.trch", "wb"
+            f"{self.name}_ndcg_100_{validation_loss}.trch", "wb"
         ) as f:
             torch.save(self.model_, f)
 
@@ -262,28 +262,29 @@ class VAE(Algorithm):
         return X_pred
 
 
-class VAETorch(nn.Module):
-    """
-    Base class for building torch modules.
-    """
+# TODO Think about removing this. Doesn't add much value
+# class VAETorch(nn.Module):
+#     """
+#     Base class for building torch modules.
+#     """
 
-    def __init__(
-        self
-    ):
-        super().__init__()
+#     def __init__(
+#         self
+#     ):
+#         super().__init__()
 
-    def forward(
-            self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Pass the input through the network, and return result.
+#     def forward(
+#             self, x: torch.Tensor
+#     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+#         """Pass the input through the network, and return result.
 
-        :param x: input tensor
-        :type x: torch.Tensor
-        :return: A tuple with
-                (predicted output value, mean values, average values)
-        :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-        """
-        mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
-        x_recon = self.decode(z)
-        return x_recon, mu, logvar
+#         :param x: input tensor
+#         :type x: torch.Tensor
+#         :return: A tuple with
+#                 (predicted output value, mean values, average values)
+#         :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+#         """
+#         mu, logvar = self.encode(x)
+#         z = self.reparameterize(mu, logvar)
+#         x_recon = self.decode(z)
+#         return x_recon, mu, logvar

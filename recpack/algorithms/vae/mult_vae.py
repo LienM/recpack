@@ -9,8 +9,8 @@ import torch.optim as optim
 from scipy.sparse import csr_matrix
 import numpy as np
 
-from recpack.algorithms.vae.base import VAE, VAETorch
-from recpack.algorithms.vae.util import StoppingCriterion, naive_sparse2tensor
+from recpack.algorithms.vae.base import VAE  #, VAETorch
+from recpack.algorithms.vae.util import naive_sparse2tensor
 from recpack.splitters.splitter_base import batch
 from recpack.metrics import NDCGK
 

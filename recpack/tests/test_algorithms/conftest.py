@@ -42,14 +42,16 @@ def labels_more_durable_items():
 
     return labels
 
+
 @pytest.fixture(scope="function")
 def metadata():
     data_dict = {
         "title": ["item_1", "Rosemary", "", "item_2", "Pepper"],
-        "item_id": [0,1,2,3,4],
+        "item_id": [0, 1, 2, 3, 4],
     }
 
     return pd.DataFrame.from_dict(data_dict)
+
 
 @pytest.fixture(scope="function")
 def metadata_tags_matrix():

@@ -3,16 +3,18 @@ import numpy as np
 from typing import Callable
 from scipy.sparse import csr_matrix
 
-from recpack.metrics import NDCGK
 
 def swish(x):
     return x.mul(torch.sigmoid(x))
 
+
 def log_norm_pdf(x, mu, logvar):
-    return -0.5*(logvar + np.log(2 * np.pi) + (x - mu).pow(2) / logvar.exp())
+    return -0.5 * (logvar + np.log(2 * np.pi) + (x - mu).pow(2) / logvar.exp())
+
 
 def naive_sparse2tensor(data: csr_matrix):
     return torch.FloatTensor(data.toarray())
+
 
 def naive_tensor2sparse(tensor: torch.Tensor):
     return csr_matrix(tensor.detach().numpy())
@@ -38,8 +40,8 @@ class StoppingCriterion:
 
         self.best_value = -np.inf
 
-        self.metric=None
-        
+        self.metric = None
+
         # Init self.metric
         self.create_metric()
 
