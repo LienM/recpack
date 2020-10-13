@@ -7,7 +7,7 @@ class StoppingCriterion:
     """
     StoppingCriterion provides a wrapper around any loss function
     """
-
+    #TODO Add documentation
     def __init__(
         self,
         loss_function: Callable,
@@ -47,13 +47,15 @@ class StoppingCriterion:
             # Reset interations w/o change.
             self.n_iter_no_change = 0
             self.best_value = loss
+            return True
         else:
             if self.n_iter_no_change >= self.max_iter_no_change:
                 raise EarlyStoppingException(
                     f"No improvements in the last {self.n_iter_no_change} iterations."
                 )
 
+        return False
+
 
 class EarlyStoppingException(Exception):
     pass
-
