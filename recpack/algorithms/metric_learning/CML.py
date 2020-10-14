@@ -150,7 +150,9 @@ class CML(Algorithm):
                 users.repeat_interleave(self.U),
                 negatives_batch.reshape(self.batch_size * self.U, 1),
             )
-            dist_neg_interaction = dist_neg_interaction_flat.reshape(self.batch_size, -1)
+            dist_neg_interaction = dist_neg_interaction_flat.reshape(
+                self.batch_size, -1
+            )
             loss = self._compute_loss(dist_pos_interaction, dist_neg_interaction)
             loss.backward()
             train_loss += loss.item()
@@ -196,6 +198,7 @@ class CML(Algorithm):
         # TODO Implement loss function
         pass
 
+
 def covariance_loss():
     # Their implementation really confuses me
     # X = tf.concat((self.item_embeddings, self.user_embeddings), 0)
@@ -207,12 +210,26 @@ def covariance_loss():
     return 0
 
 
-def warp_loss(dist_pos_interaction, dist_neg_interaction, margin):
-    min_dist_neg_interaction, indices = dist_neg_interaction.min(dim=-1)
+def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
+    dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
 
-    pairwise_loss = margin + dist_pos_interaction - min_dist_neg_interaction
+    # Largest number is "most wrongly classified", f.e.
+    # pos = 0.1, margin = 0.1, neg = 0.15 => 0.1 + 0.1 - 0.15 = 0.05 > 0
+    # pos = 0.1, margin = 0.1, neg = 0.08 => 0.1 + 0.1 - 0.08 = 0.12 > 0
+    most_wrong_neg_interaction, indices = dist_diff_pos_neg_margin.max(dim=-1)
 
-    # Implement the rank thingy
+    pairwise_hinge_loss = torch.max(
+        most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape)
+    )
+
+    M = (dist_diff_pos_neg_margin > 0).sum(axis=-1)
+
+    # M * J / U =~ rank(pos_i)
+    w = torch.log((M * J / U) + 1)
+
+    loss = (pairwise_hinge_loss * w).sum()
+
+    return loss
 
 
 class CMLTorch(nn.Module):
