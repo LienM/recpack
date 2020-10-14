@@ -15,8 +15,8 @@ from sklearn.metrics import recall_score
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
+from recpack.algorithms.metrics.recall import recall_k
 
-# TODO I decided to remove "use_rank_weight" because they always use it...
 
 logger = logging.getLogger("recpack")
 
@@ -61,7 +61,7 @@ class CML(Algorithm):
 
         # TODO Make this configurable
         self.stopping_criterion = StoppingCriterion(
-            recall_score, minimize=False, stop_early=False
+            recall_k, minimize=False, stop_early=False
         )
 
     def _init_model(self, num_users, num_items):
@@ -115,15 +115,18 @@ class CML(Algorithm):
         assert X.shape == (self.model_.num_users, self.model_.num_items)
         users = list(set(X.nonzero()[0]))
 
-        # TODO Implement
+        # TODO
+        # Probably need batch_predict as well
+        U = (
+            torch.LongTensor(users)
+            .to(self.device)
+            .repeat_interleave(self.model_.num_items)
+        )
+        I = torch.arange(X.shape[1]).to(self.device).repeat(len(users))
 
-        # U = torch.LongTensor(users).to(self.device)
-        # I = torch.arange(X.shape[1]).to(self.device)
+        V = self.model_.forward(U, I).detach().cpu().numpy()
 
-        # TODO Make this more efficient
-        # result = np.zeros(X.shape)
-        # result[users] = self.model_.forward(U, I).detach().cpu().numpy()
-        # return csr_matrix(result)
+        return csr_matrix((V, (U, I)), shape=X.shape)
 
     def _train_epoch(self, train_data: csr_matrix):
         """train a single epoch. Uses sampler to generate samples,
@@ -153,7 +156,9 @@ class CML(Algorithm):
             dist_neg_interaction = dist_neg_interaction_flat.reshape(
                 self.batch_size, -1
             )
-            loss = self._compute_loss(dist_pos_interaction, dist_neg_interaction)
+            loss = self._compute_loss(
+                dist_pos_interaction, dist_neg_interaction, train_data.shape[1]
+            )
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
@@ -169,37 +174,33 @@ class CML(Algorithm):
         :param validation_data: validation data interaction matrix.
         :type validation_data: csr_matrix
         """
-        # TODO Implement
-        val_loss = 0.0
+        # TODO Figure out if I should filter items viewed previously?
         self.model_.eval()
         with torch.no_grad():
-            #     # Bootstrap 20% of the number of training samples from validation data.
-            #     for d in warp_sample_pairs(
-            #         validation_data,
-            #         batch_size=self.batch_size,
-            #         sample_size=validation_data.nnz,
-            #     ):
-            #         users = d[:, 0].to(self.device)
-            #         target_items = d[:, 1].to(self.device)
-            #         negative_items = d[:, 2].to(self.device)
-
-            #         # TODO Maybe rename?
-            #         positive_sim = self.model_.forward(users, target_items)
-            #         negative_sim = self.model_.forward(users, negative_items)
-            #         loss = self._compute_loss(positive_sim, negative_sim)
-            #         val_loss += loss.item()
-            logger.info(f"validation loss = {val_loss}")
-            better = self.stopping_criterion.update(val_loss)
+            X_val_pred = self.predict(validation_data[0])
+            # K = 50 as in the paper
+            better = self.stopping_criterion.update(validation_data[1], X_val_pred, 50)
 
             if better:
                 self.save()
 
     def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
-        # TODO Implement loss function
-        pass
+        loss = warp_loss(
+            dist_pos_interaction,
+            dist_neg_interaction,
+            self.margin,
+            self.model_.num_items,
+            self.U,
+        )
+
+        if self.use_cov_loss:
+            loss += covariance_loss()
+
+        return loss
 
 
 def covariance_loss():
+    # TODO Implement
     # Their implementation really confuses me
     # X = tf.concat((self.item_embeddings, self.user_embeddings), 0)
     # n_rows = tf.cast(tf.shape(X)[0], tf.float32)
@@ -321,9 +322,6 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
                 # Exit the while loop
                 break
 
-        # sample_pairs_batch = np.empty((positives_batch.shape[0], U + 2))
-        # sample_pairs_batch[:, :2] = positives_batch
-        # sample_pairs_batch[:, 2:] = negatives_batch
         yield users, positives_batch, negatives_batch
 
 
