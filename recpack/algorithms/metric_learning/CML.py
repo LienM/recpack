@@ -124,7 +124,8 @@ class CML(Algorithm):
         )
         I = torch.arange(X.shape[1]).to(self.device).repeat(len(users))
 
-        V = self.model_.forward(U, I).detach().cpu().numpy()
+        # Score = -distance
+        V = - self.model_.forward(U, I).detach().cpu().numpy()
 
         return csr_matrix((V, (U, I)), shape=X.shape)
 
@@ -178,8 +179,10 @@ class CML(Algorithm):
         self.model_.eval()
         with torch.no_grad():
             X_val_pred = self.predict(validation_data[0])
+            # TODO Ignore item in prediction set
+            X_val_pred_new = X_val_pred[validation_data[0].nonzero()] = 0
             # K = 50 as in the paper
-            better = self.stopping_criterion.update(validation_data[1], X_val_pred, 50)
+            better = self.stopping_criterion.update(validation_data[1], X_val_pred_new, 50)
 
             if better:
                 self.save()
