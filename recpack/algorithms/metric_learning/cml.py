@@ -82,7 +82,7 @@ class CML(Algorithm):
         with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
-    def save(self, validation_loss):
+    def save(self, validation_loss: float):
         with open(f"{self.name}_loss_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
@@ -91,8 +91,8 @@ class CML(Algorithm):
 
         :param X: The training data matrix.
         :type X: csr_matrix
-        :param validation_data: The validation data matrix, should have same dimensions as X
-        :type validation_data: csr_matrix
+        :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output.
+        :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
 
         self._init_model(X.shape[0], X.shape[1])
@@ -137,7 +137,8 @@ class CML(Algorithm):
         return csr_matrix((V, (U, I)), shape=X.shape)
 
     def _train_epoch(self, train_data: csr_matrix):
-        """train a single epoch. Uses sampler to generate samples,
+        """
+        Train model for a single epoch. Uses sampler to generate samples,
         and loop through them in batches of self.batch_size.
         After each batch, update the parameters according to gradients.
 
@@ -177,7 +178,8 @@ class CML(Algorithm):
         logger.info(f"training loss = {train_loss}")
 
     def _evaluate(self, validation_data: csr_matrix):
-        """Perform evaluation step, samples get drawn
+        """
+        Perform evaluation step, samples get drawn
         from the validation data, and compute loss.
 
         If loss improved over previous epoch, store the model, and update best value.
@@ -248,7 +250,7 @@ def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
 
 class CMLTorch(nn.Module):
     """
-    # TODO Add description
+    Implementation of CML in PyTorch.
 
     :param num_users: the amount of users
     :type num_users: int
@@ -277,15 +279,16 @@ class CMLTorch(nn.Module):
 
     def forward(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
         """
-        Compute dot-product of user embedding (w_u) and item embedding (h_i)
+        Compute Euclidian distance between user embedding (w_u) and item embedding (h_i)
         for every user and item pair in U and I.
 
-        :param U: [description]
-        :type U: [type]
-        :param I: [description]
-        :type I: [type]
+        :param U: User identifiers.
+        :type U: torch.Tensor
+        :param I: Item identifiers.
+        :type I: torch.Tensor
+        :return: Euclidian distances between user-item pairs.
+        :rtype: torch.Tensor
         """
-
         w_U = self.W(U)
         h_I = self.H(I)
 
@@ -314,7 +317,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     np.random.shuffle(positives)
 
     for start in range(0, num_positives, batch_size):
-        batch = positives[start : start + batch_size]
+        batch = positives[start: start + batch_size]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
 
