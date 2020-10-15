@@ -11,11 +11,10 @@ import torch.nn as nn
 import torch.optim as optim
 
 from sklearn.utils.validation import check_is_fitted
-from sklearn.metrics import recall_score
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
-from recpack.algorithms.metrics.recall import recall_k
+from recpack.metrics.recall import recall_k
 
 
 logger = logging.getLogger("recpack")
@@ -175,11 +174,9 @@ class CML(Algorithm):
         :param validation_data: validation data interaction matrix.
         :type validation_data: csr_matrix
         """
-        # TODO Figure out if I should filter items viewed previously?
         self.model_.eval()
         with torch.no_grad():
             X_val_pred = self.predict(validation_data[0])
-            # TODO Ignore item in prediction set
             X_val_pred_new = X_val_pred[validation_data[0].nonzero()] = 0
             # K = 50 as in the paper
             better = self.stopping_criterion.update(validation_data[1], X_val_pred_new, 50)

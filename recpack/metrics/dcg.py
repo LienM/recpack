@@ -36,6 +36,14 @@ class DCGK(ElementwiseMetricK):
         return
 
 
+def dcg_k(y_true, y_pred, k):
+    # TODO test
+    r = DCGK(K=k)
+    r.calculate(y_true, y_pred)
+
+    return r.value
+
+
 class NDCGK(ListwiseMetricK):
     def __init__(self, K):
         super().__init__(K)
@@ -75,3 +83,12 @@ class NDCGK(ListwiseMetricK):
         )
 
         return
+
+
+def ndcg_k(y_true, y_pred, k):
+    # TODO test
+    r = NDCGK(K=k)
+    r.calculate(y_true, y_pred)
+
+    return r.value
+
