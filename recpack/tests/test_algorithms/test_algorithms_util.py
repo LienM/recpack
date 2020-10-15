@@ -1,6 +1,14 @@
 import pytest
 
-from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
+from scipy.sparse import csr_matrix
+from torch import Tensor
+
+from recpack.algorithms.util import (
+    StoppingCriterion,
+    naive_sparse2tensor,
+    naive_tensor2sparse,
+    EarlyStoppingException,
+)
 
 
 def loss_function(l):
@@ -98,3 +106,13 @@ def test_stopping_criterion_improves_minimize():
     # Third update successful
     crit.update()
     assert crit.best_value == l[2]
+
+
+def test_csr_tensor_conversions(larger_matrix):
+    assert isinstance(larger_matrix, csr_matrix)
+    tensor = naive_sparse2tensor(larger_matrix)
+    assert isinstance(tensor, Tensor)
+
+    csr_again = naive_tensor2sparse(tensor)
+
+    assert isinstance(csr_again, csr_matrix)

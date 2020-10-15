@@ -1,4 +1,5 @@
 import scipy.sparse as sp
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -64,3 +65,24 @@ def metadata_tags_matrix():
 
     mat = sp.csr_matrix((values, (items, tags)), shape=(5, 3))
     return mat
+
+
+@pytest.fixture(scope="function")
+def larger_matrix():
+    num_interactions = 2000
+    num_users = 500
+    num_items = 500
+
+    np.random.seed(400)
+
+    pv_users, pv_items, pv_values = (
+        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        [1] * num_interactions,
+    )
+
+    pv = sp.csr_matrix(
+        (pv_values, (pv_users, pv_items)), shape=(num_users + 200, num_items)
+    )
+
+    return pv
