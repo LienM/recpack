@@ -37,7 +37,7 @@ class CML(Algorithm):
         clip_norm,
         use_cov_loss,
         num_epochs,
-        seed,
+        seed=42,
         batch_size=50000,
         U=20,
     ):
@@ -140,7 +140,7 @@ class CML(Algorithm):
         self.model_.train()
 
         for users, positives_batch, negatives_batch in tqdm(
-            warp_sample_pairs(train_data, U=self.U, batch_size=self.batch_size,)
+            warp_sample_pairs(train_data, U=self.U, batch_size=self.batch_size)
         ):
             users = users.to(self.device)
             positives_batch = positives_batch.to(self.device)
@@ -148,16 +148,19 @@ class CML(Algorithm):
 
             self.optimizer.zero_grad()
 
+            current_batch_size = users.shape[0]
+
             dist_pos_interaction = self.model_.forward(users, positives_batch)
             dist_neg_interaction_flat = self.model_.forward(
                 users.repeat_interleave(self.U),
-                negatives_batch.reshape(self.batch_size * self.U, 1),
+                negatives_batch.reshape(current_batch_size * self.U, 1).squeeze(-1),
             )
             dist_neg_interaction = dist_neg_interaction_flat.reshape(
-                self.batch_size, -1
+                current_batch_size, -1
             )
+
             loss = self._compute_loss(
-                dist_pos_interaction, dist_neg_interaction, train_data.shape[1]
+                dist_pos_interaction.unsqueeze(-1), dist_neg_interaction
             )
             loss.backward()
             train_loss += loss.item()
@@ -177,14 +180,17 @@ class CML(Algorithm):
         self.model_.eval()
         with torch.no_grad():
             X_val_pred = self.predict(validation_data[0])
-            X_val_pred_new = X_val_pred[validation_data[0].nonzero()] = 0
+            X_val_pred[validation_data[0].nonzero()] = 0
             # K = 50 as in the paper
-            better = self.stopping_criterion.update(validation_data[1], X_val_pred_new, 50)
+            better = self.stopping_criterion.update(validation_data[1], X_val_pred, k=50)
 
             if better:
                 self.save()
 
     def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
+
+        print(self.model_.num_items)
+
         loss = warp_loss(
             dist_pos_interaction,
             dist_neg_interaction,
@@ -223,8 +229,8 @@ def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
         most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape)
     )
 
-    M = (dist_diff_pos_neg_margin > 0).sum(axis=-1)
-
+    # print(dist_diff_pos_neg_margin.shape)
+    M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
     # M * J / U =~ rank(pos_i)
     w = torch.log((M * J / U) + 1)
 
@@ -272,6 +278,7 @@ class CMLTorch(nn.Module):
         :param I: [description]
         :type I: [type]
         """
+
         w_U = self.W(U)
         h_I = self.H(I)
 
@@ -322,7 +329,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
                 # Exit the while loop
                 break
 
-        yield users, positives_batch, negatives_batch
+        yield torch.LongTensor(users), torch.LongTensor(positives_batch), torch.LongTensor(negatives_batch)
 
 
 class CMLWithFeatures(Algorithm):
