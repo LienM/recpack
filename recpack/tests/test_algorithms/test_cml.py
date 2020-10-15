@@ -36,41 +36,10 @@ def cml():
     return cml1
 
 
-# TODO Put in a util module
-def _training_step(
-    model: nn.Module,
-    loss_fn: Callable,
-    optim: torch.optim.Optimizer,
-    inputs: Variable,
-    targets: Variable,
-    device: torch.device
-):
-
-    # put model in train mode
-    model.train()
-    model.to(device)
-
-    #  run one forward + backward step
-    # clear gradient
-    optim.zero_grad()
-    # move data to device
-    inputs = inputs.to(device)
-    targets = targets.to(device)
-    # forward
-    likelihood = model(inputs)
-    # calc loss
-    loss = loss_fn(*likelihood, targets)
-    # backward
-    loss.backward()
-    # optimization step
-    optim.step()
-
-
 def test_cml_training_epoch(cml, larger_matrix):
     cml._init_model(*larger_matrix.shape)
 
-    params = [np for np in cml.model_.named_parameters()
-              if np[1].requires_grad]
+    params = [np for np in cml.model_.named_parameters() if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -86,8 +55,7 @@ def test_cml_training_epoch(cml, larger_matrix):
 def test_cml_evaluation_epoch(cml, larger_matrix):
     cml._init_model(*larger_matrix.shape)
 
-    params = [np for np in cml.model_.named_parameters()
-              if np[1].requires_grad]
+    params = [np for np in cml.model_.named_parameters() if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -108,21 +76,3 @@ def test_cml_predict(cml, larger_matrix):
     assert isinstance(X_pred, scipy.sparse.csr_matrix)
 
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
-
-
-# def test_cml_forward(input_size, inputs, targets):
-#     cml = CMLTorch(dim_input_layer=input_size)
-
-#     params = [np for np in cml.named_parameters() if np[1].requires_grad]
-
-#     # take a copy
-#     params_before = [(name, p.clone()) for (name, p) in params]
-
-#     device = torch.device("cpu")
-
-#     _training_step(cml, vae_loss_function, torch.optim.Adam(
-#         cml.parameters()), inputs, targets, device)
-#     # do they change after a training step?
-#     #  let's run a train step and see
-
-#     assert_changed(params_before, params, device)
