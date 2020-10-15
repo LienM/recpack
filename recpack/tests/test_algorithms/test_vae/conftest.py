@@ -32,27 +32,6 @@ def targets():
 
 
 @pytest.fixture(scope="function")
-def larger_matrix():
-    num_interactions = 2000
-    num_users = 500
-    num_items = 500
-
-    np.random.seed(400)
-
-    pv_users, pv_items, pv_values = (
-        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        [1] * num_interactions,
-    )
-
-    pv = scipy.sparse.csr_matrix(
-        (pv_values, (pv_users, pv_items)), shape=(num_users + 200, num_items)
-    )
-
-    return pv
-
-
-@pytest.fixture(scope="function")
 def mult_vae():
     mult = MultVAE(
         batch_size=500,

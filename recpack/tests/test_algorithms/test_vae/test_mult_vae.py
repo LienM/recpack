@@ -9,7 +9,7 @@ from recpack.algorithms.vae.mult_vae import (
     MultiVAETorch,
     vae_loss_function,
 )
-from util import assert_changed, assert_same
+from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 
 def _training_step(
@@ -68,8 +68,6 @@ def test_evaluation_epoch(mult_vae, larger_matrix):
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
-
-    # TODO Mock mult_vae.save
 
     # run a training step
     mult_vae._evaluate(larger_matrix, larger_matrix, users)

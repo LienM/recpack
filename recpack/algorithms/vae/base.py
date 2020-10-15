@@ -11,7 +11,7 @@ import logging
 
 from recpack.algorithms.base import Algorithm
 
-from recpack.algorithms.vae.util import (
+from recpack.algorithms.util import (
     naive_sparse2tensor
 )
 
@@ -31,6 +31,16 @@ def get_batches(users, batch_size=1000):
         users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
         for i in range(ceil(len(users) / batch_size))
     ]
+
+"""
+Things in common between all Torch/iterative algorithms:
+- Stopping Criterion
+- Train epoch method
+- evaluate method
+- fit/predict
+- loss function
+
+"""
 
 
 class VAE(Algorithm):
@@ -185,38 +195,39 @@ class VAE(Algorithm):
         if self.drop_negative_recommendations:
             results[results < 0] = 0
 
-        return coo_matrix(results).tocsr()
+        return csr_matrix(results)
 
-    def _batch_predict_and_loss(
-            self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
-        """Helper function to batch the prediction and loss computation,
-        to avoid going out of RAM on the GPU.
+    # TODO I think this can be removed? I don't see why we would need it.
+    # def _batch_predict_and_loss(
+    #         self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
+    #     """Helper function to batch the prediction and loss computation,
+    #     to avoid going out of RAM on the GPU.
 
-        Will batch the nonzero users into batches of self.batch_size.
-        The loss is accumulated by taking the sum.
+    #     Will batch the nonzero users into batches of self.batch_size.
+    #     The loss is accumulated by taking the sum.
 
-        :param X: The input user interaction matrix
-        :type X: csr_matrix
-        :return: The predicted affinity of users for items
-                 and the accumulated loss.
-        :rtype: Tuple[csr_matrix, torch.Tensor]
-        """
+    #     :param X: The input user interaction matrix
+    #     :type X: csr_matrix
+    #     :return: The predicted affinity of users for items
+    #              and the accumulated loss.
+    #     :rtype: Tuple[csr_matrix, torch.Tensor]
+    #     """
 
-        results = np.zeros(X.shape)
-        loss = 0
-        for batch in get_batches(get_users(X), batch_size=self.batch_size):
-            in_ = X[batch]
-            in_tensor = naive_sparse2tensor(in_).to(self.device)
+    #     results = np.zeros(X.shape)
+    #     loss = 0
+    #     for batch in get_batches(get_users(X), batch_size=self.batch_size):
+    #         in_ = X[batch]
+    #         in_tensor = naive_sparse2tensor(in_).to(self.device)
 
-            out_tensor, mu, logvar = self.model_(in_tensor)
-            loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
+    #         out_tensor, mu, logvar = self.model_(in_tensor)
+    #         loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
 
-            results[batch] = out_tensor.detach().cpu().numpy()
+    #         results[batch] = out_tensor.detach().cpu().numpy()
 
-        if self.drop_negative_recommendations:
-            results[results < 0] = 0
+    #     if self.drop_negative_recommendations:
+    #         results[results < 0] = 0
 
-        return csr_matrix(results), loss
+    #     return csr_matrix(results), loss
 
     def _evaluate(self, val_in: csr_matrix,
                   val_out: csr_matrix, users: List[int]):
@@ -225,19 +236,14 @@ class VAE(Algorithm):
 
         with torch.no_grad():
             # Evaluate batched
-            X_pred_cpu, loss = self._batch_predict_and_loss(val_in)
-            val_loss = loss.item()
+            X_pred_cpu = self._batch_predict(val_in)
             X_true = val_out
 
-            self.stopping_criterion.calculate(X_true, X_pred_cpu)
-            logger.info(
-                f"Evaluation Loss = {val_loss}"
-                f", NDCG@100 = {self.stopping_criterion.value}"
-            )
-            if self.stopping_criterion.is_best:
+            better = self.stopping_criterion.update(X_true, X_pred_cpu, k=100)
+
+            if better:
                 logger.info("Model improved. Storing better model.")
                 self.save()
-            self.stopping_criterion.reset()
 
     def load(self, validation_loss):
         # TODO Give better names
@@ -260,31 +266,3 @@ class VAE(Algorithm):
         self._check_prediction(X_pred, X)
 
         return X_pred
-
-
-# TODO Think about removing this. Doesn't add much value
-# class VAETorch(nn.Module):
-#     """
-#     Base class for building torch modules.
-#     """
-
-#     def __init__(
-#         self
-#     ):
-#         super().__init__()
-
-#     def forward(
-#             self, x: torch.Tensor
-#     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-#         """Pass the input through the network, and return result.
-
-#         :param x: input tensor
-#         :type x: torch.Tensor
-#         :return: A tuple with
-#                 (predicted output value, mean values, average values)
-#         :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-#         """
-#         mu, logvar = self.encode(x)
-#         z = self.reparameterize(mu, logvar)
-#         x_recon = self.decode(z)
-#         return x_recon, mu, logvar

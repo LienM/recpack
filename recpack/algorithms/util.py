@@ -1,13 +1,37 @@
+import logging
 from typing import Callable
 
 import numpy as np
+from scipy.sparse import csr_matrix
+
+import torch
+
+
+logger = logging.getLogger("recpack")
+
+
+def swish(x):
+    return x.mul(torch.sigmoid(x))
+
+
+def log_norm_pdf(x, mu, logvar):
+    return -0.5 * (logvar + np.log(2 * np.pi) + (x - mu).pow(2) / logvar.exp())
+
+
+def naive_sparse2tensor(data: csr_matrix):
+    return torch.FloatTensor(data.toarray())
+
+
+def naive_tensor2sparse(tensor: torch.Tensor):
+    return csr_matrix(tensor.detach().numpy())
 
 
 class StoppingCriterion:
     """
     StoppingCriterion provides a wrapper around any loss function
     """
-    #TODO Add documentation
+
+    # TODO Add documentation
     def __init__(
         self,
         loss_function: Callable,
@@ -53,6 +77,10 @@ class StoppingCriterion:
                 raise EarlyStoppingException(
                     f"No improvements in the last {self.n_iter_no_change} iterations."
                 )
+
+        logger.info(
+            f"StoppingCriterion has value {loss}, which is {'better' if better else 'worse'} than previous iterations."
+        )
 
         return False
 

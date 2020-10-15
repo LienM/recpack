@@ -300,7 +300,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     np.random.shuffle(positives)
 
     for start in range(0, num_positives, batch_size):
-        batch = positives[start : start + batch_size]
+        batch = positives[start: start + batch_size]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
 
