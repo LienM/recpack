@@ -163,6 +163,7 @@ class VAE(Algorithm):
         val_users = list(set(val_in.nonzero()[0]))
 
         for epoch in range(0, self.max_epochs):
+            # TODO Remove the users argument, doesn't add anything, isn't reused
             self._train_epoch(X, train_users)
             self._evaluate(val_in, val_out, val_users)
 
