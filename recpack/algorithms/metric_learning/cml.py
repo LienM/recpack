@@ -63,14 +63,22 @@ class CML(Algorithm):
             recall_k, minimize=False, stop_early=False
         )
 
-    def _init_model(self, num_users, num_items):
+    def _init_model(self, num_users: int, num_items: int):
+        """
+        Initialize model.
+
+        :param num_users: Number of users.
+        :type num_users: int
+        :param num_items: Number of items.
+        :type num_items: int
+        """
         self.model_ = CMLTorch(
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
         self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
-    def load(self, validation_loss):
+    def load(self, validation_loss: float) -> nn.Module:
         with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
@@ -124,7 +132,7 @@ class CML(Algorithm):
         I = torch.arange(X.shape[1]).to(self.device).repeat(len(users))
 
         # Score = -distance
-        V = - self.model_.forward(U, I).detach().cpu().numpy()
+        V = -self.model_.forward(U, I).detach().cpu().numpy()
 
         return csr_matrix((V, (U, I)), shape=X.shape)
 
@@ -182,14 +190,14 @@ class CML(Algorithm):
             X_val_pred = self.predict(validation_data[0])
             X_val_pred[validation_data[0].nonzero()] = 0
             # K = 50 as in the paper
-            better = self.stopping_criterion.update(validation_data[1], X_val_pred, k=50)
+            better = self.stopping_criterion.update(
+                validation_data[1], X_val_pred, k=50
+            )
 
             if better:
                 self.save()
 
     def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
-
-        print(self.model_.num_items)
 
         loss = warp_loss(
             dist_pos_interaction,
@@ -229,7 +237,6 @@ def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
         most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape)
     )
 
-    # print(dist_diff_pos_neg_margin.shape)
     M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
     # M * J / U =~ rank(pos_i)
     w = torch.log((M * J / U) + 1)
@@ -298,7 +305,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     :type U: int, optional
     :param batch_size: The number of samples returned per batch, defaults to 100
     :type batch_size: int, optional
-    :yield: Iterator of torch.LongTensor of shape (batch_size, U+2). [User, Item, Negative Sample1, Negative Sample2, ...] 
+    :yield: Iterator of torch.LongTensor of shape (batch_size, U+2). [User, Item, Negative Sample1, Negative Sample2, ...]
     :rtype: Iterator[torch.LongTensor]
     """
     # Need positive and negative pair. Requires the existence of a positive for this item.
@@ -307,7 +314,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     np.random.shuffle(positives)
 
     for start in range(0, num_positives, batch_size):
-        batch = positives[start: start + batch_size]
+        batch = positives[start : start + batch_size]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
 
@@ -329,7 +336,9 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
                 # Exit the while loop
                 break
 
-        yield torch.LongTensor(users), torch.LongTensor(positives_batch), torch.LongTensor(negatives_batch)
+        yield torch.LongTensor(users), torch.LongTensor(
+            positives_batch
+        ), torch.LongTensor(negatives_batch)
 
 
 class CMLWithFeatures(Algorithm):
