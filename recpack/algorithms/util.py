@@ -68,7 +68,7 @@ class StoppingCriterion:
                     self.n_iter_no_change += 1
 
         if better:
-            # Reset interations w/o change.
+            # Reset iterations w/o change.
             self.n_iter_no_change = 0
             self.best_value = loss
             return True
