@@ -80,7 +80,6 @@ class DataM:
         c_df = self._df[mask]
         if inplace:
             self._df = c_df
-            return self
         else:
             return DataM(c_df, shape=self.shape)
 
