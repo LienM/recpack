@@ -117,6 +117,8 @@ class DataM:
     def indices_in(self, u_i_lists, inplace=False):
         logger.debug("Performing indices_in comparison")
 
+        # Data is temporarily duplicated across a MultiIndex and the [USER_IX, ITEM_IX] columns for fast multi-indexing.
+        # This index can be dropped safely, as the data is still there in the original columns. 
         index = pd.MultiIndex.from_frame(self._df[[USER_IX, ITEM_IX]])
         tuples = list(zip(*u_i_lists))
         c_df = self._df.set_index(index)
