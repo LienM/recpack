@@ -57,7 +57,6 @@ class DataM:
 
     @property
     def timestamps(self) -> pd.Series:
-        print(self._df)
         if TIMESTAMP_IX not in self._df:
             raise AttributeError(
                 "No timestamp column, so timestamps could not be retrieved"
@@ -81,7 +80,6 @@ class DataM:
         c_df = self._df[mask]
         if inplace:
             self._df = c_df
-            return self
         else:
             return DataM(c_df, shape=self.shape)
 
