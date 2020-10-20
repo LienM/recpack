@@ -152,7 +152,7 @@ class DataM:
         return values
 
     def copy(self):
-        return DataM(self._df, shape=self.shape)
+        return DataM(self._df.copy(), shape=self.shape)
 
     @classmethod
     def create_from_dataframe(
