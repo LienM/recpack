@@ -159,10 +159,10 @@ def test_user_splitter(data_m):
     check_values_timestamps_match(te)
 
 
-def test_user_splitter_no_full_split(data_m):
-    splitter = splitter = splitter_base.UserSplitter([0, 1], [3])
-    with pytest.raises(AssertionError):
-        tr, te = splitter.split(data_m)
+# def test_user_splitter_no_full_split(data_m):
+#     splitter = splitter = splitter_base.UserSplitter([0, 1], [3])
+#     with pytest.raises(AssertionError):
+#         tr, te = splitter.split(data_m)
 
 
 @pytest.mark.parametrize("tr_perc", [0.75, 0.5, 0.45])
