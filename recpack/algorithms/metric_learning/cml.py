@@ -236,15 +236,17 @@ def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
     # pos = 0.1, margin = 0.1, neg = 0.08 => 0.1 + 0.1 - 0.08 = 0.12 > 0
     most_wrong_neg_interaction, indices = dist_diff_pos_neg_margin.max(dim=-1)
 
-    pairwise_hinge_loss = torch.max(
-        most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape).to(device)
-    )
+    most_wrong_neg_interaction[most_wrong_neg_interaction < 0] = 0
+
+    # pairwise_hinge_loss = torch.max(
+    #     most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape).to(device)
+    # )
 
     M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
     # M * J / U =~ rank(pos_i)
     w = torch.log((M * J / U) + 1)
 
-    loss = (pairwise_hinge_loss * w).sum()
+    loss = (most_wrong_neg_interaction * w).sum()
 
     return loss
 
