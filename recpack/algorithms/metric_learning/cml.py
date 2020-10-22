@@ -207,6 +207,7 @@ class CML(Algorithm):
             self.margin,
             self.model_.num_items,
             self.U,
+            self.device
         )
 
         if self.use_cov_loss:
@@ -227,7 +228,7 @@ def covariance_loss():
     return 0
 
 
-def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
+def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
 
     # Largest number is "most wrongly classified", f.e.
@@ -236,7 +237,7 @@ def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
     most_wrong_neg_interaction, indices = dist_diff_pos_neg_margin.max(dim=-1)
 
     pairwise_hinge_loss = torch.max(
-        most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape)
+        most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape).to(device)
     )
 
     M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
