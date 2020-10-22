@@ -78,7 +78,7 @@ class CML(Algorithm):
 
         self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
-    def load(self, validation_loss: float) -> nn.Module:
+    def load(self, validation_loss: float):
         with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
@@ -197,7 +197,7 @@ class CML(Algorithm):
             )
 
             if better:
-                self.save()
+                self.save(self.stopping_criterion.best_value)
 
     def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
 

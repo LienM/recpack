@@ -67,6 +67,10 @@ class StoppingCriterion:
                 if not min_change_made:
                     self.n_iter_no_change += 1
 
+        logger.info(
+            f"StoppingCriterion has value {loss}, which is {'better' if better else 'worse'} than previous iterations."
+        )
+
         if better:
             # Reset iterations w/o change.
             self.n_iter_no_change = 0
@@ -77,10 +81,6 @@ class StoppingCriterion:
                 raise EarlyStoppingException(
                     f"No improvements in the last {self.n_iter_no_change} iterations."
                 )
-
-        logger.info(
-            f"StoppingCriterion has value {loss}, which is {'better' if better else 'worse'} than previous iterations."
-        )
 
         return False
 
