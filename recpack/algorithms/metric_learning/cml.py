@@ -234,7 +234,7 @@ def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
     # Largest number is "most wrongly classified", f.e.
     # pos = 0.1, margin = 0.1, neg = 0.15 => 0.1 + 0.1 - 0.15 = 0.05 > 0
     # pos = 0.1, margin = 0.1, neg = 0.08 => 0.1 + 0.1 - 0.08 = 0.12 > 0
-    most_wrong_neg_interaction, indices = dist_diff_pos_neg_margin.max(dim=-1)
+    most_wrong_neg_interaction, _ = dist_diff_pos_neg_margin.max(dim=-1)
 
     most_wrong_neg_interaction[most_wrong_neg_interaction < 0] = 0
 
