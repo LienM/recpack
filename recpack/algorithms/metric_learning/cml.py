@@ -13,7 +13,12 @@ import torch.optim as optim
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.base import Algorithm
-from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
+from recpack.algorithms.util import (
+    StoppingCriterion,
+    EarlyStoppingException,
+    get_batches,
+    get_users,
+)
 from recpack.metrics.recall import recall_k
 
 
@@ -107,34 +112,46 @@ class CML(Algorithm):
         self.load(self.stopping_criterion.best_value)
         return
 
-    def predict(self, X: csr_matrix):
+    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+        users = list(set(X.nonzero()[0]))
+
+        U = torch.LongTensor(users).repeat_interleave(self.model_.num_items)
+        I = torch.arange(X.shape[1]).repeat(len(users))
+
+        num_interactions = U.shape[0]
+
+        V = np.array([])
+
+        for batch_ix in range(0, num_interactions, 10000):
+            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(self.device)
+            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(self.device)
+            # Score = -distance
+            batch_V = -self.model_.forward(batch_U, batch_I).detach().cpu().numpy()
+
+            V = np.append(V, batch_V)
+
+        X_pred = csr_matrix((V, (U.numpy(), I.numpy())), shape=X.shape)
+
+        return X_pred
+
+    def predict(self, X: csr_matrix) -> csr_matrix:
         """Predict recommendations for each user with at least a single event in their history.
 
         :param X: interaction matrix, should have same size as model.
         :type X: csr_matrix
-        :raises an: [description]
+        :raises an: AssertionError when the input and model's number of items and users are incongruent.
         :return: csr matrix of same shape, with recommendations.
-        :rtype: [type]
+        :rtype: csr_matrix
         """
         check_is_fitted(self)
-        # TODO We can make it so that we can recommend for unknown users by giving them an embedding equal to the sum of all items viewed previously.
-        # TODO Or raise an error
+
         assert X.shape == (self.model_.num_users, self.model_.num_items)
-        users = list(set(X.nonzero()[0]))
 
-        # TODO
-        # Probably need batch_predict as well
-        U = (
-            torch.LongTensor(users)
-            .to(self.device)
-            .repeat_interleave(self.model_.num_items)
-        )
-        I = torch.arange(X.shape[1]).to(self.device).repeat(len(users))
+        X_pred = self._batch_predict(X)
 
-        # Score = -distance
-        V = -self.model_.forward(U, I).detach().cpu().numpy()
+        self._check_prediction(X_pred, X)
 
-        return csr_matrix((V, (U, I)), shape=X.shape)
+        return X_pred
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -207,7 +224,7 @@ class CML(Algorithm):
             self.margin,
             self.model_.num_items,
             self.U,
-            self.device
+            self.device,
         )
 
         if self.use_cov_loss:
@@ -320,7 +337,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     np.random.shuffle(positives)
 
     for start in range(0, num_positives, batch_size):
-        batch = positives[start: start + batch_size]
+        batch = positives[start : start + batch_size]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
 

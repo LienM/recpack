@@ -1,5 +1,7 @@
 import logging
 from typing import Callable
+from math import ceil
+
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -24,6 +26,17 @@ def naive_sparse2tensor(data: csr_matrix):
 
 def naive_tensor2sparse(tensor: torch.Tensor):
     return csr_matrix(tensor.detach().numpy())
+
+
+def get_users(data):
+    return list(set(data.nonzero()[0]))
+
+
+def get_batches(users, batch_size=1000):
+    return [
+        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
+        for i in range(ceil(len(users) / batch_size))
+    ]
 
 
 class StoppingCriterion:

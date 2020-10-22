@@ -1,36 +1,19 @@
+import logging
 from typing import List, Tuple
 
-import torch.nn as nn
-import torch
-from math import ceil
-from scipy.sparse import csr_matrix, coo_matrix
 import numpy as np
+from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
-
-import logging
+import torch
 
 from recpack.algorithms.base import Algorithm
-
 from recpack.algorithms.util import (
-    naive_sparse2tensor
+    naive_sparse2tensor,
+    get_batches,
+    get_users
 )
 
 logger = logging.getLogger('recpack')
-
-#######
-#  Helper functions for batch computation
-#######
-
-
-def get_users(data):
-    return list(set(data.nonzero()[0]))
-
-
-def get_batches(users, batch_size=1000):
-    return [
-        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
-        for i in range(ceil(len(users) / batch_size))
-    ]
 
 """
 Things in common between all Torch/iterative algorithms:
