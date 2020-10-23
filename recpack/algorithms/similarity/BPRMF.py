@@ -214,7 +214,9 @@ class BPRMF(Algorithm):
                 # TODO Maybe rename?
                 positive_sim = self.model_.forward(users, target_items).diag()
                 negative_sim = self.model_.forward(users, negative_items).diag()
-                loss = self._compute_loss(positive_sim, negative_sim)
+                loss = self._compute_loss(
+                    positive_sim, negative_sim, regularization=False
+                )
                 val_loss += loss.item()
 
             logger.info(f"validation loss = {val_loss}")
@@ -222,18 +224,18 @@ class BPRMF(Algorithm):
             if val_loss == self.stopping_criterion.best_value:
                 self.save()
 
-    def _compute_loss(self, positive_sim, negative_sim):
+    def _compute_loss(self, positive_sim, negative_sim, regularization=True):
         distance = positive_sim - negative_sim
         # Probability of ranking given parameters
         elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
         bpr_loss = -elementwise_bpr_loss.sum()
 
-        #  Add regularization
-        return (
-            bpr_loss
-            + self.lambda_h * self.model_.H.weight.norm()
-            + self.lambda_w * self.model_.W.weight.norm()
-        )
+        loss = bpr_loss
+        if regularization:
+            loss += self.lambda_h * self.model_.H.weight.norm()
+            +self.lambda_w * self.model_.W.weight.norm()
+
+        return loss
 
 
 class MFModule(nn.Module):
