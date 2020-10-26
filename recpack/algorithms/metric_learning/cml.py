@@ -126,18 +126,23 @@ class CML(Algorithm):
                 f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
             )
 
-        U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(self.model_.num_items)
+        U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(
+            self.model_.num_items
+        )
         I = torch.arange(X.shape[1]).repeat(len(users_to_predict_for))
 
         num_interactions = U.shape[0]
 
         V = np.array([])
 
+        logger.info(f"Number of interactions: {num_interactions}")
+
         for batch_ix in range(0, num_interactions, 10000):
-            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+            logger.info("Processing new batch")
+            batch_U = U[batch_ix : min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
-            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+            batch_I = I[batch_ix : min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
             # Score = -distance
@@ -221,11 +226,28 @@ class CML(Algorithm):
         """
         self.model_.eval()
         with torch.no_grad():
-            X_val_pred = self.predict(validation_data[0])
-            X_val_pred[validation_data[0].nonzero()] = 0
+            # Need to make a selection, otherwise this step is way too slow.
+            val_data_in, val_data_out = validation_data
+            nonzero_users = list(set(val_data_in.nonzero()[0]))
+            validation_users = np.random.choice(
+                nonzero_users, size=min(1000, len(nonzero_users)), replace=False
+            )
+
+            val_data_in_selection = csr_matrix(([], ([], [])), shape=val_data_in.shape)
+            val_data_in_selection[validation_users, :] = val_data_in[
+                validation_users, :
+            ]
+
+            val_data_out_selection = csr_matrix(([], ([], [])), shape=val_data_in.shape)
+            val_data_out_selection[validation_users, :] = val_data_out[
+                validation_users, :
+            ]
+
+            X_val_pred = self.predict(val_data_in_selection)
+            X_val_pred[val_data_in_selection.nonzero()] = 0
             # K = 50 as in the paper
             better = self.stopping_criterion.update(
-                validation_data[1], X_val_pred, k=50
+                val_data_out_selection, X_val_pred, k=50
             )
 
             if better:
