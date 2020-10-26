@@ -37,7 +37,7 @@ def cml():
 
 
 def test_cml_training_epoch(cml, larger_matrix):
-    cml._init_model(*larger_matrix.shape)
+    cml._init_model(larger_matrix)
 
     params = [np for np in cml.model_.named_parameters() if np[1].requires_grad]
 
@@ -53,7 +53,7 @@ def test_cml_training_epoch(cml, larger_matrix):
 
 
 def test_cml_evaluation_epoch(cml, larger_matrix):
-    cml._init_model(*larger_matrix.shape)
+    cml._init_model(larger_matrix)
 
     params = [np for np in cml.model_.named_parameters() if np[1].requires_grad]
 
@@ -69,7 +69,7 @@ def test_cml_evaluation_epoch(cml, larger_matrix):
 
 
 def test_cml_predict(cml, larger_matrix):
-    cml._init_model(*larger_matrix.shape)
+    cml._init_model(larger_matrix)
 
     X_pred = cml.predict(larger_matrix)
 

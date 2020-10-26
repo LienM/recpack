@@ -1,16 +1,16 @@
 import logging
 from typing import Tuple, List
+import warnings
 
 import numpy as np
 from scipy.sparse import csr_matrix
+from sklearn.utils.validation import check_is_fitted
 
 from tqdm import tqdm
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
-from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import (
@@ -68,7 +68,7 @@ class CML(Algorithm):
             recall_k, minimize=False, stop_early=False
         )
 
-    def _init_model(self, num_users: int, num_items: int):
+    def _init_model(self, X):
         """
         Initialize model.
 
@@ -77,11 +77,14 @@ class CML(Algorithm):
         :param num_items: Number of items.
         :type num_items: int
         """
+        num_users, num_items = X.shape
         self.model_ = CMLTorch(
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
         self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
+
+        self.known_users = set(X.nonzero()[0])
 
     def load(self, validation_loss: float):
         with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
@@ -100,7 +103,7 @@ class CML(Algorithm):
         :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
 
-        self._init_model(X.shape[0], X.shape[1])
+        self._init_model(X)
         try:
             for epoch in range(self.num_epochs):
                 self._train_epoch(X)
@@ -113,18 +116,30 @@ class CML(Algorithm):
         return
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
-        users = list(set(X.nonzero()[0]))
+        users = set(X.nonzero()[0])
 
-        U = torch.LongTensor(users).repeat_interleave(self.model_.num_items)
-        I = torch.arange(X.shape[1]).repeat(len(users))
+        users_to_predict_for = users.intersection(self.known_users)
+        users_we_cannot_predict_for = users.difference(self.known_users)
+
+        if users_we_cannot_predict_for:
+            warnings.warn(
+                f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
+            )
+
+        U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(self.model_.num_items)
+        I = torch.arange(X.shape[1]).repeat(len(users_to_predict_for))
 
         num_interactions = U.shape[0]
 
         V = np.array([])
 
         for batch_ix in range(0, num_interactions, 10000):
-            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(self.device)
-            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(self.device)
+            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+                self.device
+            )
+            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+                self.device
+            )
             # Score = -distance
             batch_V = -self.model_.forward(batch_U, batch_I).detach().cpu().numpy()
 
