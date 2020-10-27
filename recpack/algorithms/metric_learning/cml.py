@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, List
+from typing import Tuple
 import warnings
 
 import numpy as np
@@ -16,8 +16,6 @@ from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import (
     StoppingCriterion,
     EarlyStoppingException,
-    get_batches,
-    get_users,
 )
 from recpack.metrics.recall import recall_k
 
@@ -26,31 +24,45 @@ logger = logging.getLogger("recpack")
 
 
 class CML(Algorithm):
-    """
-    Pytorch Implementation of
-    [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
-
-    Version without features, referred to as CML in the paper.
-    """
-
     def __init__(
         self,
-        num_components,
-        margin,
-        learning_rate,
-        clip_norm,
-        use_cov_loss,
-        num_epochs,
-        seed=42,
-        batch_size=50000,
-        U=20,
+        num_components: int,
+        margin: float,
+        learning_rate: float,
+        # clip_norm,
+        use_cov_loss: bool,
+        num_epochs: int,
+        seed: int = 42,
+        batch_size: int = 50000,
+        U: int = 20,
     ):
-        # TODO Figure out clip_norm?
+        """
+        Pytorch Implementation of
+        [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+        http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+
+        Version without features, referred to as CML in the paper.
+
+        :param num_components: Embedding dimension
+        :type num_components: int
+        :param margin: Hinge loss margin. Required difference in score, smaller than which we will consider a negative sample item in violation
+        :type margin: float
+        :param learning_rate: Learning rate for AdaGrad optimization
+        :type learning_rate: float
+        :param use_cov_loss: Penalize off-diagonal elements of the covariance matrix to reduce correlation between activations
+        :type use_cov_loss: bool
+        :param num_epochs: Number of epochs
+        :type num_epochs: int
+        :param seed: Random seed used for initialization, defaults to 42
+        :type seed: int, optional
+        :param batch_size: Sample batch size, defaults to 50000
+        :type batch_size: int, optional
+        :param U: Number of negative samples used in WARP loss function for every positive sample, defaults to 20
+        :type U: int, optional
+        """
         self.num_components = num_components
         self.margin = margin
         self.learning_rate = learning_rate
-        self.clip_norm = clip_norm
         self.use_cov_loss = use_cov_loss
         self.num_epochs = num_epochs
         self.batch_size = batch_size
@@ -87,19 +99,32 @@ class CML(Algorithm):
         self.known_users = set(X.nonzero()[0])
 
     def load(self, validation_loss: float):
+        """
+        Load a previously computed model.
+
+        :param validation_loss: Validation loss of model to be loaded
+        :type validation_loss: float
+        """
         with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
     def save(self, validation_loss: float):
+        """
+        Save a model. Model name contains the validation loss value.
+
+        :param validation_loss: Validation loss of model to be saved
+        :type validation_loss: float
+        """        
         with open(f"{self.name}_loss_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
     def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]):
-        """Fit the model on the X dataset, and evaluate model quality on validation_data.
+        """
+        Fit the model on the X dataset, and evaluate model quality on validation_data.
 
-        :param X: The training data matrix.
+        :param X: The training data matrix
         :type X: csr_matrix
-        :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output.
+        :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output
         :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
 
@@ -135,14 +160,11 @@ class CML(Algorithm):
 
         V = np.array([])
 
-        logger.info(f"Number of interactions: {num_interactions}")
-
         for batch_ix in range(0, num_interactions, 10000):
-            logger.info("Processing new batch")
-            batch_U = U[batch_ix : min(num_interactions, batch_ix + 10000)].to(
+            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
-            batch_I = I[batch_ix : min(num_interactions, batch_ix + 10000)].to(
+            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
             # Score = -distance
@@ -155,7 +177,8 @@ class CML(Algorithm):
         return X_pred
 
     def predict(self, X: csr_matrix) -> csr_matrix:
-        """Predict recommendations for each user with at least a single event in their history.
+        """
+        Predict recommendations for each user with at least a single event in their history.
 
         :param X: interaction matrix, should have same size as model.
         :type X: csr_matrix
@@ -179,7 +202,7 @@ class CML(Algorithm):
         and loop through them in batches of self.batch_size.
         After each batch, update the parameters according to gradients.
 
-        :param train_data: interaction matrix.
+        :param train_data: interaction matrix
         :type train_data: csr_matrix
         """
         train_loss = 0.0
@@ -221,7 +244,7 @@ class CML(Algorithm):
 
         If loss improved over previous epoch, store the model, and update best value.
 
-        :param validation_data: validation data interaction matrix.
+        :param validation_data: validation data interaction matrix
         :type validation_data: csr_matrix
         """
         self.model_.eval()
@@ -374,7 +397,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     np.random.shuffle(positives)
 
     for start in range(0, num_positives, batch_size):
-        batch = positives[start : start + batch_size]
+        batch = positives[start: start + batch_size]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
 
