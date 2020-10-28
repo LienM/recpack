@@ -37,7 +37,6 @@ class DCGK(ElementwiseMetricK):
 
 
 def dcg_k(y_true, y_pred, k):
-    # TODO test
     r = DCGK(K=k)
     r.calculate(y_true, y_pred)
 
