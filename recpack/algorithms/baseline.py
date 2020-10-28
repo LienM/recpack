@@ -25,7 +25,7 @@ class Random(Algorithm):
         self.items_ = list(set(X.nonzero()[1]))
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix, user_ids=None):
+    def predict(self, X: scipy.sparse.csr_matrix):
         """Predict K random scores for items per row in X
 
         Returns numpy array of the same shape as X, with non zero scores for K items per row.
@@ -62,7 +62,7 @@ class Popularity(Algorithm):
         ]
         return self
 
-    def predict(self, X, user_ids=None):
+    def predict(self, X):
         """For each user predict the K most popular items"""
         check_is_fitted(self)
 

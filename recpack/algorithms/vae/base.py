@@ -212,7 +212,7 @@ class VAE(Algorithm):
         with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
-    def predict(self, X, user_ids=None):
+    def predict(self, X):
         check_is_fitted(self)
         self.model_.eval()
 

@@ -103,9 +103,9 @@ class EASE_Intercept(EASE):
 
         return self
 
-    def predict(self, X, user_ids=None):
+    def predict(self, X):
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
-        return super().predict(X, user_ids=user_ids)
+        return super().predict(X)
 
 
 class EASE_XY(EASE):
@@ -166,9 +166,9 @@ class EASE_AVG(EASE):
 
         return self
 
-    def predict(self, X, user_ids=None):
+    def predict(self, X):
         X = normalize(X)
-        return super().predict(X, user_ids=user_ids)
+        return super().predict(X)
 
 
 class EASE_AVG_Int(EASE_AVG):
@@ -196,9 +196,9 @@ class EASE_AVG_Int(EASE_AVG):
         self._check_fit_complete()
         return self
 
-    def predict(self, X, user_ids=None):
+    def predict(self, X):
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
-        return super().predict(X, user_ids=user_ids)
+        return super().predict(X)
 
 
 class SLIM(SimilarityMatrixAlgorithm):

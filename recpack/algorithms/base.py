@@ -25,7 +25,7 @@ class Algorithm(BaseEstimator):
     def fit(self, X):
         pass
 
-    def predict(self, X: scipy.sparse.csr_matrix, user_ids: np.array = None):
+    def predict(self, X: scipy.sparse.csr_matrix):
         pass
 
     def save(self, filename):

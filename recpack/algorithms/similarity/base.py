@@ -10,7 +10,7 @@ class SimilarityMatrixAlgorithm(Algorithm):
     def fit(self, X: csr_matrix, y: csr_matrix = None):
         pass
 
-    def predict(self, X, user_ids=None):
+    def predict(self, X):
         check_is_fitted(self)
 
         scores = X @ self.similarity_matrix_
