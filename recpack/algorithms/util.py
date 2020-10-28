@@ -62,7 +62,7 @@ class StoppingCriterion:
         minimize: bool = False,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        tol: float = 0.01,
+        min_improvement: float = 0.01,
     ):
         """
         StoppingCriterion provides a wrapper around any loss function
@@ -70,7 +70,7 @@ class StoppingCriterion:
         A loss function can be maximized or minimized.
         If stop_early is true, then an EarlyStoppingException
         is raised when there were at least {max_iter_no_change}
-        iterations with no improvements greater than {tol}.
+        iterations with no improvements greater than {min_improvement}.
 
         :param loss_function: Metric function used in validation
         :type loss_function: Callable
@@ -78,10 +78,10 @@ class StoppingCriterion:
         :type minimize: bool, optional
         :param stop_early: Use early stopping to halt learning when overfitting, defaults to False
         :type stop_early: bool, optional
-        :param max_iter_no_change: Amount of iterations with no improvements greater than {tol} before we stop early, defaults to 5
+        :param max_iter_no_change: Amount of iterations with no improvements greater than {min_improvement} before we stop early, defaults to 5
         :type max_iter_no_change: int, optional
-        :param tol: Improvements smaller than {tol} are not counted as actual improvements, defaults to 0.01
-        :type tol: float, optional
+        :param min_improvement: Improvements smaller than {min_improvement} are not counted as actual improvements, defaults to 0.01
+        :type min_improvement: float, optional
         """
         self.best_value = np.inf if minimize else -np.inf
         self.loss_function = loss_function
@@ -89,7 +89,7 @@ class StoppingCriterion:
         self.stop_early = stop_early
         self.max_iter_no_change = max_iter_no_change  # In scikit-learn this is n_iter_no_change but I find that misleading
         self.n_iter_no_change = 0
-        self.tol = tol  # min_change seems like a more appropriate name
+        self.min_improvement = min_improvement  # min_change seems like a more appropriate name
 
     def update(self, *args, **kwargs) -> bool:
         """
@@ -115,7 +115,7 @@ class StoppingCriterion:
                 # Decrease in performance also counts as no change.
                 self.n_iter_no_change += 1
             else:
-                min_change_made = abs(loss - self.best_value) > self.tol
+                min_change_made = abs(loss - self.best_value) > self.min_improvement
                 if not min_change_made:
                     self.n_iter_no_change += 1
 

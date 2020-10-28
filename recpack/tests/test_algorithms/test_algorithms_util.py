@@ -28,7 +28,7 @@ def test_stopping_criterion_raise():
         minimize=False,
         stop_early=True,
         max_iter_no_change=3,
-        tol=0.01,
+        min_improvement=0.01,
     )
 
     # First update successful
@@ -50,7 +50,7 @@ def test_stopping_criterion_raise2():
         minimize=True,
         stop_early=True,
         max_iter_no_change=3,
-        tol=0.01,
+        min_improvement=0.01,
     )
 
     # First update successful
@@ -72,7 +72,7 @@ def test_stopping_criterion_improves_maximize():
         minimize=False,
         stop_early=True,
         max_iter_no_change=3,
-        tol=0.01,
+        min_improvement=0.01,
     )
 
     # First update successful
@@ -94,7 +94,7 @@ def test_stopping_criterion_improves_minimize():
         minimize=True,
         stop_early=True,
         max_iter_no_change=3,
-        tol=0.01,
+        min_improvement=0.01,
     )
 
     # First update successful
