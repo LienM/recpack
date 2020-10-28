@@ -14,7 +14,7 @@ class CiteULike(DataSource):
     item_id = "item_id"
 
     @classmethod
-    def load_data(cls, data_file):
+    def load_df(cls, data_file):
         # TODO Download data
         u_i_pairs = []
         with open(data_file, "r") as f:
