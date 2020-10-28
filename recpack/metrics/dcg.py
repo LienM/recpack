@@ -86,7 +86,6 @@ class NDCGK(ListwiseMetricK):
 
 
 def ndcg_k(y_true, y_pred, k):
-    # TODO test
     r = NDCGK(K=k)
     r.calculate(y_true, y_pred)
 
