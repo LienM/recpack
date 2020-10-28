@@ -29,8 +29,6 @@ class CML(Algorithm):
         num_components: int,
         margin: float,
         learning_rate: float,
-        # clip_norm,
-        use_cov_loss: bool,
         num_epochs: int,
         seed: int = 42,
         batch_size: int = 50000,
@@ -49,8 +47,6 @@ class CML(Algorithm):
         :type margin: float
         :param learning_rate: Learning rate for AdaGrad optimization
         :type learning_rate: float
-        :param use_cov_loss: Penalize off-diagonal elements of the covariance matrix to reduce correlation between activations
-        :type use_cov_loss: bool
         :param num_epochs: Number of epochs
         :type num_epochs: int
         :param seed: Random seed used for initialization, defaults to 42
@@ -63,7 +59,6 @@ class CML(Algorithm):
         self.num_components = num_components
         self.margin = margin
         self.learning_rate = learning_rate
-        self.use_cov_loss = use_cov_loss
         self.num_epochs = num_epochs
         self.batch_size = batch_size
         self.seed = seed
@@ -287,22 +282,7 @@ class CML(Algorithm):
             self.device,
         )
 
-        if self.use_cov_loss:
-            loss += covariance_loss()
-
         return loss
-
-
-def covariance_loss():
-    # TODO Implement
-    # Their implementation really confuses me
-    # X = tf.concat((self.item_embeddings, self.user_embeddings), 0)
-    # n_rows = tf.cast(tf.shape(X)[0], tf.float32)
-    # X = X - (tf.reduce_mean(X, axis=0))
-    # cov = tf.matmul(X, X, transpose_a=True) / n_rows
-
-    # return tf.reduce_sum(tf.matrix_set_diag(cov, tf.zeros(self.embed_dim, tf.float32))) * self.cov_loss_weight
-    return 0
 
 
 def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
@@ -424,30 +404,30 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
         ), torch.LongTensor(negatives_batch)
 
 
-class CMLWithFeatures(Algorithm):
-    """
-    Pytorch Implementation of
-    [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+# class CMLWithFeatures(Algorithm):
+#     """
+#     Pytorch Implementation of
+#     [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+#     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
 
-    Version with features, referred to as CML+F in the paper.
-    """
+#     Version with features, referred to as CML+F in the paper.
+#     """
 
-    def __init__(
-        self,
-        embedding_dim,
-        margin,
-        learning_rate,
-        clip_norm,
-        use_cov_loss,
-        hidden_layer_dim,
-        feature_l2_reg,
-        feature_proj_scaling_factor,
-    ):
-        pass
+#     def __init__(
+#         self,
+#         embedding_dim,
+#         margin,
+#         learning_rate,
+#         clip_norm,
+#         use_cov_loss,
+#         hidden_layer_dim,
+#         feature_l2_reg,
+#         feature_proj_scaling_factor,
+#     ):
+#         pass
 
-    def fit(self, X):
-        pass
+#     def fit(self, X):
+#         pass
 
-    def predict(self, X):
-        pass
+#     def predict(self, X):
+#         pass

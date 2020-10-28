@@ -23,8 +23,6 @@ def cml():
         100,  # num_components
         1.9,  # margin
         0.1,  # learning_rate
-        1,  # clip_norm
-        False,  # use_cov_loss
         2,  # num_epochs
         seed=42,
         batch_size=20,
