@@ -40,7 +40,6 @@ class RecallK(ElementwiseMetricK):
 
 
 def recall_k(y_true, y_pred, k):
-    # TODO test
     r = RecallK(K=k)
     r.calculate(y_true, y_pred)
 
