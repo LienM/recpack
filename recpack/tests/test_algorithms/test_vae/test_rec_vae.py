@@ -57,7 +57,6 @@ def test_decoder_training(rec_vae, larger_matrix):
 def test_training_epoch(rec_vae, larger_matrix):
     rec_vae._init_model(larger_matrix.shape[1])
 
-    users = list(set(larger_matrix.nonzero()[1]))
     params = [np for np in rec_vae.model_.named_parameters()
               if np[1].requires_grad]
 
@@ -65,7 +64,7 @@ def test_training_epoch(rec_vae, larger_matrix):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    rec_vae._train_epoch(larger_matrix, users)
+    rec_vae._train_epoch(larger_matrix)
 
     device = rec_vae.device
 
@@ -83,7 +82,7 @@ def test_evaluation_epoch(rec_vae, larger_matrix):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    rec_vae._evaluate(larger_matrix, larger_matrix, users)
+    rec_vae._evaluate(larger_matrix, larger_matrix)
 
     device = rec_vae.device
 

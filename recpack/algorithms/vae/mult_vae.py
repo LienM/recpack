@@ -113,20 +113,20 @@ class MultVAE(VAE):
         self.optimizer = optim.Adam(
             self.model_.parameters(), lr=self.learning_rate)
 
-    def _train_epoch(self, train_data: csr_matrix, users: List[int]):
+    def _train_epoch(self, train_data: csr_matrix):
         """
         Perform one training epoch.
         Data is processed in batches of self.batch_size users.
 
         :param train_data: Training data (UxI)
         :type train_data: [type]
-        :param users: List of all users in the training dataset.
-        :type users: List[int]
         """
         start_time = time.time()
         train_loss = 0.0
         # Set to training
         self.model_.train()
+
+        users = list(set(train_data.nonzero()[0]))
 
         np.random.shuffle(users)
 

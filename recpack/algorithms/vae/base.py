@@ -148,13 +148,9 @@ class VAE(Algorithm):
 
         val_in, val_out = validation_data
 
-        train_users = list(set(X.nonzero()[0]))
-        val_users = list(set(val_in.nonzero()[0]))
-
         for epoch in range(0, self.max_epochs):
-            # TODO Remove the users argument, doesn't add anything, isn't reused
-            self._train_epoch(X, train_users)
-            self._evaluate(val_in, val_out, val_users)
+            self._train_epoch(X)
+            self._evaluate(val_in, val_out)
 
         # Load best model, not necessarily last model
         self.load(self.stopping_criterion.best_value)
@@ -188,7 +184,7 @@ class VAE(Algorithm):
 
         return csr_matrix(results)
 
-    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix, users: List[int]):
+    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix):
         # Set to evaluation
         self.model_.eval()
 

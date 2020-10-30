@@ -204,7 +204,7 @@ class RecVAE(VAE):
             f" Training Loss = {train_loss}"
         )
 
-    def _train_epoch(self, train_data: csr_matrix, users: List[int]):
+    def _train_epoch(self, train_data: csr_matrix):
         """
         Perform one training epoch.
         Data is processed in batches of self.batch_size users.
@@ -216,6 +216,8 @@ class RecVAE(VAE):
         """
         # Set model to training
         self.model_.train()
+
+        users = list(set(train_data.nonzero()[0]))
 
         for _ in range(self.n_enc_epochs):
             self._train_partial(train_data, users, self.enc_optimizer)
