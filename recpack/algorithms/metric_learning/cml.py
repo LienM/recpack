@@ -33,6 +33,9 @@ class CML(Algorithm):
         seed: int = 42,
         batch_size: int = 50000,
         U: int = 20,
+        stopping_criterion: StoppingCriterion = StoppingCriterion(
+            recall_k, minimize=False, stop_early=False
+        ),
     ):
         """
         Pytorch Implementation of
@@ -55,6 +58,8 @@ class CML(Algorithm):
         :type batch_size: int, optional
         :param U: Number of negative samples used in WARP loss function for every positive sample, defaults to 20
         :type U: int, optional
+        :param stopping_criterion: Used to identify the best model computed thus far
+        :type stopping_criterion: StoppingCriterion, optional
         """
         self.num_components = num_components
         self.margin = margin
@@ -69,11 +74,7 @@ class CML(Algorithm):
 
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
-
-        # TODO Make this configurable
-        self.stopping_criterion = StoppingCriterion(
-            recall_k, minimize=False, stop_early=False
-        )
+        self.stopping_criterion = stopping_criterion
 
     def _init_model(self, X):
         """
@@ -109,7 +110,7 @@ class CML(Algorithm):
 
         :param validation_loss: Validation loss of model to be saved
         :type validation_loss: float
-        """        
+        """
         with open(f"{self.name}_loss_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
@@ -133,7 +134,7 @@ class CML(Algorithm):
 
         # Load the best of the models during training.
         self.load(self.stopping_criterion.best_value)
-        return
+        return self
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
         users = set(X.nonzero()[0])
@@ -156,10 +157,10 @@ class CML(Algorithm):
         V = np.array([])
 
         for batch_ix in range(0, num_interactions, 10000):
-            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+            batch_U = U[batch_ix : min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
-            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+            batch_I = I[batch_ix : min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
             # Score = -distance
@@ -353,7 +354,6 @@ class CMLTorch(nn.Module):
         return self.pdist(w_U, h_I)
 
 
-# TODO Integrate sampling methods somewhere more logical
 def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     """
     Sample U negatives for every user-item-pair (positive).
@@ -398,32 +398,3 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
         yield torch.LongTensor(users), torch.LongTensor(
             positives_batch
         ), torch.LongTensor(negatives_batch)
-
-
-# class CMLWithFeatures(Algorithm):
-#     """
-#     Pytorch Implementation of
-#     [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-#     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
-
-#     Version with features, referred to as CML+F in the paper.
-#     """
-
-#     def __init__(
-#         self,
-#         embedding_dim,
-#         margin,
-#         learning_rate,
-#         clip_norm,
-#         use_cov_loss,
-#         hidden_layer_dim,
-#         feature_l2_reg,
-#         feature_proj_scaling_factor,
-#     ):
-#         pass
-
-#     def fit(self, X):
-#         pass
-
-#     def predict(self, X):
-#         pass
