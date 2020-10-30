@@ -23,8 +23,6 @@ def cml():
         100,  # num_components
         1.9,  # margin
         0.1,  # learning_rate
-        1,  # clip_norm
-        False,  # use_cov_loss
         2,  # num_epochs
         seed=42,
         batch_size=20,
@@ -37,7 +35,7 @@ def cml():
 
 
 def test_cml_training_epoch(cml, larger_matrix):
-    cml._init_model(*larger_matrix.shape)
+    cml._init_model(larger_matrix)
 
     params = [np for np in cml.model_.named_parameters() if np[1].requires_grad]
 
@@ -53,7 +51,7 @@ def test_cml_training_epoch(cml, larger_matrix):
 
 
 def test_cml_evaluation_epoch(cml, larger_matrix):
-    cml._init_model(*larger_matrix.shape)
+    cml._init_model(larger_matrix)
 
     params = [np for np in cml.model_.named_parameters() if np[1].requires_grad]
 
@@ -69,7 +67,7 @@ def test_cml_evaluation_epoch(cml, larger_matrix):
 
 
 def test_cml_predict(cml, larger_matrix):
-    cml._init_model(*larger_matrix.shape)
+    cml._init_model(larger_matrix)
 
     X_pred = cml.predict(larger_matrix)
 

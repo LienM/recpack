@@ -1,8 +1,10 @@
 import logging
-from typing import Tuple, List
+from typing import Tuple
+import warnings
 
 import numpy as np
 from scipy.sparse import csr_matrix
+from sklearn.utils.validation import check_is_fitted
 
 from tqdm import tqdm
 
@@ -10,10 +12,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from sklearn.utils.validation import check_is_fitted
-
 from recpack.algorithms.base import Algorithm
-from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
+from recpack.algorithms.util import (
+    StoppingCriterion,
+    EarlyStoppingException,
+)
 from recpack.metrics.recall import recall_k
 
 
@@ -21,32 +24,41 @@ logger = logging.getLogger("recpack")
 
 
 class CML(Algorithm):
-    """
-    Pytorch Implementation of
-    [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
-
-    Version without features, referred to as CML in the paper.
-    """
-
     def __init__(
         self,
-        num_components,
-        margin,
-        learning_rate,
-        clip_norm,
-        use_cov_loss,
-        num_epochs,
-        seed=42,
-        batch_size=50000,
-        U=20,
+        num_components: int,
+        margin: float,
+        learning_rate: float,
+        num_epochs: int,
+        seed: int = 42,
+        batch_size: int = 50000,
+        U: int = 20,
     ):
-        # TODO Figure out clip_norm?
+        """
+        Pytorch Implementation of
+        [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+        http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+
+        Version without features, referred to as CML in the paper.
+
+        :param num_components: Embedding dimension
+        :type num_components: int
+        :param margin: Hinge loss margin. Required difference in score, smaller than which we will consider a negative sample item in violation
+        :type margin: float
+        :param learning_rate: Learning rate for AdaGrad optimization
+        :type learning_rate: float
+        :param num_epochs: Number of epochs
+        :type num_epochs: int
+        :param seed: Random seed used for initialization, defaults to 42
+        :type seed: int, optional
+        :param batch_size: Sample batch size, defaults to 50000
+        :type batch_size: int, optional
+        :param U: Number of negative samples used in WARP loss function for every positive sample, defaults to 20
+        :type U: int, optional
+        """
         self.num_components = num_components
         self.margin = margin
         self.learning_rate = learning_rate
-        self.clip_norm = clip_norm
-        self.use_cov_loss = use_cov_loss
         self.num_epochs = num_epochs
         self.batch_size = batch_size
         self.seed = seed
@@ -63,7 +75,7 @@ class CML(Algorithm):
             recall_k, minimize=False, stop_early=False
         )
 
-    def _init_model(self, num_users: int, num_items: int):
+    def _init_model(self, X):
         """
         Initialize model.
 
@@ -72,30 +84,46 @@ class CML(Algorithm):
         :param num_items: Number of items.
         :type num_items: int
         """
+        num_users, num_items = X.shape
         self.model_ = CMLTorch(
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
         self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
-    def load(self, validation_loss: float) -> nn.Module:
+        self.known_users = set(X.nonzero()[0])
+
+    def load(self, validation_loss: float):
+        """
+        Load a previously computed model.
+
+        :param validation_loss: Validation loss of model to be loaded
+        :type validation_loss: float
+        """
         with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
     def save(self, validation_loss: float):
+        """
+        Save a model. Model name contains the validation loss value.
+
+        :param validation_loss: Validation loss of model to be saved
+        :type validation_loss: float
+        """        
         with open(f"{self.name}_loss_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
     def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]):
-        """Fit the model on the X dataset, and evaluate model quality on validation_data.
+        """
+        Fit the model on the X dataset, and evaluate model quality on validation_data.
 
-        :param X: The training data matrix.
+        :param X: The training data matrix
         :type X: csr_matrix
-        :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output.
+        :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output
         :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
 
-        self._init_model(X.shape[0], X.shape[1])
+        self._init_model(X)
         try:
             for epoch in range(self.num_epochs):
                 self._train_epoch(X)
@@ -107,34 +135,61 @@ class CML(Algorithm):
         self.load(self.stopping_criterion.best_value)
         return
 
-    def predict(self, X: csr_matrix):
-        """Predict recommendations for each user with at least a single event in their history.
+    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+        users = set(X.nonzero()[0])
+
+        users_to_predict_for = users.intersection(self.known_users)
+        users_we_cannot_predict_for = users.difference(self.known_users)
+
+        if users_we_cannot_predict_for:
+            warnings.warn(
+                f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
+            )
+
+        U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(
+            self.model_.num_items
+        )
+        I = torch.arange(X.shape[1]).repeat(len(users_to_predict_for))
+
+        num_interactions = U.shape[0]
+
+        V = np.array([])
+
+        for batch_ix in range(0, num_interactions, 10000):
+            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+                self.device
+            )
+            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(
+                self.device
+            )
+            # Score = -distance
+            batch_V = -self.model_.forward(batch_U, batch_I).detach().cpu().numpy()
+
+            V = np.append(V, batch_V)
+
+        X_pred = csr_matrix((V, (U.numpy(), I.numpy())), shape=X.shape)
+
+        return X_pred
+
+    def predict(self, X: csr_matrix) -> csr_matrix:
+        """
+        Predict recommendations for each user with at least a single event in their history.
 
         :param X: interaction matrix, should have same size as model.
         :type X: csr_matrix
-        :raises an: [description]
+        :raises an: AssertionError when the input and model's number of items and users are incongruent.
         :return: csr matrix of same shape, with recommendations.
-        :rtype: [type]
+        :rtype: csr_matrix
         """
         check_is_fitted(self)
-        # TODO We can make it so that we can recommend for unknown users by giving them an embedding equal to the sum of all items viewed previously.
-        # TODO Or raise an error
+
         assert X.shape == (self.model_.num_users, self.model_.num_items)
-        users = list(set(X.nonzero()[0]))
 
-        # TODO
-        # Probably need batch_predict as well
-        U = (
-            torch.LongTensor(users)
-            .to(self.device)
-            .repeat_interleave(self.model_.num_items)
-        )
-        I = torch.arange(X.shape[1]).to(self.device).repeat(len(users))
+        X_pred = self._batch_predict(X)
 
-        # Score = -distance
-        V = -self.model_.forward(U, I).detach().cpu().numpy()
+        self._check_prediction(X_pred, X)
 
-        return csr_matrix((V, (U, I)), shape=X.shape)
+        return X_pred
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -142,7 +197,7 @@ class CML(Algorithm):
         and loop through them in batches of self.batch_size.
         After each batch, update the parameters according to gradients.
 
-        :param train_data: interaction matrix.
+        :param train_data: interaction matrix
         :type train_data: csr_matrix
         """
         train_loss = 0.0
@@ -184,20 +239,37 @@ class CML(Algorithm):
 
         If loss improved over previous epoch, store the model, and update best value.
 
-        :param validation_data: validation data interaction matrix.
+        :param validation_data: validation data interaction matrix
         :type validation_data: csr_matrix
         """
         self.model_.eval()
         with torch.no_grad():
-            X_val_pred = self.predict(validation_data[0])
-            X_val_pred[validation_data[0].nonzero()] = 0
+            # Need to make a selection, otherwise this step is way too slow.
+            val_data_in, val_data_out = validation_data
+            nonzero_users = list(set(val_data_in.nonzero()[0]))
+            validation_users = np.random.choice(
+                nonzero_users, size=min(1000, len(nonzero_users)), replace=False
+            )
+
+            val_data_in_selection = csr_matrix(([], ([], [])), shape=val_data_in.shape)
+            val_data_in_selection[validation_users, :] = val_data_in[
+                validation_users, :
+            ]
+
+            val_data_out_selection = csr_matrix(([], ([], [])), shape=val_data_in.shape)
+            val_data_out_selection[validation_users, :] = val_data_out[
+                validation_users, :
+            ]
+
+            X_val_pred = self.predict(val_data_in_selection)
+            X_val_pred[val_data_in_selection.nonzero()] = 0
             # K = 50 as in the paper
             better = self.stopping_criterion.update(
-                validation_data[1], X_val_pred, k=50
+                val_data_out_selection, X_val_pred, k=50
             )
 
             if better:
-                self.save()
+                self.save(self.stopping_criterion.best_value)
 
     def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
 
@@ -207,43 +279,27 @@ class CML(Algorithm):
             self.margin,
             self.model_.num_items,
             self.U,
+            self.device,
         )
-
-        if self.use_cov_loss:
-            loss += covariance_loss()
 
         return loss
 
 
-def covariance_loss():
-    # TODO Implement
-    # Their implementation really confuses me
-    # X = tf.concat((self.item_embeddings, self.user_embeddings), 0)
-    # n_rows = tf.cast(tf.shape(X)[0], tf.float32)
-    # X = X - (tf.reduce_mean(X, axis=0))
-    # cov = tf.matmul(X, X, transpose_a=True) / n_rows
-
-    # return tf.reduce_sum(tf.matrix_set_diag(cov, tf.zeros(self.embed_dim, tf.float32))) * self.cov_loss_weight
-    return 0
-
-
-def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
+def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
 
     # Largest number is "most wrongly classified", f.e.
     # pos = 0.1, margin = 0.1, neg = 0.15 => 0.1 + 0.1 - 0.15 = 0.05 > 0
     # pos = 0.1, margin = 0.1, neg = 0.08 => 0.1 + 0.1 - 0.08 = 0.12 > 0
-    most_wrong_neg_interaction, indices = dist_diff_pos_neg_margin.max(dim=-1)
+    most_wrong_neg_interaction, _ = dist_diff_pos_neg_margin.max(dim=-1)
 
-    pairwise_hinge_loss = torch.max(
-        most_wrong_neg_interaction, torch.zeros(dist_pos_interaction.shape)
-    )
+    most_wrong_neg_interaction[most_wrong_neg_interaction < 0] = 0
 
     M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
     # M * J / U =~ rank(pos_i)
     w = torch.log((M * J / U) + 1)
 
-    loss = (pairwise_hinge_loss * w).sum()
+    loss = (most_wrong_neg_interaction * w).sum()
 
     return loss
 
@@ -344,30 +400,30 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
         ), torch.LongTensor(negatives_batch)
 
 
-class CMLWithFeatures(Algorithm):
-    """
-    Pytorch Implementation of
-    [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+# class CMLWithFeatures(Algorithm):
+#     """
+#     Pytorch Implementation of
+#     [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+#     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
 
-    Version with features, referred to as CML+F in the paper.
-    """
+#     Version with features, referred to as CML+F in the paper.
+#     """
 
-    def __init__(
-        self,
-        embedding_dim,
-        margin,
-        learning_rate,
-        clip_norm,
-        use_cov_loss,
-        hidden_layer_dim,
-        feature_l2_reg,
-        feature_proj_scaling_factor,
-    ):
-        pass
+#     def __init__(
+#         self,
+#         embedding_dim,
+#         margin,
+#         learning_rate,
+#         clip_norm,
+#         use_cov_loss,
+#         hidden_layer_dim,
+#         feature_l2_reg,
+#         feature_proj_scaling_factor,
+#     ):
+#         pass
 
-    def fit(self, X):
-        pass
+#     def fit(self, X):
+#         pass
 
-    def predict(self, X):
-        pass
+#     def predict(self, X):
+#         pass

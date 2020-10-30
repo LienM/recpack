@@ -5,9 +5,7 @@ from typing import Tuple, Union
 import scipy.sparse
 from tqdm.auto import tqdm
 
-from recpack.metrics.recall import RecallK
-from recpack.metrics.reciprocal_rank import RRK
-from recpack.metrics.dcg import NDCGK
+from recpack.metrics import METRICS
 from recpack.data.data_matrix import DataM
 from recpack.splitters.splitter_base import FoldIterator
 
@@ -20,7 +18,6 @@ class MetricRegistry:
     Register metrics here for clean showing later on.
     """
 
-    METRICS = {"NDCG": NDCGK, "Recall": RecallK, "MRR": RRK}
 
     def __init__(self, algorithms, metric_names, K_values):
         self.registry = defaultdict(dict)
@@ -35,7 +32,7 @@ class MetricRegistry:
                     self._create(algo.identifier, m, K)
 
     def _create(self, algorithm_name, metric_name, K):
-        metric = self.METRICS[metric_name](K)
+        metric = METRICS[metric_name](K)
         self.registry[algorithm_name][f"{metric_name}_K_{K}"] = metric
         logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         return

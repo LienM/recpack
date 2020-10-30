@@ -1,45 +1,24 @@
+import logging
 from typing import List, Tuple
 
-import torch.nn as nn
-import torch
-from math import ceil
-from scipy.sparse import csr_matrix, coo_matrix
 import numpy as np
+from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
-
-import logging
+import torch
 
 from recpack.algorithms.base import Algorithm
+from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users
 
-from recpack.algorithms.util import (
-    naive_sparse2tensor
-)
-
-logger = logging.getLogger('recpack')
-
-#######
-#  Helper functions for batch computation
-#######
-
-
-def get_users(data):
-    return list(set(data.nonzero()[0]))
-
-
-def get_batches(users, batch_size=1000):
-    return [
-        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
-        for i in range(ceil(len(users) / batch_size))
-    ]
+logger = logging.getLogger("recpack")
 
 """
+TODO Create one base Torch algorithm.
 Things in common between all Torch/iterative algorithms:
 - Stopping Criterion
 - Train epoch method
 - evaluate method
 - fit/predict
 - loss function
-
 """
 
 
@@ -79,7 +58,8 @@ class VAE(Algorithm):
     #######
 
     def _init_model(self, dim_input_layer: int) -> None:
-        """Initialize self.model_ based on the size of the input.
+        """
+        Initialize self.model_ based on the size of the input.
         Also initialize the optimizer(s)
 
         At the end of this function,
@@ -94,7 +74,8 @@ class VAE(Algorithm):
         raise NotImplementedError()
 
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
-        """Perform one training epoch.
+        """
+        Perform one training epoch.
 
         Overwrite this function with the concrete implementation
         of the training step.
@@ -108,9 +89,15 @@ class VAE(Algorithm):
         self.model_.train()
         raise NotImplementedError()
 
-    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,
-                      mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """Compute the prediction loss.
+    def _compute_loss(
+        self,
+        X: torch.Tensor,
+        X_pred: torch.Tensor,
+        mu: torch.Tensor,
+        logvar: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Compute the prediction loss.
 
         Function used in training.
         Overwrite this function with the right way to compute the loss
@@ -132,9 +119,11 @@ class VAE(Algorithm):
     # STANDARD FUNCTIONS
     # DO NOT OVERWRITE UNLESS ABSOLUTELY NECESSARY
     #######
-    def fit(self, X: csr_matrix,
-            validation_data: Tuple[csr_matrix, csr_matrix]) -> None:
-        """Fit the model on the interaction matrix,
+    def fit(
+        self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]
+    ) -> None:
+        """
+        Fit the model on the interaction matrix,
         validation of the parameters is done with the validation data tuple.
 
         At the end of this function, the self.model_ should be ready for use.
@@ -173,7 +162,8 @@ class VAE(Algorithm):
         return
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
-        """Helper function to batch the prediction,
+        """
+        Helper function to batch the prediction,
         to avoid going out of RAM on the GPU
 
         Will batch the nonzero users into batches of self.batch_size.
@@ -198,40 +188,7 @@ class VAE(Algorithm):
 
         return csr_matrix(results)
 
-    # TODO I think this can be removed? I don't see why we would need it.
-    # def _batch_predict_and_loss(
-    #         self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
-    #     """Helper function to batch the prediction and loss computation,
-    #     to avoid going out of RAM on the GPU.
-
-    #     Will batch the nonzero users into batches of self.batch_size.
-    #     The loss is accumulated by taking the sum.
-
-    #     :param X: The input user interaction matrix
-    #     :type X: csr_matrix
-    #     :return: The predicted affinity of users for items
-    #              and the accumulated loss.
-    #     :rtype: Tuple[csr_matrix, torch.Tensor]
-    #     """
-
-    #     results = np.zeros(X.shape)
-    #     loss = 0
-    #     for batch in get_batches(get_users(X), batch_size=self.batch_size):
-    #         in_ = X[batch]
-    #         in_tensor = naive_sparse2tensor(in_).to(self.device)
-
-    #         out_tensor, mu, logvar = self.model_(in_tensor)
-    #         loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
-
-    #         results[batch] = out_tensor.detach().cpu().numpy()
-
-    #     if self.drop_negative_recommendations:
-    #         results[results < 0] = 0
-
-    #     return csr_matrix(results), loss
-
-    def _evaluate(self, val_in: csr_matrix,
-                  val_out: csr_matrix, users: List[int]):
+    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix, users: List[int]):
         # Set to evaluation
         self.model_.eval()
 
@@ -252,9 +209,7 @@ class VAE(Algorithm):
             self.model_ = torch.load(f)
 
     def save(self, validation_loss):
-        with open(
-            f"{self.name}_ndcg_100_{validation_loss}.trch", "wb"
-        ) as f:
+        with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
     def predict(self, X, user_ids=None):

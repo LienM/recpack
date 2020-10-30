@@ -1,6 +1,6 @@
 import numpy
 
-from recpack.metrics.recall import RecallK, CalibratedRecallK
+from recpack.metrics.recall import RecallK, CalibratedRecallK, recall_k, calibrated_recall_k
 
 
 def test_recallK(X_pred, X_true):
@@ -65,3 +65,51 @@ def test_calibrated_recallK_no_reco(X_pred, X_true_unrecommended_user):
     metric.calculate(X_true_unrecommended_user, X_pred)
 
     numpy.testing.assert_almost_equal(metric.value, 1 / 3)
+
+
+def test_recallK_func(X_pred, X_true):
+    K = 2
+    value = recall_k(X_true, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 2 / 3)
+
+    K = 1
+    value = recall_k(X_true, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 1 / 4)
+
+
+def test_recallK_no_reco_func(X_pred, X_true_unrecommended_user):
+    K = 2
+    value = recall_k(X_true_unrecommended_user, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 4 / 9)
+
+    K = 1
+    value = recall_k(X_true_unrecommended_user, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 1 / 6)
+
+
+def test_calibrated_recallK_func(X_pred, X_true):
+    K = 2
+    value = calibrated_recall_k(X_true, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 3 / 4)
+
+    K = 1
+    value = calibrated_recall_k(X_true, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 1 / 2)
+
+
+def test_calibrated_recallK_no_reco_func(X_pred, X_true_unrecommended_user):
+    K = 2
+    value = calibrated_recall_k(X_true_unrecommended_user, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 3 / 6)
+
+    K = 1
+    value = calibrated_recall_k(X_true_unrecommended_user, X_pred, K)
+
+    numpy.testing.assert_almost_equal(value, 1 / 3)

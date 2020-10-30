@@ -5,9 +5,7 @@ def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
     processor = DataFramePreprocessor("iid", "uid", timestamp_id="timestamp", dedupe=False)
 
-    data_ms = processor.process(dataframe)
-
-    data_m = data_ms[0]
+    data_m = processor.process(dataframe)
 
     assert len(processor.item_id_mapping.keys()) == len(dataframe["iid"].unique())
     assert len(processor.user_id_mapping.keys()) == len(dataframe["uid"].unique())
@@ -26,9 +24,7 @@ def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
 
     dataframe.loc[dataframe.shape[0]] = row
 
-    data_ms = processor.process(dataframe)
-
-    data_m = data_ms[0]
+    data_m = processor.process(dataframe)
 
     assert len(processor.item_id_mapping.keys()) == len(dataframe["iid"].unique())
     assert len(processor.user_id_mapping.keys()) == len(dataframe["uid"].unique())
@@ -50,9 +46,7 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
 
     dataframe.loc[dataframe.shape[0]] = row
 
-    data_ms = processor.process(dataframe)
-
-    data_m = data_ms[0]
+    data_m = processor.process(dataframe)
 
     assert len(processor.item_id_mapping.keys()) == len(dataframe["iid"].unique())
     assert len(processor.user_id_mapping.keys()) == len(dataframe["uid"].unique())
@@ -89,7 +83,7 @@ def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
     row_2[1] = 555
     dataframe_2.loc[dataframe_2.shape[0]] = row_2
     # ---
-    data_ms = processor.process(dataframe, dataframe_2)
+    data_ms = processor.process_many(dataframe, dataframe_2)
 
     unique_users = set(dataframe["uid"].unique()).union(dataframe_2["uid"].unique())
     unique_items = set(dataframe["iid"].unique()).union(dataframe_2["iid"].unique())
