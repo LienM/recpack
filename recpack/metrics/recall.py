@@ -34,10 +34,16 @@ class RecallK(ElementwiseMetricK):
 
         scores = scores.tocsr()
 
-        self.scores_ = sparse_divide_nonzero(
-            scores, csr_matrix(y_true.sum(axis=1)))
+        self.scores_ = sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1)))
 
         return
+
+
+def recall_k(y_true, y_pred, k):
+    r = RecallK(K=k)
+    r.calculate(y_true, y_pred)
+
+    return r.value
 
 
 class CalibratedRecallK(ElementwiseMetricK):
@@ -69,3 +75,10 @@ class CalibratedRecallK(ElementwiseMetricK):
         self.scores_ = sparse_divide_nonzero(scores, optimal)
 
         return
+
+
+def calibrated_recall_k(y_true, y_pred, k):
+    r = CalibratedRecallK(K=k)
+    r.calculate(y_true, y_pred)
+
+    return r.value

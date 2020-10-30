@@ -77,17 +77,30 @@ class DataFramePreprocessor:
             max(self.item_id_mapping.values()) + 1,
         )
 
-    def process(self, *dfs: pd.DataFrame) -> List[DataM]:
+    def process(self, df: pd.DataFrame) -> DataM:
+        """
+        Process a single DataFrame to a DataM object.
+
+        IMPORTANT: If you have multiple DataFrames, use process_many.
+        This ensures consistent DataM shapes and user/item ID mappings.
+
+        :param df: DataFrame containing user-item interaction pairs.
+        :type df: pd.DataFrame
+        :return: DataM-object containing the DataFrame data.
+        :rtype: DataM
+        """
+        return self.process_many(df)[0]
+
+    def process_many(self, *dfs: pd.DataFrame) -> List[DataM]:
         """
         Process all DataFrames passed as arguments.
         If your pipeline requires more than one DataFrame,
         pass all of them to a single call of process to guarantee
         that their dimensions will match.
 
-        :return: A list of sparse matrices in the order they were passed as arguments.
-        :rtype: List[scipy.sparse.csr_matrix]
+        :return: A list of DataM objects in the order the pandas DataFrames were passed in.
+        :rtype: List[DataM]
         """
-        dfs = list(dfs)
         for index, df in enumerate(dfs):
             logger.debug(f"Processing df {index}")
             logger.debug(f"\tinteractions before preprocess: {len(df.index)}")

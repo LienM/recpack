@@ -3,8 +3,9 @@ import recpack.splitters.splitter_base as splitter_base
 
 
 class StrongGeneralization(Scenario):
-    def __init__(self, perc_users_train: float,
-                 perc_interactions_in: float, validation=False):
+    def __init__(
+        self, perc_users_train: float, perc_interactions_in: float, validation=False
+    ):
         """
         Strong generalization splits your data so that a user can only be in one of
         training, validation or test.
@@ -21,32 +22,90 @@ class StrongGeneralization(Scenario):
         self.perc_users_train = perc_users_train
         self.perc_interactions_in = perc_interactions_in
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
-            perc_users_train)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_train)
         self.interaction_split = splitter_base.PercentageInteractionSplitter(
-            perc_interactions_in)
+            perc_interactions_in
+        )
 
     def split(self, data):
         train_val_data, test_data = self.strong_gen.split(data)
 
         if self.validation:
             self.train_X, validation_data = self.validation_splitter.split(
-                train_val_data)
-            self._validation_data_in, self._validation_data_out = self.interaction_split.split(
-                validation_data)
+                train_val_data
+            )
+            (
+                self._validation_data_in,
+                self._validation_data_out,
+            ) = self.interaction_split.split(validation_data)
         else:
             self.train_X = train_val_data
 
-        self.test_data_in, self.test_data_out = self.interaction_split.split(
-            test_data)
+        self.test_data_in, self.test_data_out = self.interaction_split.split(test_data)
+
+        self.validate()
+
+
+class WeakGeneralization(Scenario):
+    def __init__(
+        self,
+        perc_interactions_train: float,
+        perc_interactions_validation: float = 0,
+        validation=False,
+    ):
+        """
+        Weak generalization splits the data such that all users in the test set
+        are also in the training set.
+
+        :param perc_interactions_train: Percentage of interactions per user used for
+            training. The interactions are randomly chosen.
+        :type perc_interactions_train: float
+        :param perc_interactions_validation: Percentage of interactions per user used
+            for validation. The interactions are randomly chosen.
+        :type perc_interactions_validation: float, optional
+        :param validation: Split includes validation sets as well
+        :type validation: boolean, optional
+        """
+        super().__init__(validation=validation)
+        self.perc_interactions_train = perc_interactions_train
+
+        self.interaction_split = splitter_base.PercentageInteractionSplitter(
+            perc_interactions_train + perc_interactions_validation
+        )
+
+        assert (perc_interactions_train + perc_interactions_validation) < 1
+
+        if perc_interactions_validation > 0:
+            # TODO Maybe I should raise errors instead?
+            assert validation
+
+        if validation:
+            self.perc_interactions_validation = perc_interactions_validation
+            self.validation_splitter = splitter_base.PercentageInteractionSplitter(
+                perc_interactions_train / (perc_interactions_train + perc_interactions_validation)
+            )
+
+    def split(self, data):
+
+        train_val_data, self.test_data_out = self.interaction_split.split(data)
+
+        if self.validation:
+            self.train_X, self._validation_data_out = self.validation_splitter.split(
+                train_val_data
+            )
+            self._validation_data_in = self.train_X.copy()
+        else:
+            self.train_X = train_val_data
+
+        self.test_data_in = train_val_data.copy()
 
         self.validate()
 
 
 class Timed(Scenario):
-
-    def __init__(self, t, t_validation=None, t_delta=None,
-                 t_alpha=None, validation=False):
+    def __init__(
+        self, t, t_validation=None, t_delta=None, t_alpha=None, validation=False
+    ):
         """
         the data is only split on time.
 
@@ -82,10 +141,10 @@ class Timed(Scenario):
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
             raise Exception(
-                "t_validation should be provided when using validation split.")
+                "t_validation should be provided when using validation split."
+            )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -98,8 +157,10 @@ class Timed(Scenario):
         lt_t, gt_t = self.timestamp_spl.split(data)
 
         if self.validation:
-            self.train_X, self._validation_data_out = \
-                self.validation_time_splitter.split(lt_t)
+            (
+                self.train_X,
+                self._validation_data_out,
+            ) = self.validation_time_splitter.split(lt_t)
             self._validation_data_in = self.train_X
         else:
             self.train_X = lt_t
@@ -165,8 +226,15 @@ class StrongGeneralizationTimed(Scenario):
 
     """
 
-    def __init__(self, perc_users_in, t, t_validation=None, t_delta=None,
-                 t_alpha=None, validation=False):
+    def __init__(
+        self,
+        perc_users_in,
+        t,
+        t_validation=None,
+        t_delta=None,
+        t_alpha=None,
+        validation=False,
+    ):
         super().__init__(validation=validation)
         self.perc_users_in = perc_users_in
         self.t = t
@@ -175,13 +243,12 @@ class StrongGeneralizationTimed(Scenario):
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
             raise Exception(
-                "t_validation should be provided when using validation split.")
+                "t_validation should be provided when using validation split."
+            )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
-            perc_users_in)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_in)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -198,18 +265,18 @@ class StrongGeneralizationTimed(Scenario):
 
         if self.validation:
             # Split 80-20 train and val data.
-            train_data, validation_data = self.validation_splitter.split(
-                tr_val_data)
+            train_data, validation_data = self.validation_splitter.split(tr_val_data)
             # Split validation data into input and output on t_validation
-            self._validation_data_in, self._validation_data_out = \
-                self.validation_time_splitter.split(validation_data)
+            (
+                self._validation_data_in,
+                self._validation_data_out,
+            ) = self.validation_time_splitter.split(validation_data)
             # select the right train data.
             self.train_X, _ = self.validation_time_splitter.split(train_data)
         else:
             self.train_X = tr_val_data
 
-        self.test_data_in, self.test_data_out = self.timestamp_spl.split(
-            te_data)
+        self.test_data_in, self.test_data_out = self.timestamp_spl.split(te_data)
 
         self.validate()
 
@@ -226,10 +293,12 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
     test_data_in = data_2 & timestamp < t
     test_data_out = data_2 & timestamp > t
     """
+
     # TODO Make this more standard.
 
-    def __init__(self, t, t_validation=None, t_alpha=None,
-                 t_delta=None, validation=False):
+    def __init__(
+        self, t, t_validation=None, t_alpha=None, t_delta=None, validation=False
+    ):
         super().__init__(validation=validation)
         self.t = t
         self.t_delta = t_delta
@@ -237,9 +306,9 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
             raise Exception(
-                "t_validation should be provided when using validation split.")
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, t_delta, t_alpha)
+                "t_validation should be provided when using validation split."
+            )
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -255,12 +324,13 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
 
         if self.validation:
             d_1_lt_val, _ = self.validation_time_splitter.split(d_1_lt)
-            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(
-                d_2_lt)
+            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(d_2_lt)
             self.train_X = d_1_lt_val
 
             self._validation_data_in, self._validation_data_out = (
-                d_2_lt_val, d_2_gt_val)
+                d_2_lt_val,
+                d_2_gt_val,
+            )
         else:
             self.train_X = d_1_lt
 
@@ -274,10 +344,12 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
     test_in = train_data
     test_out = data_2 & timestamp > t
     """
+
     # TODO Make this more standard.
 
-    def __init__(self, t, t_validation=None, t_alpha=None,
-                 t_delta=None, validation=False):
+    def __init__(
+        self, t, t_validation=None, t_alpha=None, t_delta=None, validation=False
+    ):
         super().__init__(validation=validation)
         self.t = t
         self.t_delta = t_delta
@@ -285,10 +357,10 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
             raise Exception(
-                "t_validation should be provided when using validation split.")
+                "t_validation should be provided when using validation split."
+            )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -304,28 +376,28 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
 
         if self.validation:
             d_1_lt_val, _ = self.validation_time_splitter.split(d_1_lt)
-            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(
-                d_2_lt)
+            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(d_2_lt)
             self.train_X = d_1_lt_val
 
             self._validation_data_in, self._validation_data_out = (
-                d_1_lt_val, d_2_gt_val)
+                d_1_lt_val,
+                d_2_gt_val,
+            )
         else:
             self.train_X = d_1_lt
 
         self.validate()
 
 
-class TrainInTimedOutOfDomainWithLabelsEvaluate(
-        TrainInTimedOutOfDomainEvaluate):
+class TrainInTimedOutOfDomainWithLabelsEvaluate(TrainInTimedOutOfDomainEvaluate):
     """
     Same as TrainInTimedOutOfDomainEvaluate but with historical data_2 as labels.
     """
 
-    def __init__(self, t, t_validation=None, t_alpha=None,
-                 t_delta=None, validation=False):
-        super().__init__(
-            t, t_validation, t_alpha, t_delta, validation=validation)
+    def __init__(
+        self, t, t_validation=None, t_alpha=None, t_delta=None, validation=False
+    ):
+        super().__init__(t, t_validation, t_alpha, t_delta, validation=validation)
 
     def split(self, data, data_2):
         d_1_lt, _ = self.timestamp_spl.split(data)
@@ -335,12 +407,13 @@ class TrainInTimedOutOfDomainWithLabelsEvaluate(
 
         if self.validation:
             d_1_lt_val, _ = self.validation_time_splitter.split(d_1_lt)
-            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(
-                d_2_lt)
+            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(d_2_lt)
             self.train_X = d_1_lt_val
 
             self._validation_data_in, self._validation_data_out = (
-                d_1_lt_val, d_2_gt_val)
+                d_1_lt_val,
+                d_2_gt_val,
+            )
 
             train_users = list(self.train_X.active_users)
             self.train_y = d_2_lt_val.users_in(train_users)

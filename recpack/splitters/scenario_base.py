@@ -20,7 +20,7 @@ class Scenario(ABC):
                 0.8)
 
     @abstractmethod
-    def split(self, *data_ms: DataM):
+    def split(self, data_m: DataM):
         """
         Method to be implemented in all classes that inherit
         from Scenario. Used to create the required data objects.
@@ -29,8 +29,8 @@ class Scenario(ABC):
         or when separate labels for training are provided by the scenario:
         train_X, train_y, test_in, test_out
 
-        :param data_ms: List of datasets
-        :type data: List[DataM]
+        :param data_m: Interaction matrix
+        :type data: DataM
         """
         pass
 
@@ -51,7 +51,7 @@ class Scenario(ABC):
         :rtype: Tuple[DataM, DataM]
         """
         # TODO: make sure the users in and out match (Here? or elsewhere?)
-        if not self._validation_data_in:
+        if not hasattr(self, "_validation_data_in"):
             return None
 
         # make sure users match both.

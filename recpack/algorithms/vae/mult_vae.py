@@ -1,5 +1,5 @@
 import time
-from typing import List
+from typing import List, Tuple
 import logging
 
 import torch.nn as nn
@@ -9,10 +9,11 @@ import torch.optim as optim
 from scipy.sparse import csr_matrix
 import numpy as np
 
-from recpack.algorithms.vae.base import VAE, VAETorch
-from recpack.algorithms.vae.util import StoppingCriterion, naive_sparse2tensor
+from recpack.algorithms.vae.base import VAE
+from recpack.algorithms.util import StoppingCriterion, naive_sparse2tensor
 from recpack.splitters.splitter_base import batch
-from recpack.metrics import NDCGK
+from recpack.metrics.dcg import ndcg_k
+
 
 logger = logging.getLogger('recpack')
 
@@ -66,7 +67,7 @@ class MultVAE(VAE):
             max_epochs,
             seed,
             learning_rate,
-            StoppingCriterion(NDCGK, K=100)
+            StoppingCriterion(ndcg_k, stop_early=True)
         )
 
         self.dim_hidden_layer = dim_hidden_layer
@@ -171,7 +172,7 @@ class MultVAE(VAE):
         return loss
 
 
-class MultiVAETorch(VAETorch):
+class MultiVAETorch(nn.Module):
     """
     Container module for Multi-VAE.
     Multi-VAE : Variational Autoencoder with Multinomial Likelihood
@@ -216,7 +217,17 @@ class MultiVAETorch(VAETorch):
         self.drop = nn.Dropout(p=dropout, inplace=False)
         self._init_weights()
 
-    def forward(self, x):
+    def forward(
+            self, x: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Pass the input through the network, and return result.
+
+        :param x: input tensor
+        :type x: torch.Tensor
+        :return: A tuple with
+                (predicted output value, mean values, average values)
+        :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        """
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         x_recon = self.decode(z)
