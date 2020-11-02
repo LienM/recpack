@@ -13,6 +13,7 @@ from recpack.algorithms.metric_learning.cml import CML
 
 from recpack.algorithms.vae.mult_vae import MultVAE
 from recpack.algorithms.vae.rec_vae import RecVAE
+from recpack.algorithms.matrix_factorization.wmf import WeightedMatrixFactorizationAlgorithm
 
 
 class AlgorithmRegistry:
@@ -29,6 +30,7 @@ class AlgorithmRegistry:
         "mult_vae": MultVAE,
         "rec_vae": RecVAE,
         "CML": CML,
+        "wmf": WeightedMatrixFactorizationAlgorithm
     }
 
     @classmethod
