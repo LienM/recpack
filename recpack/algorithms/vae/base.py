@@ -1,7 +1,7 @@
 import logging
 from typing import List, Tuple
 
-from scipy.sparse import csr_matrix, dok_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.utils.validation import check_is_fitted
 import torch
 
@@ -168,7 +168,7 @@ class VAE(Algorithm):
         :return: The predicted affinity of users for items.
         :rtype: csr_matrix
         """
-        results = dok_matrix(X.shape)
+        results = lil_matrix(X.shape)
         for batch in get_batches(get_users(X), batch_size=self.batch_size):
             in_ = X[batch]
             in_tensor = naive_sparse2tensor(in_).to(self.device)
