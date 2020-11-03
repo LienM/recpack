@@ -32,8 +32,7 @@ class PercentileRanking(MetricTopK):
         ranking = self.get_top_K_ranks(csr_matrix(y_pred))
 
         # Ranking starts at 0 for this metric
-        for i, value in enumerate(ranking.data):
-            ranking.data[i] -= 1
+        ranking.data -= 1
         rank_values = ranking / self.num_items_  # to get a percentile ranking
         numerator = y_true.multiply(rank_values).sum()
 
