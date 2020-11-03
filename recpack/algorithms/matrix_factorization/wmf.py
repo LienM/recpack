@@ -46,7 +46,7 @@ class WeightedMatrixFactorization(Algorithm):
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
         :return: The fitted WeightedMatrixFactorizationAlgorithm itself.
         """
-        self._alternating_least_squares(X)
+        self.user_factors_, self.item_factors_ = self._alternating_least_squares(X)
 
         return self
 
@@ -62,8 +62,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         U = X.nonzero()[0]
         U_conf = self._generate_confidence(X)
-        U_user_factors = np.zeros((users, self.num_components))
-        self._least_squares(U_conf, U_user_factors, self.item_factors_)
+        U_user_factors = self._least_squares(U_conf, np.zeros((users, self.num_components)), self.item_factors_)
 
         score_list = []
         for u in set(U):
@@ -103,10 +102,11 @@ class WeightedMatrixFactorization(Algorithm):
 
         return result
 
-    def _alternating_least_squares(self, X: csr_matrix):
+    def _alternating_least_squares(self, X: csr_matrix) -> (np.ndarray, np.ndarray):
         """
         The ALS algorithm will execute the least squares calculation for x number of iterations.
         According factorizing matrix C into two factors Users and Items such that R \approx U^T I.
+        :return: Generated user- and item-factors based on the input matrix X.
         """
         users, items = X.shape
 
@@ -119,8 +119,8 @@ class WeightedMatrixFactorization(Algorithm):
             old_uf = np.array(user_factors, copy=True)
             old_if = np.array(item_factors, copy=True)
 
-            self._least_squares(c, user_factors, item_factors)
-            self._least_squares(ct, item_factors, user_factors)
+            user_factors = self._least_squares(c, user_factors, item_factors)
+            item_factors = self._least_squares(ct, item_factors, user_factors)
 
             norm_uf = np.linalg.norm(old_uf - user_factors, 2)
             norm_if = np.linalg.norm(old_if - item_factors, 2)
@@ -128,15 +128,15 @@ class WeightedMatrixFactorization(Algorithm):
                 f"{self.name} - Iteration {i} - L2-norm of diff user_factors: {norm_uf} - L2-norm of diff "
                 f"item_factors: {norm_if}")
 
-        self.user_factors_ = user_factors
-        self.item_factors_ = item_factors
+        return user_factors, item_factors
 
-    def _least_squares(self, matrix_c: csr_matrix, X: np.ndarray, Y: np.ndarray):
+    def _least_squares(self, matrix_c: csr_matrix, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
         """
         Least squares algorithm to calculate the 'new' user/item factors.
         :param matrix_c: Confidence matrix
         :param X: Factor matrix which need to be recalculated
-        :param Y: Based on this factor matrix
+        :param Y: Based on this factor array
+        :return: Modified nd-array X based on the factor array Y and the confidence matrix
         """
         users, factors = X.shape
         YtY = Y.T.dot(Y)
@@ -155,3 +155,5 @@ class WeightedMatrixFactorization(Algorithm):
 
             # Xu = (YtCuY + regularization * I)^-1 (YtCuPu)
             X[u] = np.linalg.solve(A, b)
+
+        return X
