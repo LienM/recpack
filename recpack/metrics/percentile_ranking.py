@@ -1,8 +1,8 @@
-from recpack.metrics.base import MetricTopK
+from recpack.metrics.base import GlobalMetricK
 from scipy.sparse import csr_matrix
 
 
-class PercentileRanking(MetricTopK):
+class PercentileRanking(GlobalMetricK):
     """
     This is a global metric where the rating r_ui of y_true and the rank/position of this item
     in the ordered prediction list (for user u in y_pred) is taken into account.
@@ -12,8 +12,6 @@ class PercentileRanking(MetricTopK):
     It will be calculated according the following forumula:
         perc-rank = \sum_{u,i}{r_{ui} * rank_{ui}} / \sum_{u,i}{r_{ui}}
     """
-
-    # TODO: It is actually a global metric without calculate parameters
     def __init__(self):
         super().__init__(None)
 

@@ -1,1 +1,1 @@
-from .wmf import WeightedMatrixFactorizationAlgorithm
+from .wmf import WeightedMatrixFactorization

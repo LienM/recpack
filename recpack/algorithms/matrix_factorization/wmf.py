@@ -9,7 +9,7 @@ from .utils import nonzeros
 logger = logging.getLogger("recpack")
 
 
-class WeightedMatrixFactorizationAlgorithm(Algorithm):
+class WeightedMatrixFactorization(Algorithm):
     """
     WMF Algorithm by Yifan Hu, Yehuda Koren and Chris Volinsky et al.
     as described in paper 'Collaborative Filtering for Implicit Feedback Datasets' (ICDM.2008.22)
@@ -32,8 +32,6 @@ class WeightedMatrixFactorizationAlgorithm(Algorithm):
         """
         super().__init__()
         self.K = K
-        self.r = None
-        self.c = None
         self.confidence_scheme = cs
         self.alpha = alpha
         self.epsilon = epsilon
@@ -48,9 +46,7 @@ class WeightedMatrixFactorizationAlgorithm(Algorithm):
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
         :return: The fitted WeightedMatrixFactorizationAlgorithm itself.
         """
-        self.r = X
-        self.c = self._generate_confidence(X)
-        self._alternating_least_squares()
+        self._alternating_least_squares(X)
 
         return self
 
@@ -95,8 +91,6 @@ class WeightedMatrixFactorizationAlgorithm(Algorithm):
         This can be calculated in different ways:
           - Minimal: c_ui = 1 + \alpha * r_ui
           - Log scaling: c_ui = 1 + \alpha * log(1 + r_ui / \epsilon)
-          - Binary higher mean: c_ui = round(r_ui / r_max)
-          - None: c_ui = r_ui
         :param r: User-item matrix which the calculations are based on.
         :return: User-item matrix converted with the confidence values.
         """
@@ -107,29 +101,23 @@ class WeightedMatrixFactorizationAlgorithm(Algorithm):
         elif self.confidence_scheme == "log-scaling":
             for i, value in enumerate(result.data):
                 result.data[i] = 1 + self.alpha * np.log(1 + value / self.epsilon)
-        elif self.confidence_scheme == "binary-higher-mean":
-            value_max = max(result.data)
-            for i, value in enumerate(result.data):
-                result.data[i] = 1 if value > value_max / 2 else 0
-        elif self.confidence_scheme == 'none':
-            pass
         else:
             raise ValueError("Invalid confidence scheme parameter.")
 
         return result
 
-    def _alternating_least_squares(self):
+    def _alternating_least_squares(self, X: csr_matrix):
         """
         The ALS algorithm will execute the least squares calculation for x number of iterations.
         According factorizing matrix C into two factors Users and Items such that R \approx U^T I.
         """
-        users, items = self.c.shape
+        users, items = X.shape
 
         self.user_factors_ = np.random.rand(users, self.factors).astype(np.float32) * 0.01
         self.item_factors_ = np.random.rand(items, self.factors).astype(np.float32) * 0.01
 
-        c = self.c.tocsr()
-        ct = self.c.T.tocsr()
+        c = self._generate_confidence(X)
+        ct = c.T.tocsr()
         for i in tqdm(range(self.iterations)):
             old_uf = np.array(self.user_factors_, copy=True)
             old_if = np.array(self.item_factors_, copy=True)
