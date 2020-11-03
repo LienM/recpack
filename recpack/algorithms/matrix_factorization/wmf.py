@@ -16,7 +16,7 @@ class WeightedMatrixFactorization(Algorithm):
     """
 
     def __init__(self, K: int = None, cs: str = "minimal", alpha: int = 40, epsilon: float = 10 ** (-8),
-                 factors: int = 100, regularization: float = 0.01,
+                 num_components: int = 100, regularization: float = 0.01,
                  iterations: int = 20):
         """
         Initialize the weighted matrix factorization algorithm with confidence generator parameters.
@@ -26,7 +26,7 @@ class WeightedMatrixFactorization(Algorithm):
                    "log-scaling"]
         :param alpha: Alpha parameter for generating confidence matrix.
         :param epsilon: Epsilon parameter for generating confidence matrix.
-        :param factors: Dimension of factors used by the user- and item-factors.
+        :param num_components: Dimension of factors used by the user- and item-factors.
         :param regularization: Regularization parameter used to calculate the Least Squares.
         :param iterations: Number of iterations to execute the ALS calculations.
         """
@@ -36,7 +36,7 @@ class WeightedMatrixFactorization(Algorithm):
         self.alpha = alpha
         self.epsilon = epsilon
 
-        self.factors = factors
+        self.num_components = num_components
         self.regularization = regularization
         self.iterations = iterations
 
@@ -60,10 +60,9 @@ class WeightedMatrixFactorization(Algorithm):
         check_is_fitted(self)
         users, items = X.shape
 
-        # TODO: filter already seen items from recommendation
         U = X.nonzero()[0]
         U_conf = self._generate_confidence(X)
-        U_user_factors = np.zeros((users, self.factors))
+        U_user_factors = np.zeros((users, self.num_components))
         self._least_squares(U_conf, U_user_factors, self.item_factors_)
 
         score_list = []
@@ -96,11 +95,9 @@ class WeightedMatrixFactorization(Algorithm):
         """
         result = csr_matrix(r, copy=True)
         if self.confidence_scheme == "minimal":
-            for i, value in enumerate(result.data):
-                result.data[i] = 1 + self.alpha * value
+            result.data = 1 + self.alpha * result.data
         elif self.confidence_scheme == "log-scaling":
-            for i, value in enumerate(result.data):
-                result.data[i] = 1 + self.alpha * np.log(1 + value / self.epsilon)
+            result.data = 1 + self.alpha * np.log(1 + result.data / self.epsilon)
         else:
             raise ValueError("Invalid confidence scheme parameter.")
 
@@ -113,23 +110,26 @@ class WeightedMatrixFactorization(Algorithm):
         """
         users, items = X.shape
 
-        self.user_factors_ = np.random.rand(users, self.factors).astype(np.float32) * 0.01
-        self.item_factors_ = np.random.rand(items, self.factors).astype(np.float32) * 0.01
+        user_factors = np.random.rand(users, self.num_components).astype(np.float32) * 0.01
+        item_factors = np.random.rand(items, self.num_components).astype(np.float32) * 0.01
 
         c = self._generate_confidence(X)
         ct = c.T.tocsr()
         for i in tqdm(range(self.iterations)):
-            old_uf = np.array(self.user_factors_, copy=True)
-            old_if = np.array(self.item_factors_, copy=True)
+            old_uf = np.array(user_factors, copy=True)
+            old_if = np.array(item_factors, copy=True)
 
-            self._least_squares(c, self.user_factors_, self.item_factors_)
-            self._least_squares(ct, self.item_factors_, self.user_factors_)
+            self._least_squares(c, user_factors, item_factors)
+            self._least_squares(ct, item_factors, user_factors)
 
-            norm_uf = np.linalg.norm(old_uf - self.user_factors_, 2)
-            norm_if = np.linalg.norm(old_if - self.item_factors_, 2)
+            norm_uf = np.linalg.norm(old_uf - user_factors, 2)
+            norm_if = np.linalg.norm(old_if - item_factors, 2)
             logger.debug(
                 f"{self.name} - Iteration {i} - L2-norm of diff user_factors: {norm_uf} - L2-norm of diff "
                 f"item_factors: {norm_if}")
+
+        self.user_factors_ = user_factors
+        self.item_factors_ = item_factors
 
     def _least_squares(self, matrix_c: csr_matrix, X: np.ndarray, Y: np.ndarray):
         """

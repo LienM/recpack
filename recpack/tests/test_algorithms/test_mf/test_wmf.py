@@ -4,7 +4,7 @@ from recpack.algorithms import WeightedMatrixFactorization
 
 
 def test_wmf():
-    wmf = WeightedMatrixFactorization(cs='log-scaling', factors=10, iterations=10000)
+    wmf = WeightedMatrixFactorization(cs='log-scaling', num_components=10, iterations=10000)
 
     values = [2, 5, 4, 1, 3, 4, 3]
     users = [0, 0, 1, 1, 2, 2, 2]
