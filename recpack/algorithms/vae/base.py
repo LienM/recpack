@@ -7,6 +7,7 @@ import torch
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -119,7 +120,7 @@ class VAE(Algorithm):
     # DO NOT OVERWRITE UNLESS ABSOLUTELY NECESSARY
     #######
     def fit(
-        self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]
+        self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
     ) -> None:
         """
         Fit the model on the interaction matrix,
@@ -130,12 +131,13 @@ class VAE(Algorithm):
         inheritting from the base class.
 
         :param X: user interactions to train on
-        :type X: csr_matrix
+        :type X: Matrix
         :param validation_data: the data to use for validation,
                                 the first entry in the tuple is the input data,
                                 the second the expected output
-        :type validation_data: Tuple[csr_matrix, csr_matrix]
+        :type validation_data: Tuple[Matrix, Matrix]
         """
+        X, validation_data = to_csr_matrix((X, validation_data))
 
         self._init_model(X.shape[1])
 
@@ -209,8 +211,11 @@ class VAE(Algorithm):
         with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
         check_is_fitted(self)
+
+        X = to_csr_matrix(X)
+
         self.model_.eval()
 
         # Compute the result in batches.

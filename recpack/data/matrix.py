@@ -1,5 +1,5 @@
 """
-Conversions between the various matrix data types supported by recpack.
+Conversion and validation of the various matrix data types supported by recpack.
 """
 import pandas as pd
 
@@ -48,14 +48,16 @@ def to_datam(X: Union[Matrix, Tuple[Matrix, ...]], timestamps: bool = False) -> 
     raise UnsupportedTypeError(X)
 
 
-def to_same_type(X: Matrix, Y: Matrix) -> Matrix:
+def to_same_type(X: Union[Matrix, Tuple[Matrix, ...]], Y: Matrix) -> Matrix:
     """
     Converts any matrix to the same type as a target matrix.
 
-    :param X: Matrix-like object to convert
+    :param X: Matrix-like object or tuple of objects to convert
     :param Y: Matrix-like object with the desired type
     :raises: UnsupportedTypeError, InvalidConversionError
     """
+    if isinstance(X, (tuple, list)):
+        return type(X)(to_same_type(x, Y) for x in X)
     f_conv = {csr_matrix: to_csr_matrix, DataM: to_datam}.get(type(Y))
     if not f_conv:
         raise UnsupportedTypeError(Y)

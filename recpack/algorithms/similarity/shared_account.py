@@ -5,7 +5,9 @@ import numpy as np
 
 import numba
 
+from scipy.sparse import csr_matrix
 from recpack.algorithms.similarity.base import SimilarityMatrixAlgorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 @enum.unique
@@ -36,15 +38,16 @@ class DAMIBCover(SimilarityMatrixAlgorithm):
         self.p = p
         self.agg = agg
 
-    def fit(self, X: scipy.sparse.csr_matrix,
-            y: scipy.sparse.csr_matrix = None):
+    def fit(self, X: Matrix, y: Matrix = None):
         return self.algo.fit(X, y)
 
     @property
     def similarity_matrix_(self):
         return self.algo.similarity_matrix_
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
+        X = to_csr_matrix(X)
+
         predictions = get_predictions(X, self.similarity_matrix_, self.p, self.agg)
 
         self._check_prediction(predictions, X)

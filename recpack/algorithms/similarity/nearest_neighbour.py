@@ -4,6 +4,7 @@ from scipy.sparse import diags
 import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
 
+from recpack.data.matrix import Matrix, to_csr_matrix
 from recpack.algorithms.similarity.base import (
     TopKSimilarityMatrixAlgorithm,
 )
@@ -20,8 +21,10 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
         super().__init__(K)
         self.normalize = normalize
 
-    def fit(self, X, y=None):
+    def fit(self, X: Matrix, y: Matrix = None):
         """Fit a cosine similarity matrix from item to item"""
+        X = to_csr_matrix(X)
+
         # Do the cosine similarity computation here, this way we can set the diagonal to zero
         # to avoid self recommendation
         # X.T otherwise we are doing a user KNN
@@ -68,8 +71,10 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
     """Construct an ItemKNN model. Before use make sure to fit the model.
     The K parameter defines the how much best neighbours are kept for each item."""
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
         """Fit a cosine similarity matrix from item to item"""
+        X = to_csr_matrix(X)
+
         co_mat = X.T @ X
         # Do the cosine similarity computation here, this way we can set the diagonal to zero
         # to avoid self recommendation

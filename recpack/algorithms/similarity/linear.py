@@ -7,6 +7,7 @@ from sklearn.linear_model import SGDRegressor
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.similarity.base import SimilarityMatrixAlgorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class EASE(SimilarityMatrixAlgorithm):
@@ -16,7 +17,7 @@ class EASE(SimilarityMatrixAlgorithm):
         self.l2 = l2
         self.alpha = alpha  # alpha exponent for filtering popularity bias
 
-    def fit(self, X, y=None):
+    def fit(self, X: Matrix, y: Matrix = None):
         """Compute the closed form solution, optionally rescalled to counter popularity bias (see param alpha). """
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
@@ -30,6 +31,7 @@ class EASE(SimilarityMatrixAlgorithm):
         # Eq. 14 B_scaled = B * diagM(w)
         if y is not None:
             raise RuntimeError("Train EASE_XY.")
+        X = to_csr_matrix(X)
 
         # Compute P
         XTX = (X.T @ X).toarray()
@@ -76,9 +78,10 @@ class EASE_Intercept(EASE):
     https://arxiv.org/pdf/1904.13033.pdf
     """
 
-    def fit(self, X, y=None):
+    def fit(self, X: Matrix, y: Matrix = None):
         if y is not None:
             raise RuntimeError("Train EASE_XY.")
+        X = to_csr_matrix(X)
 
         y = X
         X = scipy.sparse.hstack((y, np.ones((X.shape[0], 1))))
@@ -103,7 +106,8 @@ class EASE_Intercept(EASE):
 
         return self
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
+        X = to_csr_matrix(X)
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
         return super().predict(X)
 
@@ -111,11 +115,13 @@ class EASE_Intercept(EASE):
 class EASE_XY(EASE):
     """ Variation of EASE where we encode Y from X (no autoencoder). """
 
-    def fit(self, X, y=None):
+    def fit(self, X: Matrix, y: Matrix = None):
         if y is None:
             raise RuntimeError(
                 "Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY."
             )
+        X, y = to_csr_matrix((X, y))
+
         XTX = X.T @ X
         G = XTX + self.l2 * np.identity(X.shape[1])
 
@@ -147,9 +153,10 @@ class EASE_AVG(EASE):
     def __init__(self, l2=0.2):
         super().__init__(l2, alpha=0)
 
-    def fit(self, X, y=None):
+    def fit(self, X: Matrix, y: Matrix = None):
         if y is not None:
             raise RuntimeError("Train EASE_XY for distinct y.")
+        X = to_csr_matrix(X)
         y = X
         X = normalize(y)
 
@@ -166,7 +173,8 @@ class EASE_AVG(EASE):
 
         return self
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
+        X = to_csr_matrix(X)
         X = normalize(X)
         return super().predict(X)
 
@@ -175,9 +183,10 @@ class EASE_AVG_Int(EASE_AVG):
     """ Variation of EASE where we take the average of weights rather than the sum (unpublished)
     with unary weights for items. """
 
-    def fit(self, X, y=None):
+    def fit(self, X: Matrix, y: Matrix = None):
         if y is not None:
             raise RuntimeError("Train EASE_XY for distinct y.")
+        X = to_csr_matrix(X)
         y = X
 
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
@@ -196,7 +205,8 @@ class EASE_AVG_Int(EASE_AVG):
         self._check_fit_complete()
         return self
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
+        X = to_csr_matrix(X)
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
         return super().predict(X)
 
@@ -254,12 +264,14 @@ class SLIM(SimilarityMatrixAlgorithm):
             w[w < 0] = 0
         return w
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
         """Fit a similarity matrix based on data X.
 
         X is an m x n binary matrix of user item interactions.
         Where m is the number of users, and n the number of items.
         """
+        X = to_csr_matrix(X)
+
         # Prep sparse representation inputs
         data = []
         row = []
