@@ -82,3 +82,24 @@ def test_timed_split_w_validation_has_validation_users(data_m, t):
 
     assert val_data_out.active_user_count > 0
     assert val_data_in.active_user_count > 0
+
+
+def test_timed_split_w_validation_no_full_overlap_users(data_m_small):
+    t = 9
+    t_validation = 8
+    scenario = scenarios.Timed(t, t_validation=t_validation, validation=True)
+    scenario.split(data_m_small)
+
+    # This should not change after the validation data fetch
+    # This has been a bug which is fixed
+    # using copy because the training data was a ref to the validation_data_in member
+    # which is edited in the validation_data member fetching
+    # Fix made it a copy internally, this test ensures this does not ever change back
+    t_1 = scenario.training_data.copy()
+
+    val_data_in, val_data_out = scenario.validation_data
+
+    training_data = scenario.training_data
+
+    assert t_1 == training_data
+    assert training_data.active_users != val_data_in.active_users

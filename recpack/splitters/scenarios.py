@@ -82,7 +82,8 @@ class WeakGeneralization(Scenario):
         if validation:
             self.perc_interactions_validation = perc_interactions_validation
             self.validation_splitter = splitter_base.PercentageInteractionSplitter(
-                perc_interactions_train / (perc_interactions_train + perc_interactions_validation)
+                perc_interactions_train
+                / (perc_interactions_train + perc_interactions_validation)
             )
 
     def split(self, data):
@@ -161,7 +162,7 @@ class Timed(Scenario):
                 self.train_X,
                 self._validation_data_out,
             ) = self.validation_time_splitter.split(lt_t)
-            self._validation_data_in = self.train_X
+            self._validation_data_in = self.train_X.copy()
         else:
             self.train_X = lt_t
 
