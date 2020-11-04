@@ -76,3 +76,20 @@ def data_m_w_values():
         df, "movieId", "userId", value_ix="value", timestamp_ix="timestamp"
     )
     return data
+
+
+@pytest.fixture(scope="function")
+def data_m_small():
+    """Data matrix for test on validation split with users in train not in validation"""
+    input_dict = {
+        "userId": [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+        "movieId": [0, 1, 2, 0, 1, 2, 3, 3, 5, 6],
+        "timestamp": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+
+    df = pd.DataFrame.from_dict(input_dict)
+    df.drop_duplicates(["userId", "movieId"], inplace=True)
+    data = DataM.create_from_dataframe(
+        df, "movieId", "userId", timestamp_ix="timestamp"
+    )
+    return data

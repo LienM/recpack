@@ -1,8 +1,7 @@
 import logging
 from typing import List, Tuple
 
-import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.utils.validation import check_is_fitted
 import torch
 
@@ -171,20 +170,22 @@ class VAE(Algorithm):
         :return: The predicted affinity of users for items.
         :rtype: csr_matrix
         """
-        results = np.zeros(X.shape)
+        results = lil_matrix(X.shape)
         for batch in get_batches(get_users(X), batch_size=self.batch_size):
             in_ = X[batch]
             in_tensor = naive_sparse2tensor(in_).to(self.device)
 
             out_tensor, _, _ = self.model_(in_tensor)
-            results[batch] = out_tensor.detach().cpu().numpy()
+            batch_results = out_tensor.detach().cpu().numpy()
+
+            if self.drop_negative_recommendations:
+                batch_results[batch_results < 0] = 0
+
+            results[batch] = batch_results
 
         logger.info(f"shape of response ({results.shape})")
 
-        if self.drop_negative_recommendations:
-            results[results < 0] = 0
-
-        return csr_matrix(results)
+        return results.tocsr()
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix):
         # Set to evaluation

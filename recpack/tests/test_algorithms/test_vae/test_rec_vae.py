@@ -74,7 +74,6 @@ def test_training_epoch(rec_vae, larger_matrix):
 def test_evaluation_epoch(rec_vae, larger_matrix):
     rec_vae._init_model(larger_matrix.shape[1])
 
-    users = list(set(larger_matrix.nonzero()[1]))
     params = [np for np in rec_vae.model_.named_parameters()
               if np[1].requires_grad]
 
