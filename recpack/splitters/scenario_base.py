@@ -74,10 +74,10 @@ class Scenario(ABC):
         out_users = self.test_data_out.active_users
 
         matching = list(in_users.intersection(out_users))
-        self.test_data_in.users_in(matching, inplace=True)
-        self.test_data_out.users_in(matching, inplace=True)
-
-        return (self.test_data_in, self.test_data_out)
+        return (
+            self.test_data_in.users_in(matching),
+            self.test_data_out.users_in(matching),
+        )
 
     def validate(self):
         # TODO Test presency of train_y
