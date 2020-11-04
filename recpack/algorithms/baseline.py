@@ -8,6 +8,7 @@ from sklearn.utils.validation import check_is_fitted
 
 
 from recpack.algorithms.base import Algorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class Random(Algorithm):
@@ -21,16 +22,18 @@ class Random(Algorithm):
         if self.seed is not None:
             random.seed(self.seed)
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
+        X = to_csr_matrix(X)
         self.items_ = list(set(X.nonzero()[1]))
         return self
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: Matrix):
         """Predict K random scores for items per row in X
 
         Returns numpy array of the same shape as X, with non zero scores for K items per row.
         """
         check_is_fitted(self)
+        X = to_csr_matrix(X)
 
         # For each user choose random K items, and generate a score for these items
         # Then create a matrix with the scores on the right indices
@@ -54,7 +57,8 @@ class Popularity(Algorithm):
         super().__init__()
         self.K = K
 
-    def fit(self, X, y=None):
+    def fit(self, X: Matrix, y: Matrix = None):
+        X = to_csr_matrix(X)
         items = list(X.nonzero()[1])
         sorted_scores = Counter(items).most_common()
         self.sorted_scores_ = [
@@ -62,9 +66,10 @@ class Popularity(Algorithm):
         ]
         return self
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
         """For each user predict the K most popular items"""
         check_is_fitted(self)
+        X = to_csr_matrix(X)
 
         items, values = zip(*self.sorted_scores_[: self.K])
 
