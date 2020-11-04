@@ -101,5 +101,5 @@ def test_timed_split_w_validation_no_full_overlap_users(data_m_small):
 
     training_data = scenario.training_data
 
-    assert t_1 == training_data
+    assert t_1.active_users == training_data.active_users
     assert training_data.active_users != val_data_in.active_users
