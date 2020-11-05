@@ -6,38 +6,44 @@ import pandas as pd
 from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, VALUE_IX, TIMESTAMP_IX
 from scipy.sparse import csr_matrix
 from typing import Union, Any, Optional, Tuple
+from warnings import warn
 
 
 Matrix = Union[DataM, csr_matrix]
 _supported_types = Matrix.__args__  # type: ignore
 
 
-def to_csr_matrix(X: Union[Matrix, Tuple[Matrix, ...]]) -> csr_matrix:
+def to_csr_matrix(
+    X: Union[Matrix, Tuple[Matrix, ...]], binary: bool = None
+) -> csr_matrix:
     """
     Converts any matrix to a scipy csr_matrix.
 
     :param X: Matrix-like object or tuple of objects to convert
+    :param binary: Ensure matrix is binary, sets non-zero values to 1 if not
     :raises: UnsupportedTypeError
     """
     if isinstance(X, (tuple, list)):
-        return type(X)(to_csr_matrix(x) for x in X)
+        return type(X)(to_csr_matrix(x, binary=binary) for x in X)
     if isinstance(X, csr_matrix):
-        return X
-    if isinstance(X, DataM):
-        return X.values
-    raise UnsupportedTypeError(X)
+        X = X
+    elif isinstance(X, DataM):
+        X = X.values
+    else:
+        raise UnsupportedTypeError(X)
+    return _to_binary(X) if binary else X
 
 
-def to_datam(X: Union[Matrix, Tuple[Matrix, ...]], timestamps: bool = False) -> DataM:
+def to_datam(X: Union[Matrix, Tuple[Matrix, ...]], timestamps: bool = None) -> DataM:
     """
     Converts any matrix to recpack's DataM.
 
     :param X: Matrix-like object or tuple of objects to convert
-    :param timestamps: Require timestamp information, fail if none is available
+    :param timestamps: If True, an error is raised if timestamps are unavailable
     :raises: UnsupportedTypeError, InvalidConversionError
     """
     if isinstance(X, (tuple, list)):
-        return type(X)(to_datam(x, timestamps) for x in X)
+        return type(X)(to_datam(x, timestamps=timestamps) for x in X)
     if timestamps and not _get_timestamps(X):
         raise InvalidConversionError("Source matrix has no timestamp information.")
     if isinstance(X, csr_matrix):
@@ -62,6 +68,18 @@ def to_same_type(X: Union[Matrix, Tuple[Matrix, ...]], Y: Matrix) -> Matrix:
     if not f_conv:
         raise UnsupportedTypeError(Y)
     return f_conv(X)
+
+
+def _to_binary(X: csr_matrix) -> csr_matrix:
+    """
+    Checks if a matrix is binary, sets all non-zero values to 1 if not.
+    """
+    X_binary = X.astype(bool).astype(X.dtype)
+    is_binary = (X_binary != X).nnz == 0
+    if not is_binary:
+        warn("Expected a binary matrix. Setting all non-zero values to 1.")
+        return X_binary
+    return X
 
 
 def _matrix_to_df(X: csr_matrix) -> pd.DataFrame:

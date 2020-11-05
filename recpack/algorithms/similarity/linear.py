@@ -270,7 +270,7 @@ class SLIM(SimilarityMatrixAlgorithm):
         X is an m x n binary matrix of user item interactions.
         Where m is the number of users, and n the number of items.
         """
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         # Prep sparse representation inputs
         data = []

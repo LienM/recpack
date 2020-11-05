@@ -20,6 +20,14 @@ def m_csr():
     m = [[1, 2, 0, 0], 
          [0, 3, 4, 0], 
          [0, 0, 0, 0]]
+    return csr_matrix(m, dtype=np.float)
+
+
+@pytest.fixture
+def m_csr_binary():
+    m = [[1, 1, 0, 0], 
+         [0, 1, 1, 0], 
+         [0, 0, 0, 0]]
     return csr_matrix(m)
 
 
@@ -93,3 +101,19 @@ def test_to_same_type(m_csr, m_datam):
     # unsupported type
     with pytest.raises(UnsupportedTypeError):
         result = to_csr_matrix([1, 2, 3])
+
+
+def test_to_binary(m_csr, m_datam, m_csr_binary):
+    # csr_matrix -> csr_matrix
+    result = to_csr_matrix(m_csr, binary=True)
+    assert matrix_equal(result, m_csr_binary)
+    assert result.dtype == m_csr.dtype
+    result = to_csr_matrix(m_csr_binary, binary=True)
+    assert result is m_csr_binary
+    # DataM -> csr_matrix
+    result = to_csr_matrix(m_datam, binary=True)
+    assert matrix_equal(result, m_csr_binary)
+    # tuple -> tuple
+    result = to_csr_matrix((m_csr, m_datam), binary=True)
+    assert matrix_equal(result[0], m_csr_binary)
+    assert matrix_equal(result[1], m_csr_binary)
