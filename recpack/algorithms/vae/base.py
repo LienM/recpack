@@ -137,7 +137,7 @@ class VAE(Algorithm):
                                 the second the expected output
         :type validation_data: Tuple[Matrix, Matrix]
         """
-        X, validation_data = to_csr_matrix((X, validation_data))
+        X, validation_data = to_csr_matrix((X, validation_data), binary=True)
 
         self._init_model(X.shape[1])
 
@@ -214,7 +214,7 @@ class VAE(Algorithm):
     def predict(self, X: Matrix):
         check_is_fitted(self)
 
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         self.model_.eval()
 

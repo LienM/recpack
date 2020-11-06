@@ -58,6 +58,8 @@ class Popularity(Algorithm):
         self.K = K
 
     def fit(self, X: Matrix, y: Matrix = None):
+        # Values in the matrix X are considered as counts of visits
+        # If your data contains ratings, you should make them binary before fitting
         X = to_csr_matrix(X)
         items = list(X.nonzero()[1])
         sorted_scores = Counter(items).most_common()

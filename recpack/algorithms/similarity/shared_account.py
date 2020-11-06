@@ -46,7 +46,7 @@ class DAMIBCover(SimilarityMatrixAlgorithm):
         return self.algo.similarity_matrix_
 
     def predict(self, X: Matrix):
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         predictions = get_predictions(X, self.similarity_matrix_, self.p, self.agg)
 

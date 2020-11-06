@@ -13,7 +13,7 @@ class SimilarityMatrixAlgorithm(Algorithm):
 
     def predict(self, X: Matrix):
         check_is_fitted(self)
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         scores = X @ self.similarity_matrix_
 
