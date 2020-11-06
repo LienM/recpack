@@ -31,7 +31,7 @@ class EASE(SimilarityMatrixAlgorithm):
         # Eq. 14 B_scaled = B * diagM(w)
         if y is not None:
             raise RuntimeError("Train EASE_XY.")
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         # Compute P
         XTX = (X.T @ X).toarray()
@@ -81,7 +81,7 @@ class EASE_Intercept(EASE):
     def fit(self, X: Matrix, y: Matrix = None):
         if y is not None:
             raise RuntimeError("Train EASE_XY.")
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         y = X
         X = scipy.sparse.hstack((y, np.ones((X.shape[0], 1))))
@@ -107,7 +107,7 @@ class EASE_Intercept(EASE):
         return self
 
     def predict(self, X: Matrix):
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
         return super().predict(X)
 
@@ -120,7 +120,7 @@ class EASE_XY(EASE):
             raise RuntimeError(
                 "Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY."
             )
-        X, y = to_csr_matrix((X, y))
+        X, y = to_csr_matrix((X, y), binary=True)
 
         XTX = X.T @ X
         G = XTX + self.l2 * np.identity(X.shape[1])
@@ -156,7 +156,7 @@ class EASE_AVG(EASE):
     def fit(self, X: Matrix, y: Matrix = None):
         if y is not None:
             raise RuntimeError("Train EASE_XY for distinct y.")
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
         y = X
         X = normalize(y)
 
@@ -174,7 +174,7 @@ class EASE_AVG(EASE):
         return self
 
     def predict(self, X: Matrix):
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
         X = normalize(X)
         return super().predict(X)
 
@@ -186,7 +186,7 @@ class EASE_AVG_Int(EASE_AVG):
     def fit(self, X: Matrix, y: Matrix = None):
         if y is not None:
             raise RuntimeError("Train EASE_XY for distinct y.")
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
         y = X
 
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
@@ -206,7 +206,7 @@ class EASE_AVG_Int(EASE_AVG):
         return self
 
     def predict(self, X: Matrix):
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
         X = scipy.sparse.hstack((X, np.ones((X.shape[0], 1))))
         return super().predict(X)
 

@@ -124,7 +124,7 @@ class CML(Algorithm):
         :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output
         :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
-        X, validation_data = to_csr_matrix((X, validation_data))
+        X, validation_data = to_csr_matrix((X, validation_data), binary=True)
 
         self._init_model(X)
         try:
@@ -186,7 +186,7 @@ class CML(Algorithm):
         """
         check_is_fitted(self)
 
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         assert X.shape == (self.model_.num_users, self.model_.num_items)
 

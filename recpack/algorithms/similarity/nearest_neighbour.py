@@ -23,7 +23,7 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
 
     def fit(self, X: Matrix, y: Matrix = None):
         """Fit a cosine similarity matrix from item to item"""
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         # Do the cosine similarity computation here, this way we can set the diagonal to zero
         # to avoid self recommendation
@@ -73,7 +73,7 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
 
     def fit(self, X: Matrix):
         """Fit a cosine similarity matrix from item to item"""
-        X = to_csr_matrix(X)
+        X = to_csr_matrix(X, binary=True)
 
         co_mat = X.T @ X
         # Do the cosine similarity computation here, this way we can set the diagonal to zero
