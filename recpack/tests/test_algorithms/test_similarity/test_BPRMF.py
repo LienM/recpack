@@ -9,7 +9,7 @@ from recpack.algorithms import BPRMF
 
 def test_bprmf(pageviews):
     a = BPRMF(num_components=2, num_epochs=2, batch_size=1)
-    a.fit(pageviews, (None, pageviews))
+    a.fit(pageviews, (pageviews, pageviews))
 
     pred = a.predict(pageviews)
 
@@ -28,7 +28,7 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
         seed=seed,
         learning_rate=0.05,
     )
-    a.fit(pageviews_for_pairwise, (None, pageviews_for_pairwise))
+    a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
     pred = a.predict(pageviews_for_pairwise)
 
     # Negative example scores should be lower than positive

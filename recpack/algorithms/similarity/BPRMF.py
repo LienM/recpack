@@ -15,26 +15,50 @@ import torch.optim as optim
 from typing import Tuple
 
 from recpack.algorithms.base import Algorithm
-
+from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
 
 logger = logging.getLogger("recpack")
 
 
-class StoppingCriterion:
-    def __init__(self):
-        self.best_value = np.inf
-        self.converged = False
+def bpr_loss(positive_sim, negative_sim):
+    distance = positive_sim - negative_sim
+    # Probability of ranking given parameters
+    elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
+    bpr_loss = -elementwise_bpr_loss.sum()
 
-    def update(self, validation_loss):
-        delta = self.best_value - validation_loss
-        EPSILON = 1e-5
-        if abs(delta) < EPSILON:
-            # The scores are so close to the best solution
-            # We assume convergence.
-            self.converged = True
+    return bpr_loss
 
-        if self.best_value > validation_loss:
-            self.best_value = validation_loss
+
+def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
+    """Compute BPR reconstruction loss of the X_true matrix in X_pred
+
+    :param X_true: [description]
+    :type X_true: [type]
+    :param X_pred: [description]
+    :type X_pred: [type]
+    :raises an: [description]
+    :return: [description]
+    :rtype: [type]
+    :yield: [description]
+    :rtype: [type]
+    """
+    # This is kinda bad because it's duplication of data
+    prediction_tensor = torch.tensor(X_pred.toarray())
+    total_loss = 0
+
+    for d in bootstrap_sample_pairs(
+        X_true, batch_size=batch_size, sample_size=X_true.nnz
+    ):
+        users = d[:, 0]
+        target_items = d[:, 1]
+        negative_items = d[:, 2]
+
+        positive_sim = prediction_tensor[users, target_items]
+        negative_sim = prediction_tensor[users, negative_items]
+
+        total_loss += bpr_loss(positive_sim, negative_sim).item()
+
+    return total_loss
 
 
 class BPRMF(Algorithm):
@@ -86,7 +110,9 @@ class BPRMF(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.stopping_criterion = StoppingCriterion()
+        self.stopping_criterion = StoppingCriterion(
+            bpr_loss_metric, minimize=True, stop_early=False
+        )
 
     def _init_model(self, num_users, num_items):
         self.model_ = MFModule(
@@ -116,17 +142,35 @@ class BPRMF(Algorithm):
         :type validation_data: csr_matrix
         """
         # The target for prediction is the validation data.
-        X_validation = validation_data[1]
-        assert X.shape == X_validation.shape
+        assert X.shape == validation_data[0].shape
+        assert X.shape == validation_data[1].shape
 
         self._init_model(X.shape[0], X.shape[1])
-        for epoch in range(self.num_epochs):
-            self._train_epoch(X)
-            self._evaluate(X_validation)
+
+        try:
+            for epoch in range(self.num_epochs):
+                self._train_epoch(X)
+                self._evaluate(validation_data)
+        except EarlyStoppingException:
+            pass
 
         # Load the best of the models during training.
         self.load(self.stopping_criterion.best_value)
         return
+
+    def _predict(self, X):
+        """Helper function for predict, so we can also use it in validation loss
+        without the model being fitted"""
+
+        users = list(set(X.nonzero()[0]))
+
+        U = torch.LongTensor(users).to(self.device)
+        I = torch.arange(X.shape[1]).to(self.device)
+
+        result = np.zeros(X.shape)
+        result[users] = self.model_.forward(U, I).detach().cpu().numpy()
+
+        return csr_matrix(result)
 
     def predict(self, X: csr_matrix):
         """Predict recommendations for each user with at least a single event in their history.
@@ -138,17 +182,12 @@ class BPRMF(Algorithm):
         :rtype: [type]
         """
         check_is_fitted(self)
-        # TODO We can make it so that we can recommend for unknown users by giving them an embedding equal to the sum of all items viewed previously.
+        # TODO We can make it so that we can recommend for unknown users by giving them
+        # an embedding equal to the sum of all items viewed previously.
         # TODO Or raise an error
         assert X.shape == (self.model_.num_users, self.model_.num_items)
-        users = list(set(X.nonzero()[0]))
 
-        U = torch.LongTensor(users).to(self.device)
-        I = torch.arange(X.shape[1]).to(self.device)
-
-        result = np.zeros(X.shape)
-        result[users] = self.model_.forward(U, I).detach().cpu().numpy()
-        return csr_matrix(result)
+        return self._predict(X)
 
     def _train_epoch(self, train_data: csr_matrix):
         """train a single epoch. Uses sampler to generate samples,
@@ -186,9 +225,9 @@ class BPRMF(Algorithm):
 
             self.steps += 1
 
-        logger.info(f"training loss = {train_loss}")
+        # logger.info(f"training loss = {train_loss}")
 
-    def _evaluate(self, validation_data: csr_matrix):
+    def _evaluate(self, validation_data: Tuple[csr_matrix, csr_matrix]):
         """Perform evaluation step, samples get drawn
         from the validation data, and compute loss.
 
@@ -198,42 +237,28 @@ class BPRMF(Algorithm):
         :type validation_data: csr_matrix
         """
         # TODO, quite a bit of code dupe from train epoch, check if we can consolidate.
-        val_loss = 0.0
         self.model_.eval()
-        with torch.no_grad():
-            # Bootstrap 20% of the number of training samples from validation data.
-            for d in bootstrap_sample_pairs(
-                validation_data,
-                batch_size=self.batch_size,
-                sample_size=validation_data.nnz,
-            ):
-                users = d[:, 0].to(self.device)
-                target_items = d[:, 1].to(self.device)
-                negative_items = d[:, 2].to(self.device)
 
-                # TODO Maybe rename?
-                positive_sim = self.model_.forward(users, target_items).diag()
-                negative_sim = self.model_.forward(users, negative_items).diag()
-                loss = self._compute_loss(
-                    positive_sim, negative_sim, regularization=False
-                )
-                val_loss += loss.item()
+        prediction = self._predict(validation_data[0])
 
-            logger.info(f"validation loss = {val_loss}")
-            self.stopping_criterion.update(val_loss)
-            if val_loss == self.stopping_criterion.best_value:
-                self.save()
+        # TODO: If the stopping criterion is not loss based,
+        # the prediction should be turned into a csr matrix or a numpy array
+        # If the prediction is recall or ndcg based the target should be
+        # the validation_out
 
-    def _compute_loss(self, positive_sim, negative_sim, regularization=True):
-        distance = positive_sim - negative_sim
-        # Probability of ranking given parameters
-        elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
-        bpr_loss = -elementwise_bpr_loss.sum()
+        better = self.stopping_criterion.update(
+            validation_data[0], prediction, batch_size=self.batch_size
+        )
+        if better:
+            self.save()
 
-        loss = bpr_loss
-        if regularization:
-            loss += self.lambda_h * self.model_.H.weight.norm()
-            +self.lambda_w * self.model_.W.weight.norm()
+    def _compute_loss(self, positive_sim, negative_sim):
+
+        loss = bpr_loss(positive_sim, negative_sim)
+        loss += (
+            self.lambda_h * self.model_.H.weight.norm()
+            + self.lambda_w * self.model_.W.weight.norm()
+        )
 
         return loss
 
