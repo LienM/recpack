@@ -46,6 +46,8 @@ class WeightedMatrixFactorization(Algorithm):
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
         :return: The fitted WeightedMatrixFactorizationAlgorithm itself.
         """
+        self.users, self.items = X.shape
+        self.known_users = set(X.nonzero()[0])
         self.user_factors_, self.item_factors_ = self._alternating_least_squares(X)
 
         return self
@@ -58,14 +60,13 @@ class WeightedMatrixFactorization(Algorithm):
         :return: User-item matrix with the prediction scores as values.
         """
         check_is_fitted(self)
-        users, items = X.shape
 
-        U = X.nonzero()[0]
+        U = set(X.nonzero()[0])
         U_conf = self._generate_confidence(X)
-        U_user_factors = self._least_squares(U_conf, np.zeros((users, self.num_components)), self.item_factors_)
+        U_user_factors = self._least_squares_users(U_conf, self.item_factors_, U)
 
         score_list = []
-        for u in set(U):
+        for u in U:
             user = U_user_factors[u]
             scores = self.item_factors_.dot(user)  # Prediction is dot product of user and item_factors
             scores_user = [
@@ -106,12 +107,11 @@ class WeightedMatrixFactorization(Algorithm):
         """
         The ALS algorithm will execute the least squares calculation for x number of iterations.
         According factorizing matrix C into two factors Users and Items such that R \approx U^T I.
+        :param X: Sparse matrix which the ALS algorithm should be applied on.
         :return: Generated user- and item-factors based on the input matrix X.
         """
-        users, items = X.shape
-
-        user_factors = np.random.rand(users, self.num_components).astype(np.float32) * 0.01
-        item_factors = np.random.rand(items, self.num_components).astype(np.float32) * 0.01
+        user_factors = np.random.rand(self.users, self.num_components).astype(np.float32) * 0.01
+        item_factors = np.random.rand(self.items, self.num_components).astype(np.float32) * 0.01
 
         c = self._generate_confidence(X)
         ct = c.T.tocsr()
@@ -119,8 +119,8 @@ class WeightedMatrixFactorization(Algorithm):
             old_uf = np.array(user_factors, copy=True)
             old_if = np.array(item_factors, copy=True)
 
-            user_factors = self._least_squares(c, user_factors, item_factors)
-            item_factors = self._least_squares(ct, item_factors, user_factors)
+            user_factors = self._least_squares_users(c, item_factors)
+            item_factors = self._least_squares_items(ct, user_factors)
 
             norm_uf = np.linalg.norm(old_uf - user_factors, 2)
             norm_if = np.linalg.norm(old_if - item_factors, 2)
@@ -130,30 +130,58 @@ class WeightedMatrixFactorization(Algorithm):
 
         return user_factors, item_factors
 
-    def _least_squares(self, matrix_c: csr_matrix, X: np.ndarray, Y: np.ndarray) -> np.ndarray:
+    def _least_squares_users(self, matrix_c: csr_matrix, item_factors: np.ndarray, users=None) -> np.ndarray:
         """
-        Least squares algorithm to calculate the 'new' user/item factors.
-        :param matrix_c: Confidence matrix
-        :param X: Factor matrix which need to be recalculated
-        :param Y: Based on this factor array
-        :return: Modified nd-array X based on the factor array Y and the confidence matrix
+        Calculate the user_factor based on the confidence matrix and the item_factors with the least squares algorithm.
+        @param matrix_c: Confidence matrix
+        @param item_factors: Item factor array
+        @param users: Optional parameter to choose with user set to be used, default the self.known_users will be used.
+        @return: User factor nd-array based on the item factor array and the confidence matrix
         """
-        users, factors = X.shape
-        YtY = Y.T.dot(Y)
+        user_factors = np.zeros((self.users, self.num_components))
+        YtY = item_factors.T.dot(item_factors)
 
-        for u in range(users):
-            # accumulate YtCuY + regularization * I in A
-            A = YtY + self.regularization * np.eye(factors)
+        users = self.known_users if users is None else users
+        for u in users:
+            user_factors[u] = self._linear_equation(item_factors, YtY, matrix_c, u)
 
-            # accumulate YtCuPu in b
-            b = np.zeros(factors)
+        return user_factors
 
-            for i, confidence in nonzeros(matrix_c, u):
-                factor = Y[i]
-                A += (confidence - 1) * np.outer(factor, factor)
-                b += confidence * factor
+    def _least_squares_items(self, matrix_ct: csr_matrix, user_factors: np.ndarray) -> np.ndarray:
+        """
+        Calculate the item_factor based on the transposed confidence matrix and the user_factors with the least squares
+        algorithm.
+        @param matrix_ct: Transposed confidence matrix
+        @param user_factors: User factor array
+        @return: Item factor nd-array based on the user factor array and the confidence matrix
+        """
+        item_factors = np.zeros((self.items, self.num_components))
+        YtY = user_factors.T.dot(user_factors)
 
-            # Xu = (YtCuY + regularization * I)^-1 (YtCuPu)
-            X[u] = np.linalg.solve(A, b)
+        for i in range(self.items):
+            item_factors[i] = self._linear_equation(user_factors, YtY, matrix_ct, i)
 
-        return X
+        return item_factors
+
+    def _linear_equation(self, Y: np.ndarray, YtY: np.ndarray, matrix: csr_matrix, x: int) -> np.ndarray:
+        """
+        Helper function to compute the linear equation used in the Least Squares calculations.
+        @param Y: Input factor array
+        @param YtY: Product of Y transpose and Y.
+        @param matrix: The (transposed) confidence matrix
+        @param x: Calculation for which item/user x
+        @return: Solution for the linear equation (YtCxY + regularization * I)^-1 (YtCxPx)
+        """
+        # accumulate YtCxY + regularization * I in A
+        A = YtY + self.regularization * np.eye(self.num_components)
+
+        # accumulate YtCxPx in b
+        b = np.zeros(self.num_components)
+
+        for i, confidence in nonzeros(matrix, x):
+            factor = Y[i]
+            A += (confidence - 1) * np.outer(factor, factor)
+            b += confidence * factor
+
+        # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
+        return np.linalg.solve(A, b)
