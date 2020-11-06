@@ -13,12 +13,12 @@ class DataSource(object):
         super().__init__()
 
     @property
-    def data_name(self):
-        raise NotImplementedError("Need to override data_name")
+    def name(self):
+        raise NotImplementedError("Need to override name")
 
     def get_params(self):
         params = super().get_params() if hasattr(super(), "get_params") else dict()
-        params["data_source"] = self.data_name
+        params["data_source"] = self.name
         return params
 
     def load_df(self):
@@ -33,11 +33,11 @@ class DataSource(object):
 
     def preprocess(self):
         """
-        Return one or two datasets of type DataM
+        Return a dataset of type DataM
         """
-        dfs = to_tuple(self.load_df())
-        datasets = self.preprocessor.process(*dfs)
-        return datasets
+        df = to_tuple(self.load_df())
+        data_m = self.preprocessor.process(df)
+        return data_m
 
     @property
     def item_id_mapping(self):

@@ -1,6 +1,7 @@
 import pytest
 import sklearn
 import torch
+from unittest.mock import MagicMock
 
 from recpack.algorithms.similarity.BPRMF import MFModule, bootstrap_sample_pairs
 from recpack.algorithms import BPRMF
@@ -8,7 +9,6 @@ from recpack.algorithms import BPRMF
 
 def test_bprmf(pageviews):
     a = BPRMF(num_components=2, num_epochs=2, batch_size=1)
-    # TODO: for now only first entry of validation data is used.
     a.fit(pageviews, (None, pageviews))
 
     pred = a.predict(pageviews)
@@ -28,7 +28,6 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
         seed=seed,
         learning_rate=0.05,
     )
-
     a.fit(pageviews_for_pairwise, (None, pageviews_for_pairwise))
     pred = a.predict(pageviews_for_pairwise)
 

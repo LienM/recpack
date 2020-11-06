@@ -1,36 +1,24 @@
+import logging
 from typing import List, Tuple
 
-import torch.nn as nn
-import torch
-from math import ceil
-from scipy.sparse import csr_matrix, coo_matrix
-import numpy as np
+from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.utils.validation import check_is_fitted
-
-import logging
+import torch
 
 from recpack.algorithms.base import Algorithm
+from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users
 
-from recpack.algorithms.vae.util import (
-    naive_sparse2tensor
-)
+logger = logging.getLogger("recpack")
 
-logger = logging.getLogger('recpack')
-
-#######
-#  Helper functions for batch computation
-#######
-
-
-def get_users(data):
-    return list(set(data.nonzero()[0]))
-
-
-def get_batches(users, batch_size=1000):
-    return [
-        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
-        for i in range(ceil(len(users) / batch_size))
-    ]
+"""
+TODO Create one base Torch algorithm.
+Things in common between all Torch/iterative algorithms:
+- Stopping Criterion
+- Train epoch method
+- evaluate method
+- fit/predict
+- loss function
+"""
 
 
 class VAE(Algorithm):
@@ -69,7 +57,8 @@ class VAE(Algorithm):
     #######
 
     def _init_model(self, dim_input_layer: int) -> None:
-        """Initialize self.model_ based on the size of the input.
+        """
+        Initialize self.model_ based on the size of the input.
         Also initialize the optimizer(s)
 
         At the end of this function,
@@ -84,7 +73,8 @@ class VAE(Algorithm):
         raise NotImplementedError()
 
     def _train_epoch(self, train_data: csr_matrix, users: List[int]):
-        """Perform one training epoch.
+        """
+        Perform one training epoch.
 
         Overwrite this function with the concrete implementation
         of the training step.
@@ -98,9 +88,15 @@ class VAE(Algorithm):
         self.model_.train()
         raise NotImplementedError()
 
-    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,
-                      mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """Compute the prediction loss.
+    def _compute_loss(
+        self,
+        X: torch.Tensor,
+        X_pred: torch.Tensor,
+        mu: torch.Tensor,
+        logvar: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Compute the prediction loss.
 
         Function used in training.
         Overwrite this function with the right way to compute the loss
@@ -122,9 +118,11 @@ class VAE(Algorithm):
     # STANDARD FUNCTIONS
     # DO NOT OVERWRITE UNLESS ABSOLUTELY NECESSARY
     #######
-    def fit(self, X: csr_matrix,
-            validation_data: Tuple[csr_matrix, csr_matrix]) -> None:
-        """Fit the model on the interaction matrix,
+    def fit(
+        self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]
+    ) -> None:
+        """
+        Fit the model on the interaction matrix,
         validation of the parameters is done with the validation data tuple.
 
         At the end of this function, the self.model_ should be ready for use.
@@ -149,12 +147,9 @@ class VAE(Algorithm):
 
         val_in, val_out = validation_data
 
-        train_users = list(set(X.nonzero()[0]))
-        val_users = list(set(val_in.nonzero()[0]))
-
         for epoch in range(0, self.max_epochs):
-            self._train_epoch(X, train_users)
-            self._evaluate(val_in, val_out, val_users)
+            self._train_epoch(X)
+            self._evaluate(val_in, val_out)
 
         # Load best model, not necessarily last model
         self.load(self.stopping_criterion.best_value)
@@ -162,7 +157,8 @@ class VAE(Algorithm):
         return
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
-        """Helper function to batch the prediction,
+        """
+        Helper function to batch the prediction,
         to avoid going out of RAM on the GPU
 
         Will batch the nonzero users into batches of self.batch_size.
@@ -172,85 +168,48 @@ class VAE(Algorithm):
         :return: The predicted affinity of users for items.
         :rtype: csr_matrix
         """
-        results = np.zeros(X.shape)
+        results = lil_matrix(X.shape)
         for batch in get_batches(get_users(X), batch_size=self.batch_size):
             in_ = X[batch]
             in_tensor = naive_sparse2tensor(in_).to(self.device)
 
             out_tensor, _, _ = self.model_(in_tensor)
-            results[batch] = out_tensor.detach().cpu().numpy()
+            batch_results = out_tensor.detach().cpu().numpy()
+
+            if self.drop_negative_recommendations:
+                batch_results[batch_results < 0] = 0
+
+            results[batch] = batch_results
 
         logger.info(f"shape of response ({results.shape})")
 
-        if self.drop_negative_recommendations:
-            results[results < 0] = 0
+        return results.tocsr()
 
-        return csr_matrix(results)
-
-    def _batch_predict_and_loss(
-            self, X: csr_matrix) -> Tuple[csr_matrix, torch.Tensor]:
-        """Helper function to batch the prediction and loss computation,
-        to avoid going out of RAM on the GPU.
-
-        Will batch the nonzero users into batches of self.batch_size.
-        The loss is accumulated by taking the sum.
-
-        :param X: The input user interaction matrix
-        :type X: csr_matrix
-        :return: The predicted affinity of users for items
-                 and the accumulated loss.
-        :rtype: Tuple[csr_matrix, torch.Tensor]
-        """
-
-        results = np.zeros(X.shape)
-        loss = 0
-        for batch in get_batches(get_users(X), batch_size=self.batch_size):
-            in_ = X[batch]
-            in_tensor = naive_sparse2tensor(in_).to(self.device)
-
-            out_tensor, mu, logvar = self.model_(in_tensor)
-            loss += self._compute_loss(in_tensor, out_tensor, mu, logvar)
-
-            results[batch] = out_tensor.detach().cpu().numpy()
-
-        if self.drop_negative_recommendations:
-            results[results < 0] = 0
-
-        return csr_matrix(results), loss
-
-    def _evaluate(self, val_in: csr_matrix,
-                  val_out: csr_matrix, users: List[int]):
+    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix):
         # Set to evaluation
         self.model_.eval()
 
         with torch.no_grad():
             # Evaluate batched
-            X_pred_cpu, loss = self._batch_predict_and_loss(val_in)
-            val_loss = loss.item()
+            X_pred_cpu = self._batch_predict(val_in)
             X_true = val_out
 
-            self.stopping_criterion.calculate(X_true, X_pred_cpu)
-            logger.info(
-                f"Evaluation Loss = {val_loss}"
-                f", NDCG@100 = {self.stopping_criterion.value}"
-            )
-            if self.stopping_criterion.is_best:
+            better = self.stopping_criterion.update(X_true, X_pred_cpu, k=100)
+
+            if better:
                 logger.info("Model improved. Storing better model.")
                 self.save()
-            self.stopping_criterion.reset()
 
-    def load(self, value):
+    def load(self, validation_loss):
         # TODO Give better names
-        with open(f"{self.name}_ndcg_100_{value}.trch", "rb") as f:
+        with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "rb") as f:
             self.model_ = torch.load(f)
 
-    def save(self):
-        with open(
-            f"{self.name}_ndcg_100_{self.stopping_criterion.value}.trch", "wb"
-        ) as f:
+    def save(self, validation_loss):
+        with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
-    def predict(self, X, user_ids=None):
+    def predict(self, X):
         check_is_fitted(self)
         self.model_.eval()
 
@@ -260,30 +219,3 @@ class VAE(Algorithm):
         self._check_prediction(X_pred, X)
 
         return X_pred
-
-
-class VAETorch(nn.Module):
-    """
-    Base class for building torch modules.
-    """
-
-    def __init__(
-        self
-    ):
-        super().__init__()
-
-    def forward(
-            self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Pass the input through the network, and return result.
-
-        :param x: input tensor
-        :type x: torch.Tensor
-        :return: A tuple with
-                (predicted output value, mean values, average values)
-        :rtype: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-        """
-        mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
-        x_recon = self.decode(z)
-        return x_recon, mu, logvar

@@ -13,16 +13,16 @@ from scipy.sparse import csr_matrix
 from copy import deepcopy
 
 from recpack.splitters.splitter_base import batch
-from recpack.algorithms.vae.base import VAE, VAETorch
-from recpack.algorithms.vae.util import (
+from recpack.algorithms.vae.base import VAE
+from recpack.algorithms.util import (
     swish,
     log_norm_pdf,
     naive_sparse2tensor,
-    StoppingCriterion
+    StoppingCriterion,
 )
-from recpack.metrics import NDCGK
+from recpack.metrics.dcg import ndcg_k
 
-logger = logging.getLogger('recpack')
+logger = logging.getLogger("recpack")
 
 
 class RecVAE(VAE):
@@ -38,7 +38,7 @@ class RecVAE(VAE):
         dim_hidden_layer=600,
         gamma=0.005,
         beta=None,
-        dropout=0.5
+        dropout=0.5,
     ):
         """
         RecVAE Algorithm as first discussed in
@@ -84,7 +84,7 @@ class RecVAE(VAE):
             max_epochs,
             seed,
             learning_rate,
-            StoppingCriterion(NDCGK, K=100)
+            StoppingCriterion(ndcg_k, stop_early=True),
         )
 
         self.n_enc_epochs = n_enc_epochs
@@ -118,17 +118,25 @@ class RecVAE(VAE):
             dim_bottleneck_layer=self.dim_bottleneck_layer,
             dropout_rate=self.dropout,
             gamma=self.gamma,
-            beta=self.beta
+            beta=self.beta,
         ).to(self.device)
 
         self.enc_optimizer = optim.Adam(
-            self.model_.encoder.parameters(), lr=self.learning_rate)
+            self.model_.encoder.parameters(), lr=self.learning_rate
+        )
         self.dec_optimizer = optim.Adam(
-            self.model_.decoder.parameters(), lr=self.learning_rate)
+            self.model_.decoder.parameters(), lr=self.learning_rate
+        )
 
-    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,
-                      mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        """Compute the prediction loss.
+    def _compute_loss(
+        self,
+        X: torch.Tensor,
+        X_pred: torch.Tensor,
+        mu: torch.Tensor,
+        logvar: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Compute the prediction loss.
 
         More info on the loss function in the paper
 
@@ -152,14 +160,19 @@ class RecVAE(VAE):
         mll = (F.log_softmax(X_pred, dim=-1) * X).sum(dim=-1).mean()
 
         z = self.model_.reparameterize(mu, logvar)
-        kld = (log_norm_pdf(z, mu, logvar) - self.model_.prior(X, z)
-               ).sum(dim=-1).mul(kl_weight).mean()
+        kld = (
+            (log_norm_pdf(z, mu, logvar) - self.model_.prior(X, z))
+            .sum(dim=-1)
+            .mul(kl_weight)
+            .mean()
+        )
         negative_elbo = -(mll - kld)
 
         return negative_elbo
 
     def _train_partial(self, train_data, users, optimizer):
-        """Part of the train mathod,
+        """
+        Part of the train mathod,
         optimizes a single part of the combined Neural network.
         The optimizer should be passed in the argument.
         """
@@ -191,7 +204,7 @@ class RecVAE(VAE):
             f" Training Loss = {train_loss}"
         )
 
-    def _train_epoch(self, train_data: csr_matrix, users: List[int]):
+    def _train_epoch(self, train_data: csr_matrix):
         """
         Perform one training epoch.
         Data is processed in batches of self.batch_size users.
@@ -203,6 +216,8 @@ class RecVAE(VAE):
         """
         # Set model to training
         self.model_.train()
+
+        users = list(set(train_data.nonzero()[0]))
 
         for _ in range(self.n_enc_epochs):
             self._train_partial(train_data, users, self.enc_optimizer)
@@ -219,9 +234,10 @@ class CompositePrior(nn.Module):
         dim_hidden_layer: int,
         dim_bottleneck_layer: int,
         dim_input_layer: int,
-        mixture_weights=[3 / 20, 3 / 4, 1 / 10]
+        mixture_weights=[3 / 20, 3 / 4, 1 / 10],
     ):
-        """Composite prior, based on a gaussian prior, a uniform prior and
+        """
+        Composite prior, based on a gaussian prior, a uniform prior and
             the posterior of the previously trained model.
 
         :param dim_hidden_layer: The size of the hidden dimensions
@@ -239,20 +255,24 @@ class CompositePrior(nn.Module):
 
         self.mixture_weights = mixture_weights
 
-        self.mu_prior = nn.Parameter(torch.Tensor(
-            1, dim_bottleneck_layer), requires_grad=False)
+        self.mu_prior = nn.Parameter(
+            torch.Tensor(1, dim_bottleneck_layer), requires_grad=False
+        )
         self.mu_prior.data.fill_(0)
 
-        self.logvar_prior = nn.Parameter(torch.Tensor(
-            1, dim_bottleneck_layer), requires_grad=False)
+        self.logvar_prior = nn.Parameter(
+            torch.Tensor(1, dim_bottleneck_layer), requires_grad=False
+        )
         self.logvar_prior.data.fill_(0)
 
         self.logvar_uniform_prior = nn.Parameter(
-            torch.Tensor(1, dim_bottleneck_layer), requires_grad=False)
+            torch.Tensor(1, dim_bottleneck_layer), requires_grad=False
+        )
         self.logvar_uniform_prior.data.fill_(10)
 
         self.encoder_old = Encoder(
-            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
+            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer
+        )
         self.encoder_old.requires_grad_(False)
 
     def forward(self, x, z):
@@ -263,8 +283,7 @@ class CompositePrior(nn.Module):
         unif_prior = log_norm_pdf(z, self.mu_prior, self.logvar_uniform_prior)
 
         gaussians = [stnd_prior, post_prior, unif_prior]
-        gaussians = [g.add(np.log(w))
-                     for g, w in zip(gaussians, self.mixture_weights)]
+        gaussians = [g.add(np.log(w)) for g, w in zip(gaussians, self.mixture_weights)]
 
         density_per_gaussian = torch.stack(gaussians, dim=-1)
 
@@ -272,9 +291,15 @@ class CompositePrior(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, dim_hidden_layer: int, dim_bottleneck_layer: int,
-                 dim_input_layer: int, eps: float = 1e-1):
-        """Encode part of the Neural network, takes data from the input,
+    def __init__(
+        self,
+        dim_hidden_layer: int,
+        dim_bottleneck_layer: int,
+        dim_input_layer: int,
+        eps: float = 1e-1,
+    ):
+        """
+        Encode part of the Neural network, takes data from the input,
             passes it through 5 hidden layers to get a latent representation.
 
         All hidden layers have the same dimension,
@@ -309,7 +334,8 @@ class Encoder(nn.Module):
         self.fc_logvar = nn.Linear(dim_hidden_layer, dim_bottleneck_layer)
 
     def forward(self, x, dropout_rate):
-        """encode the data in x to the latent dimension,
+        """
+        Encode the data in x to the latent dimension,
         randomly dropping some values, to add noise,
         which makes the encoder more robust.
 
@@ -337,10 +363,18 @@ class Encoder(nn.Module):
         return self.fc_mu(h5), self.fc_logvar(h5)
 
 
-class RecVAETorch(VAETorch):
-    def __init__(self, dim_hidden_layer, dim_bottleneck_layer,
-                 dim_input_layer, gamma=1, beta=None, dropout_rate=0.5):
-        """RecVAE torch module.
+class RecVAETorch(nn.Module):
+    def __init__(
+        self,
+        dim_hidden_layer,
+        dim_bottleneck_layer,
+        dim_input_layer,
+        gamma=1,
+        beta=None,
+        dropout_rate=0.5,
+    ):
+        """
+        RecVAE torch module.
 
         The recVAE network consists of a separate encoder
         and decoder structure.
@@ -368,10 +402,10 @@ class RecVAETorch(VAETorch):
         """
         super(RecVAETorch, self).__init__()
 
-        self.encoder = Encoder(
-            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
+        self.encoder = Encoder(dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
         self.prior = CompositePrior(
-            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
+            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer
+        )
         self.decoder = nn.Linear(dim_bottleneck_layer, dim_input_layer)
 
         self.gamma = gamma
@@ -384,7 +418,8 @@ class RecVAETorch(VAETorch):
         self.dropout_rate = dropout_rate
 
     def reparameterize(self, mu, logvar):
-        """During training we don't use the mean values,
+        """
+        During training we don't use the mean values,
             but we use the variance to sample a score
             based on a normal distribution around the average.
 
@@ -406,7 +441,8 @@ class RecVAETorch(VAETorch):
             return mu
 
     def forward(self, X) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Use the encoder and decoder to return the predicted autoencoded result.
+        """
+        Use the encoder and decoder to return the predicted autoencoded result.
 
         :param X: input tensor of the user ratings.
         :type X: torch.Tensor
@@ -420,7 +456,7 @@ class RecVAETorch(VAETorch):
         return x_pred, mu, logvar
 
     def update_prior(self):
-        """The encoder in the prior is updated to the current encoder state.
         """
-        self.prior.encoder_old.load_state_dict(
-            deepcopy(self.encoder.state_dict()))
+        The encoder in the prior is updated to the current encoder state.
+        """
+        self.prior.encoder_old.load_state_dict(deepcopy(self.encoder.state_dict()))

@@ -12,6 +12,8 @@ from recpack.algorithms.similarity.factorization import (
     SVDItemToItem,
 )
 from recpack.algorithms.similarity.BPRMF import BPRMF
+from recpack.algorithms.metric_learning.cml import CML
+
 from recpack.algorithms.vae.mult_vae import MultVAE
 from recpack.algorithms.vae.rec_vae import RecVAE
 
@@ -32,6 +34,7 @@ class AlgorithmRegistry:
         "mult_vae": MultVAE,
         "rec_vae": RecVAE,
         "BPRMF": BPRMF,
+        "CML": CML,
     }
 
     @classmethod

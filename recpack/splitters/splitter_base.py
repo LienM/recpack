@@ -45,12 +45,6 @@ class UserSplitter(Splitter):
         :return: A tuple containing the training, validation and test data objects in that order.
         :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
         """
-
-        shape = data.shape
-
-        # We require a full data split.
-        assert shape[0] == (len(self.users_in) + len(self.users_out))
-
         tr_data = data.users_in(self.users_in)
         te_data = data.users_in(self.users_out)
 
@@ -97,9 +91,9 @@ class StrongGeneralizationSplitter(Splitter):
         """
         sp_mat = data.values
 
-        nr_users = sp_mat.shape[0]
+        users = list(set(sp_mat.nonzero()[0]))
 
-        users = list(range(0, nr_users))
+        nr_users = len(users)
 
         # Seed to make testing possible
         if self.seed is not None:

@@ -9,7 +9,7 @@ from recpack.algorithms.vae.mult_vae import (
     MultiVAETorch,
     vae_loss_function,
 )
-from util import assert_changed, assert_same
+from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 
 def _training_step(
@@ -44,7 +44,6 @@ def _training_step(
 def test_training_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix.shape[1])
 
-    users = list(set(larger_matrix.nonzero()[1]))
     params = [np for np in mult_vae.model_.named_parameters()
               if np[1].requires_grad]
 
@@ -52,7 +51,7 @@ def test_training_epoch(mult_vae, larger_matrix):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    mult_vae._train_epoch(larger_matrix, users)
+    mult_vae._train_epoch(larger_matrix)
 
     device = mult_vae.device
 
@@ -62,17 +61,14 @@ def test_training_epoch(mult_vae, larger_matrix):
 def test_evaluation_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix.shape[1])
 
-    users = list(set(larger_matrix.nonzero()[1]))
     params = [np for np in mult_vae.model_.named_parameters()
               if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
 
-    # TODO Mock mult_vae.save
-
     # run a training step
-    mult_vae._evaluate(larger_matrix, larger_matrix, users)
+    mult_vae._evaluate(larger_matrix, larger_matrix)
 
     device = mult_vae.device
 
