@@ -1,10 +1,9 @@
 import numpy as np
 import logging
 from recpack.algorithms import Algorithm
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, diags
 from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm
-from .utils import nonzeros
 
 logger = logging.getLogger("recpack")
 
@@ -15,13 +14,11 @@ class WeightedMatrixFactorization(Algorithm):
     as described in paper 'Collaborative Filtering for Implicit Feedback Datasets' (ICDM.2008.22)
     """
 
-    def __init__(self, K: int = None, cs: str = "minimal", alpha: int = 40, epsilon: float = 10 ** (-8),
+    def __init__(self, cs: str = "minimal", alpha: int = 40, epsilon: float = 10 ** (-8),
                  num_components: int = 100, regularization: float = 0.01,
                  iterations: int = 20):
         """
         Initialize the weighted matrix factorization algorithm with confidence generator parameters.
-        :param K: (optional) Set the top-K for prediction fase. If K is None, complete prediction matrix will be
-        returned.
         :param cs: Which confidence scheme should be used to calculate the confidence matrix. Options are ["minimal",
                    "log-scaling"]
         :param alpha: Alpha parameter for generating confidence matrix.
@@ -31,7 +28,6 @@ class WeightedMatrixFactorization(Algorithm):
         :param iterations: Number of iterations to execute the ALS calculations.
         """
         super().__init__()
-        self.K = K
         self.confidence_scheme = cs
         self.alpha = alpha
         self.epsilon = epsilon
@@ -73,8 +69,7 @@ class WeightedMatrixFactorization(Algorithm):
                 (u, i, s)
                 for i, s in enumerate(scores)
             ]
-            topK = sorted(scores_user, reverse=True, key=(lambda x: x[2]))[:self.K]
-            score_list += topK
+            score_list += scores_user
 
         user_idxs, item_idxs, scores = list(zip(*score_list))
         score_matrix = csr_matrix(
@@ -173,15 +168,22 @@ class WeightedMatrixFactorization(Algorithm):
         @return: Solution for the linear equation (YtCxY + regularization * I)^-1 (YtCxPx)
         """
         # accumulate YtCxY + regularization * I in A
-        A = YtY + self.regularization * np.eye(self.num_components)
+        # -----------
+        # calculating YtCxY is a bottleneck, so the significant speedup calculations will be used:
+        #  YtCxY = YtY + Yt(Cx − I)Y
+        # Left side of the linear equation A will be:
+        #  A = YtY + Yt(Cx − I)Y + regularization * I
+        #  For each x, let us define the diagonal n × n matrix Cx where Cx_yy = c_xy
+        cx_matrix = matrix[x]
+        cx_matrix.data -= 1  # In this way the identity matrix isn't needed to be calculated.
+        cx = diags(cx_matrix.toarray().flatten(), 0)
+        A = YtY + (Y.T * cx).dot(Y) + self.regularization * np.eye(self.num_components)
 
         # accumulate YtCxPx in b
-        b = np.zeros(self.num_components)
-
-        for i, confidence in nonzeros(matrix, x):
-            factor = Y[i]
-            A += (confidence - 1) * np.outer(factor, factor)
-            b += confidence * factor
+        cx_matrix[cx_matrix > 0] = 1  # now Px is represented as cx_matrix
+        cx.data += 1  # Cx is needed in the calculation for the right side, not Cx - I as described above
+        b = (Y.T * cx).dot(cx_matrix.T.toarray())
 
         # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
-        return np.linalg.solve(A, b)
+        #  Flatten the result to make sure the dimension is (self.num_components,)
+        return np.linalg.solve(A, b).flatten()
