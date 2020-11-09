@@ -1,10 +1,14 @@
+from functools import partial
+
 import pytest
 import sklearn
 import torch
 from unittest.mock import MagicMock
 
-from recpack.algorithms.similarity.BPRMF import MFModule, bootstrap_sample_pairs
 from recpack.algorithms import BPRMF
+from recpack.algorithms.similarity.BPRMF import MFModule, bootstrap_sample_pairs
+from recpack.algorithms.util import StoppingCriterion
+from recpack.metrics.recall import recall_k
 
 
 def test_bprmf(pageviews):
@@ -86,3 +90,18 @@ def test_forward(pageviews_for_pairwise):
     print(res_2)
 
     assert res_2 == res_1[1, 1]
+
+
+def test_bad_stopping_criterion(pageviews):
+    with pytest.raises(RuntimeError):
+        BPRMF(stopping_criterion="not_a_correct_value")
+
+
+def test_recall_stopping_criterion(pageviews):
+    recall = partial(recall_k, k=2)
+    sc = StoppingCriterion(recall, minimize=False)
+
+    a = BPRMF(num_components=2, num_epochs=2, batch_size=1, stopping_criterion=sc)
+    a.save = MagicMock(return_value=True)
+    a.load = MagicMock(return_value=True)
+    a.fit(pageviews, (pageviews, pageviews))

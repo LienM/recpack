@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 
 import math
@@ -12,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from typing import Tuple
+from typing import Tuple, Union
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
@@ -82,7 +83,12 @@ class BPRMF(Algorithm):
     :type learning_rate: float, optional
     :param seed: seed to fix random numbers, to make results reproducible,
                     defaults to None
-    :type seed: [type], optional
+    :type seed: [int], optional,
+    :param stopping_criterion: The stopping criterion to use for evaluating the method.
+        Can be either a string indicating which loss function to use
+        (currently supports: 'bpr')
+        or a StoppingCriterion instance. Defaults to 'bpr'
+    :type stopping_criterion: Union[StoppingCriterion, str]
     """
 
     def __init__(
@@ -94,6 +100,7 @@ class BPRMF(Algorithm):
         learning_rate=0.01,
         batch_size=1_000,
         seed=None,
+        stopping_criterion: Union[StoppingCriterion, str] = "bpr",
     ):
 
         self.num_components = num_components
@@ -110,9 +117,15 @@ class BPRMF(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.stopping_criterion = StoppingCriterion(
-            bpr_loss_metric, minimize=True, stop_early=False
-        )
+        if type(stopping_criterion) == StoppingCriterion:
+            self.stopping_criterion = stopping_criterion
+        elif stopping_criterion.lower() == "bpr":
+            bpr_part = partial(bpr_loss_metric, batch_size=self.batch_size)
+            self.stopping_criterion = StoppingCriterion(
+                bpr_part, minimize=True, stop_early=False
+            )
+        else:
+            raise RuntimeError(f"stopping criterion {stopping_criterion} not supported")
 
     def _init_model(self, num_users, num_items):
         self.model_ = MFModule(
@@ -246,9 +259,7 @@ class BPRMF(Algorithm):
         # If the prediction is recall or ndcg based the target should be
         # the validation_out
 
-        better = self.stopping_criterion.update(
-            validation_data[0], prediction, batch_size=self.batch_size
-        )
+        better = self.stopping_criterion.update(validation_data[0], prediction)
         if better:
             self.save()
 

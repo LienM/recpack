@@ -6,7 +6,12 @@ from sklearn.utils.validation import check_is_fitted
 import torch
 
 from recpack.algorithms.base import Algorithm
-from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users
+from recpack.algorithms.util import (
+    naive_sparse2tensor,
+    get_batches,
+    get_users,
+    StoppingCriterion,
+)
 
 logger = logging.getLogger("recpack")
 
@@ -28,7 +33,7 @@ class VAE(Algorithm):
         max_epochs,
         seed,
         learning_rate,
-        stopping_criterion,
+        stopping_criterion: StoppingCriterion,
         drop_negative_recommendations=True,
     ):
         self.batch_size = (
@@ -194,7 +199,7 @@ class VAE(Algorithm):
             X_pred_cpu = self._batch_predict(val_in)
             X_true = val_out
 
-            better = self.stopping_criterion.update(X_true, X_pred_cpu, k=100)
+            better = self.stopping_criterion.update(X_true, X_pred_cpu)
 
             if better:
                 logger.info("Model improved. Storing better model.")

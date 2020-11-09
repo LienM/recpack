@@ -50,7 +50,7 @@ def get_users(data):
 
 def get_batches(users, batch_size=1000):
     return [
-        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
+        users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
         for i in range(ceil(len(users) / batch_size))
     ]
 
@@ -72,7 +72,8 @@ class StoppingCriterion:
         is raised when there were at least {max_iter_no_change}
         iterations with no improvements greater than {min_improvement}.
 
-        :param loss_function: Metric function used in validation
+        :param loss_function: Metric function used in validation,
+                                required interface of func(X_true, X_pred)
         :type loss_function: Callable
         :param minimize: True if smaller values of loss_function are better, defaults to False
         :type minimize: bool, optional
@@ -89,9 +90,11 @@ class StoppingCriterion:
         self.stop_early = stop_early
         self.max_iter_no_change = max_iter_no_change  # In scikit-learn this is n_iter_no_change but I find that misleading
         self.n_iter_no_change = 0
-        self.min_improvement = min_improvement  # min_change seems like a more appropriate name
+        self.min_improvement = (
+            min_improvement  # min_change seems like a more appropriate name
+        )
 
-    def update(self, *args, **kwargs) -> bool:
+    def update(self, X_true: csr_matrix, X_pred: csr_matrix) -> bool:
         """
         Update StoppingCriterion value.
         All args and kwargs are passed to the loss function
@@ -101,7 +104,7 @@ class StoppingCriterion:
         :return: True if value is better than the previous best value, False if not.
         :rtype: bool
         """
-        loss = self.loss_function(*args, **kwargs)
+        loss = self.loss_function(X_true, X_pred)
 
         if self.minimize:
             # If we try to minimize, smaller values of loss are better.
@@ -141,4 +144,5 @@ class EarlyStoppingException(Exception):
     """
     Raised when Early Stopping condition is met.
     """
+
     pass

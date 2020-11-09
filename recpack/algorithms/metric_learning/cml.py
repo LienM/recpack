@@ -1,5 +1,6 @@
+from functools import partial
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 import warnings
 
 import numpy as np
@@ -33,9 +34,7 @@ class CML(Algorithm):
         seed: int = 42,
         batch_size: int = 50000,
         U: int = 20,
-        stopping_criterion: StoppingCriterion = StoppingCriterion(
-            recall_k, minimize=False, stop_early=False
-        ),
+        stopping_criterion: Union[StoppingCriterion, str] = "recall",
     ):
         """
         Pytorch Implementation of
@@ -58,8 +57,12 @@ class CML(Algorithm):
         :type batch_size: int, optional
         :param U: Number of negative samples used in WARP loss function for every positive sample, defaults to 20
         :type U: int, optional
-        :param stopping_criterion: Used to identify the best model computed thus far
-        :type stopping_criterion: StoppingCriterion, optional
+        :param stopping_criterion: Used to identify the best model computed thus far.
+            Can be either a string with the name of the metric or loss to use
+            (currently supports: 'recall')
+            or a StoppingCriterion instance, which will then be used.
+            Defaults to 'recall'
+        :type stopping_criterion: Union[StoppingCriterion, str], optional
         """
         self.num_components = num_components
         self.margin = margin
@@ -74,7 +77,19 @@ class CML(Algorithm):
 
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
-        self.stopping_criterion = stopping_criterion
+
+        if type(stopping_criterion) == StoppingCriterion:
+            self.stopping_criterion = stopping_criterion
+        elif stopping_criterion.lower() == "recall":
+            # Create a partial,
+            # so the k parameter does not need to be passed at evaluation time
+            # K = 50 as in the paper
+            recall_partial = partial(recall_k, k=50)
+            self.stopping_criterion = StoppingCriterion(
+                recall_partial, minimize=False, stop_early=False
+            )
+        else:
+            raise RuntimeError(f"stopping criterion {stopping_criterion} not supported")
 
     def _init_model(self, X):
         """
@@ -264,10 +279,7 @@ class CML(Algorithm):
 
             X_val_pred = self.predict(val_data_in_selection)
             X_val_pred[val_data_in_selection.nonzero()] = 0
-            # K = 50 as in the paper
-            better = self.stopping_criterion.update(
-                val_data_out_selection, X_val_pred, k=50
-            )
+            better = self.stopping_criterion.update(val_data_out_selection, X_val_pred)
 
             if better:
                 self.save(self.stopping_criterion.best_value)
@@ -373,7 +385,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
     np.random.shuffle(positives)
 
     for start in range(0, num_positives, batch_size):
-        batch = positives[start: start + batch_size]
+        batch = positives[start : start + batch_size]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
 

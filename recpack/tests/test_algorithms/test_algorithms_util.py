@@ -14,7 +14,7 @@ from recpack.algorithms.util import (
 def loss_function(l):
     i = iter(l)
 
-    def inner():
+    def inner(X_true, X_pred):
         return next(i)
 
     return inner
@@ -30,16 +30,19 @@ def test_stopping_criterion_raise():
         max_iter_no_change=3,
         min_improvement=0.01,
     )
-
+    # Setting X_pred and X_true to None,
+    # because they are not needed in these tests to be actual values
+    X_pred = None
+    X_true = None
     # First update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     # No change
-    crit.update()
+    crit.update(X_true, X_pred)
     # No change
-    crit.update()
+    crit.update(X_true, X_pred)
 
     with pytest.raises(EarlyStoppingException):
-        crit.update()
+        crit.update(X_true, X_pred)
 
 
 def test_stopping_criterion_raise2():
@@ -53,15 +56,20 @@ def test_stopping_criterion_raise2():
         min_improvement=0.01,
     )
 
+    # Setting X_pred and X_true to None,
+    # because they are not needed in these tests to be actual values
+    X_pred = None
+    X_true = None
+
     # First update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     # No change
-    crit.update()
+    crit.update(X_true, X_pred)
     # Bad change
-    crit.update()
+    crit.update(X_true, X_pred)
 
     with pytest.raises(EarlyStoppingException):
-        crit.update()
+        crit.update(X_true, X_pred)
 
 
 def test_stopping_criterion_improves_maximize():
@@ -75,14 +83,19 @@ def test_stopping_criterion_improves_maximize():
         min_improvement=0.01,
     )
 
+    # Setting X_pred and X_true to None,
+    # because they are not needed in these tests to be actual values
+    X_pred = None
+    X_true = None
+
     # First update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     assert crit.best_value == l[0]
     # Second update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     assert crit.best_value == l[1]
     # Third update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     assert crit.best_value == l[2]
 
 
@@ -97,14 +110,19 @@ def test_stopping_criterion_improves_minimize():
         min_improvement=0.01,
     )
 
+    # Setting X_pred and X_true to None,
+    # because they are not needed in these tests to be actual values
+    X_pred = None
+    X_true = None
+
     # First update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     assert crit.best_value == l[0]
     # Second update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     assert crit.best_value == l[1]
     # Third update successful
-    crit.update()
+    crit.update(X_true, X_pred)
     assert crit.best_value == l[2]
 
 

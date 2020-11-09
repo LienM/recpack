@@ -1,5 +1,6 @@
-import time
+from functools import partial
 import logging
+import time
 from typing import List, Tuple
 
 import torch.nn as nn
@@ -79,12 +80,15 @@ class RecVAE(VAE):
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
         """
+        # K = 100 as in the paper
+        ndcg_partial = partial(ndcg_k, k=100)
+
         super().__init__(
             batch_size,
             max_epochs,
             seed,
             learning_rate,
-            StoppingCriterion(ndcg_k, stop_early=True),
+            StoppingCriterion(ndcg_partial, minimize=False, stop_early=True),
         )
 
         self.n_enc_epochs = n_enc_epochs

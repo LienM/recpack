@@ -1,6 +1,7 @@
+from functools import partial
+import logging
 import time
 from typing import List, Tuple
-import logging
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,7 +16,7 @@ from recpack.splitters.splitter_base import batch
 from recpack.metrics.dcg import ndcg_k
 
 
-logger = logging.getLogger('recpack')
+logger = logging.getLogger("recpack")
 
 
 class MultVAE(VAE):
@@ -62,12 +63,15 @@ class MultVAE(VAE):
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
         """
+        # K = 100 as in the paper
+        ndcg_partial = partial(ndcg_k, k=100)
+
         super().__init__(
             batch_size,
             max_epochs,
             seed,
             learning_rate,
-            StoppingCriterion(ndcg_k, stop_early=True)
+            StoppingCriterion(ndcg_partial, minimize=False, stop_early=True),
         )
 
         self.dim_hidden_layer = dim_hidden_layer
@@ -110,8 +114,7 @@ class MultVAE(VAE):
             dropout=self.dropout,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(
-            self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -150,8 +153,13 @@ class MultVAE(VAE):
             f" Training Loss = {train_loss}"
         )
 
-    def _compute_loss(self, X: torch.Tensor, X_pred: torch.Tensor,
-                      mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+    def _compute_loss(
+        self,
+        X: torch.Tensor,
+        X_pred: torch.Tensor,
+        mu: torch.Tensor,
+        logvar: torch.Tensor,
+    ) -> torch.Tensor:
         """Compute the prediction loss.
 
         More info on the loss function in the paper
@@ -199,8 +207,7 @@ class MultiVAETorch(nn.Module):
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.
-        self.q_hid_bn_layer = nn.Linear(
-            dim_hidden_layer, dim_bottleneck_layer * 2)
+        self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
 
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
@@ -218,7 +225,7 @@ class MultiVAETorch(nn.Module):
         self._init_weights()
 
     def forward(
-            self, x: torch.Tensor
+        self, x: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Pass the input through the network, and return result.
 
@@ -247,7 +254,7 @@ class MultiVAETorch(nn.Module):
 
         # TODO This is a terrible hack. Do something about it.
         mu = h[:, : self.dim_bottleneck_layer]
-        logvar = h[:, self.dim_bottleneck_layer:]
+        logvar = h[:, self.dim_bottleneck_layer :]
         return mu, logvar
 
     def decode(self, z):
@@ -276,7 +283,6 @@ class MultiVAETorch(nn.Module):
 
 def vae_loss_function(recon_x, mu, logvar, x, anneal=1.0):
     BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
-                                      mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD
