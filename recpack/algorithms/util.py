@@ -91,7 +91,7 @@ class StoppingCriterion:
         self.max_iter_no_change = max_iter_no_change  # In scikit-learn this is n_iter_no_change but I find that misleading
         self.n_iter_no_change = 0
         self.min_improvement = (
-            min_improvement  # min_change seems like a more appropriate name
+            min_improvement
         )
 
     def update(self, X_true: csr_matrix, X_pred: csr_matrix) -> bool:
