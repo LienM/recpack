@@ -4,7 +4,7 @@ from recpack.algorithms import WeightedMatrixFactorization
 
 
 def test_wmf():
-    wmf = WeightedMatrixFactorization(cs='log-scaling', num_components=10, iterations=5000)
+    wmf = WeightedMatrixFactorization(cs='log-scaling', num_components=10, iterations=100)
 
     values = [2, 5, 4, 1, 3, 4, 3]
     users = [0, 0, 1, 1, 2, 2, 2]
@@ -16,7 +16,7 @@ def test_wmf():
 
     should_converge_to = [[0.0, 1.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 1.0]]
     dotproduct = wmf.user_factors_.dot(wmf.item_factors_.T)
-    numpy.testing.assert_almost_equal(dotproduct, should_converge_to, decimal=2)
+    numpy.testing.assert_almost_equal(dotproduct, should_converge_to, decimal=1)
 
     # Test the prediction
     values_pred = [1, 2, 3]
@@ -29,7 +29,7 @@ def test_wmf():
     exp_users = [0, 0, 0, 1, 1, 1]
     exp_items = [0, 1, 2, 0, 1, 2]
     expected_prediction = csr_matrix((exp_values, (exp_users, exp_items)), shape=test_matrix.shape)
-    numpy.testing.assert_almost_equal(prediction.toarray(), expected_prediction.toarray(), decimal=2)
+    numpy.testing.assert_almost_equal(prediction.toarray(), expected_prediction.toarray(), decimal=1)
 
 
 def test_linear_equation():
@@ -42,6 +42,6 @@ def test_linear_equation():
     test_matrix = csr_matrix((values, (users, items)))
 
     wmf = WeightedMatrixFactorization(num_components=2, regularization=0.1)
-    result = wmf._linear_equation_3(Y, YtY, test_matrix, 0)
+    result = wmf._linear_equation(Y, YtY, test_matrix, 0)
 
     numpy.testing.assert_almost_equal(result, numpy.array([-0.66, 0.86]), decimal=2)
