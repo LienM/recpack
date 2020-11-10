@@ -1,7 +1,7 @@
 import numpy as np
 import logging
 from recpack.algorithms import Algorithm
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_matrix, diags, eye
 from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm
 
@@ -50,7 +50,7 @@ class WeightedMatrixFactorization(Algorithm):
 
     def predict(self, X: csr_matrix, user_ids: np.array = None) -> csr_matrix:
         """
-        For each user predict the K most popular items.
+        The prediction can easily be calculated as the dotproduct of the recalculated user-factor and the item-factor.
         :param X: Sparse user-item matrix which will be used to do the predictions; only the set of users will be used.
         :param user_ids: Unused parameter.
         :return: User-item matrix with the prediction scores as values.
@@ -61,20 +61,8 @@ class WeightedMatrixFactorization(Algorithm):
         U_conf = self._generate_confidence(X)
         U_user_factors = self._least_squares_users(U_conf, self.item_factors_, U)
 
-        score_list = []
-        for u in U:
-            user = U_user_factors[u]
-            scores = self.item_factors_.dot(user)  # Prediction is dot product of user and item_factors
-            scores_user = [
-                (u, i, s)
-                for i, s in enumerate(scores)
-            ]
-            score_list += scores_user
-
-        user_idxs, item_idxs, scores = list(zip(*score_list))
-        score_matrix = csr_matrix(
-            (scores, (user_idxs, item_idxs)), shape=X.shape
-        )
+        # TODO: Can this operation be more efficient?
+        score_matrix = csr_matrix(U_user_factors.dot(self.item_factors_.T))
 
         self._check_prediction(score_matrix, X)
         return score_matrix
@@ -83,16 +71,19 @@ class WeightedMatrixFactorization(Algorithm):
         """
         Generate the confidence matrix as described in the paper.
         This can be calculated in different ways:
-          - Minimal: c_ui = 1 + \alpha * r_ui
-          - Log scaling: c_ui = 1 + \alpha * log(1 + r_ui / \epsilon)
+          - Minimal: c_ui = \alpha * r_ui
+          - Log scaling: c_ui = \alpha * log(1 + r_ui / \epsilon)
+        NOTE: This implementation deviates from the paper. The additional +1 won't be stored in memory to keep the
+        confidence matrix sparse. For this reason C-1 will be the result of this function. Important is that it will
+        infect the least squares calculation.
         :param r: User-item matrix which the calculations are based on.
         :return: User-item matrix converted with the confidence values.
         """
         result = csr_matrix(r, copy=True)
         if self.confidence_scheme == "minimal":
-            result.data = 1 + self.alpha * result.data
+            result.data = self.alpha * result.data
         elif self.confidence_scheme == "log-scaling":
-            result.data = 1 + self.alpha * np.log(1 + result.data / self.epsilon)
+            result.data = self.alpha * np.log(1 + result.data / self.epsilon)
         else:
             raise ValueError("Invalid confidence scheme parameter.")
 
@@ -169,20 +160,19 @@ class WeightedMatrixFactorization(Algorithm):
         """
         # accumulate YtCxY + regularization * I in A
         # -----------
+        # Because of the impact of calculating C-1, instead of C,
         # calculating YtCxY is a bottleneck, so the significant speedup calculations will be used:
-        #  YtCxY = YtY + Yt(Cx − I)Y
+        #  YtCxY = YtY + Yt(Cx)Y
         # Left side of the linear equation A will be:
-        #  A = YtY + Yt(Cx − I)Y + regularization * I
+        #  A = YtY + Yt(Cx)Y + regularization * I
         #  For each x, let us define the diagonal n × n matrix Cx where Cx_yy = c_xy
         cx_matrix = matrix[x]
-        cx_matrix.data -= 1  # In this way the identity matrix isn't needed to be calculated.
         cx = diags(cx_matrix.toarray().flatten(), 0)
         A = YtY + (Y.T * cx).dot(Y) + self.regularization * np.eye(self.num_components)
 
-        # accumulate YtCxPx in b
+        # accumulate Yt(Cx + I)Px in b
         cx_matrix[cx_matrix > 0] = 1  # now Px is represented as cx_matrix
-        cx.data += 1  # Cx is needed in the calculation for the right side, not Cx - I as described above
-        b = (Y.T * cx).dot(cx_matrix.T.toarray())
+        b = (Y.T * (cx + eye(cx.shape[0]))).dot(cx_matrix.T.toarray())
 
         # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
         #  Flatten the result to make sure the dimension is (self.num_components,)
