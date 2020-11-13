@@ -33,12 +33,14 @@ class RSC2015(DataSource):
         )  # pandas datetime -> seconds from epoch
         return df
 
-    def preprocess(self, path: str, min_iu: int = 2, min_ui: int = 5) -> DataM:
+    def preprocess(
+        self, path: str, min_iu: int = 2, min_ui: int = 5, nrows: int = None
+    ) -> DataM:
         """
-        Loads the dataset as a DataM. By default, users with fewer than 2 clicks 
+        Loads the dataset as a DataM. By default, users with fewer than 2 clicks
         and items with fewer than 5 clicks are removed.
         """
-        df = self.load_df(path)
+        df = self.load_df(path, nrows=nrows)
 
         filter_users = MinItemsPerUser(
             min_iu,
@@ -59,10 +61,10 @@ class RSC2015(DataSource):
         preprocessor.add_filter(filter_items)
         preprocessor.add_filter(filter_users)
 
-        return preprocessor.process(df)[0]
+        return preprocessor.process(df)
 
     @property
-    def data_name(self):
+    def name(self):
         return "rsc2015"
 
     @property
