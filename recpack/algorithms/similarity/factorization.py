@@ -4,12 +4,15 @@ import sklearn.decomposition
 from recpack.algorithms.similarity.base import (
     TopKSimilarityMatrixAlgorithm,
 )
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class NMF(TopKSimilarityMatrixAlgorithm):
     # TODO check params NMF to see which ones are useful.
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
+        X = to_csr_matrix(X, binary=True)
+
         # Using Sklearn NMF implementation. For info and parameters:
         # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
         model = sklearn.decomposition.NMF(
@@ -30,7 +33,9 @@ class NMF(TopKSimilarityMatrixAlgorithm):
 
 class SVD(TopKSimilarityMatrixAlgorithm):
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
+        X = to_csr_matrix(X, binary=True)
+
         # TODO use other parameter options?
         model = sklearn.decomposition.TruncatedSVD(
             n_components=self.K, n_iter=7, random_state=42)

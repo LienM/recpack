@@ -3,15 +3,17 @@ from scipy.sparse import csr_matrix
 import warnings
 
 from recpack.algorithms.base import Algorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class SimilarityMatrixAlgorithm(Algorithm):
 
-    def fit(self, X: csr_matrix, y: csr_matrix = None):
+    def fit(self, X: Matrix, y: Matrix = None):
         pass
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
         check_is_fitted(self)
+        X = to_csr_matrix(X, binary=True)
 
         scores = X @ self.similarity_matrix_
 
@@ -31,8 +33,7 @@ class SimilarityMatrixAlgorithm(Algorithm):
 
         missing = self.similarity_matrix_.shape[0] - len(items_with_score)
         if missing > 0:
-            warnings.warn(
-                f"{self.name} missing similar items for {missing} items.")
+            warnings.warn(f"{self.name} missing similar items for {missing} items.")
 
 
 class TopKSimilarityMatrixAlgorithm(SimilarityMatrixAlgorithm):

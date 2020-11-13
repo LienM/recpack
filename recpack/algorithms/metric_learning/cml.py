@@ -18,6 +18,7 @@ from recpack.algorithms.util import (
     EarlyStoppingException,
 )
 from recpack.metrics.recall import recall_k
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 logger = logging.getLogger("recpack")
@@ -114,15 +115,16 @@ class CML(Algorithm):
         with open(f"{self.name}_loss_{validation_loss}.trch", "wb") as f:
             torch.save(self.model_, f)
 
-    def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]):
+    def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
         """
         Fit the model on the X dataset, and evaluate model quality on validation_data.
 
         :param X: The training data matrix
-        :type X: csr_matrix
+        :type X: Matrix
         :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output
         :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
+        X, validation_data = to_csr_matrix((X, validation_data), binary=True)
 
         self._init_model(X)
         try:
@@ -172,17 +174,19 @@ class CML(Algorithm):
 
         return X_pred
 
-    def predict(self, X: csr_matrix) -> csr_matrix:
+    def predict(self, X: Matrix) -> csr_matrix:
         """
         Predict recommendations for each user with at least a single event in their history.
 
         :param X: interaction matrix, should have same size as model.
-        :type X: csr_matrix
+        :type X: Matrix
         :raises an: AssertionError when the input and model's number of items and users are incongruent.
         :return: csr matrix of same shape, with recommendations.
         :rtype: csr_matrix
         """
         check_is_fitted(self)
+
+        X = to_csr_matrix(X, binary=True)
 
         assert X.shape == (self.model_.num_users, self.model_.num_items)
 
@@ -233,7 +237,7 @@ class CML(Algorithm):
 
         logger.info(f"training loss = {train_loss}")
 
-    def _evaluate(self, validation_data: csr_matrix):
+    def _evaluate(self, validation_data: Tuple[csr_matrix, csr_matrix]):
         """
         Perform evaluation step, samples get drawn
         from the validation data, and compute loss.
@@ -241,7 +245,7 @@ class CML(Algorithm):
         If loss improved over previous epoch, store the model, and update best value.
 
         :param validation_data: validation data interaction matrix
-        :type validation_data: csr_matrix
+        :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
         self.model_.eval()
         with torch.no_grad():
