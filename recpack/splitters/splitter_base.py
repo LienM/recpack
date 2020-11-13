@@ -272,15 +272,12 @@ class MostRecentSplitter(Splitter):
                  with n most recent actions of each user.
         """
         df = data.dataframe
-        df = df.sort_values([USER_IX, TIMESTAMP_IX])
-        df["pos"] = np.ones(len(df))
-        df["pos"] = df.groupby(USER_IX)["pos"].cumsum()
-        df["cnt"] = df[USER_IX].map(df[USER_IX].value_counts())
+        pos = df.groupby(USER_IX)[TIMESTAMP_IX].rank(method="first")
+        cnt = df[USER_IX].map(df[USER_IX].value_counts())
         if self.n >= 0:
-            mask = df["pos"] <= df["cnt"] - self.n
+            mask = pos <= cnt - self.n
         else:
-            mask = df["pos"] <= -self.n
-        del df["pos"], df["cnt"]
+            mask = pos <= -self.n
 
         logger.debug(f"{self.name} - Split successful")
         return DataM(df[mask], shape=data.shape), DataM(df[~mask], shape=data.shape)
