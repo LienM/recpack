@@ -8,7 +8,7 @@ import scipy.sparse
 
 from tqdm.auto import tqdm
 
-from recpack.data.data_matrix import DataM
+from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX
 
 logger = logging.getLogger("recpack")
 
@@ -180,7 +180,7 @@ class PercentageInteractionSplitter(Splitter):
 class TimestampSplitter(Splitter):
     """
     Use this class if you want to split your data on a timestamp.
-    Training data will be all data in the interval [t_alpha, t),
+    Training data will be all data in the interval [t-t_alpha, t),
     the test data will be the data in the interval [t, t+t_delta).
     If t_alpha or t_delta are omitted, all data before/after t is used.
 
@@ -190,13 +190,17 @@ class TimestampSplitter(Splitter):
     :type t_delta: int
     :param t_alpha: seconds before t to use as training data (default is None -> all data < t is considered)
     :type t_alpha: int
+    :param split_user: Allow user data to be split. If False, data from the same user is kept together,
+                       the time of the most recent action determines which split the user is placed in.
+    :type split_user: bool
     """
 
-    def __init__(self, t, t_delta=None, t_alpha=None):
+    def __init__(self, t, t_delta=None, t_alpha=None, split_user=True):
         super().__init__()
         self.t = t
         self.t_delta = t_delta
         self.t_alpha = t_alpha
+        self.split_user = split_user
 
     @property
     def name(self):
@@ -215,31 +219,71 @@ class TimestampSplitter(Splitter):
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be split.
         :type data: class:`recpack.DataM`
-        :return: A tuple containing the training, validation and test data objects in that order.
-        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        :return: A tuple containing the training and test data objects, in that order.
+        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`)
         """
 
         if self.t_alpha is None:
             # Holds indices where timestamp < t
-            tr_data = data.timestamps_lt(self.t)
+            tr_data = data.timestamps_lt(self.t, split_user=self.split_user)
         else:
             # Holds indices in interval: t-t_alpha =< timestamp < t
             tr_data = data.timestamps_lt(
-                self.t).timestamps_gte(
-                self.t - self.t_alpha)
+                self.t, split_user=self.split_user).timestamps_gte(
+                self.t - self.t_alpha, split_user=self.split_user)
 
         if self.t_delta is None:
             # Holds indices where timestamp >= t
-            te_data = data.timestamps_gte(self.t)
+            te_data = data.timestamps_gte(self.t, split_user=self.split_user)
         else:
             # Get indices where timestamp >= t and timestamp < t + t_delta
             te_data = data.timestamps_gte(
-                self.t).timestamps_lt(
-                self.t + self.t_delta)
+                self.t, split_user=self.split_user).timestamps_lt(
+                self.t + self.t_delta, split_user=self.split_user)
 
         logger.debug(f"{self.name} - Split successful")
 
         return tr_data, te_data
+
+
+class MostRecentSplitter(Splitter):
+    """
+    Splits the n most recent actions of each user into a separate set.
+
+    :param n: Number of most recent actions. If negative, all but the |n| earliest 
+              actions are split off.
+    """
+
+    def __init__(self, n: int):
+        super().__init__()
+        self.n = n
+
+    @property
+    def name(self):
+        return f"most_recent_split_n{self.n}"
+
+    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+        """
+        Returns a data matrix with all but the n most recent actions of each user 
+        and a data matrix with the n most recent actions of each user.
+
+        :param data: Data matrix to be split. Must contain timestamps.
+        :return: A tuple containing a matrix with all-but-n most recent and matrix 
+                 with n most recent actions of each user.
+        """
+        df = data.dataframe
+        df = df.sort_values([USER_IX, TIMESTAMP_IX])
+        df["pos"] = np.ones(len(df))
+        df["pos"] = df.groupby(USER_IX)["pos"].cumsum()
+        df["cnt"] = df[USER_IX].map(df[USER_IX].value_counts())
+        if self.n >= 0:
+            mask = df["pos"] <= df["cnt"] - self.n
+        else:
+            mask = df["pos"] <= -self.n
+        del df["pos"], df["cnt"]
+
+        logger.debug(f"{self.name} - Split successful")
+        return DataM(df[mask], shape=data.shape), DataM(df[~mask], shape=data.shape)
 
 
 def batch(iterable, n=1):
