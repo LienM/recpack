@@ -3,8 +3,8 @@ from typing import List, Set, Tuple, Union
 
 import pandas as pd
 import numpy as np
-
 import scipy.sparse
+import operator
 
 from recpack.util import groupby2
 
@@ -56,6 +56,10 @@ class DataM:
         return matrix
 
     @property
+    def dataframe(self) -> pd.DataFrame:
+        return self._df.copy()
+
+    @property
     def timestamps(self) -> pd.Series:
         if TIMESTAMP_IX not in self._df:
             raise AttributeError(
@@ -83,29 +87,26 @@ class DataM:
         else:
             return DataM(c_df, shape=self.shape)
 
-    def timestamps_gt(self, timestamp, inplace=False):
-        logger.debug("Performing t > timestamp")
-
-        mask = self._df[TIMESTAMP_IX] > timestamp
+    def timestamps_cmp(self, op, timestamp, inplace=False, split_user=True):
+        logger.debug(f"Performing {op.__name__}(t, timestamp)")
+        if split_user:
+            mask = op(self._df[TIMESTAMP_IX], timestamp)
+        else:
+            last_action = self._df.groupby(USER_IX)[TIMESTAMP_IX].max()
+            mask = op(self._df[USER_IX].map(last_action), timestamp)
         return self._apply_mask(mask, inplace=inplace)
 
-    def timestamps_lt(self, timestamp, inplace=False):
-        logger.debug("Performing t < timestamp")
+    def timestamps_gt(self, timestamp, inplace=False, split_user=True):
+        return self.timestamps_cmp(operator.gt, timestamp, inplace, split_user)
 
-        mask = self._df[TIMESTAMP_IX] < timestamp
-        return self._apply_mask(mask, inplace=inplace)
+    def timestamps_lt(self, timestamp, inplace=False, split_user=True):
+        return self.timestamps_cmp(operator.lt, timestamp, inplace, split_user)
 
-    def timestamps_gte(self, timestamp, inplace=False):
-        logger.debug("Performing t => timestamp")
+    def timestamps_gte(self, timestamp, inplace=False, split_user=True):
+        return self.timestamps_cmp(operator.ge, timestamp, inplace, split_user)
 
-        mask = self._df[TIMESTAMP_IX] >= timestamp
-        return self._apply_mask(mask, inplace=inplace)
-
-    def timestamps_lte(self, timestamp, inplace=False):
-        logger.debug("Performing t <= timestamp")
-
-        mask = self._df[TIMESTAMP_IX] <= timestamp
-        return self._apply_mask(mask, inplace=inplace)
+    def timestamps_lte(self, timestamp, inplace=False, split_user=True):
+        return self.timestamps_cmp(operator.le, timestamp, inplace, split_user)
 
     def users_in(self, U: Union[Set[int], List[int]], inplace=False):
         logger.debug("Performing users_in comparison")

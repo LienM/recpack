@@ -282,6 +282,83 @@ class StrongGeneralizationTimed(Scenario):
         self.validate()
 
 
+class StrongGeneralizationTimedMostRecent(Scenario):
+    """
+    Users are split into train, validation and test sets based on the time of 
+    their most recent action. A user can have interactions in only 1 of the sets.
+
+    The test set is further divided in a test_data_in set containing all but the 
+    n most recent actions, and a test_data_out set containing the n most recent 
+    actions of the test users. The validation set (if required) is split the same.
+
+    As an example, splitting following data on t = 2 with n = 1, w/o validation
+
+        time    0   1   2   3   4   5
+        user1     X   X   
+        user2         X   X   X   X
+
+    would yield training_data:
+
+        time    0   1   2   3   4   5
+        user1     X   X   
+        user2      
+
+    test_data_in:
+
+        time    0   1   2   3   4   5
+        user1         
+        user2         X   X   X
+
+    test_data_out:
+
+        time    0   1   2   3   4   5
+        user1         
+        user2                     X
+
+    :param t: Users whose last action has time >= t are placed in the test set,
+              all other users are placed in the training or validation sets.
+    :param t_validation: Users whose last action has time >= t_validation and 
+                         time < t are put in the validation set. Users whose 
+                         last action has time < t_validation are put in train.
+                         Only required if validation is True.
+    :param n: The n most recent user actions to split off. If a negative number,
+              split off all but the |n| earliest actions.
+    :param validation: Create validation sets
+    """
+
+    def __init__(self, t: float, t_validation: float = None, n: int = 1, 
+                 validation: bool = False):
+        super().__init__(validation=validation)
+        self.t = t
+        self.t_validation = t_validation
+        self.n = n
+        if self.validation and not self.t_validation:
+            raise Exception(
+                "t_validation should be provided when using validation split.")
+
+        self.time_splitter_test = splitter_base.TimestampSplitter(t, split_user=False)
+        if self.validation:
+            assert self.t_validation < self.t
+            self.time_splitter_val = splitter_base.TimestampSplitter(
+                t_validation, split_user=False
+            )
+        self.most_recent_splitter = splitter_base.MostRecentSplitter(n)
+
+    def split(self, data):
+        tr_val_data, te_data = self.time_splitter_test.split(data)
+
+        self.test_data_in, self.test_data_out = self.most_recent_splitter.split(te_data)
+
+        if self.validation:
+            self.train_X, val_data = self.time_splitter_val.split(tr_val_data)
+            self._validation_data_in, self._validation_data_out = \
+                self.most_recent_splitter.split(val_data)
+        else:
+            self.train_X = tr_val_data
+
+        self.validate()
+
+
 class TimedOutOfDomainPredictAndEvaluate(Scenario):
     """
     Class to split data from 2 input datatypes,
