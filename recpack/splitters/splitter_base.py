@@ -268,7 +268,7 @@ class MostRecentSplitter(Splitter):
         and a data matrix with the n most recent actions of each user.
 
         :param data: Data matrix to be split. Must contain timestamps.
-        :return: A tuple containing a matrix with all-but-n most recent and matrix 
+        :return: A tuple containing a matrix with all but n most recent and matrix 
                  with n most recent actions of each user.
         """
         df = data.dataframe
