@@ -38,7 +38,12 @@ class Filter(ABC):
 
 class MinUsersPerItem(Filter):
     def __init__(
-        self, min_users_per_item: int, item_id: str, user_id: str, timestamp_id=None
+        self,
+        min_users_per_item: int,
+        item_id: str,
+        user_id: str,
+        timestamp_id: str = None,
+        count_duplicates: bool = False,
     ):
         """
         Require that a minimum number of users has interacted with an item.
@@ -51,14 +56,21 @@ class MinUsersPerItem(Filter):
         :type user_id: str
         :param timestamp_id: Name of the column in which timestamps are listed, defaults to None
         :type timestamp_id: str, optional
+        :param count_duplicates: Count multiple interactions with the same user, defaults to False
+        :type count_duplicates: bool
         """
         self.min_ui = min_users_per_item
+        self.count_duplicates = count_duplicates
 
         super().__init__(item_id, user_id, timestamp_id=timestamp_id)
 
     def apply(self, df):
-        no_dups = df.drop_duplicates(subset=[self.user_id, self.item_id])
-        cnt_users_per_item = no_dups[self.item_id].value_counts()
+        iids = (
+            df[self.item_id]
+            if self.count_duplicates
+            else df.drop_duplicates([self.user_id, self.item_id])[self.item_id]
+        )
+        cnt_users_per_item = iids.value_counts()
         items_of_interest = list(
             cnt_users_per_item[cnt_users_per_item >= self.min_ui].index
         )
@@ -89,7 +101,7 @@ class NMostPopular(Filter):
     def apply(self, df):
         cnt_users_per_item = df[self.item_id].value_counts(sort=True, ascending=False)
 
-        items_of_interest = list(cnt_users_per_item[0:self.N].index)
+        items_of_interest = list(cnt_users_per_item[0 : self.N].index)
 
         return df[df[self.item_id].isin(items_of_interest)]
 
@@ -100,10 +112,15 @@ class EventsSince(Filter):
 
 class MinItemsPerUser(Filter):
     def __init__(
-        self, min_items_per_user: int, item_id: str, user_id: str, timestamp_id=None
+        self,
+        min_items_per_user: int,
+        item_id: str,
+        user_id: str,
+        timestamp_id: str = None,
+        count_duplicates: bool = False,
     ):
         """
-        Require that a user has interacted with a minimum number of item.
+        Require that a user has interacted with a minimum number of items.
 
         :param min_items_per_user: Minimum number of items required.
         :type min_items_per_user: int
@@ -113,13 +130,21 @@ class MinItemsPerUser(Filter):
         :type user_id: str
         :param timestamp_id: Name of the column in which timestamps are listed, defaults to None
         :type timestamp_id: str, optional
+        :param count_duplicates: Count multiple interactions with the same item, defaults to False
+        :type count_duplicates: bool
         """
         self.min_iu = min_items_per_user
+        self.count_duplicates = count_duplicates
 
         super().__init__(item_id, user_id, timestamp_id=timestamp_id)
 
     def apply(self, df):
-        cnt_items_per_user = df.drop_duplicates([self.user_id, self.item_id])[self.user_id].value_counts()
+        uids = (
+            df[self.user_id]
+            if self.count_duplicates
+            else df.drop_duplicates([self.user_id, self.item_id])[self.user_id]
+        )
+        cnt_items_per_user = uids.value_counts()
         users_of_interest = list(
             cnt_items_per_user[cnt_items_per_user >= self.min_iu].index
         )
