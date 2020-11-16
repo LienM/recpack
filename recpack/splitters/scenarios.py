@@ -1,3 +1,4 @@
+from warnings import warn
 from recpack.splitters.scenario_base import Scenario
 import recpack.splitters.splitter_base as splitter_base
 
@@ -357,6 +358,31 @@ class StrongGeneralizationTimedMostRecent(Scenario):
             self.train_X = tr_val_data
 
         self.validate()
+        self._check_size(data)
+
+    def _check_size(self, data):
+        # TODO: Make more general, place check in scenario base class
+        n_total = data.active_user_count
+        n_train = self.train_X.active_user_count
+        n_test_in, n_test_out = (self.test_data_in.active_user_count, 
+                                 self.test_data_out.active_user_count)
+        n_test = n_test_in + n_test_out
+
+        def check(name, count, total, threshold):
+            if (count + 1e-9) / (total + 1e-9) < threshold:
+                warn(f"{name} resulting from {type(self).__name__} is unusually small.")
+
+        check("Training set", n_train, n_total, 0.05)
+        check("Test set", n_test, n_total, 0.01)
+        check("Test input set", n_test_in,  n_test, 0.05)
+        check("Test output set", n_test_out, n_test, 0.01)
+        if self.validation:
+            n_val_in, n_val_out = (self._validation_data_in.active_user_count, 
+                                self._validation_data_out.active_user_count)
+            n_val = n_val_in + n_val_out
+            check("Validation set", n_val, n_total, 0.01)
+            check("Validation input set", n_val_in, n_val, 0.05)
+            check("Validation output set", n_val_out, n_val, 0.01)
 
 
 class TimedOutOfDomainPredictAndEvaluate(Scenario):
