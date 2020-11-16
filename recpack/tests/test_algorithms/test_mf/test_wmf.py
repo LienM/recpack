@@ -1,5 +1,6 @@
 import numpy
 from scipy.sparse import csr_matrix
+
 from recpack.algorithms import WeightedMatrixFactorization
 
 

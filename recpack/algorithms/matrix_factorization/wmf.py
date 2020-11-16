@@ -1,9 +1,11 @@
-import numpy as np
 import logging
-from recpack.algorithms import Algorithm
+
+import numpy as np
 from scipy.sparse import csr_matrix, diags, eye
 from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm
+
+from recpack.algorithms import Algorithm
 
 logger = logging.getLogger("recpack")
 
