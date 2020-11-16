@@ -87,7 +87,8 @@ def _matrix_to_df(X: csr_matrix) -> pd.DataFrame:
     Converts a user-item matrix to the dataframe format used by DataM.
     """
     uids, iids = X.nonzero()
-    return pd.DataFrame({USER_IX: uids, ITEM_IX: iids, VALUE_IX: X.data})
+    data_nz = X.data[X.data != 0]  # Might contain explicit zeros
+    return pd.DataFrame({USER_IX: uids, ITEM_IX: iids, VALUE_IX: data_nz})
 
 
 def _get_timestamps(X: Matrix) -> Optional[pd.Series]:
