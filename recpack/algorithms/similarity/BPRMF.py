@@ -1,5 +1,6 @@
 from functools import partial
 import logging
+import tempfile
 
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
@@ -88,6 +89,8 @@ class BPRMF(Algorithm):
         (currently supports: 'bpr')
         or a StoppingCriterion instance. Defaults to 'bpr'
     :type stopping_criterion: Union[StoppingCriterion, str]
+    :param save_best_to_file: If True, the best model is saved to disk after fit.
+    :type save_best_to_file: bool
     """
 
     def __init__(
@@ -100,6 +103,7 @@ class BPRMF(Algorithm):
         batch_size=1_000,
         seed=None,
         stopping_criterion: Union[StoppingCriterion, str] = "bpr",
+        save_best_to_file: bool = False,
     ):
 
         self.num_components = num_components
@@ -109,12 +113,17 @@ class BPRMF(Algorithm):
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.seed = seed
+
+        self.save_best_to_file = save_best_to_file
+
         if self.seed:
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
+
+        self.best_model = tempfile.TemporaryFile()
 
         if type(stopping_criterion) == StoppingCriterion:
             self.stopping_criterion = stopping_criterion
@@ -134,16 +143,29 @@ class BPRMF(Algorithm):
         self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
         self.steps = 0
 
-    def load(self, value):
+    @property
+    def file_name(self):
+        return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
+
+    def load(self, file_name):
         # TODO Give better names
-        with open(f"{self.name}_loss_{value}.trch", "rb") as f:
+        with open(file_name, "rb") as f:
             self.model_ = torch.load(f)
 
     def save(self):
-        with open(
-            f"{self.name}_loss_{self.stopping_criterion.best_value}.trch", "wb"
-        ) as f:
+        """Save the current model to disk"""
+        with open(self.file_name, "wb") as f:
             torch.save(self.model_, f)
+
+    def _save_best(self):
+        """Save the best model in a temp file"""
+        self.best_model.close()
+        self.best_model = tempfile.TemporaryFile()
+        torch.save(self.model_, self.best_model)
+
+    def _load_best(self):
+        self.best_model.seek(0)
+        self.model_ = torch.load(self.best_model)
 
     def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]):
         """Fit the model on the X dataset, and evaluate model quality on validation_data.
@@ -167,7 +189,10 @@ class BPRMF(Algorithm):
             pass
 
         # Load the best of the models during training.
-        self.load(self.stopping_criterion.best_value)
+        self._load_best()
+
+        if self.save_best_to_file:
+            self.save()
         return
 
     def _predict(self, X):
@@ -259,7 +284,7 @@ class BPRMF(Algorithm):
 
         better = self.stopping_criterion.update(validation_data[0], prediction)
         if better:
-            self.save()
+            self._save_best()
 
     def _compute_loss(self, positive_sim, negative_sim):
 

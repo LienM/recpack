@@ -1,7 +1,8 @@
 from functools import partial
+import os
 
+import numpy as np
 import pytest
-import sklearn
 import torch
 from unittest.mock import MagicMock
 
@@ -49,6 +50,40 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
     assert pred[3, 4] > pred[3, 1]
 
 
+def test_save_and_load(pageviews_for_pairwise):
+    a = BPRMF(
+        num_components=4,
+        num_epochs=40,
+        batch_size=2,
+        seed=42,
+        learning_rate=0.05,
+        save_best_to_file=True,
+    )
+
+    a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
+
+    assert os.path.isfile(a.file_name)
+
+    b = BPRMF(
+        num_components=4,
+        num_epochs=40,
+        batch_size=2,
+        seed=42,
+        learning_rate=0.05,
+        save_best_to_file=True,
+    )
+
+    b.load(a.file_name)
+
+    np.testing.assert_array_equal(
+        a.predict(pageviews_for_pairwise).toarray(),
+        b.predict(pageviews_for_pairwise).toarray(),
+    )
+
+    # TODO cleanup
+    os.remove(a.file_name)
+
+
 @pytest.mark.parametrize(
     "batch_size, sample_size",
     [
@@ -84,10 +119,7 @@ def test_forward(pageviews_for_pairwise):
     I = torch.LongTensor([0, 2])
 
     res_1 = a.forward(U, I)
-    print(res_1)
-
     res_2 = a.forward(U[1], I[1])
-    print(res_2)
 
     assert res_2 == res_1[1, 1]
 
