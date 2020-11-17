@@ -17,6 +17,7 @@ def test_strong_generalization_timed_split(data_m_w_dups, t, n):
     last_action_te_out = te_data_out.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
 
     actions_per_user_total = data_m_w_dups.dataframe[USER_IX].value_counts()
+    actions_per_user_tr = tr.dataframe[USER_IX].value_counts()
     actions_per_user_te_in = te_data_in.dataframe[USER_IX].value_counts()
     actions_per_user_te_out = te_data_out.dataframe[USER_IX].value_counts()
     actions_per_user_test = actions_per_user_total[actions_per_user_te_in.index]
@@ -24,6 +25,16 @@ def test_strong_generalization_timed_split(data_m_w_dups, t, n):
     # User actions should never be split between train and test sets
     assert not tr.active_users.intersection(te_data_in.active_users)
     assert not tr.active_users.intersection(te_data_out.active_users)
+
+    # No actions should ever be discarded, no set should be empty for this data
+    assert (
+        actions_per_user_tr.sum()
+        + actions_per_user_te_in.sum()
+        + actions_per_user_te_out.sum()
+    ) == actions_per_user_total.sum()
+    assert actions_per_user_tr.sum() > 0
+    assert actions_per_user_te_in.sum() > 0
+    assert actions_per_user_te_out.sum() > 0
 
     # Time of last user action decides if actions are placed in train or test
     assert (tr.timestamps < t).all()
