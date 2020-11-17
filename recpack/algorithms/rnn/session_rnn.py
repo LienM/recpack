@@ -25,6 +25,7 @@ from recpack.algorithms.util import (
 )
 from recpack.metrics.recall import recall_k
 from recpack.data.data_matrix import DataM
+from recpack.data.matrix import Matrix, to_datam
 from typing import Tuple, Optional, Iterator
 
 from recpack.algorithms.rnn.loss import (
@@ -180,13 +181,16 @@ class SessionRNN(Algorithm):
         """
         return torch.load(file)
 
-    def fit(self, X: DataM, validation_data: Tuple[DataM, DataM] = None) -> SessionRNN:
+    def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix] = None) -> SessionRNN:
         """
         Fit the model on the X dataset, and evaluate model quality on validation_data.
 
         :param train_data: The training data matrix.
         :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output.
         """
+        #X, validation_data = to_datam((X, validation_data), timestamps=True)
+        X = to_datam(X, timestamps=True)
+
         self._init_random_state()
         self._init_model(X)
         self._init_training(X)
@@ -203,12 +207,14 @@ class SessionRNN(Algorithm):
         # self.load(self.stopping_criterion.best_value)  # Load best model
         return self
 
-    def predict(self, X: DataM) -> csr_matrix:
+    def predict(self, X: Matrix) -> csr_matrix:
         """
         Predict recommendations for each user with at least a single event in their history.
 
         :param X: Data matrix, should have same shape as training matrix
         """
+        X = to_datam(X, timestamps=True)
+
         check_is_fitted(self)
 
         X_pred = lil_matrix(X.shape)
@@ -288,18 +294,25 @@ class SessionRNN(Algorithm):
                 self.save(self.stopping_criterion.best_value)
         # TODO: Log performance on val. Possible to read from stopping criterion
 
-    def session_based_evaluate(self, X: DataM, K: int = 20):
+    def session_based_evaluate(self, X: Matrix, K: int = 20) -> Tuple[float, float]:
         """
-        Calculates Recall@K and MRR@K using the evaluation procedure from the 2016 paper.
+        Calculates Recall@K and MRR@K using the evaluation procedure from the 2016 
+        paper by Hidasi et al.
 
-        Each session is fed to the rnn action by action. If the true next item is in the
-        top K predicted items it is considered a 'hit'. Recall is the fraction of hits
-        over all actions in the dataset. MRR is the reciprocal rank of the true next item,
-        averaged over all actions in the dataset.
+        Each user/session is fed to the rnn action by action. If the true next item is 
+        in the top K predicted items it is considered a 'hit'. Recall is the fraction 
+        of hits over all actions in the dataset. MRR is the reciprocal rank of the 
+        true next item, averaged over all actions in the dataset.
 
-        :param X: Session data to evaluate on
+        This method is mainly provided to compare performance to that reported in the 
+        original paper and should not generally be used, as the results are heavily 
+        skewed towards users/sessions with many actions.
+
+        :param X: Data to evaluate on
         :param K: Calculate metrics on top K recommendations
         """
+        X = to_datam(X, timestamps=True)
+
         check_is_fitted(self)
 
         def recall(output, targets, K=K):
@@ -316,7 +329,6 @@ class SessionRNN(Algorithm):
 
         with torch.no_grad():
             mean_recall, mean_mrr = self._session_evaluate(X, [recall, mrr])
-            print("Recall: {:.5f}\nMRR: {:.5f}".format(mean_recall, mean_mrr))
             return mean_recall, mean_mrr
 
     def _session_evaluate(self, X: DataM, metrics: List):
