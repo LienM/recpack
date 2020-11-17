@@ -1,4 +1,3 @@
-import numpy as np
 import scipy.sparse
 import sklearn.decomposition
 from sklearn.utils.validation import check_is_fitted
@@ -17,9 +16,9 @@ class FactorizationAlgorithm(Algorithm):
         check_is_fitted(self)
         assert X.shape == (self.W_.shape[0], self.H_.shape[1])
         users = list(set(X.nonzero()[0]))
-        result = np.zeros(X.shape)
+        result = scipy.sparse.lil_matrix(X.shape)
         result[users] = self.W_[users] @ self.H_
-        return scipy.sparse.csr_matrix(result)
+        return result.tocsr()
 
 
 class NMF(FactorizationAlgorithm):

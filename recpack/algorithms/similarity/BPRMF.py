@@ -1,10 +1,8 @@
 from functools import partial
 import logging
 
-import math
-
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.utils.validation import check_is_fitted
 
 from tqdm import tqdm
@@ -180,10 +178,10 @@ class BPRMF(Algorithm):
         U = torch.LongTensor(users).to(self.device)
         I = torch.arange(X.shape[1]).to(self.device)
 
-        result = np.zeros(X.shape)
+        result = lil_matrix(X.shape)
         result[users] = self.model_.forward(U, I).detach().cpu().numpy()
 
-        return csr_matrix(result)
+        return result.tocsr()
 
     def predict(self, X: csr_matrix):
         """Predict recommendations for each user with at least a single event in their history.
