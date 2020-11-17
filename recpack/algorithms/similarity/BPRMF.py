@@ -247,7 +247,6 @@ class BPRMF(Algorithm):
         :param validation_data: validation data interaction matrix.
         :type validation_data: csr_matrix
         """
-        # TODO, quite a bit of code dupe from train epoch, check if we can consolidate.
         self.model_.eval()
 
         prediction = self._predict(validation_data[0])
