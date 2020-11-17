@@ -2,6 +2,7 @@ import scipy.sparse
 import numpy as np
 from sklearn.base import BaseEstimator
 import warnings
+from recpack.data.matrix import Matrix
 
 
 class Algorithm(BaseEstimator):
@@ -22,10 +23,10 @@ class Algorithm(BaseEstimator):
     def __str__(self):
         return self.name
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
         pass
 
-    def predict(self, X: scipy.sparse.csr_matrix):
+    def predict(self, X: Matrix):
         pass
 
     def save(self, filename):

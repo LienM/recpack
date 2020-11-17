@@ -3,6 +3,7 @@ import sklearn.decomposition
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.similarity.base import Algorithm, SimilarityMatrixAlgorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class FactorizationAlgorithm(Algorithm):
@@ -36,7 +37,9 @@ class NMF(FactorizationAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
+        X = to_csr_matrix(X, binary=True)
+
         # Using Sklearn NMF implementation. For info and parameters:
         # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
         model = sklearn.decomposition.NMF(
@@ -88,7 +91,9 @@ class SVD(FactorizationAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
+        X = to_csr_matrix(X, binary=True)
+
         # TODO use other parameter options?
         model = sklearn.decomposition.TruncatedSVD(
             n_components=self.num_components, n_iter=7, random_state=self.random_state

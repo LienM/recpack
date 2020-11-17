@@ -6,7 +6,7 @@ import scipy.sparse
 from tqdm.auto import tqdm
 
 from recpack.metrics import METRICS
-from recpack.data.data_matrix import DataM
+from recpack.data.matrix import Matrix, to_csr_matrix
 from recpack.splitters.splitter_base import FoldIterator
 
 
@@ -17,7 +17,6 @@ class MetricRegistry:
     """
     Register metrics here for clean showing later on.
     """
-
 
     def __init__(self, algorithms, metric_names, K_values):
         self.registry = defaultdict(dict)
@@ -43,7 +42,9 @@ class MetricRegistry:
     def register_from_factory(self, metric_factory, identifier, K_values):
         for algo in self.algorithms:
             for K in K_values:
-                self.register(metric_factory.create(K), algo.identifier, f"{identifier}@{K}")
+                self.register(
+                    metric_factory.create(K), algo.identifier, f"{identifier}@{K}"
+                )
 
     def register(self, metric, algorithm_name, metric_name):
         logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
@@ -67,7 +68,6 @@ class MetricRegistry:
 
 
 class Pipeline(object):
-
     def __init__(self, algorithms, metric_names, K_values):
         """
         Performs all steps in order and holds on to results.
@@ -88,30 +88,33 @@ class Pipeline(object):
         self.K_values = K_values
         self.metric_registry = MetricRegistry(algorithms, metric_names, K_values)
 
-    def run(self, train_data: Union[Tuple[DataM, DataM], DataM], test_data: Tuple[DataM, DataM], validation_data: Tuple[DataM, DataM] = None, batch_size=1000):
+    def run(
+        self,
+        train_data: Union[Tuple[Matrix, Matrix], Matrix],
+        test_data: Tuple[Matrix, Matrix],
+        validation_data: Tuple[Matrix, Matrix] = None,
+        batch_size=1000,
+    ):
         """
-        Run the pipeline with the input data.
+        Runs the pipeline.
+
         This will use the different components in the pipeline to:
-        1. Split data into train, validation, test
-        2. Train models
-        3. Split test data into in and out
-        4. Evaluate models
-        5. Store metrics
+        1. Train models
+        2. Evaluate models
+        3. Store metrics
 
-        :param data: The first data object to use. This data will be used in the splitters.
-        :type data: `recpack.DataM`
-        :param data_2: Additional data.
-                       If the splitter expects a second data object to generate the train, validation and test,
-                       you should use this one to give it that information.
-        :type data_2: `recpack.DataM`
+        :param train_data: Training data. If given a tuple the second matrix will
+                           be used as targets.
+        :param test_data: Test data, (in, out) tuple.
+        :param validation_data: Validation data, (in, out) tuple. Optional.
         """
 
-        if isinstance(train_data, DataM):
-            X = train_data.binary_values
-            y = None
+        if isinstance(train_data, (tuple, list)):
+            X = train_data[0]
+            y = train_data[1]
         else:
-            X = train_data[0].binary_values
-            y = train_data[1].binary_values
+            X = train_data
+            y = None
 
         self.train(X, y=y, validation_data=validation_data)
         self.eval(test_data[0], test_data[1], batch_size)
@@ -128,18 +131,18 @@ class Pipeline(object):
             else:
                 algo.fit(X)
 
-    def eval(self, data_m_in, data_m_out, batch_size):
+    def eval(self, m_in, m_out, batch_size):
 
         for algo in self.algorithms:
             metrics = self.metric_registry[algo.identifier]
 
-            X_pred = data_m_in.values
+            X_pred = m_in
             y_pred = algo.predict(X_pred)
 
             if not scipy.sparse.issparse(y_pred):
                 y_pred = scipy.sparse.csr_matrix(y_pred)
 
-            y_true = data_m_out.binary_values
+            y_true = to_csr_matrix(m_out)
 
             for metric in metrics.values():
                 metric.calculate(y_true, y_pred)

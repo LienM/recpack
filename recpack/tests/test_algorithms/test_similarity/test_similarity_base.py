@@ -14,8 +14,8 @@ def test_check_fit_complete(pageviews):
         warnings.simplefilter("always")
         # Trigger a warning.
         a.fit(pageviews)
-        # No warning should be triggered
-        assert len(w) == 0
+        # Expected a binary matrix, warn that default binary conversion is used
+        assert len(w) == 1
 
         a.fit(pv_copy)
         # The algorithm might also throw a warning
