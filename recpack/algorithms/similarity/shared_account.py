@@ -37,8 +37,8 @@ class DAMIBCover(SimilarityMatrixAlgorithm):
         self.p = p
         self.agg = agg
 
-    def fit(self, *args, **kwargs):
-        return self.algo.fit(*args, **kwargs)
+    def fit(self, X: Matrix):
+        return self.algo.fit(X)
 
     @property
     def similarity_matrix_(self):
