@@ -1,11 +1,9 @@
 import enum
 
-import scipy.sparse
 import numpy as np
 
 import numba
 
-from scipy.sparse import csr_matrix
 from recpack.algorithms.similarity.base import SimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
@@ -27,19 +25,20 @@ class DAMIBCover(SimilarityMatrixAlgorithm):
     """
     DAMIB-Cover Algorithm by Koen Verstrepen et al.
     Only the rescaling os scores is implemented for now.
-    The optimal set of explanations is found with the parameter `p` by dividing the sum of scores by the size of the set to the power `p`.
-    The final score can either be the sum, average or adjusted average (with denominator) depending on the `agg` param.
+    The optimal set of explanations is found with the parameter `p`
+    by dividing the sum of scores by the size of the set to the power `p`.
+    The final score can either be the sum, average or adjusted average
+    (with denominator) depending on the `agg` param.
     """
 
-    def __init__(self, algo: SimilarityMatrixAlgorithm,
-                 p=0.75, agg: Agg = Agg.Adj):
+    def __init__(self, algo: SimilarityMatrixAlgorithm, p=0.75, agg: Agg = Agg.Adj):
         super().__init__()
         self.algo = algo
         self.p = p
         self.agg = agg
 
-    def fit(self, X: Matrix, y: Matrix = None):
-        return self.algo.fit(X, y)
+    def fit(self, *args, **kwargs):
+        return self.algo.fit(*args, **kwargs)
 
     @property
     def similarity_matrix_(self):
