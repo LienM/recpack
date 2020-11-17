@@ -11,8 +11,8 @@ USER_IX = InteractionMatrix.USER_IX
 ITEM_IX = InteractionMatrix.ITEM_IX
 TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
-@pytest.mark.parametrize("t, n", [(4, 1), (4, -2), (5, 1), (5, -2)])
-def test_strong_generalization_timed_most_recent(data_m_sessions, t, n):
+@pytest.mark.parametrize("t, n", [(99, 1), (99, 2), (99, -5)])
+def test_strong_generalization_timed_most_recent_split(data_m_w_dups, t, n):
     scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, n=n)
     scenario.split(data_m_sessions)
     tr = scenario.training_data
