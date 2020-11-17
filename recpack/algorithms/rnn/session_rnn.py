@@ -1,32 +1,26 @@
 from __future__ import annotations
-import logging
-from typing import Tuple, List
 
+import logging
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix, lil_matrix
-
-from tqdm import tqdm
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from scipy.sparse import csr_matrix, lil_matrix
 from torch import Tensor
-
+from tqdm import tqdm
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import (
     StoppingCriterion,
     EarlyStoppingException,
-    get_batches,
-    get_users,
 )
 from recpack.metrics.recall import recall_k
 from recpack.data.data_matrix import DataM
 from recpack.data.matrix import Matrix, to_datam
-from typing import Tuple, Optional, Iterator
+from typing import Tuple, Optional, List
 
 from recpack.algorithms.rnn.loss import (
     BatchSampler,
@@ -35,6 +29,7 @@ from recpack.algorithms.rnn.loss import (
     TOP1Loss,
     TOP1MaxLoss,
 )
+from recpack.algorithms.rnn.data import dm_to_tensor
 from recpack.algorithms.rnn.model import SessionRNNTorch
 
 
@@ -181,14 +176,16 @@ class SessionRNN(Algorithm):
         """
         return torch.load(file)
 
-    def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix] = None) -> SessionRNN:
+    def fit(
+        self, X: Matrix, validation_data: Tuple[Matrix, Matrix] = None
+    ) -> SessionRNN:
         """
         Fit the model on the X dataset, and evaluate model quality on validation_data.
 
         :param train_data: The training data matrix.
         :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output.
         """
-        #X, validation_data = to_datam((X, validation_data), timestamps=True)
+        # X, validation_data = to_datam((X, validation_data), timestamps=True)
         X = to_datam(X, timestamps=True)
 
         self._init_random_state()
@@ -296,16 +293,16 @@ class SessionRNN(Algorithm):
 
     def session_based_evaluate(self, X: Matrix, K: int = 20) -> Tuple[float, float]:
         """
-        Calculates Recall@K and MRR@K using the evaluation procedure from the 2016 
+        Calculates Recall@K and MRR@K using the evaluation procedure from the 2016
         paper by Hidasi et al.
 
-        Each user/session is fed to the rnn action by action. If the true next item is 
-        in the top K predicted items it is considered a 'hit'. Recall is the fraction 
-        of hits over all actions in the dataset. MRR is the reciprocal rank of the 
+        Each user/session is fed to the rnn action by action. If the true next item is
+        in the top K predicted items it is considered a 'hit'. Recall is the fraction
+        of hits over all actions in the dataset. MRR is the reciprocal rank of the
         true next item, averaged over all actions in the dataset.
 
-        This method is mainly provided to compare performance to that reported in the 
-        original paper and should not generally be used, as the results are heavily 
+        This method is mainly provided to compare performance to that reported in the
+        original paper and should not generally be used, as the results are heavily
         skewed towards users/sessions with many actions.
 
         :param X: Data to evaluate on
@@ -349,76 +346,3 @@ class SessionRNN(Algorithm):
                 score = m(output, target)
                 metric_scores[m_idx].append(score)
         return [np.mean(scores) for scores in metric_scores]
-
-
-def dm_to_tensor(
-    dm: DataM,
-    batch_size: int,
-    device: str = "cpu",
-    shuffle: bool = False,
-    include_last: bool = False,
-) -> Tuple[Tensor, Tensor, Tensor]:
-    """
-    Converts a data matrix with timestamp information to tensor format.
-
-    As an example, with following interactions (sorted by time):
-        uid  0    1      2      3
-        iid  0 1  2 3 4  5 6 7  8 9
-    The returned tensors for a batch size of two would be
-        [[0, 5],      [[1, 6],        [[0, 2],
-         [2, 6],       [3, 7],         [1, 2],
-         [3, 8]]   ,   [4, 9]]   and   [1, 3]]
-    Containing input item ids, next item ids, and user/session ids. Grouped by
-    users, ordered by time. Users at boundaries may be split across columns.
-    """
-    # Convert the item and user ids to 1D tensors
-    df = dm.timestamps.reset_index()
-    if shuffle:
-        df = shuffle_and_sort(df)
-    else:
-        df = df.sort_values(by=["uid", "ts"], ascending=True)
-    iids = torch.tensor(df["iid"].to_numpy(), device=device)
-    uids = torch.tensor(df["uid"].to_numpy(), device=device)
-    # Drop the last action of each user if include_last is false
-    if include_last:
-        actions = iids
-        targets = iids.roll(-1, dims=0)
-    else:
-        true = torch.tensor([True], device=device)
-        is_first = torch.cat((true, uids[1:] != uids[:-1]))
-        is_last = torch.cat((uids[:-1] != uids[1:], true))
-        actions = iids[~is_last]
-        targets = iids[~is_first]
-        uids = uids[~is_last]
-    # Create user-parallel mini batches
-    return (
-        batchify(actions, batch_size),
-        batchify(targets, batch_size),
-        batchify(uids, batch_size),
-    )
-
-
-def shuffle_and_sort(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Shuffle sessions but keep all interactions for a session together, sorted
-    by timestamp.
-    """
-    # Generate a unique random number for each session/user
-    uuid = df["uid"].unique()
-    rand = pd.Series(data=np.random.permutation(len(uuid)), index=uuid, name="rand")
-    df = df.join(rand, on="uid")
-    # Shuffle sessions by sorting on their random number
-    df = df.sort_values(by=["rand", "ts"], ascending=True, ignore_index=True)
-    del df["rand"]
-    return df
-
-
-def batchify(data: Tensor, batch_size: int) -> Tensor:
-    """
-    Splits a sequence into contiguous batches, indexed along dim 0.
-    """
-    nbatch = data.size(0) // batch_size
-    data = data.narrow(0, 0, nbatch * batch_size)
-    data = data.view(batch_size, -1).t()
-    data = data.contiguous()
-    return data
