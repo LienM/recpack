@@ -130,10 +130,6 @@ def test_bad_stopping_criterion(pageviews):
 
 
 def test_recall_stopping_criterion(pageviews):
-    recall = partial(recall_k, k=2)
-    sc = StoppingCriterion(recall, minimize=False)
 
-    a = BPRMF(num_components=2, num_epochs=2, batch_size=1, stopping_criterion=sc)
-    a.save = MagicMock(return_value=True)
-    a.load = MagicMock(return_value=True)
+    a = BPRMF(num_components=2, num_epochs=2, batch_size=1, stopping_criterion="recall")
     a.fit(pageviews, (pageviews, pageviews))

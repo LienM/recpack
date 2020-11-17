@@ -9,6 +9,8 @@ from recpack.algorithms.util import (
     naive_tensor2sparse,
     EarlyStoppingException,
 )
+from recpack.metrics.recall import recall_k
+from recpack.metrics.dcg import ndcg_k
 
 
 def loss_function(l):
@@ -124,6 +126,21 @@ def test_stopping_criterion_improves_minimize():
     # Third update successful
     crit.update(X_true, X_pred)
     assert crit.best_value == l[2]
+
+
+@pytest.mark.parametrize(
+    "criterion, expected_function", [("recall", recall_k), ("ndcg", ndcg_k)]
+)
+def test_stopping_criterion_create(criterion, expected_function):
+    c = StoppingCriterion.create(criterion)
+
+    assert c.loss_function == expected_function
+
+
+def test_kwargs_criterion_create():
+    c = StoppingCriterion.create("recall")
+
+    assert "k" in c.kwargs
 
 
 def test_csr_tensor_conversions(larger_matrix):

@@ -15,51 +15,11 @@ import torch.optim as optim
 from typing import Tuple, Union
 
 from recpack.algorithms.base import Algorithm
+from recpack.loss_functions.bpr import bpr_loss
+from recpack.samplers.negative_sampling import bootstrap_sample_pairs
 from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
 
 logger = logging.getLogger("recpack")
-
-
-def bpr_loss(positive_sim, negative_sim):
-    distance = positive_sim - negative_sim
-    # Probability of ranking given parameters
-    elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
-    bpr_loss = -elementwise_bpr_loss.sum()
-
-    return bpr_loss
-
-
-def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
-    """Compute BPR reconstruction loss of the X_true matrix in X_pred
-
-    :param X_true: [description]
-    :type X_true: [type]
-    :param X_pred: [description]
-    :type X_pred: [type]
-    :raises an: [description]
-    :return: [description]
-    :rtype: [type]
-    :yield: [description]
-    :rtype: [type]
-    """
-    # This is kinda bad because it's duplication of data
-    total_loss = 0
-
-    for d in bootstrap_sample_pairs(
-        X_true, batch_size=batch_size, sample_size=X_true.nnz
-    ):
-        # Needed to do copy, to use as index in the predidction matrix
-        users = d[:, 0].numpy().copy()
-        target_items = d[:, 1].numpy().copy()
-        negative_items = d[:, 2].numpy().copy()
-
-        print(X_pred[users, target_items])
-        positive_sim = torch.tensor(X_pred[users, target_items])
-        negative_sim = torch.tensor(X_pred[users, negative_items])
-
-        total_loss += bpr_loss(positive_sim, negative_sim).item()
-
-    return total_loss
 
 
 class BPRMF(Algorithm):
@@ -102,7 +62,7 @@ class BPRMF(Algorithm):
         learning_rate=0.01,
         batch_size=1_000,
         seed=None,
-        stopping_criterion: Union[StoppingCriterion, str] = "bpr",
+        stopping_criterion: str = "bpr",
         save_best_to_file: bool = False,
     ):
 
@@ -125,15 +85,17 @@ class BPRMF(Algorithm):
 
         self.best_model = tempfile.TemporaryFile()
 
-        if type(stopping_criterion) == StoppingCriterion:
-            self.stopping_criterion = stopping_criterion
-        elif stopping_criterion.lower() == "bpr":
-            bpr_part = partial(bpr_loss_metric, batch_size=self.batch_size)
-            self.stopping_criterion = StoppingCriterion(
-                bpr_part, minimize=True, stop_early=False
-            )
-        else:
-            raise RuntimeError(f"stopping criterion {stopping_criterion} not supported")
+        self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
+        # TODO: could not easily figure out how to manage batch_size parameter here.
+        # if type(stopping_criterion) == StoppingCriterion:
+        #     self.stopping_criterion = stopping_criterion
+        # elif stopping_criterion.lower() == "bpr":
+        #     bpr_part = partial(bpr_loss_metric, batch_size=self.batch_size)
+        #     self.stopping_criterion = StoppingCriterion(
+        #         bpr_part, minimize=True, stop_early=False
+        #     )
+        # else:
+        #     raise RuntimeError(f"stopping criterion {stopping_criterion} not supported")
 
     def _init_model(self, num_users, num_items):
         self.model_ = MFModule(
@@ -336,50 +298,3 @@ class MFModule(nn.Module):
         h_I = self.H(I)
 
         return w_U.matmul(h_I.T)
-
-
-def bootstrap_sample_pairs(
-    X: csr_matrix, batch_size=100, sample_size=10000
-) -> torch.LongTensor:
-    """bootstrap sample triples from the data. Each triple contains (user, positive item, negative item).
-
-    :param X: Interaction matrix
-    :type X: csr_matrix
-    :param batch_size: The number of samples returned per batch, defaults to 100
-    :type batch_size: int, optional
-    :param sample_size: The number of samples to generate, defaults to 10000
-    :type sample_size: int, optional
-    :yield: tensor of shape (batch_size, 3), with user, positive item, negative item for each row.
-    :rtype: torch.LongTensor
-    """
-    # Need positive and negative pair. Requires the existence of a positive for this item.
-    positives = np.array(X.nonzero()).T  # As a (num_interactions, 2) numpy array
-    num_positives = positives.shape[0]
-    np.random.shuffle(positives)
-
-    # Pick interactions at random, with replacement
-    samples = np.random.choice(num_positives, size=(sample_size,), replace=True)
-
-    # TODO Could be better to only yield this when required, to keep the memory footprint low.
-    possible_negatives = np.random.randint(0, X.shape[1], size=(sample_size,))
-
-    for start in range(0, sample_size, batch_size):
-        sample_batch = samples[start : start + batch_size]
-        positives_batch = positives[sample_batch]
-        negatives_batch = possible_negatives[start : start + batch_size]
-        while True:
-            # Fix the negatives that are equal to the positives, if there are any
-            mask = positives_batch[:, 1] == negatives_batch
-            num_incorrect = np.sum(mask)
-
-            if num_incorrect > 0:
-                new_negatives = np.random.randint(0, X.shape[1], size=(num_incorrect,))
-                negatives_batch[mask] = new_negatives
-            else:
-                # Exit the while loop
-                break
-
-        sample_pairs_batch = np.empty((positives_batch.shape[0], 3))
-        sample_pairs_batch[:, :2] = positives_batch
-        sample_pairs_batch[:, 2] = negatives_batch
-        yield torch.LongTensor(sample_pairs_batch)

@@ -8,6 +8,9 @@ from scipy.sparse import csr_matrix
 
 import torch
 
+from recpack.loss_functions.bpr import bpr_loss_metric
+from recpack.metrics.dcg import ndcg_k
+from recpack.metrics.recall import recall_k
 
 logger = logging.getLogger("recpack")
 
@@ -63,6 +66,7 @@ class StoppingCriterion:
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: float = 0.01,
+        **kwargs,
     ):
         """
         StoppingCriterion provides a wrapper around any loss function
@@ -83,6 +87,8 @@ class StoppingCriterion:
         :type max_iter_no_change: int, optional
         :param min_improvement: Improvements smaller than {min_improvement} are not counted as actual improvements, defaults to 0.01
         :type min_improvement: float, optional
+        :param kwargs: The keyword arguments to be passed to the loss function
+        :type kwargs: dict, optional
         """
         self.best_value = np.inf if minimize else -np.inf
         self.loss_function = loss_function
@@ -90,9 +96,9 @@ class StoppingCriterion:
         self.stop_early = stop_early
         self.max_iter_no_change = max_iter_no_change  # In scikit-learn this is n_iter_no_change but I find that misleading
         self.n_iter_no_change = 0
-        self.min_improvement = (
-            min_improvement
-        )
+        self.min_improvement = min_improvement
+
+        self.kwargs = kwargs
 
     def update(self, X_true: csr_matrix, X_pred: csr_matrix) -> bool:
         """
@@ -104,7 +110,7 @@ class StoppingCriterion:
         :return: True if value is better than the previous best value, False if not.
         :rtype: bool
         """
-        loss = self.loss_function(X_true, X_pred)
+        loss = self.loss_function(X_true, X_pred, **self.kwargs)
 
         if self.minimize:
             # If we try to minimize, smaller values of loss are better.
@@ -138,6 +144,24 @@ class StoppingCriterion:
                 )
 
         return False
+
+    FUNCTIONS = {
+        "bpr": {
+            "loss_function": bpr_loss_metric,
+            "minimize": True,
+            "batch_size": 1,
+        },
+        "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
+        "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
+    }
+
+    @classmethod
+    def create(cls, criterion_name, **kwargs):
+
+        if criterion_name not in cls.FUNCTIONS:
+            raise RuntimeError(f"stopping criterion {criterion_name} not supported")
+
+        return StoppingCriterion(**cls.FUNCTIONS[criterion_name], **kwargs)
 
 
 class EarlyStoppingException(Exception):
