@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 import numpy as np
 
-from recpack.data.data_matrix import DataM
+from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX
 import recpack.splitters.splitter_base as splitter_base
 
 
@@ -194,6 +194,36 @@ def test_timestamp_splitter_windowed_alpha_w_dups(data_m_w_dups, t, t_alpha):
 
     check_values_timestamps_match(tr)
     check_values_timestamps_match(te)
+
+
+def test_most_recent_splitter(data_m_w_dups):
+    m = data_m_w_dups
+    last_action = m.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
+    num_actions = m.values.toarray().sum(axis=1, keepdims=False)
+
+    # Split off last action
+    splitter = splitter_base.MostRecentSplitter(1)
+    tr, te = splitter.split(m)
+
+    assert tr.active_user_count == te.active_user_count == m.active_user_count
+    for uid in tr.active_users:
+        u_actions_tr = tr.dataframe[tr.dataframe[USER_IX] == uid]
+        u_actions_te = te.dataframe[te.dataframe[USER_IX] == uid]
+        assert len(u_actions_tr) == num_actions[uid] - 1
+        assert len(u_actions_te) == 1
+        assert u_actions_te[TIMESTAMP_IX].max() == last_action[uid]
+
+    # Split off all but first two actions
+    splitter = splitter_base.MostRecentSplitter(-2)
+    tr, te = splitter.split(m)
+
+    assert tr.active_user_count == te.active_user_count == m.active_user_count
+    for uid in tr.active_users:
+        u_actions_tr = tr.dataframe[tr.dataframe[USER_IX] == uid]
+        u_actions_te = te.dataframe[te.dataframe[USER_IX] == uid]
+        assert len(u_actions_tr) == 2
+        assert len(u_actions_te) == num_actions[uid] - 2
+        assert u_actions_te[TIMESTAMP_IX].max() == last_action[uid]
 
 
 def test_user_splitter(data_m_w_timestamps):
