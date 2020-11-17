@@ -74,7 +74,7 @@ class SessionRNNTorch(nn.Module):
         """
         Initializes all model parameters uniformly.
         """
-        initrange = 0.1
+        initrange = 0.01
         for param in self.parameters():
             nn.init.uniform_(param, -initrange, initrange)
 

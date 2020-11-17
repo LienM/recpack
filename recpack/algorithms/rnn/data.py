@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from recpack.data.data_matrix import DataM
+from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX
 from torch import Tensor
 from typing import Tuple
 
@@ -35,9 +35,9 @@ def dm_to_tensor(
     if shuffle:
         df = shuffle_and_sort(df)
     else:
-        df = df.sort_values(by=["uid", "ts"], ascending=True)
-    iids = torch.tensor(df["iid"].to_numpy(), device=device)
-    uids = torch.tensor(df["uid"].to_numpy(), device=device)
+        df = df.sort_values(by=[USER_IX, TIMESTAMP_IX], ascending=True)
+    iids = torch.tensor(df[ITEM_IX].to_numpy(), device=device)
+    uids = torch.tensor(df[USER_IX].to_numpy(), device=device)
     # Drop the last action of each user if include_last is false
     if include_last:
         actions = iids
@@ -63,11 +63,11 @@ def shuffle_and_sort(df: pd.DataFrame) -> pd.DataFrame:
     by timestamp.
     """
     # Generate a unique random number for each session/user
-    uuid = df["uid"].unique()
+    uuid = df[USER_IX].unique()
     rand = pd.Series(data=np.random.permutation(len(uuid)), index=uuid, name="rand")
-    df = df.join(rand, on="uid")
+    df = df.join(rand, on=USER_IX)
     # Shuffle sessions by sorting on their random number
-    df = df.sort_values(by=["rand", "ts"], ascending=True, ignore_index=True)
+    df = df.sort_values(by=["rand", TIMESTAMP_IX], ascending=True, ignore_index=True)
     del df["rand"]
     return df
 

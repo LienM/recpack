@@ -18,7 +18,7 @@ from recpack.algorithms.util import (
     EarlyStoppingException,
 )
 from recpack.metrics.recall import recall_k
-from recpack.data.data_matrix import DataM
+from recpack.data.data_matrix import DataM, ITEM_IX
 from recpack.data.matrix import Matrix, to_datam
 from typing import Tuple, Optional, List
 
@@ -136,7 +136,7 @@ class SessionRNN(Algorithm):
         Initializes the objects required for network optimization.
         """
         item_counts = torch.as_tensor(
-            train_data.timestamps.reset_index()["iid"]
+            train_data.dataframe[ITEM_IX] # FIXME: this might not contain all items
             .value_counts()
             .sort_index()
             .to_numpy()
