@@ -135,13 +135,10 @@ class SessionRNN(Algorithm):
         """
         Initializes the objects required for network optimization.
         """
-        item_counts = torch.as_tensor(
-            train_data.dataframe[ITEM_IX] # FIXME: this might not contain all items
-            .value_counts()
-            .sort_index()
-            .to_numpy()
-        )
-        item_weights = item_counts ** self.alpha
+        item_counts_tr = train_data.dataframe[ITEM_IX].value_counts()
+        item_counts = pd.Series(np.arange(train_data.shape[1]))
+        item_counts = item_counts.map(item_counts_tr).fillna(0)
+        item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
 
         sampler = BatchSampler(item_weights, device=self.device)
         self._criterion = {
