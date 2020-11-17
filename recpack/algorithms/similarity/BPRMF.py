@@ -42,18 +42,19 @@ def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
     :rtype: [type]
     """
     # This is kinda bad because it's duplication of data
-    prediction_tensor = torch.tensor(X_pred.toarray())
     total_loss = 0
 
     for d in bootstrap_sample_pairs(
         X_true, batch_size=batch_size, sample_size=X_true.nnz
     ):
-        users = d[:, 0]
-        target_items = d[:, 1]
-        negative_items = d[:, 2]
+        # Needed to do copy, to use as index in the predidction matrix
+        users = d[:, 0].numpy().copy()
+        target_items = d[:, 1].numpy().copy()
+        negative_items = d[:, 2].numpy().copy()
 
-        positive_sim = prediction_tensor[users, target_items]
-        negative_sim = prediction_tensor[users, negative_items]
+        print(X_pred[users, target_items])
+        positive_sim = torch.tensor(X_pred[users, target_items])
+        negative_sim = torch.tensor(X_pred[users, negative_items])
 
         total_loss += bpr_loss(positive_sim, negative_sim).item()
 
