@@ -12,6 +12,7 @@ from recpack.algorithms.util import (
     get_batches,
     get_users,
     StoppingCriterion,
+    EarlyStoppingException,
 )
 from recpack.data.matrix import Matrix, to_csr_matrix
 
@@ -161,9 +162,12 @@ class VAE(Algorithm):
 
         val_in, val_out = validation_data
 
-        for epoch in range(0, self.max_epochs):
-            self._train_epoch(X)
-            self._evaluate(val_in, val_out)
+        try:
+            for epoch in range(0, self.max_epochs):
+                self._train_epoch(X)
+                self._evaluate(val_in, val_out)
+        except EarlyStoppingException:
+            pass
 
         # Load best model, not necessarily last model
         self._load_best()
