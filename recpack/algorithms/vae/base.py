@@ -167,6 +167,7 @@ class VAE(Algorithm):
 
         # Load best model, not necessarily last model
         self._load_best()
+
         if self.save_best_to_file:
             self.save()
 
@@ -214,7 +215,7 @@ class VAE(Algorithm):
 
             if better:
                 logger.info("Model improved. Storing better model.")
-                self.save()
+                self._save_best()
 
     @property
     def file_name(self):

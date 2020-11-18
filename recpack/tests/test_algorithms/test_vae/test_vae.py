@@ -22,7 +22,7 @@ def test_batched_prediction(larger_matrix):
 
 def test_vae_save_load(larger_matrix):
 
-    mult_vae_1 = MultVAE(seed=1)
+    mult_vae_1 = MultVAE(seed=1, save_best_to_file=True, max_epochs=10)
 
     mult_vae_1.fit(larger_matrix, (larger_matrix, larger_matrix))
     assert os.path.isfile(mult_vae_1.file_name)
