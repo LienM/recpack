@@ -31,7 +31,7 @@ def dm_to_tensor(
     users, ordered by time. Users at boundaries may be split across columns.
     """
     # Convert the item and user ids to 1D tensors
-    df = dm.timestamps.reset_index()
+    df = dm.dataframe
     if shuffle:
         df = shuffle_and_sort(df)
     else:

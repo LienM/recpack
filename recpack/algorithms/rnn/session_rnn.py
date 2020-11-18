@@ -106,7 +106,7 @@ class SessionRNN(Algorithm):
         self.device = torch.device("cuda" if cuda else "cpu")
         self.stopping_criterion = StoppingCriterion(
             recall_k, minimize=False, stop_early=False
-        )
+        )  # TODO: Evaluate using the loss function used for optimization
 
     def _init_random_state(self) -> None:
         """
@@ -215,7 +215,7 @@ class SessionRNN(Algorithm):
 
         with torch.no_grad():
             actions, _, uids = dm_to_tensor(
-                X, batch_size=1, device=self.device, shuffle=True, include_last=True
+                X, batch_size=1, device=self.device, shuffle=False, include_last=True
             )
             new_uid = uids != uids.roll(1, dims=0)
 
@@ -273,20 +273,15 @@ class SessionRNN(Algorithm):
         If performance improved over previous epoch, store the model and update
         best value. If performance stagnates, stop training.
 
-        :param validation_data: validation data interaction matrix.
+        :param validation_data: validation data interaction matrices.
         """
-        self.model_.eval()
-        with torch.no_grad():
-            X_val_pred = self.predict(validation_data[0])
-            X_val_pred[
-                validation_data[0].values.nonzero()
-            ] = -np.inf  # TODO: should this belong in predict()?
-            better = self.stopping_criterion.update(
-                validation_data[1], X_val_pred, k=50
-            )
-            if better:
-                self.save(self.stopping_criterion.best_value)
-        # TODO: Log performance on val. Possible to read from stopping criterion
+        self.model_.train(False)
+        X_val_pred = self.predict(validation_data[0])
+        better = self.stopping_criterion.update(
+            validation_data[1], X_val_pred, k=50
+        )
+        if better:
+            self.save(self.stopping_criterion.best_value)
 
     def session_based_evaluate(self, X: Matrix, K: int = 20) -> Tuple[float, float]:
         """
