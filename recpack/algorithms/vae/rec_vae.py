@@ -90,7 +90,6 @@ class RecVAE(VAE):
         :type save_best_to_file: bool
 
         """
-        # K = 100 as in the paper
 
         super().__init__(
             batch_size,
