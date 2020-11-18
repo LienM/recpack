@@ -31,6 +31,8 @@ class MultVAE(VAE):
         max_beta=0.2,
         anneal_steps=200000,
         dropout=0.5,
+        stopping_criterion="ndcg",
+        save_best_to_file=False,
     ):
         """
         MultVAE Algorithm as first discussed in
@@ -62,16 +64,22 @@ class MultVAE(VAE):
         :type anneal_steps: int, optional
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
+        :param stopping_criterion: Used to identify the best model computed thus far.
+            The string indicates the name of the stopping criterion.
+            Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+            Defaults to 'recall'
+        :type stopping_criterion: str, optional
+        :param save_best_to_file: If True, the best model is saved to disk after fit.
+        :type save_best_to_file: bool
         """
-        # K = 100 as in the paper
-        ndcg_partial = partial(ndcg_k, k=100)
 
         super().__init__(
             batch_size,
             max_epochs,
             seed,
             learning_rate,
-            StoppingCriterion(ndcg_partial, minimize=False, stop_early=True),
+            StoppingCriterion.create(stopping_criterion),
+            save_best_to_file=save_best_to_file,
         )
 
         self.dim_hidden_layer = dim_hidden_layer
