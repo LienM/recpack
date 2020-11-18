@@ -17,7 +17,7 @@ class EASE(SimilarityMatrixAlgorithm):
         self.l2 = l2
         self.alpha = alpha  # alpha exponent for filtering popularity bias
 
-    def fit(self, X: Matrix, y: Matrix = None):
+    def fit(self, X: Matrix):
         """Compute the closed form solution, optionally rescalled to counter popularity bias (see param alpha). """
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
@@ -29,18 +29,11 @@ class EASE(SimilarityMatrixAlgorithm):
         # Collaborative Filtering via High-Dimensional Regression from Steck
         # https://arxiv.org/pdf/1904.13033.pdf
         # Eq. 14 B_scaled = B * diagM(w)
-        if y is not None:
-            raise RuntimeError("Train EASE_XY.")
         X = to_csr_matrix(X, binary=True)
 
         # Compute P
         XTX = (X.T @ X).toarray()
-        P = np.linalg.inv(
-            XTX +
-            self.l2 *
-            np.identity(
-                (X.shape[1]),
-                dtype=np.float32))
+        P = np.linalg.inv(XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
 
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))
@@ -78,9 +71,7 @@ class EASE_Intercept(EASE):
     https://arxiv.org/pdf/1904.13033.pdf
     """
 
-    def fit(self, X: Matrix, y: Matrix = None):
-        if y is not None:
-            raise RuntimeError("Train EASE_XY.")
+    def fit(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
 
         y = X
@@ -143,19 +134,19 @@ class EASE_XY(EASE):
 
 
 def normalize(X):
-    return scipy.sparse.csr_matrix(
-        scipy.sparse.diags(1 / np.sum(X, axis=1).A1) @ X)
+    return scipy.sparse.csr_matrix(scipy.sparse.diags(1 / np.sum(X, axis=1).A1) @ X)
 
 
 class EASE_AVG(EASE):
-    """ Variation of EASE where we take the average of weights rather than the sum (unpublished). """
+    """
+    Variation of EASE where we take the average of weights
+    rather than the sum (unpublished).
+    """
 
     def __init__(self, l2=0.2):
         super().__init__(l2, alpha=0)
 
-    def fit(self, X: Matrix, y: Matrix = None):
-        if y is not None:
-            raise RuntimeError("Train EASE_XY for distinct y.")
+    def fit(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
         y = X
         X = normalize(y)
@@ -180,12 +171,10 @@ class EASE_AVG(EASE):
 
 
 class EASE_AVG_Int(EASE_AVG):
-    """ Variation of EASE where we take the average of weights rather than the sum (unpublished)
-    with unary weights for items. """
+    """Variation of EASE where we take the average of weights rather than the sum (unpublished)
+    with unary weights for items."""
 
-    def fit(self, X: Matrix, y: Matrix = None):
-        if y is not None:
-            raise RuntimeError("Train EASE_XY for distinct y.")
+    def fit(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
         y = X
 
@@ -212,7 +201,7 @@ class EASE_AVG_Int(EASE_AVG):
 
 
 class SLIM(SimilarityMatrixAlgorithm):
-    """ Implementation of the SLIM model.
+    """Implementation of the SLIM model.
     loosely based on https://github.com/Mendeley/mrec
     """
 
