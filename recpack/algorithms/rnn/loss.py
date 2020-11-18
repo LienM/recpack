@@ -9,7 +9,7 @@ from typing import Callable
 from torch import Tensor
 
 
-Sampler = Callable[[int, Tensor], Tensor]
+Sampler = Callable[[int, Tensor], Tensor]  # (num_samples, targets) -> samples
 
 
 class BPRLoss(nn.Module):
@@ -109,6 +109,26 @@ class TOP1MaxLoss(nn.Module):
 
 
 class BatchSampler:
+    """
+    A sampler that uses the other targets in a minibatch as samples.
+
+    As an example, if the targets in a minibatch of size 5 are [1, 2, 3, 4, 5],
+    the resulting samples would be
+
+        [[2, 3, 4, 5]
+         [1, 3, 4, 5]
+         [1, 2, 4, 5]
+         [1, 2, 3, 5]
+         [1, 2, 3, 4]]
+
+    If the number of samples needed exceeds (batch size - 1), extra samples across all 
+    items (not necessarily those in the target set) are added by sampling according 
+    to the given item weights.
+
+    :param weights: Sampling weight for each item
+    :param device: The device where generated samples will be stored
+    """
+
     def __init__(self, weights: Tensor, device: str = "cpu"):
         self._wsampler = _WeightedSampler(weights, device=device)
         self.device = device

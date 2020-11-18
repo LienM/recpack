@@ -58,11 +58,11 @@ class SessionRNN(Algorithm):
         "bpr", "bpr-max"
     :param optimizer: Gradient descent optimizer, one of "sgd", "adagrad"
     :param learning_rate: Gradient descent initial learning rate
-    :param momentum: Gradient descent momentum
+    :param momentum: Momentum when using the sgd optimizer
     :param clip_norm: Clip the gradient's l2 norm, None for no clipping
     :param seed: Seed for random number generator
     :param bptt: Number of backpropagation through time steps
-    :param num_epochs: Max training runs through entire dataset, None for no limit
+    :param num_epochs: Max training runs through entire dataset
     """
 
     def __init__(
@@ -82,7 +82,7 @@ class SessionRNN(Algorithm):
         clip_norm: Optional[float] = 1.0,
         seed: int = 2,
         bptt: int = 1,
-        num_epochs: Optional[int] = 20,
+        num_epochs: int = 20,
         stopping_criterion=None,  # TODO
     ):
         self.num_layers = num_layers
@@ -189,7 +189,6 @@ class SessionRNN(Algorithm):
         self._init_model(X)
         self._init_training(X)
 
-        # TODO: verify train set & batch size compatible
         try:
             for epoch in range(self.num_epochs):
                 logger.info(f"Epoch {epoch}")
