@@ -83,10 +83,14 @@ class CML(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.best_model = tempfile.TemporaryFile()
+        self.best_model = tempfile.NamedTemporaryFile()
         self.save_best_to_file = save_best_to_file
 
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
+
+    def __del__(self):
+        """cleans up temp file"""
+        self.best_model.close()
 
     def _init_model(self, X):
         """
@@ -110,6 +114,8 @@ class CML(Algorithm):
     def file_name(self):
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
+    # TODO: loading just the model is not enough to reuse it.
+    # We also need known users etc. Pickling seems like a good way to go here.
     def load(self, file_name: str):
         """Load a previously computed model.
 
@@ -127,7 +133,7 @@ class CML(Algorithm):
     def _save_best(self):
         """Save the best model in a temp file"""
         self.best_model.close()
-        self.best_model = tempfile.TemporaryFile()
+        self.best_model = tempfile.NamedTemporaryFile()
         torch.save(self.model_, self.best_model)
 
     def _load_best(self):

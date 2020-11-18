@@ -82,10 +82,14 @@ class BPRMF(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.best_model = tempfile.TemporaryFile()
+        self.best_model = tempfile.NamedTemporaryFile()
 
-        # TODO: could not easily figure out how to manage batch_size parameter here.
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
+
+    # TODO: move into some sort of super class
+    def __del__(self):
+        """cleans up temp file"""
+        self.best_model.close()
 
     def _init_model(self, num_users, num_items):
         self.model_ = MFModule(
@@ -112,7 +116,7 @@ class BPRMF(Algorithm):
     def _save_best(self):
         """Save the best model in a temp file"""
         self.best_model.close()
-        self.best_model = tempfile.TemporaryFile()
+        self.best_model = tempfile.NamedTemporaryFile()
         torch.save(self.model_, self.best_model)
 
     def _load_best(self):

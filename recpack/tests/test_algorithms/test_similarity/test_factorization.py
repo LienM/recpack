@@ -13,6 +13,14 @@ def test_nmf(pageviews):
     prediction = a.predict(pageviews)
     assert prediction.shape == pageviews.shape
 
+    # Reconstruction expected, so items with 1 should have high scores.
+    assert prediction[0, 0] > prediction[0, 1]
+    assert prediction[0, 2] > prediction[0, 1]
+    assert prediction[0, 3] > prediction[0, 1]
+
+    assert prediction[2, 1] > prediction[2, 0]
+    assert prediction[2, 1] > prediction[2, 2]
+
 
 def test_nmf_item_to_item(pageviews):
     a = NMFItemToItem(2)
@@ -44,6 +52,14 @@ def test_svd(pageviews):
 
     prediction = a.predict(pageviews)
     assert prediction.shape == pageviews.shape
+
+    # Reconstruction expected, so items with 1 should have high scores.
+    assert prediction[0, 0] > prediction[0, 1]
+    assert prediction[0, 2] > prediction[0, 1]
+    assert prediction[0, 3] > prediction[0, 1]
+
+    assert prediction[2, 1] > prediction[2, 0]
+    assert prediction[2, 1] > prediction[2, 2]
 
 
 def test_svd_item_to_item(pageviews):

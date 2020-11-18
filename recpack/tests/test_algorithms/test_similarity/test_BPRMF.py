@@ -134,3 +134,13 @@ def test_recall_stopping_criterion(pageviews):
 
     a = BPRMF(num_components=2, num_epochs=2, batch_size=1, stopping_criterion="recall")
     a.fit(pageviews, (pageviews, pageviews))
+
+
+def test_cleanup():
+    def inner():
+        a = BPRMF()
+        assert os.path.isfile(a.best_model.name)
+        return a.best_model.name
+
+    n = inner()
+    assert not os.path.isfile(n)

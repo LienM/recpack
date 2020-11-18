@@ -60,8 +60,12 @@ class VAE(Algorithm):
         # converting the dense recommendation response to sparse
         self.drop_negative_recommendations = drop_negative_recommendations
 
-        self.best_model = tempfile.TemporaryFile()
+        self.best_model = tempfile.NamedTemporaryFile()
         self.save_best_to_file = save_best_to_file
+
+    def __del__(self):
+        """cleans up temp file"""
+        self.best_model.close()
 
     #######
     # FUNCTIONS TO OVERWRITE FOR EACH VAE
@@ -229,7 +233,7 @@ class VAE(Algorithm):
     def _save_best(self):
         """Save the best model in a temp file"""
         self.best_model.close()
-        self.best_model = tempfile.TemporaryFile()
+        self.best_model = tempfile.NamedTemporaryFile()
         torch.save(self.model_, self.best_model)
 
     def _load_best(self):
