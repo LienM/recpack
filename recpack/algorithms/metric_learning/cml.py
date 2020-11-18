@@ -1,6 +1,6 @@
-from functools import partial
 import logging
-from typing import Tuple, Union
+import tempfile
+from typing import Tuple
 import warnings
 
 import numpy as np
@@ -14,17 +14,18 @@ import torch.nn as nn
 import torch.optim as optim
 
 from recpack.algorithms.base import Algorithm
+from recpack.algorithms.samplers import warp_sample_pairs
 from recpack.algorithms.util import (
     StoppingCriterion,
     EarlyStoppingException,
 )
-from recpack.metrics.recall import recall_k
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 logger = logging.getLogger("recpack")
 
 
+# TODO: make WARP LOSS usable as stopping criterion
 class CML(Algorithm):
     def __init__(
         self,
@@ -35,7 +36,8 @@ class CML(Algorithm):
         seed: int = 42,
         batch_size: int = 50000,
         U: int = 20,
-        stopping_criterion: Union[StoppingCriterion, str] = "recall",
+        stopping_criterion: str = "recall",
+        save_best_to_file=False,
     ):
         """
         Pytorch Implementation of
@@ -59,11 +61,13 @@ class CML(Algorithm):
         :param U: Number of negative samples used in WARP loss function for every positive sample, defaults to 20
         :type U: int, optional
         :param stopping_criterion: Used to identify the best model computed thus far.
-            Can be either a string with the name of the metric or loss to use
-            (currently supports: 'recall')
-            or a StoppingCriterion instance, which will then be used.
+            The string indicates the name of the stopping criterion.
+            Which criterions are available can be found at StoppingCriterion.FUNCTIONS
             Defaults to 'recall'
-        :type stopping_criterion: Union[StoppingCriterion, str], optional
+        :type stopping_criterion: str, optional
+        :param save_best_to_file: If True, the best model is saved to disk after fit.
+        :type save_best_to_file: bool
+
         """
         self.num_components = num_components
         self.margin = margin
@@ -79,18 +83,10 @@ class CML(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        if type(stopping_criterion) == StoppingCriterion:
-            self.stopping_criterion = stopping_criterion
-        elif stopping_criterion.lower() == "recall":
-            # Create a partial,
-            # so the k parameter does not need to be passed at evaluation time
-            # K = 50 as in the paper
-            recall_partial = partial(recall_k, k=50)
-            self.stopping_criterion = StoppingCriterion(
-                recall_partial, minimize=False, stop_early=False
-            )
-        else:
-            raise RuntimeError(f"stopping criterion {stopping_criterion} not supported")
+        self.best_model = tempfile.TemporaryFile()
+        self.save_best_to_file = save_best_to_file
+
+        self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
 
     def _init_model(self, X):
         """
@@ -110,25 +106,33 @@ class CML(Algorithm):
 
         self.known_users = set(X.nonzero()[0])
 
-    def load(self, validation_loss: float):
-        """
-        Load a previously computed model.
+    @property
+    def file_name(self):
+        return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
-        :param validation_loss: Validation loss of model to be loaded
-        :type validation_loss: float
+    def load(self, file_name: str):
+        """Load a previously computed model.
+
+        :param file_name: path to file to load
+        :type file_name: str
         """
-        with open(f"{self.name}_loss_{validation_loss}.trch", "rb") as f:
+        with open(file_name, "rb") as f:
             self.model_ = torch.load(f)
 
-    def save(self, validation_loss: float):
-        """
-        Save a model. Model name contains the validation loss value.
-
-        :param validation_loss: Validation loss of model to be saved
-        :type validation_loss: float
-        """
-        with open(f"{self.name}_loss_{validation_loss}.trch", "wb") as f:
+    def save(self):
+        """Save the current model to disk"""
+        with open(self.file_name, "wb") as f:
             torch.save(self.model_, f)
+
+    def _save_best(self):
+        """Save the best model in a temp file"""
+        self.best_model.close()
+        self.best_model = tempfile.TemporaryFile()
+        torch.save(self.model_, self.best_model)
+
+    def _load_best(self):
+        self.best_model.seek(0)
+        self.model_ = torch.load(self.best_model)
 
     def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
         """
@@ -150,7 +154,12 @@ class CML(Algorithm):
             pass
 
         # Load the best of the models during training.
-        self.load(self.stopping_criterion.best_value)
+        self._load_best()
+
+        # If saving turned on: save to file.
+        if self.save_best_to_file:
+            self.save()
+
         return self
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
@@ -286,7 +295,7 @@ class CML(Algorithm):
             better = self.stopping_criterion.update(val_data_out_selection, X_val_pred)
 
             if better:
-                self.save(self.stopping_criterion.best_value)
+                self._save_best()
 
     def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
 
@@ -368,49 +377,3 @@ class CMLTorch(nn.Module):
         # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]
 
         return self.pdist(w_U, h_I)
-
-
-def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100):
-    """
-    Sample U negatives for every user-item-pair (positive).
-
-    :param X: Interaction matrix
-    :type X: csr_matrix
-    :param U: Number of negative samples for each positive, defaults to 10
-    :type U: int, optional
-    :param batch_size: The number of samples returned per batch, defaults to 100
-    :type batch_size: int, optional
-    :yield: Iterator of torch.LongTensor of shape (batch_size, U+2). [User, Item, Negative Sample1, Negative Sample2, ...]
-    :rtype: Iterator[torch.LongTensor]
-    """
-    # Need positive and negative pair. Requires the existence of a positive for this item.
-    positives = np.array(X.nonzero()).T  # As a (num_interactions, 2) numpy array
-    num_positives = positives.shape[0]
-    np.random.shuffle(positives)
-
-    for start in range(0, num_positives, batch_size):
-        batch = positives[start : start + batch_size]
-        users = batch[:, 0]
-        positives_batch = batch[:, 1]
-
-        # Important only for final batch, if smaller than batch_size
-        true_batch_size = min(batch_size, num_positives - start)
-
-        negatives_batch = np.random.randint(0, X.shape[1], size=(true_batch_size, U))
-        while True:
-            # Fix the negatives that are equal to the positives, if there are any
-            mask = np.apply_along_axis(
-                lambda col: col == positives_batch, 0, negatives_batch
-            )
-            num_incorrect = np.sum(mask)
-
-            if num_incorrect > 0:
-                new_negatives = np.random.randint(0, X.shape[1], size=(num_incorrect,))
-                negatives_batch[mask] = new_negatives
-            else:
-                # Exit the while loop
-                break
-
-        yield torch.LongTensor(users), torch.LongTensor(
-            positives_batch
-        ), torch.LongTensor(negatives_batch)

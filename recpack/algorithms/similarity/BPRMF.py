@@ -1,4 +1,3 @@
-from functools import partial
 import logging
 import tempfile
 
@@ -12,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from typing import Tuple, Union
+from typing import Tuple
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.loss_functions import bpr_loss
@@ -44,11 +43,11 @@ class BPRMF(Algorithm):
     :param seed: seed to fix random numbers, to make results reproducible,
                     defaults to None
     :type seed: [int], optional,
-    :param stopping_criterion: The stopping criterion to use for evaluating the method.
-        Can be either a string indicating which loss function to use
-        (currently supports: 'bpr')
-        or a StoppingCriterion instance. Defaults to 'bpr'
-    :type stopping_criterion: Union[StoppingCriterion, str]
+    :param stopping_criterion: Used to identify the best model computed thus far.
+        The string indicates the name of the stopping criterion.
+        Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+        Defaults to 'recall'
+    :type stopping_criterion: str, optional
     :param save_best_to_file: If True, the best model is saved to disk after fit.
     :type save_best_to_file: bool
     """
@@ -85,17 +84,8 @@ class BPRMF(Algorithm):
 
         self.best_model = tempfile.TemporaryFile()
 
-        self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
         # TODO: could not easily figure out how to manage batch_size parameter here.
-        # if type(stopping_criterion) == StoppingCriterion:
-        #     self.stopping_criterion = stopping_criterion
-        # elif stopping_criterion.lower() == "bpr":
-        #     bpr_part = partial(bpr_loss_metric, batch_size=self.batch_size)
-        #     self.stopping_criterion = StoppingCriterion(
-        #         bpr_part, minimize=True, stop_early=False
-        #     )
-        # else:
-        #     raise RuntimeError(f"stopping criterion {stopping_criterion} not supported")
+        self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
 
     def _init_model(self, num_users, num_items):
         self.model_ = MFModule(
