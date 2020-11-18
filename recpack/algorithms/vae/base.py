@@ -6,7 +6,7 @@ from sklearn.utils.validation import check_is_fitted
 import torch
 
 from recpack.algorithms.base import Algorithm
-from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users
+from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users, EarlyStoppingException
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
@@ -149,9 +149,12 @@ class VAE(Algorithm):
 
         val_in, val_out = validation_data
 
-        for epoch in range(0, self.max_epochs):
-            self._train_epoch(X)
-            self._evaluate(val_in, val_out)
+        try:
+            for epoch in range(0, self.max_epochs):
+                self._train_epoch(X)
+                self._evaluate(val_in, val_out)
+        except EarlyStoppingException:
+            pass
 
         # Load best model, not necessarily last model
         self.load(self.stopping_criterion.best_value)
