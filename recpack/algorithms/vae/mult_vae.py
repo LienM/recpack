@@ -67,7 +67,7 @@ class MultVAE(VAE):
         :param stopping_criterion: Used to identify the best model computed thus far.
             The string indicates the name of the stopping criterion.
             Which criterions are available can be found at StoppingCriterion.FUNCTIONS
-            Defaults to 'recall'
+            Defaults to 'ndcg'
         :type stopping_criterion: str, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
         :type save_best_to_file: bool
