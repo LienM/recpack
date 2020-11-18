@@ -8,7 +8,7 @@ from scipy.sparse import csr_matrix
 
 import torch
 
-from recpack.loss_functions.bpr import bpr_loss_metric
+from recpack.algorithms.loss_functions import bpr_loss_metric
 from recpack.metrics.dcg import ndcg_k
 from recpack.metrics.recall import recall_k
 

@@ -1,7 +1,7 @@
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.samplers.negative_sampling import bootstrap_sample_pairs
+from recpack.algorithms.samplers import bootstrap_sample_pairs
 
 
 def bpr_loss(positive_sim, negative_sim):

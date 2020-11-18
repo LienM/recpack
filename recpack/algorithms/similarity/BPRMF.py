@@ -15,8 +15,8 @@ import torch.optim as optim
 from typing import Tuple, Union
 
 from recpack.algorithms.base import Algorithm
-from recpack.loss_functions.bpr import bpr_loss
-from recpack.samplers.negative_sampling import bootstrap_sample_pairs
+from recpack.algorithms.loss_functions import bpr_loss
+from recpack.algorithms.samplers import bootstrap_sample_pairs
 from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
 
 logger = logging.getLogger("recpack")
