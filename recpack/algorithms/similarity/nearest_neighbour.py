@@ -11,7 +11,6 @@ from recpack.algorithms.similarity.base import (
 
 
 class ItemKNN(TopKSimilarityMatrixAlgorithm):
-
     def __init__(self, K=200, normalize=False):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item.
@@ -21,7 +20,7 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
         super().__init__(K)
         self.normalize = normalize
 
-    def fit(self, X: Matrix, y: Matrix = None):
+    def fit(self, X: Matrix):
         """Fit a cosine similarity matrix from item to item"""
         X = to_csr_matrix(X, binary=True)
 
@@ -40,7 +39,7 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
             for i, best_items_row in enumerate(
                 np.argpartition(item_cosine_similarities_.toarray(), -self.K)
             )
-            for j in best_items_row[-self.K:]
+            for j in best_items_row[-self.K :]
         ]
         # Create a mask matrix which will be pointwise multiplied with the
         # similarity matrix.
@@ -68,6 +67,7 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
     TODO: Figure out what this code is actually implementing. It is not cosine similarity
     It does seem to work fine though.
     """
+
     """Construct an ItemKNN model. Before use make sure to fit the model.
     The K parameter defines the how much best neighbours are kept for each item."""
 
@@ -94,7 +94,7 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
             for i, best_items_row in enumerate(
                 np.argpartition(item_cosine_similarities_.toarray(), -self.K)
             )
-            for j in best_items_row[-self.K:]
+            for j in best_items_row[-self.K :]
         ]
         # Create a mask matrix which will be pointwise multiplied with the
         # similarity matrix.
