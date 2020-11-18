@@ -7,8 +7,7 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class SimilarityMatrixAlgorithm(Algorithm):
-
-    def fit(self, X: Matrix, y: Matrix = None):
+    def fit(self, X: Matrix):
         pass
 
     def predict(self, X: Matrix):
@@ -37,7 +36,6 @@ class SimilarityMatrixAlgorithm(Algorithm):
 
 
 class TopKSimilarityMatrixAlgorithm(SimilarityMatrixAlgorithm):
-
     def __init__(self, K):
         super().__init__()
         self.K = K
