@@ -218,7 +218,6 @@ class BPRMF(Algorithm):
 
             self.steps += 1
 
-        # logger.info(f"training loss = {train_loss}")
 
     def _evaluate(self, validation_data: Tuple[csr_matrix, csr_matrix]):
         """Perform evaluation step, samples get drawn
