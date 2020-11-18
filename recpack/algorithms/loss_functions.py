@@ -26,7 +26,6 @@ def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
     :yield: [description]
     :rtype: [type]
     """
-    # This is kinda bad because it's duplication of data
     total_loss = 0
 
     for d in bootstrap_sample_pairs(
