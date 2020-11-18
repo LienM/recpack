@@ -149,7 +149,7 @@ class StoppingCriterion:
         "bpr": {
             "loss_function": bpr_loss_metric,
             "minimize": True,
-            "batch_size": 1,
+            "batch_size": 1000,
         },
         "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
         "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
