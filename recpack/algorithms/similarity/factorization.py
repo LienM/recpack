@@ -13,13 +13,17 @@ class FactorizationAlgorithm(Algorithm):
     :type Algorithm: [type]
     """
 
-    def predict(self, X):
+    def predict(self, X: Matrix):
         check_is_fitted(self)
-        assert X.shape == (self.W_.shape[0], self.H_.shape[1])
+        assert X.shape == (self.user_features_.shape[0], self.item_features_.shape[1])
         users = list(set(X.nonzero()[0]))
         result = scipy.sparse.lil_matrix(X.shape)
-        result[users] = self.W_[users] @ self.H_
+        result[users] = self.user_features_[users] @ self.item_features_
         return result.tocsr()
+
+    def fit(self, X: Matrix):
+        """Fit the self.user_features_ and self.item_features_"""
+        raise NotImplementedError("Need to implement fit")
 
 
 class NMF(FactorizationAlgorithm):
@@ -50,12 +54,12 @@ class NMF(FactorizationAlgorithm):
 
         # Factorization is W * H. Where W contains user latent vectors, and H
         # contains item latent vectors
-        self.W_ = model.fit_transform(X)
-        self.H_ = model.components_
+        self.user_features_ = model.fit_transform(X)
+        self.item_features_ = model.components_
 
         # Post conditions
-        assert self.W_.shape == (X.shape[0], self.num_components)
-        assert self.H_.shape == (self.num_components, X.shape[1])
+        assert self.user_features_.shape == (X.shape[0], self.num_components)
+        assert self.item_features_.shape == (self.num_components, X.shape[1])
 
         return self
 
@@ -66,11 +70,13 @@ class NMFItemToItem(SimilarityMatrixAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
         self.model_ = NMF(self.num_components, self.random_state)
         self.model_.fit(X)
 
-        self.similarity_matrix_ = self.model_.H_.T @ self.model_.H_
+        self.similarity_matrix_ = (
+            self.model_.item_features_.T @ self.model_.item_features_
+        )
 
         self._check_fit_complete()
 
@@ -101,15 +107,15 @@ class SVD(FactorizationAlgorithm):
         # Factorization computes U x Sigma x V
         # U are the user features,
         # Sigma x V are the item features.
-        self.W_ = model.fit_transform(X)
+        self.user_features_ = model.fit_transform(X)
 
         V = model.components_
         sigma = scipy.sparse.diags(model.singular_values_)
-        self.H_ = sigma @ V
+        self.item_features_ = sigma @ V
 
         # Post conditions
-        assert self.W_.shape == (X.shape[0], self.num_components)
-        assert self.H_.shape == (self.num_components, X.shape[1])
+        assert self.user_features_.shape == (X.shape[0], self.num_components)
+        assert self.item_features_.shape == (self.num_components, X.shape[1])
 
         return self
 
@@ -120,10 +126,12 @@ class SVDItemToItem(SimilarityMatrixAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X):
+    def fit(self, X: Matrix):
         self.model_ = SVD(self.num_components, self.random_state)
         self.model_.fit(X)
 
-        self.similarity_matrix_ = self.model_.H_.T @ self.model_.H_
+        self.similarity_matrix_ = (
+            self.model_.item_features_.T @ self.model_.item_features_
+        )
 
         self._check_fit_complete()
