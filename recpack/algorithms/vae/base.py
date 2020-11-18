@@ -200,7 +200,7 @@ class VAE(Algorithm):
 
             if better:
                 logger.info("Model improved. Storing better model.")
-                self.save()
+                self.save(self.stopping_criterion.best_value)
 
     def load(self, validation_loss):
         # TODO Give better names
