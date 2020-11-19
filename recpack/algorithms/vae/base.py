@@ -222,17 +222,17 @@ class VAE(Algorithm):
                 self._save_best()
 
     @property
-    def file_name(self):
+    def filename(self):
         # TODO: validation func used in name
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
-    def load(self, file_name):
-        with open(file_name, "rb") as f:
+    def load(self, filename):
+        with open(filename, "rb") as f:
             self.model_ = torch.load(f)
 
     def save(self):
         """Save the current model to disk"""
-        with open(self.file_name, "wb") as f:
+        with open(self.filename, "wb") as f:
             torch.save(self.model_, f)
 
     def _save_best(self):

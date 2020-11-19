@@ -111,23 +111,23 @@ class CML(Algorithm):
         self.known_users = set(X.nonzero()[0])
 
     @property
-    def file_name(self):
+    def filename(self):
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
     # TODO: loading just the model is not enough to reuse it.
     # We also need known users etc. Pickling seems like a good way to go here.
-    def load(self, file_name: str):
+    def load(self, filename: str):
         """Load a previously computed model.
 
-        :param file_name: path to file to load
-        :type file_name: str
+        :param filename: path to file to load
+        :type filename: str
         """
-        with open(file_name, "rb") as f:
+        with open(filename, "rb") as f:
             self.model_ = torch.load(f)
 
     def save(self):
         """Save the current model to disk"""
-        with open(self.file_name, "wb") as f:
+        with open(self.filename, "wb") as f:
             torch.save(self.model_, f)
 
     def _save_best(self):

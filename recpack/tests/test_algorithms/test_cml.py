@@ -92,9 +92,9 @@ def test_cml_predict(cml, larger_matrix):
 def test_cml_save_load(cml_save, larger_matrix):
 
     cml_save.fit(larger_matrix, (larger_matrix, larger_matrix))
-    assert os.path.isfile(cml_save.file_name)
+    assert os.path.isfile(cml_save.filename)
 
-    os.remove(cml_save.file_name)
+    os.remove(cml_save.filename)
 
 
 def test_cleanup():

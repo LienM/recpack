@@ -63,7 +63,7 @@ def test_save_and_load(pageviews_for_pairwise):
 
     a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
 
-    assert os.path.isfile(a.file_name)
+    assert os.path.isfile(a.filename)
 
     b = BPRMF(
         num_components=4,
@@ -74,7 +74,7 @@ def test_save_and_load(pageviews_for_pairwise):
         save_best_to_file=True,
     )
 
-    b.load(a.file_name)
+    b.load(a.filename)
 
     np.testing.assert_array_equal(
         a.predict(pageviews_for_pairwise).toarray(),
@@ -82,7 +82,7 @@ def test_save_and_load(pageviews_for_pairwise):
     )
 
     # TODO cleanup
-    os.remove(a.file_name)
+    os.remove(a.filename)
 
 
 @pytest.mark.parametrize(

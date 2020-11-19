@@ -25,9 +25,9 @@ def test_vae_save_load(larger_matrix):
     mult_vae_1 = MultVAE(seed=1, save_best_to_file=True, max_epochs=10)
 
     mult_vae_1.fit(larger_matrix, (larger_matrix, larger_matrix))
-    assert os.path.isfile(mult_vae_1.file_name)
+    assert os.path.isfile(mult_vae_1.filename)
 
-    os.remove(mult_vae_1.file_name)
+    os.remove(mult_vae_1.filename)
 
 
 def test_cleanup():

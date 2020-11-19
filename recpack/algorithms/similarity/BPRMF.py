@@ -100,17 +100,17 @@ class BPRMF(Algorithm):
         self.steps = 0
 
     @property
-    def file_name(self):
+    def filename(self):
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
-    def load(self, file_name):
+    def load(self, filename):
         # TODO Give better names
-        with open(file_name, "rb") as f:
+        with open(filename, "rb") as f:
             self.model_ = torch.load(f)
 
     def save(self):
         """Save the current model to disk"""
-        with open(self.file_name, "wb") as f:
+        with open(self.filename, "wb") as f:
             torch.save(self.model_, f)
 
     def _save_best(self):
