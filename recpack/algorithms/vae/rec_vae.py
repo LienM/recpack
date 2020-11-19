@@ -1,5 +1,6 @@
-import time
+from functools import partial
 import logging
+import time
 from typing import List, Tuple
 
 import torch.nn as nn
@@ -39,6 +40,8 @@ class RecVAE(VAE):
         gamma=0.005,
         beta=None,
         dropout=0.5,
+        stopping_criterion: str = "ndcg",
+        save_best_to_file: bool = False,
     ):
         """
         RecVAE Algorithm as first discussed in
@@ -78,13 +81,23 @@ class RecVAE(VAE):
         :type beta: float, optional
         :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
         :type dropout: float, optional
+        :param stopping_criterion: Used to identify the best model computed thus far.
+            The string indicates the name of the stopping criterion.
+            Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+            Defaults to 'ndcg'
+        :type stopping_criterion: str, optional
+        :param save_best_to_file: If True, the best model is saved to disk after fit.
+        :type save_best_to_file: bool
+
         """
+
         super().__init__(
             batch_size,
             max_epochs,
             seed,
             learning_rate,
-            StoppingCriterion(ndcg_k, stop_early=True),
+            StoppingCriterion.create(stopping_criterion),
+            save_best_to_file=save_best_to_file,
         )
 
         self.n_enc_epochs = n_enc_epochs

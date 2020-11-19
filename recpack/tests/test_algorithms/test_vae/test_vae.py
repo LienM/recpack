@@ -1,9 +1,11 @@
+import os.path
+
 import numpy as np
 
 from recpack.algorithms import MultVAE
 
 
-def test_batched_prediction(larger_matrix, mult_vae):
+def test_batched_prediction(larger_matrix):
 
     mult_vae_1 = MultVAE(seed=1)
 
@@ -16,3 +18,23 @@ def test_batched_prediction(larger_matrix, mult_vae):
 
     # We want to make sure all users got recommendations
     np.testing.assert_array_equal(list(input_users), list(batched_users))
+
+
+def test_vae_save_load(larger_matrix):
+
+    mult_vae_1 = MultVAE(seed=1, save_best_to_file=True, max_epochs=10)
+
+    mult_vae_1.fit(larger_matrix, (larger_matrix, larger_matrix))
+    assert os.path.isfile(mult_vae_1.filename)
+
+    os.remove(mult_vae_1.filename)
+
+
+def test_cleanup():
+    def inner():
+        a = MultVAE(seed=1)
+        assert os.path.isfile(a.best_model.name)
+        return a.best_model.name
+
+    n = inner()
+    assert not os.path.isfile(n)

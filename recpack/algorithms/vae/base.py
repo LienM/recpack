@@ -1,4 +1,5 @@
 import logging
+import tempfile
 from typing import List, Tuple
 
 from scipy.sparse import csr_matrix, lil_matrix
@@ -6,7 +7,13 @@ from sklearn.utils.validation import check_is_fitted
 import torch
 
 from recpack.algorithms.base import Algorithm
-from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users, EarlyStoppingException
+from recpack.algorithms.util import (
+    naive_sparse2tensor,
+    get_batches,
+    get_users,
+    StoppingCriterion,
+    EarlyStoppingException,
+)
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
@@ -29,8 +36,9 @@ class VAE(Algorithm):
         max_epochs,
         seed,
         learning_rate,
-        stopping_criterion,
+        stopping_criterion: StoppingCriterion,
         drop_negative_recommendations=True,
+        save_best_to_file=False,
     ):
         self.batch_size = (
             # TODO * torch.cuda.device_count() if cuda else batch_size
@@ -52,6 +60,13 @@ class VAE(Algorithm):
         # We need to do this to avoid blowing up RAM usage
         # converting the dense recommendation response to sparse
         self.drop_negative_recommendations = drop_negative_recommendations
+
+        self.best_model = tempfile.NamedTemporaryFile()
+        self.save_best_to_file = save_best_to_file
+
+    def __del__(self):
+        """cleans up temp file"""
+        self.best_model.close()
 
     #######
     # FUNCTIONS TO OVERWRITE FOR EACH VAE
@@ -119,16 +134,14 @@ class VAE(Algorithm):
     # STANDARD FUNCTIONS
     # DO NOT OVERWRITE UNLESS ABSOLUTELY NECESSARY
     #######
-    def fit(
-        self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
-    ) -> None:
+    def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]) -> None:
         """
         Fit the model on the interaction matrix,
         validation of the parameters is done with the validation data tuple.
 
         At the end of this function, the self.model_ should be ready for use.
         There is typically no need to change this function when
-        inheritting from the base class.
+        inheriting from the base class.
 
         :param X: user interactions to train on
         :type X: Matrix
@@ -157,7 +170,10 @@ class VAE(Algorithm):
             pass
 
         # Load best model, not necessarily last model
-        self.load(self.stopping_criterion.best_value)
+        self._load_best()
+
+        if self.save_best_to_file:
+            self.save()
 
         return
 
@@ -199,20 +215,35 @@ class VAE(Algorithm):
             X_pred_cpu = self._batch_predict(val_in)
             X_true = val_out
 
-            better = self.stopping_criterion.update(X_true, X_pred_cpu, k=100)
+            better = self.stopping_criterion.update(X_true, X_pred_cpu)
 
             if better:
                 logger.info("Model improved. Storing better model.")
-                self.save(self.stopping_criterion.best_value)
+                self._save_best()
 
-    def load(self, validation_loss):
-        # TODO Give better names
-        with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "rb") as f:
+    @property
+    def filename(self):
+        # TODO: validation func used in name
+        return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
+
+    def load(self, filename):
+        with open(filename, "rb") as f:
             self.model_ = torch.load(f)
 
-    def save(self, validation_loss):
-        with open(f"{self.name}_ndcg_100_{validation_loss}.trch", "wb") as f:
+    def save(self):
+        """Save the current model to disk"""
+        with open(self.filename, "wb") as f:
             torch.save(self.model_, f)
+
+    def _save_best(self):
+        """Save the best model in a temp file"""
+        self.best_model.close()
+        self.best_model = tempfile.NamedTemporaryFile()
+        torch.save(self.model_, self.best_model)
+
+    def _load_best(self):
+        self.best_model.seek(0)
+        self.model_ = torch.load(self.best_model)
 
     def predict(self, X: Matrix):
         check_is_fitted(self)

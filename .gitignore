@@ -139,3 +139,6 @@ recpack/.DS_store
 
 # default results output file
 results.json
+
+# trch model files
+*.trch

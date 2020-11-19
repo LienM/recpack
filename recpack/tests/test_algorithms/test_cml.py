@@ -1,16 +1,15 @@
-from typing import Callable
-from unittest.mock import MagicMock
+import os.path
 
+# from unittest.mock import MagicMock
+
+import numpy as np
 import scipy.sparse
-import torch
-import torch.nn as nn
-from torch.autograd import Variable
 import pytest
 
 from recpack.algorithms.metric_learning.cml import (
     CML,
-    CMLTorch,
-    warp_loss,
+    # CMLTorch,
+    # warp_loss,
 )
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
@@ -29,7 +28,21 @@ def cml():
         U=10,
     )
 
-    cml1.save = MagicMock(return_value=True)
+    return cml1
+
+
+@pytest.fixture(scope="function")
+def cml_save():
+    cml1 = CML(
+        100,  # num_components
+        1.9,  # margin
+        0.1,  # learning_rate
+        2,  # num_epochs
+        seed=42,
+        batch_size=20,
+        U=10,
+        save_best_to_file=True,
+    )
 
     return cml1
 
@@ -74,3 +87,26 @@ def test_cml_predict(cml, larger_matrix):
     assert isinstance(X_pred, scipy.sparse.csr_matrix)
 
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
+
+
+def test_cml_save_load(cml_save, larger_matrix):
+
+    cml_save.fit(larger_matrix, (larger_matrix, larger_matrix))
+    assert os.path.isfile(cml_save.filename)
+
+    os.remove(cml_save.filename)
+
+
+def test_cleanup():
+    def inner():
+        a = CML(
+            100,  # num_components
+            1.9,  # margin
+            0.1,  # learning_rate
+            2,  # num_epochs
+        )
+        assert os.path.isfile(a.best_model.name)
+        return a.best_model.name
+
+    n = inner()
+    assert not os.path.isfile(n)
