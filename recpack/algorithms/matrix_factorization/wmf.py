@@ -1,4 +1,5 @@
 import logging
+from enum import Enum
 
 import numpy as np
 from scipy.sparse import csr_matrix, diags, eye
@@ -6,6 +7,10 @@ from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm
 
 from recpack.algorithms import Algorithm
+
+class FactorType(Enum):
+    USER = True
+    ITEM = False
 
 logger = logging.getLogger("recpack")
 
@@ -61,10 +66,9 @@ class WeightedMatrixFactorization(Algorithm):
 
         U = set(X.nonzero()[0])
         U_conf = self._generate_confidence(X)
-        U_user_factors = self._least_squares_users(U_conf, self.item_factors_, U)
+        U_user_factors = self._least_squares(FactorType.USER, U_conf, self.item_factors_, U)
 
-        # TODO: Can this operation be more efficient?
-        score_matrix = csr_matrix(U_user_factors.dot(self.item_factors_.T))
+        score_matrix = csr_matrix(U_user_factors @ self.item_factors_.T)
 
         self._check_prediction(score_matrix, X)
         return score_matrix
@@ -107,8 +111,8 @@ class WeightedMatrixFactorization(Algorithm):
             old_uf = np.array(user_factors, copy=True)
             old_if = np.array(item_factors, copy=True)
 
-            user_factors = self._least_squares_users(c, item_factors)
-            item_factors = self._least_squares_items(ct, user_factors)
+            user_factors = self._least_squares(FactorType.USER, c, item_factors)
+            item_factors = self._least_squares(FactorType.ITEM, ct, user_factors)
 
             norm_uf = np.linalg.norm(old_uf - user_factors, 2)
             norm_if = np.linalg.norm(old_if - item_factors, 2)
@@ -118,38 +122,32 @@ class WeightedMatrixFactorization(Algorithm):
 
         return user_factors, item_factors
 
-    def _least_squares_users(self, matrix_c: csr_matrix, item_factors: np.ndarray, users=None) -> np.ndarray:
+    def _least_squares(self, factor_type: FactorType, conf_matrix: csr_matrix, factors: np.ndarray, users=None) \
+            -> np.ndarray:
         """
-        Calculate the user_factor based on the confidence matrix and the item_factors with the least squares algorithm.
-        @param matrix_c: Confidence matrix
-        @param item_factors: Item factor array
+        Calculate the other factor based on the confidence matrix and the factors with the least squares algorithm.
+        It is a general function for item- and user-factors. Depending on the parameter factor_type the other factor
+        will be calculated.
+        @param factor_type: Factor type which need to be calculated
+        @param conf_matrix: (Transposed) Confidence matrix
+        @param factors: Factor array
         @param users: Optional parameter to choose with user set to be used, default the self.known_users will be used.
-        @return: User factor nd-array based on the item factor array and the confidence matrix
+        @return: Other factor nd-array based on the factor array and the confidence matrix
         """
-        user_factors = np.zeros((self.users, self.num_components))
-        YtY = item_factors.T.dot(item_factors)
+        if factor_type is FactorType.USER:
+            dimension = self.users
+            distinct_set = self.known_users if users is None else users
+        else:  # factor_type is FactorType.ITEM
+            dimension = self.items
+            distinct_set = range(self.items)
 
-        users = self.known_users if users is None else users
-        for u in users:
-            user_factors[u] = self._linear_equation(item_factors, YtY, matrix_c, u)
+        factors_x = np.zeros((dimension, self.num_components))
+        YtY = factors.T @ factors
 
-        return user_factors
+        for i in distinct_set:
+            factors_x[i] = self._linear_equation(factors, YtY, conf_matrix, i)
 
-    def _least_squares_items(self, matrix_ct: csr_matrix, user_factors: np.ndarray) -> np.ndarray:
-        """
-        Calculate the item_factor based on the transposed confidence matrix and the user_factors with the least squares
-        algorithm.
-        @param matrix_ct: Transposed confidence matrix
-        @param user_factors: User factor array
-        @return: Item factor nd-array based on the user factor array and the confidence matrix
-        """
-        item_factors = np.zeros((self.items, self.num_components))
-        YtY = user_factors.T.dot(user_factors)
-
-        for i in range(self.items):
-            item_factors[i] = self._linear_equation(user_factors, YtY, matrix_ct, i)
-
-        return item_factors
+        return factors_x
 
     def _linear_equation(self, Y: np.ndarray, YtY: np.ndarray, matrix: csr_matrix, x: int) -> np.ndarray:
         """
@@ -170,11 +168,11 @@ class WeightedMatrixFactorization(Algorithm):
         #  For each x, let us define the diagonal n × n matrix Cx where Cx_yy = c_xy
         cx_matrix = matrix[x]
         cx = diags(cx_matrix.toarray().flatten(), 0)
-        A = YtY + (Y.T * cx).dot(Y) + self.regularization * np.eye(self.num_components)
+        A = YtY + (Y.T * cx) @ Y + self.regularization * np.eye(self.num_components)
 
         # accumulate Yt(Cx + I)Px in b
         cx_matrix[cx_matrix > 0] = 1  # now Px is represented as cx_matrix
-        b = (Y.T * (cx + eye(cx.shape[0]))).dot(cx_matrix.T.toarray())
+        b = (Y.T * (cx + eye(cx.shape[0]))) @ cx_matrix.T.toarray()
 
         # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
         #  Flatten the result to make sure the dimension is (self.num_components,)
