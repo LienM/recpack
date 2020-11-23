@@ -15,9 +15,10 @@ class AUCAMAN(ElementwiseMetricK):
     Measure is described in paper of S. Rendle, C. Freudenthaler, Z. Gantner, and L. Schmidt-Thieme. Bpr: Bayesian
     personalized ranking from implicit feedback. In UAI, pages 452–461, 2009
     It is an AUC measure where a missing preference is evaluated as a dislike; given by the following formula:
-        AUC_AMAN = 1 / |U_t| \sum_{u \in U_t}{\frac{|I| - rank(h_u)}{|I| - 1}}
+        AUC_AMAN = 1 / |U_t| \\sum_{u \\in U_t}{\\frac{|I| - rank(h_u)}{|I| - 1}}
         where H_u is the set containing all test preferences of that user
     """
+
     def __init__(self):
         super().__init__(None)
 

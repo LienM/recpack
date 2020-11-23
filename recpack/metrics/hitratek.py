@@ -16,9 +16,10 @@ class HitRateK(ElementwiseMetricK):
     22(1):143–177, 2004.
     The HitRate@K is a measure which gives the percentage of test users for which the test preference is in the top K
     recommendations; given by the following formula:
-        hr@k = 1 / |U_t| \sum_{u \in U_t}{|H_u \union top-k(u)|}
+        hr@k = 1 / |U_t| \\sum_{u \\in U_t}{|H_u \\union top-k(u)|}
         where H_u is the set containing all test preferences of that user
     """
+
     def __init__(self, K):
         super().__init__(K)
 

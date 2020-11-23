@@ -16,9 +16,10 @@ class AvgRecHitRateK(ElementwiseMetricK):
     22(1):143–177, 2004.
     The Average Reciprocal HitRate@K is a measure which extends the HitRate@K by takeing the rank of the test preference
     in the top 10 of a user into account; given by the following formula:
-        arhr@k = 1 / |U_t| \sum_{u \in U_t}{|H_u \union top-k(u)| * 1 / rank(h_u)}
+        arhr@k = 1 / |U_t| \\sum_{u \\in U_t}{|H_u \\union top-k(u)| * 1 / rank(h_u)}
         where H_u is the set containing all test preferences of that user
     """
+
     def __init__(self, K):
         super().__init__(K)
 

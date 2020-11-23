@@ -15,10 +15,10 @@ def test_hitratek():
     items_pred = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     y_pred = csr_matrix((values_pred, (users_pred, items_pred)), shape=(1, 10))
 
-    avgrechitk = HitRateK(3)
-    avgrechitk.calculate(y_true, y_pred)
+    hitratek = HitRateK(3)
+    hitratek.calculate(y_true, y_pred)
 
     manual_numerator = 1 + 1
     manual_denominator = 3
 
-    numpy.testing.assert_almost_equal(avgrechitk.value, manual_numerator / manual_denominator)
+    numpy.testing.assert_almost_equal(hitratek.value, manual_numerator / manual_denominator)
