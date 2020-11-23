@@ -11,8 +11,9 @@ class PercentileRanking(GlobalMetricK):
     are closer to the top of the recommendation list.
 
     It will be calculated according the following forumula:
-        perc-rank = \sum_{u,i}{r_{ui} * rank_{ui}} / \sum_{u,i}{r_{ui}}
+        perc-rank = \\sum_{u,i}{r_{ui} * rank_{ui}} / \\sum_{u,i}{r_{ui}}
     """
+
     def __init__(self):
         super().__init__(None)
 
