@@ -5,6 +5,9 @@ from recpack.metrics.ips import IPSHitRateK
 from recpack.metrics.precision import PrecisionK
 from recpack.metrics.recall import RecallK, CalibratedRecallK
 from recpack.metrics.reciprocal_rank import RRK
+from recpack.metrics.hitratek import HitRateK
+from recpack.metrics.avgrechitratek import AvgRecHitRateK
+from recpack.metrics.auc_aman import AUCAMAN
 
 
 METRICS = {
@@ -16,5 +19,8 @@ METRICS = {
     "Precision": PrecisionK,
     "Recall": RecallK,
     "CalibratedRecall": CalibratedRecallK,
-    "RR": RRK
+    "RR": RRK,
+    "HRK": HitRateK,
+    "ARHRK": AvgRecHitRateK,
+    "AUCAMAN": AUCAMAN
 }
