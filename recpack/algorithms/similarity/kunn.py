@@ -111,17 +111,22 @@ class KUNN(Algorithm):
         :param X: Sparse binary user-item matrix
         :return: 3-tuple of csr_matrices will be returned: Xscaled, Cu_rooted, Ci_rooted.
         """
-        Ci = np.asarray(X.sum(axis=0).flatten()).reshape(-1)
-        Cu = np.asarray(X.sum(axis=1).flatten()).reshape(-1)
+        Cu_rooted = self._get_rooted_counts(X, 1)
+        Ci_rooted = self._get_rooted_counts(X, 0)
 
-        Cu_calc = 1.0 / np.sqrt(Cu)
-        Cu_calc[Cu_calc >= np.inf] = 0
-        Ci_calc = 1.0 / np.sqrt(Ci)
-        Ci_calc[Ci_calc >= np.inf] = 0
-
-        Cu_rooted = diags(Cu_calc, 0)
-        Ci_rooted = diags(Ci_calc, 0)
-
-        Xscaled = (Cu_rooted * X) @ Ci_rooted
+        Xscaled = (Cu_rooted @ X) @ Ci_rooted
 
         return Xscaled, Cu_rooted, Ci_rooted
+
+    def _get_rooted_counts(self, X: csr_matrix, axis: int) -> csr_matrix:
+        """
+        Helper function to determine the Cu- and Ci_rooted diagonal matrices.
+        :param X: Sparse binary user-item matrix
+        :param axis: If 0, the Ci_rooted will be calculated and for Cu_rooted axis 1 must be used.
+        :return: Diagonal matrix with
+        """
+        Cx = np.asarray(X.sum(axis=axis).flatten()).reshape(-1)
+        Cx_calc = 1.0 / np.sqrt(Cx)
+        Cx_calc[Cx_calc >= np.inf] = 0
+
+        return diags(Cx_calc, 0)
