@@ -10,7 +10,7 @@ from recpack.metrics.base import ElementwiseMetricK
 logger = logging.getLogger("recpack")
 
 
-class AvgRecHitRateK(ElementwiseMetricK):
+class AvgReciprocalHitRateK(ElementwiseMetricK):
     """
     Measure is described in paper of M. Deshpande and G. Karypis: Item-based top-n recommendation algorithms. TOIS,
     22(1):143–177, 2004.
@@ -44,8 +44,6 @@ class AvgRecHitRateK(ElementwiseMetricK):
 
         scores = scores.tocsr()
 
-        self.scores_ = scores
-        sums = scores.sum(axis=1) / self.K
-        self.value_ = sums.mean()
+        self.scores_ = scores / self.K
 
         return

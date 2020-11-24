@@ -1,7 +1,7 @@
 import numpy
 from scipy.sparse import csr_matrix
 
-from recpack.metrics import AvgRecHitRateK
+from recpack.metrics import AvgReciprocalHitRateK
 
 
 def test_avg_rec_hitratek():
@@ -15,7 +15,7 @@ def test_avg_rec_hitratek():
     items_pred = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     y_pred = csr_matrix((values_pred, (users_pred, items_pred)), shape=(1, 10))
 
-    avgrechitk = AvgRecHitRateK(3)
+    avgrechitk = AvgReciprocalHitRateK(3)
     avgrechitk.calculate(y_true, y_pred)
 
     manual_numerator = 1 + 1/3
