@@ -65,9 +65,8 @@ class KUNN(Algorithm):
 
         # Predict for users, diagnal matrix with 1's when the prediction scores need to be computed for these users.
         users = set(X.nonzero()[0])
-        U, V = [], []
-        for user in users:
-            U.append(user)
+        V = np.ones((len(users),))
+        U = np.array(list(users))
             V.append(1)
 
         diag_users = csr_matrix((V, (U, U)), shape=(X.shape[0], X.shape[0]))
