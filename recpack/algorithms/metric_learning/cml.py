@@ -38,6 +38,7 @@ class CML(Algorithm):
         U: int = 20,
         stopping_criterion: str = "recall",
         save_best_to_file=False,
+        approximate_user_vectors=False,
     ):
         """
         Pytorch Implementation of
@@ -67,7 +68,8 @@ class CML(Algorithm):
         :type stopping_criterion: str, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
         :type save_best_to_file: bool
-
+        :param approximate_user_vectors: If True, make an approximate of user vectors for unknown users.
+        :type approximate_user_vectors: bool
         """
         self.num_components = num_components
         self.margin = margin
@@ -87,6 +89,8 @@ class CML(Algorithm):
         self.save_best_to_file = save_best_to_file
 
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
+
+        self.approximate_user_vectors = approximate_user_vectors
 
     def __del__(self):
         """cleans up temp file"""
@@ -196,7 +200,7 @@ class CML(Algorithm):
                 self.device
             )
             # Score = -distance
-            batch_V = -self.model_.forward(batch_U, batch_I).detach().cpu().numpy()
+            batch_V = -self.model_.predict(batch_U, batch_I).detach().cpu().numpy()
 
             V = np.append(V, batch_V)
 
@@ -215,6 +219,9 @@ class CML(Algorithm):
         :rtype: csr_matrix
         """
         check_is_fitted(self)
+
+        if self.approximate_user_vectors:
+            self.approximate_user_vectors(X)
 
         X = to_csr_matrix(X, binary=True)
 
@@ -316,6 +323,15 @@ class CML(Algorithm):
 
         return loss
 
+    # def approximate_user_vectors(self, X: csr_matrix):
+    #     """
+    #     [summary]
+
+    #     :param X: [description]
+    #     :type X: csr_matrix
+    #     """        
+    #     pass
+
 
 def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
@@ -379,6 +395,50 @@ class CMLTorch(nn.Module):
         """
         w_U = self.W(U)
         h_I = self.H(I)
+
+        # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]
+
+        return self.pdist(w_U, h_I)
+
+    @property
+    def W_as_tensor(self):
+
+        if not hasattr(self, "_W_as_tensor"):
+            self._W_as_tensor = self.W.state_dict()["weight"]
+
+        return self._W_as_tensor
+
+    @W_as_tensor.setter
+    def W_as_tensor(self, value):
+        self._W_as_tensor = value
+
+    @property
+    def H_as_tensor(self):
+
+        if not hasattr(self, "_H_as_tensor"):
+            self._H_as_tensor = self.H.state_dict()["weight"]
+
+        return self._H_as_tensor
+
+    @H_as_tensor.setter
+    def H_as_tensor(self, value):
+        self._H_as_tensor = value
+
+    def predict(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
+        """
+        Compute Euclidian distance between user embedding (w_u) and item embedding (h_i)
+        for every user and item pair in U and I.
+
+        :param U: User identifiers.
+        :type U: torch.Tensor
+        :param I: Item identifiers.
+        :type I: torch.Tensor
+        :return: Euclidian distances between user-item pairs.
+        :rtype: torch.Tensor
+        """
+
+        w_U = self.W_as_tensor[U]
+        h_I = self.H_as_tensor[I]
 
         # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]
 
