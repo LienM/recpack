@@ -89,6 +89,10 @@ def test_cml_predict(cml, larger_matrix):
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
 
 
+def _test_cml_predict_w_approximate(cml, larger_matrix):
+    pass
+
+
 def test_cml_save_load(cml_save, larger_matrix):
 
     cml_save.fit(larger_matrix, (larger_matrix, larger_matrix))

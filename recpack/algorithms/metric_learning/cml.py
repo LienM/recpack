@@ -112,7 +112,7 @@ class CML(Algorithm):
 
         self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
-        self.known_users = set(X.nonzero()[0])
+        self.known_users_ = set(X.nonzero()[0])
 
     @property
     def filename(self):
@@ -175,8 +175,8 @@ class CML(Algorithm):
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
         users = set(X.nonzero()[0])
 
-        users_to_predict_for = users.intersection(self.known_users)
-        users_we_cannot_predict_for = users.difference(self.known_users)
+        users_to_predict_for = users.intersection(self.known_users_)
+        users_we_cannot_predict_for = users.difference(self.known_users_)
 
         if users_we_cannot_predict_for:
             warnings.warn(
@@ -221,7 +221,8 @@ class CML(Algorithm):
         check_is_fitted(self)
 
         if self.approximate_user_vectors:
-            self.approximate_user_vectors(X)
+            # TODO Needs a better name
+            self.approximate(X)
 
         X = to_csr_matrix(X, binary=True)
 
@@ -323,14 +324,19 @@ class CML(Algorithm):
 
         return loss
 
-    # def approximate_user_vectors(self, X: csr_matrix):
-    #     """
-    #     [summary]
+    def approximate(self, X: csr_matrix):
+        """
+        Approximate user embeddings by setting them to the average of item embeddings the user visited.
 
-    #     :param X: [description]
-    #     :type X: csr_matrix
-    #     """        
-    #     pass
+        :param X: [description]
+        :type X: csr_matrix
+        """
+        U  = set(X.nonzero()[0])
+        users_to_approximate = U.difference(self.known_users_)
+
+        for user in users_to_approximate:
+            item_indices = X[user].nonzero()[1]
+            self.model_.W_as_tensor[user] = self.model_.H(torch.LongTensor(item_indices)).mean(axis=0)
 
 
 def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
@@ -412,17 +418,17 @@ class CMLTorch(nn.Module):
     def W_as_tensor(self, value):
         self._W_as_tensor = value
 
-    @property
-    def H_as_tensor(self):
+    # @property
+    # def H_as_tensor(self):
 
-        if not hasattr(self, "_H_as_tensor"):
-            self._H_as_tensor = self.H.state_dict()["weight"]
+    #     if not hasattr(self, "_H_as_tensor"):
+    #         self._H_as_tensor = self.H.state_dict()["weight"]
 
-        return self._H_as_tensor
+    #     return self._H_as_tensor
 
-    @H_as_tensor.setter
-    def H_as_tensor(self, value):
-        self._H_as_tensor = value
+    # @H_as_tensor.setter
+    # def H_as_tensor(self, value):
+    #     self._H_as_tensor = value
 
     def predict(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
         """
@@ -438,7 +444,7 @@ class CMLTorch(nn.Module):
         """
 
         w_U = self.W_as_tensor[U]
-        h_I = self.H_as_tensor[I]
+        h_I = self.H(I)
 
         # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]
 
