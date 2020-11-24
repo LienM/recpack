@@ -67,7 +67,6 @@ class KUNN(Algorithm):
         users = set(X.nonzero()[0])
         V = np.ones((len(users),))
         U = np.array(list(users))
-            V.append(1)
 
         diag_users = csr_matrix((V, (U, U)), shape=(X.shape[0], X.shape[0]))
 
