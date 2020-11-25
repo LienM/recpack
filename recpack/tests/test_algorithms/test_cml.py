@@ -67,6 +67,22 @@ def test_cml_training_epoch(cml, larger_matrix):
     assert_changed(params_before, params, device)
 
 
+def test_cml_training_epoch_w_disentanglement(cml, larger_matrix):
+    cml.disentange = True
+    cml._init_model(larger_matrix)
+
+    params = [np for np in cml.model_.named_parameters() if np[1].requires_grad]
+
+    # take a copy
+    params_before = [(name, p.clone()) for (name, p) in params]
+
+    # run a training step
+    cml._train_epoch(larger_matrix)
+
+    device = cml.device
+
+    assert_changed(params_before, params, device)
+
 def test_cml_evaluation_epoch(cml, larger_matrix):
     cml._init_model(larger_matrix)
 
@@ -115,7 +131,7 @@ def test_covariance_loss():
     loss = covariance_loss(ct.H, ct.W).detach().numpy()
 
     np.testing.assert_almost_equal(abs(loss), ct.std, decimal=1)
-    
+
 
 def test_cml_predict(cml, larger_matrix):
     cml._init_model(larger_matrix)
