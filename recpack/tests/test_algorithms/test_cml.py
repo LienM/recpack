@@ -6,6 +6,8 @@ import numpy as np
 import scipy.sparse
 import pytest
 
+from recpack.data.matrix import to_datam
+from recpack.splitters.scenarios import StrongGeneralization
 from recpack.algorithms.metric_learning.cml import (
     CML,
     # CMLTorch,
@@ -89,6 +91,23 @@ def test_cml_predict(cml, larger_matrix):
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
 
 
+def test_cml_predict_w_approximate(cml, larger_matrix):
+    cml.approximate_user_vectors = True
+
+    dm = to_datam(larger_matrix)
+    s = StrongGeneralization(0.7, 1., validation=True)
+
+    s.split(dm)
+
+    cml.fit(s.training_data, s.validation_data)
+
+    assert cml.known_users_ == set(s.training_data.binary_values.nonzero()[0])
+
+    X_pred = cml.predict(s.test_data_in)
+
+    assert cml.known_users_.intersection(s.test_data_in.binary_values.nonzero()[0])
+
+
 def test_cml_save_load(cml_save, larger_matrix):
 
     cml_save.fit(larger_matrix, (larger_matrix, larger_matrix))
@@ -97,7 +116,7 @@ def test_cml_save_load(cml_save, larger_matrix):
     os.remove(cml_save.filename)
 
 
-def test_cleanup():
+def test_cleanup(larger_matrix):
     def inner():
         a = CML(
             100,  # num_components
@@ -105,8 +124,9 @@ def test_cleanup():
             0.1,  # learning_rate
             2,  # num_epochs
         )
-        assert os.path.isfile(a.best_model.name)
-        return a.best_model.name
+        a._init_model(larger_matrix)
+        assert os.path.isfile(a.best_model_.name)
+        return a.best_model_.name
 
     n = inner()
     assert not os.path.isfile(n)
