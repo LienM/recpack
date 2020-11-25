@@ -5,11 +5,13 @@ import os.path
 import numpy as np
 import scipy.sparse
 import pytest
+import torch.nn as nn
 
 from recpack.algorithms.metric_learning.cml import (
     CML,
-    # CMLTorch,
+    CMLTorch,
     # warp_loss,
+    covariance_loss
 )
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
@@ -78,6 +80,24 @@ def test_cml_evaluation_epoch(cml, larger_matrix):
 
     assert_same(params_before, params, device)
 
+
+def test_cml_predict(cml, larger_matrix):
+    cml._init_model(larger_matrix)
+
+    X_pred = cml.predict(larger_matrix)
+
+    assert isinstance(X_pred, scipy.sparse.csr_matrix)
+
+    assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
+
+
+def test_covariance_loss():
+    ct = CMLTorch(10000, 1000, 200)
+
+    loss = covariance_loss(ct.H, ct.W).detach().numpy()
+
+    np.testing.assert_almost_equal(abs(loss), ct.std, decimal=1)
+    
 
 def test_cml_predict(cml, larger_matrix):
     cml._init_model(larger_matrix)
