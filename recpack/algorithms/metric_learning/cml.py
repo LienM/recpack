@@ -6,6 +6,7 @@ import warnings
 import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
+from torch import transpose
 
 from tqdm import tqdm
 
@@ -38,6 +39,7 @@ class CML(Algorithm):
         U: int = 20,
         stopping_criterion: str = "recall",
         save_best_to_file=False,
+        disentangle=False
     ):
         """
         Pytorch Implementation of
@@ -67,7 +69,8 @@ class CML(Algorithm):
         :type stopping_criterion: str, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
         :type save_best_to_file: bool
-
+        :param disentangle: Disentangle embedding dimensions by adding a covariance loss term to regularize.
+        :type disentangle: bool
         """
         self.num_components = num_components
         self.margin = margin
@@ -87,6 +90,8 @@ class CML(Algorithm):
         self.save_best_to_file = save_best_to_file
 
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
+
+        self.disentangle = disentangle
 
     def __del__(self):
         """cleans up temp file"""
@@ -311,13 +316,32 @@ class CML(Algorithm):
             self.margin,
             self.model_.num_items,
             self.U,
-            self.device,
         )
+
+        if self.disentangle:
+            loss += covariance_loss(self.model_.H, self.model_.W)
 
         return loss
 
 
-def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
+def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> int:
+
+    W_as_tensor = next(W.parameters())
+    H_as_tensor = next(H.parameters())
+
+    # Concatenate them together. They live in the same metric space, so share the same dimensions.
+    X = torch.cat([W_as_tensor, H_as_tensor], dim=0)
+
+    # Zero mean
+    X = X - X.mean(dim=0)
+
+    cov = X.matmul(X.T)
+
+    # Per element covariance, excluding the variance of individual random variables.
+    return cov.fill_diagonal_(0).sum() / (X.shape[0] * X.shape[1])
+
+
+def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
 
     # Largest number is "most wrongly classified", f.e.
