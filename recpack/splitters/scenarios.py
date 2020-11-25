@@ -337,21 +337,21 @@ class StrongGeneralizationTimedMostRecent(Scenario):
             raise Exception(
                 "t_validation should be provided when using validation split.")
 
-        self.time_splitter_test = splitter_base.TimestampSplitter(t, split_user=False)
+        self.user_splitter_test = splitter_base.UserInteractionTimeSplitter(t, on="max")
         if self.validation:
             assert self.t_validation < self.t
-            self.time_splitter_val = splitter_base.TimestampSplitter(
-                t_validation, split_user=False
+            self.user_splitter_val = splitter_base.UserInteractionTimeSplitter(
+                t_validation, on="max"
             )
         self.most_recent_splitter = splitter_base.MostRecentSplitter(n)
 
     def split(self, data):
-        tr_val_data, te_data = self.time_splitter_test.split(data)
+        tr_val_data, te_data = self.user_splitter_test.split(data)
 
         self.test_data_in, self.test_data_out = self.most_recent_splitter.split(te_data)
 
         if self.validation:
-            self.train_X, val_data = self.time_splitter_val.split(tr_val_data)
+            self.train_X, val_data = self.user_splitter_val.split(tr_val_data)
             self._validation_data_in, self._validation_data_out = \
                 self.most_recent_splitter.split(val_data)
         else:

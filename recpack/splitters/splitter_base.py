@@ -130,6 +130,46 @@ class StrongGeneralizationSplitter(Splitter):
         return u_splitter.split(data)
 
 
+class UserInteractionTimeSplitter(Splitter):
+    """
+    Users are split based on the time of their interactions. A user's interactions will 
+    all be placed in one of the two sets, never in both.
+
+    :param t: Timestamp to split on. By default, users whose last interaction has 
+              time < t are placed in the first set, other users in the second. Which 
+              interaction to split on can be controlled by the `on` parameter.
+    :param on: Which user interaction to split on, one of "min", "max", "median", "mean".
+               Defaults to "max", i.e. the user's latest interaction.
+    """
+
+    def __init__(self, t: float, on: str = "max"):
+        super().__init__()
+        assert on in ["min", "max", "median", "mean"]
+        self.t = t
+        self.on = on
+
+    @property
+    def name(self):
+        return f"user_interaction_time_split_t={self.t}_on={self.on}"
+
+    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+        """
+        Splits the users into two sets based on the time of their interactions.
+
+        :param data: Data matrix to be split. Must contain timestamps.
+        :return: A tuple containing a matrix with all users whose interaction specified 
+                 by the `on` parameter occured strictly before time `t`, and a matrix 
+                 with users whose interaction occured at or after time `t`.
+        """
+        compare_to = "user-" + self.on
+
+        tr_data = data.timestamps_lt(self.t, compare_to=compare_to)
+        te_data = data.timestamps_gte(self.t, compare_to=compare_to)
+
+        logger.debug(f"{self.name} - Split successful")
+        return tr_data, te_data
+
+
 class ItemSplitter(Splitter):
     pass
 
@@ -190,17 +230,13 @@ class TimestampSplitter(Splitter):
     :type t_delta: int
     :param t_alpha: seconds before t to use as training data (default is None -> all data < t is considered)
     :type t_alpha: int
-    :param split_user: Allow user data to be split. If False, data from the same user is kept together,
-                       the time of the most recent action determines which split the user is placed in.
-    :type split_user: bool
     """
 
-    def __init__(self, t, t_delta=None, t_alpha=None, split_user=True):
+    def __init__(self, t, t_delta=None, t_alpha=None):
         super().__init__()
         self.t = t
         self.t_delta = t_delta
         self.t_alpha = t_alpha
-        self.split_user = split_user
 
     @property
     def name(self):
@@ -225,21 +261,21 @@ class TimestampSplitter(Splitter):
 
         if self.t_alpha is None:
             # Holds indices where timestamp < t
-            tr_data = data.timestamps_lt(self.t, split_user=self.split_user)
+            tr_data = data.timestamps_lt(self.t)
         else:
             # Holds indices in interval: t-t_alpha =< timestamp < t
             tr_data = data.timestamps_lt(
-                self.t, split_user=self.split_user).timestamps_gte(
-                self.t - self.t_alpha, split_user=self.split_user)
+                self.t).timestamps_gte(
+                self.t - self.t_alpha)
 
         if self.t_delta is None:
             # Holds indices where timestamp >= t
-            te_data = data.timestamps_gte(self.t, split_user=self.split_user)
+            te_data = data.timestamps_gte(self.t)
         else:
             # Get indices where timestamp >= t and timestamp < t + t_delta
             te_data = data.timestamps_gte(
-                self.t, split_user=self.split_user).timestamps_lt(
-                self.t + self.t_delta, split_user=self.split_user)
+                self.t).timestamps_lt(
+                self.t + self.t_delta)
 
         logger.debug(f"{self.name} - Split successful")
 
