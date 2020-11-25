@@ -354,7 +354,7 @@ class CML(Algorithm):
         self.known_users_.update(users_to_approximate)
 
 
-def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> int:
+def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
 
     W_as_tensor = next(W.parameters())
     H_as_tensor = next(H.parameters())
@@ -371,7 +371,13 @@ def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> int:
     return cov.fill_diagonal_(0).sum() / (X.shape[0] * X.shape[1])
 
 
-def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U):
+def warp_loss(
+    dist_pos_interaction: torch.Tensor,
+    dist_neg_interaction: torch.Tensor,
+    margin: float,
+    J: int,
+    U: int,
+) -> torch.Tensor:
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
 
     # Largest number is "most wrongly classified", f.e.
@@ -412,10 +418,10 @@ class CMLTorch(nn.Module):
         self.W = nn.Embedding(num_users, num_components)  # User embedding
         self.H = nn.Embedding(num_items, num_components)  # Item embedding
 
-        std = 1 / num_components ** 0.5
+        self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
-        nn.init.normal_(self.W.weight, std=std)
-        nn.init.normal_(self.H.weight, std=std)
+        nn.init.normal_(self.W.weight, std=self.std)
+        nn.init.normal_(self.H.weight, std=self.std)
 
         self.pdist = nn.PairwiseDistance(p=2)
 
