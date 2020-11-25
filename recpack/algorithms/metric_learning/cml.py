@@ -136,6 +136,9 @@ class CML(Algorithm):
 
     def _save_best(self):
         """Save the best model in a temp file"""
+
+        # First removes the old saved file, 
+        # and then creates a new one in which the model is saved
         self.best_model_.close()
         self.best_model_ = tempfile.NamedTemporaryFile()
         torch.save(self.model_, self.best_model_)
