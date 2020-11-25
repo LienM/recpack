@@ -114,7 +114,6 @@ class CML(Algorithm):
         self.best_model_ = tempfile.NamedTemporaryFile()
         torch.save(self.model_, self.best_model_)
 
-
     @property
     def filename(self):
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
@@ -332,12 +331,14 @@ class CML(Algorithm):
         :param X: [description]
         :type X: csr_matrix
         """
-        U  = set(X.nonzero()[0])
+        U = set(X.nonzero()[0])
         users_to_approximate = U.difference(self.known_users_)
 
         for user in users_to_approximate:
             item_indices = X[user].nonzero()[1]
-            self.model_.W_as_tensor[user] = self.model_.H(torch.LongTensor(item_indices)).mean(axis=0)
+            self.model_.W_as_tensor[user] = self.model_.H(
+                torch.LongTensor(item_indices)
+            ).mean(axis=0)
 
         self.known_users_.update(users_to_approximate)
 
@@ -420,18 +421,6 @@ class CMLTorch(nn.Module):
     @W_as_tensor.setter
     def W_as_tensor(self, value):
         self._W_as_tensor = value
-
-    # @property
-    # def H_as_tensor(self):
-
-    #     if not hasattr(self, "_H_as_tensor"):
-    #         self._H_as_tensor = self.H.state_dict()["weight"]
-
-    #     return self._H_as_tensor
-
-    # @H_as_tensor.setter
-    # def H_as_tensor(self, value):
-    #     self._H_as_tensor = value
 
     def predict(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
         """
