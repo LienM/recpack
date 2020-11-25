@@ -36,7 +36,6 @@ def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
         target_items = d[:, 1].numpy().copy()
         negative_items = d[:, 2].numpy().copy()
 
-        print(X_pred[users, target_items])
         positive_sim = torch.tensor(X_pred[users, target_items])
         negative_sim = torch.tensor(X_pred[users, negative_items])
 
