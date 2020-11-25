@@ -133,16 +133,6 @@ def test_covariance_loss():
     np.testing.assert_almost_equal(abs(loss), ct.std, decimal=1)
 
 
-def test_cml_predict(cml, larger_matrix):
-    cml._init_model(larger_matrix)
-
-    X_pred = cml.predict(larger_matrix)
-
-    assert isinstance(X_pred, scipy.sparse.csr_matrix)
-
-    assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
-
-
 def test_cml_save_load(cml_save, larger_matrix):
 
     cml_save.fit(larger_matrix, (larger_matrix, larger_matrix))
