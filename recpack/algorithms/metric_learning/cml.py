@@ -68,7 +68,7 @@ class CML(Algorithm):
         :type stopping_criterion: str, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
         :type save_best_to_file: bool
-        :param approximate_user_vectors: If True, make an approximate of user vectors for unknown users.
+        :param approximate_user_vectors: If True, make an approximation of user vectors for unknown users.
         :type approximate_user_vectors: bool
         """
         self.num_components = num_components
@@ -85,16 +85,13 @@ class CML(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.best_model = tempfile.NamedTemporaryFile()
         self.save_best_to_file = save_best_to_file
-
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
-
         self.approximate_user_vectors = approximate_user_vectors
 
     def __del__(self):
         """cleans up temp file"""
-        self.best_model.close()
+        self.best_model_.close()
 
     def _init_model(self, X):
         """
@@ -113,6 +110,10 @@ class CML(Algorithm):
         self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
         self.known_users_ = set(X.nonzero()[0])
+
+        self.best_model_ = tempfile.NamedTemporaryFile()
+        torch.save(self.model_, self.best_model_)
+
 
     @property
     def filename(self):
@@ -136,13 +137,13 @@ class CML(Algorithm):
 
     def _save_best(self):
         """Save the best model in a temp file"""
-        self.best_model.close()
-        self.best_model = tempfile.NamedTemporaryFile()
-        torch.save(self.model_, self.best_model)
+        self.best_model_.close()
+        self.best_model_ = tempfile.NamedTemporaryFile()
+        torch.save(self.model_, self.best_model_)
 
     def _load_best(self):
-        self.best_model.seek(0)
-        self.model_ = torch.load(self.best_model)
+        self.best_model_.seek(0)
+        self.model_ = torch.load(self.best_model_)
 
     def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
         """
@@ -220,13 +221,13 @@ class CML(Algorithm):
         """
         check_is_fitted(self)
 
-        if self.approximate_user_vectors:
-            # TODO Needs a better name
-            self.approximate(X)
-
         X = to_csr_matrix(X, binary=True)
 
         assert X.shape == (self.model_.num_users, self.model_.num_items)
+
+        if self.approximate_user_vectors:
+            # TODO Needs a better name
+            self.approximate(X)
 
         X_pred = self._batch_predict(X)
 
@@ -338,6 +339,8 @@ class CML(Algorithm):
             item_indices = X[user].nonzero()[1]
             self.model_.W_as_tensor[user] = self.model_.H(torch.LongTensor(item_indices)).mean(axis=0)
 
+        self.known_users_.update(users_to_approximate)
+
 
 def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
@@ -432,8 +435,11 @@ class CMLTorch(nn.Module):
 
     def predict(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
         """
-        Compute Euclidian distance between user embedding (w_u) and item embedding (h_i)
+        Compute Euclidian distance between the !! already calculated !!
+        user embedding (w_u) and item embedding (h_i)
         for every user and item pair in U and I.
+        Can also make meaningful predictions for unknown users if their embeddings
+        were approximated.
 
         :param U: User identifiers.
         :type U: torch.Tensor

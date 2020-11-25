@@ -34,7 +34,7 @@ class Scenario(ABC):
         pass
 
     @property
-    def training_data(self) -> Tuple[DataM, DataM]:
+    def training_data(self) -> Union[Tuple[DataM, DataM], DataM]:
         return (
             (self.train_X, self.train_y) if hasattr(self, "train_y") else self.train_X
         )
