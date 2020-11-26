@@ -40,11 +40,11 @@ class CML(Algorithm):
         stopping_criterion: str = "recall",
         save_best_to_file=False,
         approximate_user_vectors=False,
-        disentangle=False
+        disentangle=False,
     ):
         """
         Pytorch Implementation of
-        [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+        Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
         http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
 
         Version without features, referred to as CML in the paper.
@@ -143,7 +143,7 @@ class CML(Algorithm):
     def _save_best(self):
         """Save the best model in a temp file"""
 
-        # First removes the old saved file, 
+        # First removes the old saved file,
         # and then creates a new one in which the model is saved
         self.best_model_.close()
         self.best_model_ = tempfile.NamedTemporaryFile()
@@ -182,6 +182,15 @@ class CML(Algorithm):
         return self
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+        """
+        Method for internal use only. Users should use `predict`.
+
+        :param X: interaction matrix, should have same dimensions as the matrix the model was fit on.
+        :type X: csr_matrix
+        :raises an: AssertionError when the input and model's number of items and users are incongruent.
+        :return: csr matrix of same shape, with recommendations.
+        :rtype: csr_matrix
+        """
         users = set(X.nonzero()[0])
 
         users_to_predict_for = users.intersection(self.known_users_)
@@ -320,8 +329,21 @@ class CML(Algorithm):
             if better:
                 self._save_best()
 
-    def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
+    def _compute_loss(
+        self, dist_pos_interaction: torch.Tensor, dist_neg_interaction: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Method for internal use only. Please use `warp_loss` or `covariance_loss`.
 
+        Compute differentiable loss function.
+
+        :param dist_pos_interaction: Tensor containing distances between positive sample pairs.
+        :type dist_pos_interaction: torch.Tensor
+        :param dist_neg_interaction: Tensor containing distance between negative sample pairs.
+        :type dist_neg_interaction: torch.Tensor
+        :return: 0-D Tensor containing computed loss value.
+        :rtype: torch.Tensor
+        """
         loss = warp_loss(
             dist_pos_interaction,
             dist_neg_interaction,
@@ -355,7 +377,23 @@ class CML(Algorithm):
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
+    """
+    Implementation of covariance loss as described in
+    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
 
+    The loss term is used to penalize covariance between embedding dimensions and
+    thus disentangle these embedding dimensions.
+
+    It is assumed H and W are embeddings in the same space.
+
+    :param H: Item embedding
+    :type H: nn.Embedding
+    :param W: User Embedding
+    :type W: nn.Embedding
+    :return: Covariance loss term
+    :rtype: torch.Tensor
+    """
     W_as_tensor = next(W.parameters())
     H_as_tensor = next(H.parameters())
 
@@ -378,6 +416,34 @@ def warp_loss(
     J: int,
     U: int,
 ) -> torch.Tensor:
+    """
+    Implementation of
+    WARP loss as described in
+    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+    based on
+    J. Weston, S. Bengio, and N. Usunier. Large scale image annotation:
+    learning to rank with joint word-image embeddings. Machine learning, 81(1):21–35, 2010.
+
+    Adds a loss penalty for every negative sample that is not at least
+    an amount of margin further away from the reference sample than a positive
+    sample. This per sample loss penalty has a weight proportional to the
+    amount of samples in the negative sample batch were "misclassified",
+    i.e. closer than the positive sample.
+
+    :param dist_pos_interaction: Tensor of distances between positive sample and reference sample.
+    :type dist_pos_interaction: torch.Tensor
+    :param dist_neg_interaction: Tensor of distances between negatives samples and reference sample.
+    :type dist_neg_interaction: torch.Tensor
+    :param margin: Required margin between positive and negative sample.
+    :type margin: float
+    :param J: Total number of items in the dataset.
+    :type J: int
+    :param U: Number of negative samples used for every positive sample.
+    :type U: int
+    :return: 0-D Tensor containing WARP loss.
+    :rtype: torch.Tensor
+    """
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
 
     # Largest number is "most wrongly classified", f.e.
@@ -408,7 +474,7 @@ class CMLTorch(nn.Module):
     :type num_components: int, optional
     """
 
-    def __init__(self, num_users, num_items, num_components=100):
+    def __init__(self, num_users: int, num_items: int, num_components: int = 100):
         super().__init__()
 
         self.num_components = num_components

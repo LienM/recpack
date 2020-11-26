@@ -13,7 +13,7 @@ from recpack.algorithms.metric_learning.cml import (
     CML,
     CMLTorch,
     # warp_loss,
-    covariance_loss
+    covariance_loss,
 )
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
@@ -83,6 +83,7 @@ def test_cml_training_epoch_w_disentanglement(cml, larger_matrix):
 
     assert_changed(params_before, params, device)
 
+
 def test_cml_evaluation_epoch(cml, larger_matrix):
     cml._init_model(larger_matrix)
 
@@ -113,7 +114,7 @@ def test_cml_predict_w_approximate(cml, larger_matrix):
     cml.approximate_user_vectors = True
 
     dm = to_datam(larger_matrix)
-    s = StrongGeneralization(0.7, 1., validation=True)
+    s = StrongGeneralization(0.7, 1.0, validation=True)
 
     s.split(dm)
 
@@ -124,6 +125,7 @@ def test_cml_predict_w_approximate(cml, larger_matrix):
     X_pred = cml.predict(s.test_data_in)
 
     assert cml.known_users_.intersection(s.test_data_in.binary_values.nonzero()[0])
+
 
 def test_covariance_loss():
     ct = CMLTorch(10000, 1000, 200)
