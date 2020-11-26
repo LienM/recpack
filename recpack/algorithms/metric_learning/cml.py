@@ -6,7 +6,6 @@ import warnings
 import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
-from torch import transpose
 
 from tqdm import tqdm
 
@@ -92,9 +91,6 @@ class CML(Algorithm):
         self.save_best_to_file = save_best_to_file
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
         self.approximate_user_vectors = approximate_user_vectors
-
-        self.disentangle = disentangle
-
         self.disentangle = disentangle
 
     def __del__(self):
