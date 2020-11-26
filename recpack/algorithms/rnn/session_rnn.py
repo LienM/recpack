@@ -19,7 +19,7 @@ from recpack.algorithms.util import (
 )
 from recpack.metrics.recall import recall_k
 from recpack.data.data_matrix import DataM, ITEM_IX
-from recpack.data.matrix import Matrix, to_datam
+from recpack.data.matrix import Matrix, to_datam, to_csr_matrix
 from typing import Tuple, Optional, List
 
 from recpack.algorithms.rnn.loss import (
@@ -45,17 +45,17 @@ class SessionRNN(Algorithm):
     "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations"
 
     :param batch_size: Number of examples in a mini-batch
-    :param sample_size: Number of negative samples used for loss calculation,
-        including samples from the same minibatch
+    :param sample_size: Number of negative samples used for bpr, bpr-max, top1, top1-max
+        loss calculation. This number includes samples from the same minibatch.
     :param alpha: Sampling weight parameter, 0 is uniform, 1 is popularity-based
     :param embedding_size: Size of item embeddings, None for no embeddings
-    :param dropout: Dropout applied to embeddings and hidden layers
+    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout.
     :param num_layers: Number of hidden layers in the RNN
     :param hidden_size: Number of neurons in the hidden layer(s)
     :param activation: Final layer activation function, one of "identity", "tanh",
         "softmax", "relu", "elu-<X>", "leaky-<X>"
-    :param loss_fn: Loss function, one of "cross-entropy", "top1", "top1-max",
-        "bpr", "bpr-max"
+    :param loss_fn: Loss function. One of "cross-entropy", "top1", "top1-max", "bpr",
+        "bpr-max"
     :param optimizer: Gradient descent optimizer, one of "sgd", "adagrad"
     :param learning_rate: Gradient descent initial learning rate
     :param momentum: Momentum when using the sgd optimizer
@@ -63,6 +63,9 @@ class SessionRNN(Algorithm):
     :param seed: Seed for random number generator
     :param bptt: Number of backpropagation through time steps
     :param num_epochs: Max training runs through entire dataset
+    :param stopping_criterion: Name of the stopping criterion used to evaluate the
+        model on a validation set during training. Must be one of the criterions in
+        StoppingCriterion.FUNCTIONS.
     """
 
     def __init__(
@@ -72,7 +75,7 @@ class SessionRNN(Algorithm):
         embedding_size: Optional[int] = None,
         dropout: float = 0.0,
         activation: str = "elu-1",
-        loss_fn: str = "bpr-max",
+        loss_fn: str = "cross-entropy",
         sample_size: int = 5000,
         alpha: float = 0.5,
         optimizer: str = "adagrad",
@@ -83,7 +86,7 @@ class SessionRNN(Algorithm):
         seed: int = 2,
         bptt: int = 1,
         num_epochs: int = 20,
-        stopping_criterion=None,  # TODO
+        stopping_criterion: str = "recall",
     ):
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -101,12 +104,9 @@ class SessionRNN(Algorithm):
         self.seed = seed
         self.bptt = bptt
         self.num_epochs = num_epochs
-        self.stopping_criterion = stopping_criterion
+        self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
-        self.stopping_criterion = StoppingCriterion(
-            recall_k, minimize=False, stop_early=False
-        )  # TODO: Evaluate using the loss function used for optimization
 
     def _init_random_state(self) -> None:
         """
@@ -123,8 +123,8 @@ class SessionRNN(Algorithm):
         num_items = train_data.shape[1]
 
         self.model_ = SessionRNNTorch(
-            num_items,
-            self.hidden_size,
+            num_items=num_items,
+            hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             embedding_size=self.embedding_size,
             dropout=self.dropout,
@@ -135,8 +135,10 @@ class SessionRNN(Algorithm):
         """
         Initializes the objects required for network optimization.
         """
+        num_items = train_data.shape[1]
+
         item_counts_tr = train_data.dataframe[ITEM_IX].value_counts()
-        item_counts = pd.Series(np.arange(train_data.shape[1]))
+        item_counts = pd.Series(np.arange(num_items))
         item_counts = item_counts.map(item_counts_tr).fillna(0)
         item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
 
@@ -177,13 +179,18 @@ class SessionRNN(Algorithm):
         self, X: Matrix, validation_data: Tuple[Matrix, Matrix] = None
     ) -> SessionRNN:
         """
-        Fit the model on the X dataset, and evaluate model quality on validation_data.
+        Fit the model on the X dataset.
+
+        Model quality is evaluated after every epoch on validation_data using the
+        algorithm's stopping criterion. If no validation data is provided or early
+        stopping is disabled, training will continue for exactly num_epochs.
 
         :param train_data: The training data matrix.
-        :param validation_data: Validation data, as matrix to be used as input and matrix to be used as output.
+        :param validation_data: Validation in and out matrices. None for no validation.
         """
-        # X, validation_data = to_datam((X, validation_data), timestamps=True)
         X = to_datam(X, timestamps=True)
+        if validation_data:
+            validation_data = to_datam(validation_data, timestamps=True)
 
         self._init_random_state()
         self._init_model(X)
@@ -193,11 +200,12 @@ class SessionRNN(Algorithm):
             for epoch in range(self.num_epochs):
                 logger.info(f"Epoch {epoch}")
                 self._train_epoch(X)
-                # self._evaluate(validation_data)
+                if validation_data:
+                    self._evaluate(validation_data)
         except EarlyStoppingException:
             pass
 
-        # self.load(self.stopping_criterion.best_value)  # Load best model
+        # TODO: restore best model from temp file
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:
@@ -206,28 +214,26 @@ class SessionRNN(Algorithm):
 
         :param X: Data matrix, should have same shape as training matrix
         """
-        X = to_datam(X, timestamps=True)
-
         check_is_fitted(self)
 
+        X = to_datam(X, timestamps=True)
         X_pred = lil_matrix(X.shape)
 
         with torch.no_grad():
             actions, _, uids = dm_to_tensor(
                 X, batch_size=1, device=self.device, shuffle=False, include_last=True
             )
-            new_uid = uids != uids.roll(1, dims=0)
+            is_last_action = uids != uids.roll(-1, dims=0)
 
             self.model_.train(False)
             hidden = self.model_.init_hidden(1)
-            for i, (action, uid, new) in tqdm(
-                enumerate(zip(actions, uids, new_uid)), total=len(actions)
+            for action, uid, is_last in tqdm(
+                zip(actions, uids, is_last_action), total=len(actions)
             ):
-                hidden = hidden * ~new.view(1, -1, 1)
                 output, hidden = self.model_(action.unsqueeze(0), hidden)
-                last_action = (i == len(actions) - 1) or new_uid[i + 1, 0]
-                if last_action:
-                    X_pred[uid[0].item()] = output.cpu().numpy().reshape(-1)
+                if is_last:
+                    X_pred[uid.item()] = output.cpu().numpy().reshape(-1)
+                    hidden = hidden * 0
 
         X_pred = X_pred.tocsr()
 
@@ -242,15 +248,14 @@ class SessionRNN(Algorithm):
         actions, targets, uids = dm_to_tensor(
             X, batch_size=self.batch_size, device=self.device, shuffle=True
         )
-        new_uid = uids != uids.roll(1, dims=0)
+        is_last_action = uids != uids.roll(-1, dims=0)
 
         loss, losses = 0.0, []
         self.model_.train(True)
         hidden = self.model_.init_hidden(self.batch_size)
-        for i, (action, target, new) in tqdm(
-            enumerate(zip(actions, targets, new_uid)), total=len(actions)
+        for i, (action, target, is_last) in tqdm(
+            enumerate(zip(actions, targets, is_last_action)), total=len(actions)
         ):
-            hidden = hidden * ~new.view(1, -1, 1)  # Reset hidden state between users
             output, hidden = self.model_(action.unsqueeze(0), hidden)
             loss += self._criterion(output, target) / self.bptt
             if i % self.bptt == self.bptt - 1:
@@ -262,6 +267,7 @@ class SessionRNN(Algorithm):
                 losses.append(loss.item())
                 loss = 0.0
                 hidden = hidden.detach()  # Prevent backprop past bptt steps
+            hidden = hidden * ~is_last.view(1, -1, 1)  # Reset hidden state between users
 
         logger.info("training loss = {}".format(np.mean(losses)))
 
@@ -275,12 +281,12 @@ class SessionRNN(Algorithm):
         :param validation_data: validation data interaction matrices.
         """
         self.model_.train(False)
+        X_true = to_csr_matrix(validation_data[1], binary=True)
         X_val_pred = self.predict(validation_data[0])
-        better = self.stopping_criterion.update(
-            validation_data[1], X_val_pred, k=50
-        )
-        if better:
-            self.save(self.stopping_criterion.best_value)
+        better = self.stopping_criterion.update(X_true, X_val_pred)
+        # TODO: save using temp files
+        #if better:
+        #    self.save(self.stopping_criterion.best_value)
 
     def session_based_evaluate(self, X: Matrix, K: int = 20) -> Tuple[float, float]:
         """
@@ -299,9 +305,9 @@ class SessionRNN(Algorithm):
         :param X: Data to evaluate on
         :param K: Calculate metrics on top K recommendations
         """
-        X = to_datam(X, timestamps=True)
-
         check_is_fitted(self)
+
+        X = to_datam(X, timestamps=True)
 
         def recall(output, targets, K=K):
             _, indices = output.topk(K, dim=1)
@@ -323,17 +329,17 @@ class SessionRNN(Algorithm):
         actions, targets, uids = dm_to_tensor(
             X, batch_size=1, device=self.device, shuffle=False
         )
-        new_uid = uids != uids.roll(1, dims=0)
+        is_last_action = uids != uids.roll(-1, dims=0)
 
         self.model_.train(False)
         metric_scores = [[] for _ in metrics]
         hidden = self.model_.init_hidden(1)
-        for action, target, new in tqdm(
-            zip(actions, targets, new_uid), total=len(actions)
+        for action, target, is_last in tqdm(
+            zip(actions, targets, is_last_action), total=len(actions)
         ):
-            hidden = hidden * ~new.view(1, -1, 1)  # Reset hidden state between users
             output, hidden = self.model_(action.unsqueeze(0), hidden)
             for m_idx, m in enumerate(metrics):
                 score = m(output, target)
                 metric_scores[m_idx].append(score)
+            hidden = hidden * ~is_last.view(1, -1, 1)  # Reset hidden state between users
         return [np.mean(scores) for scores in metric_scores]
