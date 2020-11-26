@@ -95,6 +95,8 @@ class CML(Algorithm):
 
         self.disentangle = disentangle
 
+        self.disentangle = disentangle
+
     def __del__(self):
         """cleans up temp file"""
         self.best_model_.close()
