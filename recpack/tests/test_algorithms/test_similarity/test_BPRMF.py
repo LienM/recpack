@@ -39,10 +39,10 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
 
     a = BPRMF(
         num_components=4,
-        num_epochs=40,
+        num_epochs=10,
         batch_size=2,
         seed=seed,
-        learning_rate=0.05,
+        learning_rate=0.20,
     )
     a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
     pred = a.predict(pageviews_for_pairwise)
@@ -64,7 +64,7 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
 def test_save_and_load(pageviews_for_pairwise):
     a = BPRMF(
         num_components=4,
-        num_epochs=40,
+        num_epochs=1,
         batch_size=2,
         seed=42,
         learning_rate=0.05,
