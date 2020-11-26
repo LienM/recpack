@@ -139,8 +139,7 @@ class BPRMF(Algorithm):
 
         self._init_model(X.shape[0], X.shape[1])
 
-        X = to_csr_matrix(X, binary=True)
-        validation_data = to_csr_matrix(validation_data)
+        X, validation_data = to_csr_matrix((X, validation_data), binary=True)
 
         try:
             for epoch in range(self.num_epochs):
