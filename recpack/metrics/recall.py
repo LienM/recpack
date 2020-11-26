@@ -39,7 +39,7 @@ class RecallK(ElementwiseMetricK):
         return
 
 
-def recall_k(y_true, y_pred, k):
+def recall_k(y_true, y_pred, k=50):
     r = RecallK(K=k)
     r.calculate(y_true, y_pred)
 

@@ -36,7 +36,7 @@ class DCGK(ElementwiseMetricK):
         return
 
 
-def dcg_k(y_true, y_pred, k):
+def dcg_k(y_true, y_pred, k=50):
     r = DCGK(K=k)
     r.calculate(y_true, y_pred)
 
@@ -51,8 +51,7 @@ class NDCGK(ListwiseMetricK):
         # Calculate IDCG values by creating a list of partial sums (the
         # functional way)
         self.IDCG_cache = np.array(
-            [1] + list(itertools.accumulate(self.discount_template,
-                                            lambda x, y: x + y))
+            [1] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y))
         )
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
@@ -84,9 +83,8 @@ class NDCGK(ListwiseMetricK):
         return
 
 
-def ndcg_k(y_true, y_pred, k):
+def ndcg_k(y_true, y_pred, k=50):
     r = NDCGK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value
-
