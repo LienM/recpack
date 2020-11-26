@@ -396,6 +396,7 @@ def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
     H_as_tensor = next(H.parameters())
 
     # Concatenate them together. They live in the same metric space, so share the same dimensions.
+    # X is a matrix of shape (|users| + |items|, num_dimensions)
     X = torch.cat([W_as_tensor, H_as_tensor], dim=0)
 
     # Zero mean
