@@ -23,6 +23,16 @@ def test_bprmf(pageviews):
     assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
 
 
+def test_bprmf_w_datam(pageviews_data_m):
+    a = BPRMF(num_components=2, num_epochs=2, batch_size=1)
+    a.fit(pageviews_data_m, (pageviews_data_m, pageviews_data_m))
+
+    pred = a.predict(pageviews_data_m)
+
+    # Users should be the exact same.
+    assert set(pred.nonzero()[0]) == set(pageviews_data_m.active_users)
+
+
 @pytest.mark.parametrize("seed", list(range(1, 25)))
 def test_pairwise_ranking(pageviews_for_pairwise, seed):
     """Tests that the pairwise ranking of 2 items is correctly computed."""
