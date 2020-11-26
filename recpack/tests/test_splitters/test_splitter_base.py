@@ -110,6 +110,34 @@ def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
     check_values_timestamps_match(te)
 
 
+@pytest.mark.parametrize(
+    "t, on, n_tr_expected, n_te_expected",
+    [(2, "max", 0, 3), (2, "min", 2, 1), (2, "mean", 1, 2), (2, "median", 0, 3)],
+)
+def test_user_interaction_time_splitter(
+    data_m_sessions, t, on, n_tr_expected, n_te_expected
+):
+    splitter = splitter_base.UserInteractionTimeSplitter(t=t, on=on)
+
+    tr, te = splitter.split(data_m_sessions)
+
+    # No users are ever discarded
+    assert (
+        tr.active_user_count + te.active_user_count == data_m_sessions.active_user_count
+    )
+
+    # Users can have interactions in only one of the sets, never both
+    assert not tr.active_users.intersection(te.active_users)
+
+    # Each set contains every interaction of the users in it
+    assert (tr.dataframe[USER_IX].value_counts() == 3).all()
+    assert (te.dataframe[USER_IX].value_counts() == 3).all()
+
+    # The 'on' parameter controls which user interaction is used to split on
+    assert tr.active_user_count == n_tr_expected
+    assert te.active_user_count == n_te_expected
+
+
 @pytest.mark.parametrize("t", [20, 15])
 def test_timestamp_splitter_no_limit(data_m_w_timestamps, t):
     splitter = splitter_base.TimestampSplitter(t)
@@ -196,33 +224,30 @@ def test_timestamp_splitter_windowed_alpha_w_dups(data_m_w_dups, t, t_alpha):
     check_values_timestamps_match(te)
 
 
-def test_most_recent_splitter(data_m_w_dups):
+@pytest.mark.parametrize("n", [1, 2, -1, -2])
+def test_most_recent_splitter(data_m_w_dups, n):
     m = data_m_w_dups
     last_action = m.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
     num_actions = m.values.toarray().sum(axis=1, keepdims=False)
 
-    # Split off last action
-    splitter = splitter_base.MostRecentSplitter(1)
+    splitter = splitter_base.MostRecentSplitter(n)
     tr, te = splitter.split(m)
 
+    # All users should have actions in both train and test sets
     assert tr.active_user_count == te.active_user_count == m.active_user_count
+
     for uid in tr.active_users:
         u_actions_tr = tr.dataframe[tr.dataframe[USER_IX] == uid]
         u_actions_te = te.dataframe[te.dataframe[USER_IX] == uid]
-        assert len(u_actions_tr) == num_actions[uid] - 1
-        assert len(u_actions_te) == 1
-        assert u_actions_te[TIMESTAMP_IX].max() == last_action[uid]
-
-    # Split off all but first two actions
-    splitter = splitter_base.MostRecentSplitter(-2)
-    tr, te = splitter.split(m)
-
-    assert tr.active_user_count == te.active_user_count == m.active_user_count
-    for uid in tr.active_users:
-        u_actions_tr = tr.dataframe[tr.dataframe[USER_IX] == uid]
-        u_actions_te = te.dataframe[te.dataframe[USER_IX] == uid]
-        assert len(u_actions_tr) == 2
-        assert len(u_actions_te) == num_actions[uid] - 2
+        # Train should contain all but n of a user's actions, test n actions
+        if n >= 0:
+            assert len(u_actions_tr) == num_actions[uid] - n
+            assert len(u_actions_te) == n
+        # If n is negative, train contains |n| actions, test all but |n| actions
+        else:
+            assert len(u_actions_tr) == -n
+            assert len(u_actions_te) == num_actions[uid] - (-n)
+        # The most recent actions should be in the test set
         assert u_actions_te[TIMESTAMP_IX].max() == last_action[uid]
 
 
@@ -297,7 +322,8 @@ def test_fold_iterator_correctness(data_m_w_timestamps, batch_size):
 def test_fold_iterator_completeness(data_m_w_timestamps, batch_size):
 
     fold_iterator = splitter_base.FoldIterator(
-        data_m_w_timestamps, data_m_w_timestamps, batch_size=batch_size)
+        data_m_w_timestamps, data_m_w_timestamps, batch_size=batch_size
+    )
 
     nonzero_users = set(data_m_w_timestamps.indices[0])
 

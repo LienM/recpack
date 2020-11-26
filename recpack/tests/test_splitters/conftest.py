@@ -1,4 +1,5 @@
-from recpack.data.data_matrix import DataM
+from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX, VALUE_IX
+from scipy.sparse import csr_matrix
 import pandas as pd
 import pytest
 import numpy as np
@@ -93,3 +94,27 @@ def data_m_small():
         df, "movieId", "userId", timestamp_ix="timestamp"
     )
     return data
+
+
+@pytest.fixture(scope="function")
+def data_m_sessions():
+    """Data matrix with sessions of varying time overlap for testing time-based splits"""
+    # (user, time) matrix, non-zero entries are item ids
+    user_time = csr_matrix(
+        [
+            #0  1  2  3  4  5  6  7
+            [1, 0, 2, 1, 0, 0, 0, 0],  # time: mean 5/3, median 2, min 0, max 3
+            [0, 1, 1, 0, 3, 0, 0, 0],  # time: mean 7/3, median 2, min 1, max 4
+            [0, 0, 0, 0, 0, 2, 1, 1],  # time: mean 6.0, median 6, min 5, max 6
+        ]
+    )
+    user_ids, timestamps = user_time.nonzero()
+    item_ids = user_time.data
+    df = pd.DataFrame(
+        {
+            USER_IX: user_ids,
+            ITEM_IX: item_ids,
+            TIMESTAMP_IX: timestamps,
+        }
+    )
+    return DataM(df)
