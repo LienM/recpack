@@ -23,11 +23,11 @@ class DataM:
     Stores information about interactions between users and items.
 
     :param df: Dataframe containing user-item interactions. Must contain at least 
-               item ids and user ids. Interaction values and timestamps are optional.
-    :param item_ix: Name of the column containing item ids.
-    :param user_ix: Name of the column containing user ids.
-    :param value_ix: Name of the column containing interaction values.
-    :param timestamp_ix: Name of the column containing interaction timestamps.
+               item ids and user ids.
+    :param item_ix: Item ids column name
+    :param user_ix: User ids column name
+    :param value_ix: Interaction values column name
+    :param timestamp_ix: Interaction timestamps column name
     :param shape: The desired shape of the matrix, i.e. the number of users and items.
                   If no shape is specified, the number of users will be equal to the 
                   maximum user id plus one, the number of items to the maximum item 
@@ -40,7 +40,7 @@ class DataM:
         item_ix: str = ITEM_IX,
         user_ix: str = USER_IX,
         value_ix: str = VALUE_IX,
-        timestamp_ix:str = TIMESTAMP_IX,
+        timestamp_ix: str = TIMESTAMP_IX,
         shape: Tuple[int, int] = None,
     ):
         col_mapper = {
@@ -83,7 +83,7 @@ class DataM:
         """
         All interactions as a pandas DataFrame.
         
-        The user ids, item ids, interaction values and timestamps are stored in columns 
+        The item ids, user ids, interaction values and timestamps are stored in columns 
         `ITEM_IX`, `USER_IX`, `VALUE_IX` and `TIMESTAMP_IX` respectively.
         """
         return self._df.copy()
@@ -130,12 +130,11 @@ class DataM:
                    evaluates to True.
         :param timestamp: Timestamp to compare against in seconds from epoch.
         :param inplace: Modify the data matrix in place. If False, returns a new object.
-        :param compare_to: If specified, the timestamp is compared to a related interaction 
-                           time instead. Must be one of "user-min", "user-max", "user-median" 
-                           or "user-mean". For example, with "user-max" all interactions for 
-                           which op(max(t_1, t_2, ...), timestamp) evaluates to True are 
-                           filtered, where t_1, t_2, ... are the times of all interactions by
-                           the same user.
+        :param compare_to: If specified, compares the timestamp to a related interaction time 
+                           instead. Must be one of user-min", "user-max", "user-median" or 
+                           "user-mean". For example, "user-max" filters all interactions where 
+                           op(max(t_1, t_2, ...), timestamp) is True, where t_1, t_2, ... are 
+                           all interaction times of that same user.
         """
         logger.debug(f"Performing {op.__name__}(t, timestamp)")
         assert compare_to in [None, "user-min", "user-max", "user-median", "user-mean"]
@@ -221,6 +220,8 @@ class DataM:
         """
         values = self.values
         values[values > 0] = 1
+        values[values < 0] = 0
+        values.eliminate_zeros()
         return values
 
     def copy(self):
