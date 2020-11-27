@@ -5,6 +5,7 @@ from scipy.sparse import csr_matrix, diags
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms import Algorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -24,13 +25,13 @@ class KUNN(Algorithm):
         self.Ku = Ku
         self.Ki = Ki
 
-    def fit(self, X: csr_matrix) -> Algorithm:
+    def fit(self, X: Matrix) -> Algorithm:
         """
         Calculate the score matrix for items based on the binary matrix .
         :param X: Sparse binary user-item matrix which will be used to fit the algorithm.
         :return: The fitted KUNN Algorithm itself.
         """
-        X[X > 0] = 1  # To make sure the input is interpreted as a binary matrix
+        X = to_csr_matrix(X, binary=True)
         Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(X)
 
         sim_i = csr_matrix((X.T * Xscaled) @ Ci_rooted)
@@ -41,7 +42,7 @@ class KUNN(Algorithm):
 
         return self
 
-    def predict(self, X: csr_matrix, user_ids: np.array = None) -> csr_matrix:
+    def predict(self, X: Matrix, user_ids: np.array = None) -> csr_matrix:
         """
         The prediction can easily be calculated by computing score matrix for users and add this to the already
         calculated score matrix for items.
@@ -52,7 +53,7 @@ class KUNN(Algorithm):
         """
         check_is_fitted(self)
 
-        X[X > 0] = 1
+        X = to_csr_matrix(X, binary=True)
         Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(X)
 
         sim_u = csr_matrix((X * Xscaled.T) @ Cu_rooted)
