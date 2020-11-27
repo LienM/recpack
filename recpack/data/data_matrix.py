@@ -207,6 +207,11 @@ class DataM:
         return len(set(U))
 
     @property
+    def interaction_count(self) -> int:
+        """The total number of interactions."""
+        return len(self._df)
+
+    @property
     def binary_values(self) -> scipy.sparse.csr_matrix:
         """
         All user-item interactions as a sparse, binary matrix of size (users, items).
