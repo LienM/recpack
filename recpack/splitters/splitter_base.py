@@ -341,8 +341,8 @@ class FoldIterator:
         self.batch_size = batch_size
         assert self.batch_size > 0  # Avoid inf loops
 
-        self.data_m_in.eliminate_timestamps()
-        self.data_m_out.eliminate_timestamps()
+        self.data_m_in.eliminate_timestamps(inplace=True)
+        self.data_m_out.eliminate_timestamps(inplace=True)
 
         # users need history, but absence of true labels is allowed (some
         # metrics don't require true labels).

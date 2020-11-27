@@ -98,10 +98,16 @@ class DataM:
         index = pd.MultiIndex.from_frame(self._df[[USER_IX, ITEM_IX]])
         return self._df[[TIMESTAMP_IX]].set_index(index)[TIMESTAMP_IX]
 
-    def eliminate_timestamps(self) -> None:
-        """Removes all timestamp information, inplace."""
-        if TIMESTAMP_IX in self._df:
-            self._df.drop(columns=[TIMESTAMP_IX], inplace=True, errors="ignore")
+    def eliminate_timestamps(self, inplace: bool = False):
+        """
+        Remove all timestamp information.
+
+        :param inplace: Modify the data matrix in place. If False, returns a new object.
+        """
+        df = self._df
+        if TIMESTAMP_IX in df:
+            df = df.drop(columns=[TIMESTAMP_IX], inplace=inplace, errors="ignore")
+        return None if inplace else DataM(df, shape=self.shape)
 
     @property
     def indices(self) -> Tuple[List[int], List[int]]:
@@ -124,7 +130,7 @@ class DataM:
         """
         Filter interactions based on timestamp.
 
-        :param op: Keep only the interactions for which op(t, timestamp) evaluates to True.
+        :param op: Comparison operator. Keep only interactions for which op(t, timestamp) is True.
         :param timestamp: Timestamp to compare against in seconds from epoch.
         :param inplace: Modify the data matrix in place. If False, returns a new object.
         """
