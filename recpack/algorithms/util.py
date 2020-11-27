@@ -53,7 +53,7 @@ def get_users(data):
 
 def get_batches(users, batch_size=1000):
     return [
-        users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
+        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
         for i in range(ceil(len(users) / batch_size))
     ]
 

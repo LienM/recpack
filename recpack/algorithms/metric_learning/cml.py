@@ -38,10 +38,12 @@ class CML(Algorithm):
         U: int = 20,
         stopping_criterion: str = "recall",
         save_best_to_file=False,
+        approximate_user_vectors=False,
+        disentangle=False,
     ):
         """
         Pytorch Implementation of
-        [1] Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+        Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
         http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
 
         Version without features, referred to as CML in the paper.
@@ -67,7 +69,10 @@ class CML(Algorithm):
         :type stopping_criterion: str, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
         :type save_best_to_file: bool
-
+        :param approximate_user_vectors: If True, make an approximation of user vectors for unknown users.
+        :type approximate_user_vectors: bool
+        :param disentangle: Disentangle embedding dimensions by adding a covariance loss term to regularize.
+        :type disentangle: bool
         """
         self.num_components = num_components
         self.margin = margin
@@ -83,14 +88,14 @@ class CML(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-        self.best_model = tempfile.NamedTemporaryFile()
         self.save_best_to_file = save_best_to_file
-
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
+        self.approximate_user_vectors = approximate_user_vectors
+        self.disentangle = disentangle
 
     def __del__(self):
         """cleans up temp file"""
-        self.best_model.close()
+        self.best_model_.close()
 
     def _init_model(self, X):
         """
@@ -108,7 +113,10 @@ class CML(Algorithm):
 
         self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
-        self.known_users = set(X.nonzero()[0])
+        self.known_users_ = set(X.nonzero()[0])
+
+        self.best_model_ = tempfile.NamedTemporaryFile()
+        torch.save(self.model_, self.best_model_)
 
     @property
     def filename(self):
@@ -132,13 +140,16 @@ class CML(Algorithm):
 
     def _save_best(self):
         """Save the best model in a temp file"""
-        self.best_model.close()
-        self.best_model = tempfile.NamedTemporaryFile()
-        torch.save(self.model_, self.best_model)
+
+        # First removes the old saved file,
+        # and then creates a new one in which the model is saved
+        self.best_model_.close()
+        self.best_model_ = tempfile.NamedTemporaryFile()
+        torch.save(self.model_, self.best_model_)
 
     def _load_best(self):
-        self.best_model.seek(0)
-        self.model_ = torch.load(self.best_model)
+        self.best_model_.seek(0)
+        self.model_ = torch.load(self.best_model_)
 
     def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
         """
@@ -169,10 +180,19 @@ class CML(Algorithm):
         return self
 
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+        """
+        Method for internal use only. Users should use `predict`.
+
+        :param X: interaction matrix, should have same dimensions as the matrix the model was fit on.
+        :type X: csr_matrix
+        :raises an: AssertionError when the input and model's number of items and users are incongruent.
+        :return: csr matrix of same shape, with recommendations.
+        :rtype: csr_matrix
+        """
         users = set(X.nonzero()[0])
 
-        users_to_predict_for = users.intersection(self.known_users)
-        users_we_cannot_predict_for = users.difference(self.known_users)
+        users_to_predict_for = users.intersection(self.known_users_)
+        users_we_cannot_predict_for = users.difference(self.known_users_)
 
         if users_we_cannot_predict_for:
             warnings.warn(
@@ -196,7 +216,7 @@ class CML(Algorithm):
                 self.device
             )
             # Score = -distance
-            batch_V = -self.model_.forward(batch_U, batch_I).detach().cpu().numpy()
+            batch_V = -self.model_.predict(batch_U, batch_I).detach().cpu().numpy()
 
             V = np.append(V, batch_V)
 
@@ -219,6 +239,10 @@ class CML(Algorithm):
         X = to_csr_matrix(X, binary=True)
 
         assert X.shape == (self.model_.num_users, self.model_.num_items)
+
+        if self.approximate_user_vectors:
+            # TODO Needs a better name
+            self.approximate(X)
 
         X_pred = self._batch_predict(X)
 
@@ -303,21 +327,122 @@ class CML(Algorithm):
             if better:
                 self._save_best()
 
-    def _compute_loss(self, dist_pos_interaction, dist_neg_interaction):
+    def _compute_loss(
+        self, dist_pos_interaction: torch.Tensor, dist_neg_interaction: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Method for internal use only. Please use `warp_loss` or `covariance_loss`.
 
+        Compute differentiable loss function.
+
+        :param dist_pos_interaction: Tensor containing distances between positive sample pairs.
+        :type dist_pos_interaction: torch.Tensor
+        :param dist_neg_interaction: Tensor containing distance between negative sample pairs.
+        :type dist_neg_interaction: torch.Tensor
+        :return: 0-D Tensor containing computed loss value.
+        :rtype: torch.Tensor
+        """
         loss = warp_loss(
             dist_pos_interaction,
             dist_neg_interaction,
             self.margin,
             self.model_.num_items,
             self.U,
-            self.device,
         )
+
+        if self.disentangle:
+            loss += covariance_loss(self.model_.H, self.model_.W)
 
         return loss
 
+    def approximate(self, X: csr_matrix):
+        """
+        Approximate user embeddings by setting them to the average of item embeddings the user visited.
 
-def warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U, device):
+        :param X: [description]
+        :type X: csr_matrix
+        """
+        U = set(X.nonzero()[0])
+        users_to_approximate = U.difference(self.known_users_)
+
+        for user in users_to_approximate:
+            item_indices = X[user].nonzero()[1]
+            self.model_.W_as_tensor[user] = self.model_.H(
+                torch.LongTensor(item_indices)
+            ).mean(axis=0)
+
+        self.known_users_.update(users_to_approximate)
+
+
+def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
+    """
+    Implementation of covariance loss as described in
+    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+
+    The loss term is used to penalize covariance between embedding dimensions and
+    thus disentangle these embedding dimensions.
+
+    It is assumed H and W are embeddings in the same space.
+
+    :param H: Item embedding
+    :type H: nn.Embedding
+    :param W: User Embedding
+    :type W: nn.Embedding
+    :return: Covariance loss term
+    :rtype: torch.Tensor
+    """
+    W_as_tensor = next(W.parameters())
+    H_as_tensor = next(H.parameters())
+
+    # Concatenate them together. They live in the same metric space, so share the same dimensions.
+    # X is a matrix of shape (|users| + |items|, num_dimensions)
+    X = torch.cat([W_as_tensor, H_as_tensor], dim=0)
+
+    # Zero mean
+    X = X - X.mean(dim=0)
+
+    cov = X.matmul(X.T)
+
+    # Per element covariance, excluding the variance of individual random variables.
+    return cov.fill_diagonal_(0).sum() / (X.shape[0] * X.shape[1])
+
+
+def warp_loss(
+    dist_pos_interaction: torch.Tensor,
+    dist_neg_interaction: torch.Tensor,
+    margin: float,
+    J: int,
+    U: int,
+) -> torch.Tensor:
+    """
+    Implementation of
+    WARP loss as described in
+    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+    based on
+    J. Weston, S. Bengio, and N. Usunier. Large scale image annotation:
+    learning to rank with joint word-image embeddings. Machine learning, 81(1):21–35, 2010.
+
+    Adds a loss penalty for every negative sample that is not at least
+    an amount of margin further away from the reference sample than a positive
+    sample. This per sample loss penalty has a weight proportional to the
+    amount of samples in the negative sample batch were "misclassified",
+    i.e. closer than the positive sample.
+
+    :param dist_pos_interaction: Tensor of distances between positive sample and reference sample.
+    :type dist_pos_interaction: torch.Tensor
+    :param dist_neg_interaction: Tensor of distances between negatives samples and reference sample.
+    :type dist_neg_interaction: torch.Tensor
+    :param margin: Required margin between positive and negative sample.
+    :type margin: float
+    :param J: Total number of items in the dataset.
+    :type J: int
+    :param U: Number of negative samples used for every positive sample.
+    :type U: int
+    :return: 0-D Tensor containing WARP loss.
+    :rtype: torch.Tensor
+    """
     dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
 
     # Largest number is "most wrongly classified", f.e.
@@ -348,7 +473,7 @@ class CMLTorch(nn.Module):
     :type num_components: int, optional
     """
 
-    def __init__(self, num_users, num_items, num_components=100):
+    def __init__(self, num_users: int, num_items: int, num_components: int = 100):
         super().__init__()
 
         self.num_components = num_components
@@ -358,10 +483,10 @@ class CMLTorch(nn.Module):
         self.W = nn.Embedding(num_users, num_components)  # User embedding
         self.H = nn.Embedding(num_items, num_components)  # Item embedding
 
-        std = 1 / num_components ** 0.5
+        self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
-        nn.init.normal_(self.W.weight, std=std)
-        nn.init.normal_(self.H.weight, std=std)
+        nn.init.normal_(self.W.weight, std=self.std)
+        nn.init.normal_(self.H.weight, std=self.std)
 
         self.pdist = nn.PairwiseDistance(p=2)
 
@@ -378,6 +503,41 @@ class CMLTorch(nn.Module):
         :rtype: torch.Tensor
         """
         w_U = self.W(U)
+        h_I = self.H(I)
+
+        # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]
+
+        return self.pdist(w_U, h_I)
+
+    @property
+    def W_as_tensor(self):
+
+        if not hasattr(self, "_W_as_tensor"):
+            self._W_as_tensor = self.W.state_dict()["weight"]
+
+        return self._W_as_tensor
+
+    @W_as_tensor.setter
+    def W_as_tensor(self, value):
+        self._W_as_tensor = value
+
+    def predict(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
+        """
+        Compute Euclidian distance between the !! already calculated !!
+        user embedding (w_u) and item embedding (h_i)
+        for every user and item pair in U and I.
+        Can also make meaningful predictions for unknown users if their embeddings
+        were approximated.
+
+        :param U: User identifiers.
+        :type U: torch.Tensor
+        :param I: Item identifiers.
+        :type I: torch.Tensor
+        :return: Euclidian distances between user-item pairs.
+        :rtype: torch.Tensor
+        """
+
+        w_U = self.W_as_tensor[U]
         h_I = self.H(I)
 
         # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]

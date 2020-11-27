@@ -17,6 +17,7 @@ from recpack.algorithms.base import Algorithm
 from recpack.algorithms.loss_functions import bpr_loss
 from recpack.algorithms.samplers import bootstrap_sample_pairs
 from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -123,19 +124,22 @@ class BPRMF(Algorithm):
         self.best_model.seek(0)
         self.model_ = torch.load(self.best_model)
 
-    def fit(self, X: csr_matrix, validation_data: Tuple[csr_matrix, csr_matrix]):
+    def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
         """Fit the model on the X dataset, and evaluate model quality on validation_data.
 
         :param X: The training data matrix.
-        :type X: csr_matrix
-        :param validation_data: The validation data matrix, should have same dimensions as X
-        :type validation_data: csr_matrix
+        :type X: Matrix
+        :param validation_data: The validation data matrix,
+            should have same dimensions as X
+        :type validation_data: Matrix
         """
         # The target for prediction is the validation data.
         assert X.shape == validation_data[0].shape
         assert X.shape == validation_data[1].shape
 
         self._init_model(X.shape[0], X.shape[1])
+
+        X, validation_data = to_csr_matrix((X, validation_data), binary=True)
 
         try:
             for epoch in range(self.num_epochs):
@@ -165,16 +169,17 @@ class BPRMF(Algorithm):
 
         return result.tocsr()
 
-    def predict(self, X: csr_matrix):
+    def predict(self, X: Matrix):
         """Predict recommendations for each user with at least a single event in their history.
 
         :param X: interaction matrix, should have same size as model.
-        :type X: csr_matrix
+        :type X: Matrix
         :raises an: [description]
         :return: csr matrix of same shape, with recommendations.
         :rtype: [type]
         """
         check_is_fitted(self)
+        X = to_csr_matrix(X, binary=True)
         # TODO We can make it so that we can recommend for unknown users by giving them
         # an embedding equal to the sum of all items viewed previously.
         # TODO Or raise an error
@@ -217,7 +222,6 @@ class BPRMF(Algorithm):
             self.optimizer.step()
 
             self.steps += 1
-
 
     def _evaluate(self, validation_data: Tuple[csr_matrix, csr_matrix]):
         """Perform evaluation step, samples get drawn

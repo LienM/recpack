@@ -68,6 +68,12 @@ def test_to_csr_matrix(m_csr, m_datam):
     # tuple -> tuple
     result = to_csr_matrix((m_datam, m_datam))
     assert all(matrix_equal(r, m_csr) for r in result)
+    # tuple(Matrix, tuple(Matrix, Matrix))
+    # Useful for when validation data and train data need to be converted
+    result_1, (r_2_1, r_2_2) = to_csr_matrix((m_datam, (m_datam, m_datam)))
+    assert matrix_equal(result_1, m_csr)
+    assert matrix_equal(r_2_1, m_csr)
+    assert matrix_equal(r_2_2, m_csr)
     # unsupported type
     with pytest.raises(UnsupportedTypeError):
         result = to_csr_matrix([1, 2, 3])

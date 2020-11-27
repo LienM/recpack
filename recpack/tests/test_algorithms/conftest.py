@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from recpack.data.matrix import to_datam
+
 
 @pytest.fixture(scope="function")
 def pageviews():
@@ -15,6 +17,11 @@ def pageviews():
     pv = sp.csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
 
     return pv
+
+
+@pytest.fixture(scope="function")
+def pageviews_data_m(pageviews):
+    return to_datam(pageviews)
 
 
 @pytest.fixture(scope="function")
