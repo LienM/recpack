@@ -161,13 +161,13 @@ class UserInteractionTimeSplitter(Splitter):
                  by the `on` parameter occured strictly before time `t`, and a matrix 
                  with users whose interaction occured at or after time `t`.
         """
-        compare_to = "user-" + self.on
-
-        tr_data = data.timestamps_lt(self.t, compare_to=compare_to)
-        te_data = data.timestamps_gte(self.t, compare_to=compare_to)
+        df = data.dataframe
+        ts_grouped_by_user = df.groupby(USER_IX)[TIMESTAMP_IX]
+        ts_user = getattr(ts_grouped_by_user, self.on)()
+        mask = df[USER_IX].map(ts_user) < self.t
 
         logger.debug(f"{self.name} - Split successful")
-        return tr_data, te_data
+        return DataM(df[mask], shape=data.shape), DataM(df[~mask], shape=data.shape)
 
 
 class ItemSplitter(Splitter):

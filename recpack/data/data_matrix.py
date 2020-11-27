@@ -22,15 +22,15 @@ class DataM:
     """
     Stores information about interactions between users and items.
 
-    :param df: Dataframe containing user-item interactions. Must contain at least 
+    :param df: Dataframe containing user-item interactions. Must contain at least
                item ids and user ids.
     :param item_ix: Item ids column name
     :param user_ix: User ids column name
     :param value_ix: Interaction values column name
     :param timestamp_ix: Interaction timestamps column name
     :param shape: The desired shape of the matrix, i.e. the number of users and items.
-                  If no shape is specified, the number of users will be equal to the 
-                  maximum user id plus one, the number of items to the maximum item 
+                  If no shape is specified, the number of users will be equal to the
+                  maximum user id plus one, the number of items to the maximum item
                   id plus one.
     """
 
@@ -60,8 +60,8 @@ class DataM:
         """
         All user-item interactions as a sparse matrix of size (users, items).
 
-        Each entry is the sum of interaction values for that user and item. If no 
-        interaction values are known, the entry is the total number of interactions 
+        Each entry is the sum of interaction values for that user and item. If no
+        interaction values are known, the entry is the total number of interactions
         between that user and item.
 
         If there are no interactions between a user and item, the entry is 0.
@@ -82,8 +82,8 @@ class DataM:
     def dataframe(self) -> pd.DataFrame:
         """
         All interactions as a pandas DataFrame.
-        
-        The item ids, user ids, interaction values and timestamps are stored in columns 
+
+        The item ids, user ids, interaction values and timestamps are stored in columns
         `ITEM_IX`, `USER_IX`, `VALUE_IX` and `TIMESTAMP_IX` respectively.
         """
         return self._df.copy()
@@ -120,48 +120,35 @@ class DataM:
         else:
             return DataM(c_df, shape=self.shape)
 
-    def timestamps_cmp(
-        self, op: Callable, timestamp: float, inplace: bool = False, compare_to: str = None
-    ):
+    def timestamps_cmp(self, op: Callable, timestamp: float, inplace: bool = False):
         """
         Filter interactions based on timestamp.
 
-        :param op: Comparison operator. Keep only the interactions for which op(t, timestamp) 
-                   evaluates to True.
+        :param op: Keep only the interactions for which op(t, timestamp) evaluates to True.
         :param timestamp: Timestamp to compare against in seconds from epoch.
         :param inplace: Modify the data matrix in place. If False, returns a new object.
-        :param compare_to: If specified, compares the timestamp to a related interaction time 
-                           instead. Must be one of user-min", "user-max", "user-median" or 
-                           "user-mean". For example, "user-max" filters all interactions where 
-                           op(max(t_1, t_2, ...), timestamp) is True, where t_1, t_2, ... are 
-                           all interaction times of that same user.
         """
         logger.debug(f"Performing {op.__name__}(t, timestamp)")
-        assert compare_to in [None, "user-min", "user-max", "user-median", "user-mean"]
-        if compare_to is None:
-            mask = op(self._df[TIMESTAMP_IX], timestamp)
-        else:
-            compare_to = compare_to.split("-")[1]
-            ts_grouped_by_user = self._df.groupby(USER_IX)[TIMESTAMP_IX]
-            ts_user = getattr(ts_grouped_by_user, compare_to)()
-            mask = op(self._df[USER_IX].map(ts_user), timestamp)
+
+        mask = op(self._df[TIMESTAMP_IX], timestamp)
+
         return self._apply_mask(mask, inplace=inplace)
 
-    def timestamps_gt(self, timestamp: float, inplace: bool = False, compare_to: str = None):
+    def timestamps_gt(self, timestamp: float, inplace: bool = False):
         """Keep only interactions where t > timestamp. See `timestamps_cmp` for more info."""
-        return self.timestamps_cmp(operator.gt, timestamp, inplace, compare_to)
+        return self.timestamps_cmp(operator.gt, timestamp, inplace)
 
-    def timestamps_lt(self, timestamp: float, inplace: bool = False, compare_to: str = None):
+    def timestamps_lt(self, timestamp: float, inplace: bool = False):
         """Keep only interactions where t < timestamp. See `timestamps_cmp` for more info."""
-        return self.timestamps_cmp(operator.lt, timestamp, inplace, compare_to)
+        return self.timestamps_cmp(operator.lt, timestamp, inplace)
 
-    def timestamps_gte(self, timestamp: float, inplace: bool = False, compare_to: str = None):
+    def timestamps_gte(self, timestamp: float, inplace: bool = False):
         """Keep only interactions where t >= timestamp. See `timestamps_cmp` for more info."""
-        return self.timestamps_cmp(operator.ge, timestamp, inplace, compare_to)
+        return self.timestamps_cmp(operator.ge, timestamp, inplace)
 
-    def timestamps_lte(self, timestamp: float, inplace: bool = False, compare_to: str = None):
+    def timestamps_lte(self, timestamp: float, inplace: bool = False):
         """Keep only interactions where t <= timestamp. See `timestamps_cmp` for more info."""
-        return self.timestamps_cmp(operator.le, timestamp, inplace, compare_to)
+        return self.timestamps_cmp(operator.le, timestamp, inplace)
 
     def users_in(self, U: Union[Set[int], List[int]], inplace=False):
         """Keep only interactions by one of the specified users."""
@@ -176,7 +163,7 @@ class DataM:
         logger.debug("Performing indices_in comparison")
 
         # Data is temporarily duplicated across a MultiIndex and the [USER_IX, ITEM_IX] columns for fast multi-indexing.
-        # This index can be dropped safely, as the data is still there in the original columns. 
+        # This index can be dropped safely, as the data is still there in the original columns.
         index = pd.MultiIndex.from_frame(self._df[[USER_IX, ITEM_IX]])
         tuples = list(zip(*u_i_lists))
         c_df = self._df.set_index(index)
@@ -216,7 +203,7 @@ class DataM:
         """
         All user-item interactions as a sparse, binary matrix of size (users, items).
 
-        An entry is 1 if there is at least one interaction between that user and item 
+        An entry is 1 if there is at least one interaction between that user and item
         and either:
             - No interaction values are known, or
             - The sum of interaction values for that user and item is strictly positive
