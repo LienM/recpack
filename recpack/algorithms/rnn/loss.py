@@ -27,9 +27,9 @@ class BPRLoss(nn.Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         samples = self.sampler(self.num_samples, target)
-        tar_scores = torch.gather(input, 1, target.unsqueeze(1))
+        target_scores = torch.gather(input, 1, target.unsqueeze(1))
         sample_scores = torch.gather(input, 1, samples)
-        score_diff = F.logsigmoid(tar_scores - sample_scores)
+        score_diff = F.logsigmoid(target_scores - sample_scores)
         return -score_diff.mean()
 
 
@@ -50,10 +50,10 @@ class BPRMaxLoss(nn.Module):
 
     def forward(self, input: Tensor, target: Tensor, reg: float = 1.0) -> Tensor:
         samples = self.sampler(self.num_samples, target)
-        tar_scores = torch.gather(input, 1, target.unsqueeze(1))
+        target_scores = torch.gather(input, 1, target.unsqueeze(1))
         sample_scores = torch.gather(input, 1, samples)
         weights = torch.softmax(sample_scores, dim=1)
-        score_diff = weights * torch.sigmoid(tar_scores - sample_scores)
+        score_diff = weights * torch.sigmoid(target_scores - sample_scores)
         norm_penalty = weights * sample_scores ** 2
         return (
             -torch.log(score_diff.sum(dim=1)) + reg * norm_penalty.sum(dim=1)
@@ -75,9 +75,9 @@ class TOP1Loss(nn.Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         samples = self.sampler(self.num_samples, target)
-        tar_scores = torch.gather(input, 1, target.unsqueeze(1))
+        target_scores = torch.gather(input, 1, target.unsqueeze(1))
         sample_scores = torch.gather(input, 1, samples)
-        score_diff = torch.sigmoid(sample_scores - tar_scores)
+        score_diff = torch.sigmoid(sample_scores - target_scores)
         norm_penalty = torch.sigmoid(sample_scores ** 2)
         return (score_diff + norm_penalty).mean()
 
@@ -99,10 +99,10 @@ class TOP1MaxLoss(nn.Module):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         samples = self.sampler(self.num_samples, target)
-        tar_scores = torch.gather(input, 1, target.unsqueeze(1))
+        target_scores = torch.gather(input, 1, target.unsqueeze(1))
         sample_scores = torch.gather(input, 1, samples)
         weights = torch.softmax(sample_scores, dim=1)
-        score_diff = torch.sigmoid(sample_scores - tar_scores)
+        score_diff = torch.sigmoid(sample_scores - target_scores)
         norm_penalty = torch.sigmoid(sample_scores ** 2)
         loss_terms = weights * (score_diff + norm_penalty)
         return loss_terms.sum(dim=1).mean()

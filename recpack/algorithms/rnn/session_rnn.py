@@ -29,7 +29,7 @@ from recpack.algorithms.rnn.loss import (
     TOP1Loss,
     TOP1MaxLoss,
 )
-from recpack.algorithms.rnn.data import dm_to_tensor
+from recpack.algorithms.rnn.data import data_m_to_tensor
 from recpack.algorithms.rnn.model import SessionRNNTorch
 
 
@@ -40,9 +40,19 @@ class SessionRNN(Algorithm):
     """
     A recurrent neural network for session-based recommendations.
 
-    This algorithm is described in the 2016 and 2018 papers by Hidasi et al.
+    This algorithm was introduced in the 2016 and 2018 papers by Hidasi et al.
     "Session-based Recommendations with Recurrent Neural Networks" and
     "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations"
+
+    The algorithm makes recommendations by training a recurrent neural network to 
+    predict the next action of a user, and using the most likely next actions as 
+    recommendations. The  Gated Recurrent Unit (GRU) 
+                  
+                                          iid_3_predictions
+                                                  |
+                 0 --> [ GRU ] --> [ GRU ] --> [ GRU ]
+                          |           |           |
+                        iid_0       iid_1       iid_2
 
     :param batch_size: Number of examples in a mini-batch
     :param sample_size: Number of negative samples used for bpr, bpr-max, top1, top1-max
@@ -220,7 +230,7 @@ class SessionRNN(Algorithm):
         X_pred = lil_matrix(X.shape)
 
         with torch.no_grad():
-            actions, _, uids = dm_to_tensor(
+            actions, _, uids = data_m_to_tensor(
                 X, batch_size=1, device=self.device, shuffle=False, include_last=True
             )
             is_last_action = uids != uids.roll(-1, dims=0)
@@ -245,7 +255,7 @@ class SessionRNN(Algorithm):
         """
         Train model for a single epoch.
         """
-        actions, targets, uids = dm_to_tensor(
+        actions, targets, uids = data_m_to_tensor(
             X, batch_size=self.batch_size, device=self.device, shuffle=True
         )
         is_last_action = uids != uids.roll(-1, dims=0)
@@ -303,7 +313,7 @@ class SessionRNN(Algorithm):
         skewed towards users/sessions with many actions.
 
         :param X: Data to evaluate on
-        :param K: Calculate metrics on top K recommendations
+        :param K: Metrics are calculated on the top K recommendations
         """
         check_is_fitted(self)
 
@@ -326,7 +336,7 @@ class SessionRNN(Algorithm):
             return mean_recall, mean_mrr
 
     def _session_evaluate(self, X: DataM, metrics: List):
-        actions, targets, uids = dm_to_tensor(
+        actions, targets, uids = data_m_to_tensor(
             X, batch_size=1, device=self.device, shuffle=False
         )
         is_last_action = uids != uids.roll(-1, dims=0)

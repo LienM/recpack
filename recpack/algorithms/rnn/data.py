@@ -10,7 +10,7 @@ from torch import Tensor
 from typing import Tuple
 
 
-def dm_to_tensor(
+def data_m_to_tensor(
     dm: DataM,
     batch_size: int,
     device: str = "cpu",
@@ -19,6 +19,8 @@ def dm_to_tensor(
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     Converts a data matrix with timestamp information to tensor format.
+
+    The 
 
     As an example, with following interactions (sorted by time):
         uid  0    1      2      3
@@ -75,6 +77,11 @@ def shuffle_and_sort(df: pd.DataFrame) -> pd.DataFrame:
 def batchify(data: Tensor, batch_size: int) -> Tensor:
     """
     Splits a sequence into contiguous batches, indexed along dim 0.
+
+    :param data: One-dimensional tensor to be split into batches
+    :param batch_size: How many elements per batch
+    :return: A tensor of shape (N, B), where B is the batch size and N is the number 
+        of complete batches that can be created
     """
     nbatch = data.size(0) // batch_size
     data = data.narrow(0, 0, nbatch * batch_size)
