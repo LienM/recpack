@@ -30,7 +30,7 @@ def df_w_values_and_duplicate():
         "timestamp": [3, 2, 4, 1, 1],
         "item_id": [1, 1, 1, 2, 3],
         "user_id": [0, 1, 1, 1, 2],
-        "value": [2, 3, 4, 5, 6],
+        "value": [2, 3, 4, 5, -6],
     }
     df = pd.DataFrame.from_dict(data)
 
@@ -79,7 +79,7 @@ def test_values_w_values_and_dups(df_w_values_and_duplicate):
     )
     assert (
         d.values.toarray()
-        == np.array([[0, 2, 0, 0], [0, 7, 5, 0], [0, 0, 0, 6]], dtype=np.int32)
+        == np.array([[0, 2, 0, 0], [0, 7, 5, 0], [0, 0, 0, -6]], dtype=np.int32)
     ).all()
 
 
@@ -93,6 +93,19 @@ def test_binary_values_w_dups(df_w_duplicate):
     assert (
         binary_values.toarray()
         == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+
+def test_binary_values_w_values_and_dups(df_w_values_and_duplicate):
+    d_w_duplicate = DataM.create_from_dataframe(
+        df_w_values_and_duplicate, "item_id", "user_id", timestamp_ix="timestamp"
+    )
+
+    binary_values = d_w_duplicate.binary_values
+
+    assert (
+        binary_values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 0]], dtype=np.int32)
     ).all()
 
 
@@ -199,7 +212,7 @@ def test_timestamps_lt_w_values_and_dups(df_w_values_and_duplicate):
     assert (filtered_d_w_duplicate.timestamps.values == np.array([1, 1])).all()
     assert (
         filtered_d_w_duplicate.values.toarray()
-        == np.array([[0, 0, 0, 0], [0, 0, 5, 0], [0, 0, 0, 6]], dtype=np.int32)
+        == np.array([[0, 0, 0, 0], [0, 0, 5, 0], [0, 0, 0, -6]], dtype=np.int32)
     ).all()
 
 
@@ -230,7 +243,7 @@ def test_timestamps_lte_w_values_and_dups(df_w_values_and_duplicate):
     assert (filtered_d_w_duplicate.timestamps.values == np.array([2, 1, 1])).all()
     assert (
         filtered_d_w_duplicate.values.toarray()
-        == np.array([[0, 0, 0, 0], [0, 3, 5, 0], [0, 0, 0, 6]], dtype=np.int32)
+        == np.array([[0, 0, 0, 0], [0, 3, 5, 0], [0, 0, 0, -6]], dtype=np.int32)
     ).all()
 
 
