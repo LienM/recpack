@@ -128,7 +128,7 @@ class MetricTopK(Metric):
         U, I, V = [], [], []
         for row_ix, (le, ri) in enumerate(
                 zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
-            K_row_pick = min(self.K, ri - le)
+            K_row_pick = min(self.K, ri - le) if self.K is not None else ri-le
 
             if K_row_pick != 0:
 
