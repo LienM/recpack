@@ -126,3 +126,4 @@ class Scenario(ABC):
             check("Validation set", n_val, n_total, 0.01)
             check("Validation in set", n_val_in, n_val, 0.05)
             check("Validation out set", n_val_out, n_val, 0.01)
+
