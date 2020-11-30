@@ -368,7 +368,7 @@ class CML(Algorithm):
         for user in users_to_approximate:
             item_indices = X[user].nonzero()[1]
             self.model_.W_as_tensor[user] = self.model_.H(
-                torch.LongTensor(item_indices)
+                torch.LongTensor(item_indices).to(self.device)
             ).mean(axis=0)
 
         self.known_users_.update(users_to_approximate)
