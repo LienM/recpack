@@ -5,7 +5,6 @@ import warnings
 
 import numpy as np
 from scipy.sparse import csr_matrix
-import scipy.spatial
 from sklearn.utils.validation import check_is_fitted
 
 from tqdm import tqdm
