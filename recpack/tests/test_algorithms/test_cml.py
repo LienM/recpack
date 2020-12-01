@@ -125,6 +125,7 @@ def test_cml_predict_w_approximate(cml, larger_matrix):
 
     X_pred = cml.predict(s.test_data_in)
 
+    # Known users should not be changed
     assert cml.known_users_ == set(s.training_data.binary_values.nonzero()[0])
 
     W_as_tensor = cml.model_.W.state_dict()["weight"]
@@ -132,6 +133,7 @@ def test_cml_predict_w_approximate(cml, larger_matrix):
 
     W_as_tensor_approximated = cml.approximate_W(s._validation_data_in.binary_values, W_as_tensor, H_as_tensor)
 
+    # W_as_tensor_approximated should have changed in comparison to before
     with np.testing.assert_raises(AssertionError):
         np.testing.assert_array_equal(W_as_tensor.detach().cpu().numpy(), W_as_tensor_approximated.detach().cpu().numpy())
 

@@ -178,16 +178,22 @@ class CML(Algorithm):
         return self
 
     def _batch_predict(
-        self, users_to_predict_for: set, W_as_tensor: torch.Tensor, H_as_tensor: torch.Tensor
+        self,
+        users_to_predict_for: set,
+        W_as_tensor: torch.Tensor,
+        H_as_tensor: torch.Tensor,
     ) -> csr_matrix:
-        # TODO Update docstring
         """
         Method for internal use only. Users should use `predict`.
 
-        :param X: interaction matrix, should have same dimensions as the matrix the model was fit on.
-        :type X: csr_matrix
-        :raises an: AssertionError when the input and model's number of items and users are incongruent.
-        :return: csr matrix of same shape, with recommendations.
+        :param users_to_predict_for: Set of users for which we wish to make predictions
+        :type users_to_predict_for: set
+        :param W_as_tensor: User embedding matrix W
+        :type W_as_tensor: torch.Tensor
+        :param H_as_tensor: Item embedding matrix H
+        :type H_as_tensor: torch.Tensor
+        :raises: AssertionError when the input and model's number of items and users are incongruent
+        :return: Predictions for all users in users_to_predict_for. Matrix has shape (model.num_users, model.num_items)
         :rtype: csr_matrix
         """
         U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(
@@ -211,13 +217,16 @@ class CML(Algorithm):
             batch_h_I = H_as_tensor[batch_I]
 
             # Score = -distance
-            batch_V = - nn.PairwiseDistance(p=2)(
-                batch_w_U, batch_h_I
-            ).detach().cpu().numpy()
+            batch_V = (
+                -nn.PairwiseDistance(p=2)(batch_w_U, batch_h_I).detach().cpu().numpy()
+            )
 
             V = np.append(V, batch_V)
 
-        X_pred = csr_matrix((V, (U.numpy(), I.numpy())), shape=(self.model_.num_users, self.model_.num_items))
+        X_pred = csr_matrix(
+            (V, (U.numpy(), I.numpy())),
+            shape=(self.model_.num_users, self.model_.num_items),
+        )
 
         return X_pred
 
@@ -237,6 +246,7 @@ class CML(Algorithm):
 
         assert X.shape == (self.model_.num_users, self.model_.num_items)
 
+        # Extract embedding matrices
         W_as_tensor = self.model_.W.state_dict()["weight"]
         H_as_tensor = self.model_.H.state_dict()["weight"]
 
@@ -374,6 +384,12 @@ class CML(Algorithm):
 
         :param X: Interaction matrix of shape (num_users, num_items)
         :type X: csr_matrix
+        :param W_as_tensor: Embedding matrix W (user embeddings)
+        :type W_as_tensor: torch.Tensor
+        :param H_as_tensor: Embedding matrix H (item embeddings)
+        :type H_as_tensor: torch.Tensor
+        :return: Embedding matrix W (user embeddings) with unknown users approximated
+        :rtype: torch.Tensor
         """
         U = set(X.nonzero()[0])
         users_to_approximate = U.difference(self.known_users_)
