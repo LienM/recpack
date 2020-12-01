@@ -178,8 +178,9 @@ class CML(Algorithm):
         return self
 
     def _batch_predict(
-        self, X: csr_matrix, W_as_tensor: torch.Tensor, H_as_tensor: torch.Tensor
+        self, users_to_predict_for: set, W_as_tensor: torch.Tensor, H_as_tensor: torch.Tensor
     ) -> csr_matrix:
+        # TODO Update docstring
         """
         Method for internal use only. Users should use `predict`.
 
@@ -189,20 +190,10 @@ class CML(Algorithm):
         :return: csr matrix of same shape, with recommendations.
         :rtype: csr_matrix
         """
-        users = set(X.nonzero()[0])
-
-        users_to_predict_for = users.intersection(self.known_users_)
-        users_we_cannot_predict_for = users.difference(self.known_users_)
-
-        if users_we_cannot_predict_for:
-            warnings.warn(
-                f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
-            )
-
         U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(
             self.model_.num_items
         )
-        I = torch.arange(X.shape[1]).repeat(len(users_to_predict_for))
+        I = torch.arange(self.model_.num_items).repeat(len(users_to_predict_for))
 
         num_interactions = U.shape[0]
 
@@ -226,7 +217,7 @@ class CML(Algorithm):
 
             V = np.append(V, batch_V)
 
-        X_pred = csr_matrix((V, (U.numpy(), I.numpy())), shape=X.shape)
+        X_pred = csr_matrix((V, (U.numpy(), I.numpy())), shape=(self.model_.num_users, self.model_.num_items))
 
         return X_pred
 
@@ -249,10 +240,22 @@ class CML(Algorithm):
         W_as_tensor = self.model_.W.state_dict()["weight"]
         H_as_tensor = self.model_.H.state_dict()["weight"]
 
+        users = set(X.nonzero()[0])
+
         if self.approximate_user_vectors:
+            users_to_predict_for = users
+        else:
+            users_to_predict_for = users.intersection(self.known_users_)
+            users_we_cannot_predict_for = users.difference(self.known_users_)
+
+            if users_we_cannot_predict_for:
+                warnings.warn(
+                    f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
+                )
+
             W_as_tensor = self.approximate_W(X, W_as_tensor, H_as_tensor)
 
-        X_pred = self._batch_predict(X, W_as_tensor, H_as_tensor)
+        X_pred = self._batch_predict(users_to_predict_for, W_as_tensor, H_as_tensor)
 
         self._check_prediction(X_pred, X)
 
@@ -375,14 +378,16 @@ class CML(Algorithm):
         U = set(X.nonzero()[0])
         users_to_approximate = U.difference(self.known_users_)
 
+        W_as_tensor_approximated = W_as_tensor.clone()
+
         for user in users_to_approximate:
             item_indices = X[user].nonzero()[1]
 
-            W_as_tensor[user] = H_as_tensor[
+            W_as_tensor_approximated[user] = H_as_tensor[
                 torch.LongTensor(item_indices).to(self.device)
             ].mean(axis=0)
 
-        return W_as_tensor
+        return W_as_tensor_approximated
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
