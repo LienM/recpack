@@ -34,11 +34,11 @@ class KUNN(Algorithm):
         X = to_csr_matrix(X, binary=True)
         Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(X)
 
-        sim_i = csr_matrix((X.T * Xscaled) @ Ci_rooted)
+        sim_i = csr_matrix((X.T @ Xscaled) @ Cu_rooted)
         sim_i.setdiag(0)
 
         knn_i = self._get_top_K(sim_i, self.Ki)
-        self.Si_ = csr_matrix((Cu_rooted * X) @ knn_i)
+        self.Si_ = csr_matrix((Ci_rooted @ X) * knn_i)
 
         return self
 
@@ -52,15 +52,18 @@ class KUNN(Algorithm):
         :return: User-item matrix with the prediction scores as values.
         """
         check_is_fitted(self)
+        # TODO: memoize fit rating matrix x: call it r
+        # TODO: find nearest neighbor users of predict matrix in that matrix r
+        # FIXME: volgorde checken: eerst in latex in matrix vorm uitschrijven
 
         X = to_csr_matrix(X, binary=True)
         Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(X)
 
-        sim_u = csr_matrix((X * Xscaled.T) @ Cu_rooted)
+        sim_u = csr_matrix((X @ Xscaled.T) @ Ci_rooted)
         sim_u.setdiag(0)
 
         knn_u = self._get_top_K(sim_u, self.Ku)
-        Su = csr_matrix((knn_u * X) @ Ci_rooted)
+        Su = csr_matrix((knn_u * X) @ Cu_rooted)
 
         self.S_ = self.Si_ + Su
 
@@ -130,4 +133,5 @@ class KUNN(Algorithm):
         Cx_calc = 1.0 / np.sqrt(Cx)
         Cx_calc[Cx_calc >= np.inf] = 0
 
+        # TODO: have a look at returning vector
         return diags(Cx_calc, 0)
