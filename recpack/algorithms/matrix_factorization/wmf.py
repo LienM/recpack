@@ -1,5 +1,4 @@
 import logging
-from enum import Enum
 
 import numpy as np
 from scipy.sparse import csr_matrix, diags, eye
@@ -7,10 +6,6 @@ from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm
 
 from recpack.algorithms import Algorithm
-
-class FactorType(Enum):
-    USER = True
-    ITEM = False
 
 logger = logging.getLogger("recpack")
 
@@ -66,7 +61,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         U = set(X.nonzero()[0])
         U_conf = self._generate_confidence(X)
-        U_user_factors = self._least_squares(FactorType.USER, U_conf, self.item_factors_, U)
+        U_user_factors = self._least_squares(U_conf, self.item_factors_, self.users, U)
 
         score_matrix = csr_matrix(U_user_factors @ self.item_factors_.T)
 
@@ -107,12 +102,14 @@ class WeightedMatrixFactorization(Algorithm):
 
         c = self._generate_confidence(X)
         ct = c.T.tocsr()
+        item_set = set(range(self.items))
+
         for i in tqdm(range(self.iterations)):
             old_uf = np.array(user_factors, copy=True)
             old_if = np.array(item_factors, copy=True)
 
-            user_factors = self._least_squares(FactorType.USER, c, item_factors)
-            item_factors = self._least_squares(FactorType.ITEM, ct, user_factors)
+            user_factors = self._least_squares(c, item_factors, self.users, self.known_users)
+            item_factors = self._least_squares(ct, user_factors, self.items, item_set)
 
             norm_uf = np.linalg.norm(old_uf - user_factors, 2)
             norm_if = np.linalg.norm(old_if - item_factors, 2)
@@ -122,25 +119,18 @@ class WeightedMatrixFactorization(Algorithm):
 
         return user_factors, item_factors
 
-    def _least_squares(self, factor_type: FactorType, conf_matrix: csr_matrix, factors: np.ndarray, users=None) \
+    def _least_squares(self, conf_matrix: csr_matrix, factors: np.ndarray, dimension: int, distinct_set: set) \
             -> np.ndarray:
         """
         Calculate the other factor based on the confidence matrix and the factors with the least squares algorithm.
         It is a general function for item- and user-factors. Depending on the parameter factor_type the other factor
         will be calculated.
-        @param factor_type: Factor type which need to be calculated
         @param conf_matrix: (Transposed) Confidence matrix
         @param factors: Factor array
-        @param users: Optional parameter to choose with user set to be used, default the self.known_users will be used.
+        @param dimension: User/item dimension.
+        @param distinct_set: Set of users/items
         @return: Other factor nd-array based on the factor array and the confidence matrix
         """
-        if factor_type is FactorType.USER:
-            dimension = self.users
-            distinct_set = self.known_users if users is None else users
-        else:  # factor_type is FactorType.ITEM
-            dimension = self.items
-            distinct_set = range(self.items)
-
         factors_x = np.zeros((dimension, self.num_components))
         YtY = factors.T @ factors
 
@@ -149,12 +139,12 @@ class WeightedMatrixFactorization(Algorithm):
 
         return factors_x
 
-    def _linear_equation(self, Y: np.ndarray, YtY: np.ndarray, matrix: csr_matrix, x: int) -> np.ndarray:
+    def _linear_equation(self, Y: np.ndarray, YtY: np.ndarray, C: csr_matrix, x: int) -> np.ndarray:
         """
         Helper function to compute the linear equation used in the Least Squares calculations.
         @param Y: Input factor array
         @param YtY: Product of Y transpose and Y.
-        @param matrix: The (transposed) confidence matrix
+        @param C: The (transposed) confidence matrix
         @param x: Calculation for which item/user x
         @return: Solution for the linear equation (YtCxY + regularization * I)^-1 (YtCxPx)
         """
@@ -166,13 +156,13 @@ class WeightedMatrixFactorization(Algorithm):
         # Left side of the linear equation A will be:
         #  A = YtY + Yt(Cx)Y + regularization * I
         #  For each x, let us define the diagonal n × n matrix Cx where Cx_yy = c_xy
-        cx_matrix = matrix[x]
-        cx = diags(cx_matrix.toarray().flatten(), 0)
-        A = YtY + (Y.T * cx) @ Y + self.regularization * np.eye(self.num_components)
+        cx = C[x]
+        Cx = diags(C[x].toarray().flatten(), 0)
+        A = YtY + (Y.T * Cx) @ Y + self.regularization * np.eye(self.num_components)
 
         # accumulate Yt(Cx + I)Px in b
-        cx_matrix[cx_matrix > 0] = 1  # now Px is represented as cx_matrix
-        b = (Y.T * (cx + eye(cx.shape[0]))) @ cx_matrix.T.toarray()
+        cx[cx > 0] = 1  # now Px is represented as cx
+        b = (Y.T * (Cx + eye(Cx.shape[0]))) @ cx.T.toarray()
 
         # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
         #  Flatten the result to make sure the dimension is (self.num_components,)
