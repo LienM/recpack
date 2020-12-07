@@ -154,6 +154,11 @@ class MetricTopK(Metric):
         return y_pred_top_K
 
     def get_top_K_values(self, y_pred: csr_matrix) -> csr_matrix:
+        """
+        Return csr_matrix of top K items for every user.
+        @param y_pred: Predicted affinity of users for items.
+        @return: Sparse matrix containing values of top K predictions.
+        """
         top_K_ranks = self.get_top_K_ranks(y_pred)
         top_K_ranks[top_K_ranks > 0] = 1  # ranks to binary
 
