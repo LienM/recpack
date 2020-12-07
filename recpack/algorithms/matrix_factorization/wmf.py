@@ -158,7 +158,7 @@ class WeightedMatrixFactorization(Algorithm):
         #  For each x, let us define the diagonal n × n matrix Cx where Cx_yy = c_xy
         cx = C[x]
         Cx = diags(C[x].toarray().flatten(), 0)
-        A = YtY + (Y.T * Cx) @ Y + self.regularization * np.eye(self.num_components)
+        A = YtY + (Y.T @ Cx) @ Y + self.regularization * np.eye(self.num_components)
 
         # accumulate Yt(Cx + I)Px in b
         cx[cx > 0] = 1  # now Px is represented as cx
