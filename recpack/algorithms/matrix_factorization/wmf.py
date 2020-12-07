@@ -111,8 +111,8 @@ class WeightedMatrixFactorization(Algorithm):
             user_factors = self._least_squares(c, item_factors, self.num_users, self.known_users)
             item_factors = self._least_squares(ct, user_factors, self.num_items, item_set)
 
-            norm_uf = np.linalg.norm(old_uf - user_factors, 2)
-            norm_if = np.linalg.norm(old_if - item_factors, 2)
+            norm_uf = np.linalg.norm(old_uf - user_factors, 'fro')
+            norm_if = np.linalg.norm(old_if - item_factors, 'fro')
             logger.debug(
                 f"{self.name} - Iteration {i} - L2-norm of diff user_factors: {norm_uf} - L2-norm of diff "
                 f"item_factors: {norm_if}")
