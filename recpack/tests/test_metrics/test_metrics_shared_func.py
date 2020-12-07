@@ -95,6 +95,28 @@ def test_get_topK_ranks():
     assert top_k_ranks[1, max_ix_row_1] == 1
 
 
+def test_get_all_topK_ranks(data, ranked_data_complete):
+    metric = MetricTopK(None)
+    top_k_ranks = metric.get_top_K_ranks(data)
+    numpy.testing.assert_almost_equal(top_k_ranks.todense(), ranked_data_complete.todense())
+
+
+def test_get_topK_values(X_pred):
+    metric = MetricTopK(2)
+    top_k_values = metric.get_top_K_ranks(X_pred, use_rank=False)
+
+    topK_users, topK_items, topK_values = (
+        [0, 0, 2, 2],
+        [0, 2, 3, 4],
+        [0.3, 0.2, 0.3, 0.5],
+    )
+
+    topK = scipy.sparse.csr_matrix(
+        (topK_values, (topK_users, topK_items)), shape=(10, 5)
+    )
+
+    numpy.testing.assert_almost_equal(topK.todense(), top_k_values.todense())
+
 def test_eliminate_zeros(X_true, X_pred):
     recall = RecallK(2)
 

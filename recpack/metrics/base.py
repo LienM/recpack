@@ -116,12 +116,15 @@ class MetricTopK(Metric):
     def name(self):
         return f"{super().name}_{self.K}"
 
-    def get_top_K_ranks(self, y_pred: csr_matrix) -> csr_matrix:
+    def get_top_K_ranks(self, y_pred: csr_matrix, use_rank: bool = True) -> csr_matrix:
         """
         Return csr_matrix of top K item ranks for every user.
 
         :param y_pred: Predicted affinity of users for items.
         :type y_pred: csr_matrix
+        :param use_rank: Optional parameter to indicate if the actual top K ranks of the user/item pairs should be
+        returned, else the actual top K values should be returned
+        :type use_rank: bool
         :return: Sparse matrix containing ranks of top K predictions.
         :rtype: csr_matrix
         """
@@ -142,7 +145,7 @@ class MetricTopK(Metric):
                 for rank, col_ix in enumerate(reversed(top_k_row)):
                     U.append(row_ix)
                     I.append(col_ix)
-                    V.append(rank + 1)
+                    V.append(rank + 1 if use_rank else y_pred[row_ix, col_ix])
 
         y_pred_top_K = csr_matrix((V, (U, I)), shape=y_pred.shape)
 
