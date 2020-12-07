@@ -103,7 +103,7 @@ def test_get_all_topK_ranks(data, ranked_data_complete):
 
 def test_get_topK_values(X_pred):
     metric = MetricTopK(2)
-    top_k_values = metric.get_top_K_ranks(X_pred, use_rank=False)
+    top_k_values = metric.get_top_K_values(X_pred)
 
     topK_users, topK_items, topK_values = (
         [0, 0, 2, 2],

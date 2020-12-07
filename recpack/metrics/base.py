@@ -116,7 +116,7 @@ class MetricTopK(Metric):
     def name(self):
         return f"{super().name}_{self.K}"
 
-    def get_top_K_ranks(self, y_pred: csr_matrix, use_rank: bool = True) -> csr_matrix:
+    def get_top_K_ranks(self, y_pred: csr_matrix) -> csr_matrix:
         """
         Return csr_matrix of top K item ranks for every user.
 
@@ -145,13 +145,19 @@ class MetricTopK(Metric):
                 for rank, col_ix in enumerate(reversed(top_k_row)):
                     U.append(row_ix)
                     I.append(col_ix)
-                    V.append(rank + 1 if use_rank else y_pred[row_ix, col_ix])
+                    V.append(rank + 1)
 
         y_pred_top_K = csr_matrix((V, (U, I)), shape=y_pred.shape)
 
         self.y_pred_top_K_ = y_pred_top_K
 
         return y_pred_top_K
+
+    def get_top_K_values(self, y_pred: csr_matrix) -> csr_matrix:
+        top_K_ranks = self.get_top_K_ranks(y_pred)
+        top_K_ranks[top_K_ranks > 0] = 1  # ranks to binary
+
+        return top_K_ranks.multiply(y_pred)  # elementwise multiplication
 
     @property
     def indices(self):
