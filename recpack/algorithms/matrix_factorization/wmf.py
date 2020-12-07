@@ -162,7 +162,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         # accumulate Yt(Cx + I)Px in b
         cx[cx > 0] = 1  # now Px is represented as cx
-        b = (Y.T * (Cx + eye(Cx.shape[0]))) @ cx.T.toarray()
+        b = (Y.T @ (Cx + eye(Cx.shape[0]))) @ cx.T.toarray()
 
         # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
         #  Flatten the result to make sure the dimension is (self.num_components,)
