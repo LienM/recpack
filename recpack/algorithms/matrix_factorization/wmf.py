@@ -44,7 +44,7 @@ class WeightedMatrixFactorization(Algorithm):
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
         :return: The fitted WeightedMatrixFactorizationAlgorithm itself.
         """
-        self.users, self.items = X.shape
+        self.num_users, self.num_items = X.shape
         self.known_users = set(X.nonzero()[0])
         self.user_factors_, self.item_factors_ = self._alternating_least_squares(X)
 
@@ -61,7 +61,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         U = set(X.nonzero()[0])
         U_conf = self._generate_confidence(X)
-        U_user_factors = self._least_squares(U_conf, self.item_factors_, self.users, U)
+        U_user_factors = self._least_squares(U_conf, self.item_factors_, self.num_users, U)
 
         score_matrix = csr_matrix(U_user_factors @ self.item_factors_.T)
 
@@ -97,19 +97,19 @@ class WeightedMatrixFactorization(Algorithm):
         :param X: Sparse matrix which the ALS algorithm should be applied on.
         :return: Generated user- and item-factors based on the input matrix X.
         """
-        user_factors = np.random.rand(self.users, self.num_components).astype(np.float32) * 0.01
-        item_factors = np.random.rand(self.items, self.num_components).astype(np.float32) * 0.01
+        user_factors = np.random.rand(self.num_users, self.num_components).astype(np.float32) * 0.01
+        item_factors = np.random.rand(self.num_items, self.num_components).astype(np.float32) * 0.01
 
         c = self._generate_confidence(X)
         ct = c.T.tocsr()
-        item_set = set(range(self.items))
+        item_set = set(range(self.num_items))
 
         for i in tqdm(range(self.iterations)):
             old_uf = np.array(user_factors, copy=True)
             old_if = np.array(item_factors, copy=True)
 
-            user_factors = self._least_squares(c, item_factors, self.users, self.known_users)
-            item_factors = self._least_squares(ct, user_factors, self.items, item_set)
+            user_factors = self._least_squares(c, item_factors, self.num_users, self.known_users)
+            item_factors = self._least_squares(ct, user_factors, self.num_items, item_set)
 
             norm_uf = np.linalg.norm(old_uf - user_factors, 2)
             norm_if = np.linalg.norm(old_if - item_factors, 2)
