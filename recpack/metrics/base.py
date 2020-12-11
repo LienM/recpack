@@ -6,6 +6,7 @@ from scipy.sparse import csr_matrix
 import pandas as pd
 from sklearn.base import BaseEstimator
 
+from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
@@ -116,42 +117,19 @@ class MetricTopK(Metric):
     def name(self):
         return f"{super().name}_{self.K}"
 
-    def get_top_K_ranks(self, y_pred: csr_matrix) -> csr_matrix:
-        """
-        Return csr_matrix of top K item ranks for every user.
-
-        :param y_pred: Predicted affinity of users for items.
-        :type y_pred: csr_matrix
-        :param use_rank: Optional parameter to indicate if the actual top K ranks of the user/item pairs should be
-        returned, else the actual top K values should be returned
-        :type use_rank: bool
-        :return: Sparse matrix containing ranks of top K predictions.
-        :rtype: csr_matrix
-        """
-        U, I, V = [], [], []
-        for row_ix, (le, ri) in enumerate(
-                zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
-            K_row_pick = min(self.K, ri - le) if self.K is not None else ri-le
-
-            if K_row_pick != 0:
-
-                top_k_row = y_pred.indices[
-                    le
-                    + np.argpartition(y_pred.data[le:ri], list(range(-K_row_pick, 0)))[
-                        -K_row_pick:
-                    ]
-                ]
-
-                for rank, col_ix in enumerate(reversed(top_k_row)):
-                    U.append(row_ix)
-                    I.append(col_ix)
-                    V.append(rank + 1)
-
-        y_pred_top_K = csr_matrix((V, (U, I)), shape=y_pred.shape)
-
-        self.y_pred_top_K_ = y_pred_top_K
-
-        return y_pred_top_K
+    # def get_top_K_ranks(self, y_pred: csr_matrix) -> csr_matrix:
+    #     """
+    #     Return csr_matrix of top K item ranks for every user.
+    #
+    #     :param y_pred: Predicted affinity of users for items.
+    #     :type y_pred: csr_matrix
+    #     :type use_rank: bool
+    #     :return: Sparse matrix containing ranks of top K predictions.
+    #     :rtype: csr_matrix
+    #     """
+    #     y_pred_top_K = get_top_K_ranks(y_pred)
+    #     self.y_pred_top_K_ = y_pred_top_K
+    #     return y_pred_top_K
 
     @property
     def indices(self):

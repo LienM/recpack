@@ -11,7 +11,6 @@ import torch
 from recpack.algorithms.loss_functions import bpr_loss_metric
 from recpack.metrics.dcg import ndcg_k
 from recpack.metrics.recall import recall_k
-from recpack.metrics.base import MetricTopK
 
 logger = logging.getLogger("recpack")
 
@@ -57,20 +56,6 @@ def get_batches(users, batch_size=1000):
         users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
         for i in range(ceil(len(users) / batch_size))
     ]
-
-
-def get_knn(data: csr_matrix, k: int) -> csr_matrix:
-    """
-    Return csr_matrix of top K items for every user.
-    @param data: Predicted affinity of users for items.
-    @param k: Value for K; k could be None.
-    @return: Sparse matrix containing values of top K predictions.
-    """
-    metric = MetricTopK(k)
-    top_K_ranks = metric.get_top_K_ranks(data)
-    top_K_ranks[top_K_ranks > 0] = 1  # ranks to binary
-
-    return top_K_ranks.multiply(data)  # elementwise multiplication
 
 
 class StoppingCriterion:

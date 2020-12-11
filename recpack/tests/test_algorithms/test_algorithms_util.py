@@ -8,8 +8,7 @@ from recpack.algorithms.util import (
     StoppingCriterion,
     naive_sparse2tensor,
     naive_tensor2sparse,
-    EarlyStoppingException,
-    get_knn
+    EarlyStoppingException
 )
 from recpack.metrics.recall import recall_k
 from recpack.metrics.dcg import ndcg_k
@@ -154,18 +153,3 @@ def test_csr_tensor_conversions(larger_matrix):
 
     assert isinstance(csr_again, csr_matrix)
 
-
-def test_get_knn_values(data):
-    top_k_values = get_knn(data, 2)
-
-    topK_users, topK_items, topK_values = (
-        [0, 0, 2, 2],
-        [0, 2, 3, 4],
-        [0.3, 0.2, 0.3, 0.5],
-    )
-
-    topK = csr_matrix(
-        (topK_values, (topK_users, topK_items)), shape=(10, 5)
-    )
-
-    numpy.testing.assert_almost_equal(topK.todense(), top_k_values.todense())
