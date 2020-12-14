@@ -93,10 +93,6 @@ class CML(Algorithm):
         self.approximate_user_vectors = approximate_user_vectors
         self.disentangle = disentangle
 
-    def __del__(self):
-        """cleans up temp file"""
-        self.best_model_.close()
-
     def _init_model(self, X):
         """
         Initialize model.
@@ -125,7 +121,8 @@ class CML(Algorithm):
     # TODO: loading just the model is not enough to reuse it.
     # We also need known users etc. Pickling seems like a good way to go here.
     def load(self, filename: str):
-        """Load a previously computed model.
+        """
+        Load a previously computed model.
 
         :param filename: path to file to load
         :type filename: str
@@ -179,30 +176,29 @@ class CML(Algorithm):
 
         return self
 
-    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+    def _batch_predict(
+        self,
+        users_to_predict_for: set,
+        W_as_tensor: torch.Tensor,
+        H_as_tensor: torch.Tensor,
+    ) -> csr_matrix:
         """
         Method for internal use only. Users should use `predict`.
 
-        :param X: interaction matrix, should have same dimensions as the matrix the model was fit on.
-        :type X: csr_matrix
-        :raises an: AssertionError when the input and model's number of items and users are incongruent.
-        :return: csr matrix of same shape, with recommendations.
+        :param users_to_predict_for: Set of users for which we wish to make predictions
+        :type users_to_predict_for: set
+        :param W_as_tensor: User embedding matrix W
+        :type W_as_tensor: torch.Tensor
+        :param H_as_tensor: Item embedding matrix H
+        :type H_as_tensor: torch.Tensor
+        :raises: AssertionError when the input and model's number of items and users are incongruent
+        :return: Predictions for all users in users_to_predict_for. Matrix has shape (model.num_users, model.num_items)
         :rtype: csr_matrix
         """
-        users = set(X.nonzero()[0])
-
-        users_to_predict_for = users.intersection(self.known_users_)
-        users_we_cannot_predict_for = users.difference(self.known_users_)
-
-        if users_we_cannot_predict_for:
-            warnings.warn(
-                f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
-            )
-
         U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(
             self.model_.num_items
         )
-        I = torch.arange(X.shape[1]).repeat(len(users_to_predict_for))
+        I = torch.arange(self.model_.num_items).repeat(len(users_to_predict_for))
 
         num_interactions = U.shape[0]
 
@@ -215,12 +211,21 @@ class CML(Algorithm):
             batch_I = I[batch_ix : min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
+
+            batch_w_U = W_as_tensor[batch_U]
+            batch_h_I = H_as_tensor[batch_I]
+
             # Score = -distance
-            batch_V = -self.model_.predict(batch_U, batch_I).detach().cpu().numpy()
+            batch_V = (
+                -nn.PairwiseDistance(p=2)(batch_w_U, batch_h_I).detach().cpu().numpy()
+            )
 
             V = np.append(V, batch_V)
 
-        X_pred = csr_matrix((V, (U.numpy(), I.numpy())), shape=X.shape)
+        X_pred = csr_matrix(
+            (V, (U.numpy(), I.numpy())),
+            shape=(self.model_.num_users, self.model_.num_items),
+        )
 
         return X_pred
 
@@ -240,11 +245,26 @@ class CML(Algorithm):
 
         assert X.shape == (self.model_.num_users, self.model_.num_items)
 
-        if self.approximate_user_vectors:
-            # TODO Needs a better name
-            self.approximate(X)
+        # Extract embedding matrices
+        W_as_tensor = self.model_.W.state_dict()["weight"]
+        H_as_tensor = self.model_.H.state_dict()["weight"]
 
-        X_pred = self._batch_predict(X)
+        users = set(X.nonzero()[0])
+
+        if self.approximate_user_vectors:
+            users_to_predict_for = users
+        else:
+            users_to_predict_for = users.intersection(self.known_users_)
+            users_we_cannot_predict_for = users.difference(self.known_users_)
+
+            if users_we_cannot_predict_for:
+                warnings.warn(
+                    f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
+                )
+
+            W_as_tensor = self.approximate_W(X, W_as_tensor, H_as_tensor)
+
+        X_pred = self._batch_predict(users_to_predict_for, W_as_tensor, H_as_tensor)
 
         self._check_prediction(X_pred, X)
 
@@ -310,12 +330,12 @@ class CML(Algorithm):
                 nonzero_users, size=min(1000, len(nonzero_users)), replace=False
             )
 
-            val_data_in_selection = csr_matrix(([], ([], [])), shape=val_data_in.shape)
+            val_data_in_selection = csr_matrix(val_data_in.shape)
             val_data_in_selection[validation_users, :] = val_data_in[
                 validation_users, :
             ]
 
-            val_data_out_selection = csr_matrix(([], ([], [])), shape=val_data_in.shape)
+            val_data_out_selection = csr_matrix(val_data_in.shape)
             val_data_out_selection[validation_users, :] = val_data_out[
                 validation_users, :
             ]
@@ -355,23 +375,34 @@ class CML(Algorithm):
 
         return loss
 
-    def approximate(self, X: csr_matrix):
+    def approximate_W(
+        self, X: csr_matrix, W_as_tensor: torch.Tensor, H_as_tensor: torch.Tensor
+    ) -> torch.Tensor:
         """
-        Approximate user embeddings by setting them to the average of item embeddings the user visited.
+        Approximate user embeddings of unknown users by setting them to the average of item embeddings the user visited.
 
-        :param X: [description]
+        :param X: Interaction matrix of shape (num_users, num_items)
         :type X: csr_matrix
+        :param W_as_tensor: Embedding matrix W (user embeddings)
+        :type W_as_tensor: torch.Tensor
+        :param H_as_tensor: Embedding matrix H (item embeddings)
+        :type H_as_tensor: torch.Tensor
+        :return: Embedding matrix W (user embeddings) with unknown users approximated
+        :rtype: torch.Tensor
         """
         U = set(X.nonzero()[0])
         users_to_approximate = U.difference(self.known_users_)
 
+        W_as_tensor_approximated = W_as_tensor.clone()
+
         for user in users_to_approximate:
             item_indices = X[user].nonzero()[1]
-            self.model_.W_as_tensor[user] = self.model_.H(
-                torch.LongTensor(item_indices)
-            ).mean(axis=0)
 
-        self.known_users_.update(users_to_approximate)
+            W_as_tensor_approximated[user] = H_as_tensor[
+                torch.LongTensor(item_indices).to(self.device)
+            ].mean(axis=0)
+
+        return W_as_tensor_approximated
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
@@ -396,7 +427,7 @@ def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
     H_as_tensor = next(H.parameters())
 
     # Concatenate them together. They live in the same metric space, so share the same dimensions.
-    # X is a matrix of shape (|users| + |items|, num_dimensions)
+    #  X is a matrix of shape (|users| + |items|, num_dimensions)
     X = torch.cat([W_as_tensor, H_as_tensor], dim=0)
 
     # Zero mean
@@ -503,41 +534,6 @@ class CMLTorch(nn.Module):
         :rtype: torch.Tensor
         """
         w_U = self.W(U)
-        h_I = self.H(I)
-
-        # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]
-
-        return self.pdist(w_U, h_I)
-
-    @property
-    def W_as_tensor(self):
-
-        if not hasattr(self, "_W_as_tensor"):
-            self._W_as_tensor = self.W.state_dict()["weight"]
-
-        return self._W_as_tensor
-
-    @W_as_tensor.setter
-    def W_as_tensor(self, value):
-        self._W_as_tensor = value
-
-    def predict(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
-        """
-        Compute Euclidian distance between the !! already calculated !!
-        user embedding (w_u) and item embedding (h_i)
-        for every user and item pair in U and I.
-        Can also make meaningful predictions for unknown users if their embeddings
-        were approximated.
-
-        :param U: User identifiers.
-        :type U: torch.Tensor
-        :param I: Item identifiers.
-        :type I: torch.Tensor
-        :return: Euclidian distances between user-item pairs.
-        :rtype: torch.Tensor
-        """
-
-        w_U = self.W_as_tensor[U]
         h_I = self.H(I)
 
         # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]

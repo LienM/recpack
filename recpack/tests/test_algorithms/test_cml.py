@@ -110,6 +110,7 @@ def test_cml_predict(cml, larger_matrix):
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
 
 
+# Test if matrix changed between before and after approximate?
 def test_cml_predict_w_approximate(cml, larger_matrix):
     cml.approximate_user_vectors = True
 
@@ -124,7 +125,17 @@ def test_cml_predict_w_approximate(cml, larger_matrix):
 
     X_pred = cml.predict(s.test_data_in)
 
-    assert cml.known_users_.intersection(s.test_data_in.binary_values.nonzero()[0])
+    # Known users should not be changed
+    assert cml.known_users_ == set(s.training_data.binary_values.nonzero()[0])
+
+    W_as_tensor = cml.model_.W.state_dict()["weight"]
+    H_as_tensor = cml.model_.H.state_dict()["weight"]
+
+    W_as_tensor_approximated = cml.approximate_W(s._validation_data_in.binary_values, W_as_tensor, H_as_tensor)
+
+    # W_as_tensor_approximated should have changed in comparison to before
+    with np.testing.assert_raises(AssertionError):
+        np.testing.assert_array_equal(W_as_tensor.detach().cpu().numpy(), W_as_tensor_approximated.detach().cpu().numpy())
 
 
 def test_covariance_loss():
@@ -132,6 +143,7 @@ def test_covariance_loss():
 
     loss = covariance_loss(ct.H, ct.W).detach().numpy()
 
+    # Embeddings are initialized to be zero mean, ct.std standard deviation.
     np.testing.assert_almost_equal(abs(loss), ct.std, decimal=1)
 
 
