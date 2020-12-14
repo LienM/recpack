@@ -40,13 +40,13 @@ class SessionRNN(Algorithm):
     """
     A recurrent neural network for session-based recommendations.
 
-    The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers 
+    The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
     "Session-based Recommendations with Recurrent Neural Networks" and
     "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations"
 
-    The algorithm makes recommendations by training a recurrent neural network to 
-    predict the next action of a user, and using the most likely next actions as 
-    recommendations. At the heart of it is a Gated Recurrent Unit (GRU), a recurrent 
+    The algorithm makes recommendations by training a recurrent neural network to
+    predict the next action of a user, and using the most likely next actions as
+    recommendations. At the heart of it is a Gated Recurrent Unit (GRU), a recurrent
     network architecture that is able to form long-term memories.
 
     Predictions are made by processing a user's actions so far one by one, in chrono-
@@ -57,19 +57,19 @@ class SessionRNN(Algorithm):
                  0 --> [ GRU ] --> [ GRU ] --> [ GRU ]
                           |           |           |
                         iid_0       iid_1       iid_2
-    
-    here 'iid' are item ids, which can represent page views, purchases, or some other 
-    action. The GRU builds up a memory of the actions so far and predicts what the 
+
+    here 'iid' are item ids, which can represent page views, purchases, or some other
+    action. The GRU builds up a memory of the actions so far and predicts what the
     next action will be based on what other users with similar histories did next.
-    While originally devised to make recommendations based on (often short) user 
+    While originally devised to make recommendations based on (often short) user
     sessions, the algorithm can be used with long user histories as well.
 
-    For the mathematical details of GRU see "Empirical Evaluation of Gated Recurrent 
+    For the mathematical details of GRU see "Empirical Evaluation of Gated Recurrent
     Neural Networks on Sequence Modeling" by Chung et al.
 
     :param num_layers: Number of hidden layers in the RNN
     :param hidden_size: Number of neurons in the hidden layer(s)
-    :param embedding_size: Size of item embeddings. If None, no embeddings are used and 
+    :param embedding_size: Size of item embeddings. If None, no embeddings are used and
         the input to the network is a one-of-N binary vector.
     :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout.
     :param activation: Final layer activation function, one of "identity", "tanh",
@@ -147,7 +147,7 @@ class SessionRNN(Algorithm):
         num_items = train_data.shape[1]
 
         self.model_ = SessionRNNTorch(
-            num_items=num_items,
+            num_items=int(num_items),  # PyTorch 1.4 can't handle numpy ints
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             embedding_size=self.embedding_size,
@@ -235,7 +235,7 @@ class SessionRNN(Algorithm):
 
     def predict(self, X: Matrix) -> csr_matrix:
         """
-        Predict recommendations for each user with at least a single event in their 
+        Predict recommendations for each user with at least a single event in their
         history.
 
         :param X: Data matrix, same shape as training matrix. Timestamps required.
@@ -293,7 +293,9 @@ class SessionRNN(Algorithm):
                 losses.append(loss.item())
                 loss = 0.0
                 hidden = hidden.detach()  # Prevent backprop past bptt steps
-            hidden = hidden * ~is_last.view(1, -1, 1)  # Reset hidden state between users
+            hidden = hidden * ~is_last.view(
+                1, -1, 1
+            )  # Reset hidden state between users
 
         logger.info("training loss = {}".format(np.mean(losses)))
 
@@ -311,7 +313,7 @@ class SessionRNN(Algorithm):
         X_val_pred = self.predict(validation_data[0])
         better = self.stopping_criterion.update(X_true, X_val_pred)
         # TODO: save using temp files
-        #if better:
+        # if better:
         #    self.save(self.stopping_criterion.best_value)
 
     def session_based_evaluate(self, X: Matrix, K: int = 20) -> Tuple[float, float]:
@@ -367,5 +369,7 @@ class SessionRNN(Algorithm):
             for m_idx, m in enumerate(metrics):
                 score = m(output, target)
                 metric_scores[m_idx].append(score)
-            hidden = hidden * ~is_last.view(1, -1, 1)  # Reset hidden state between users
+            hidden = hidden * ~is_last.view(
+                1, -1, 1
+            )  # Reset hidden state between users
         return [np.mean(scores) for scores in metric_scores]
