@@ -40,33 +40,47 @@ class SessionRNN(Algorithm):
     """
     A recurrent neural network for session-based recommendations.
 
-    This algorithm was introduced in the 2016 and 2018 papers by Hidasi et al.
+    The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers 
     "Session-based Recommendations with Recurrent Neural Networks" and
     "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations"
 
     The algorithm makes recommendations by training a recurrent neural network to 
     predict the next action of a user, and using the most likely next actions as 
-    recommendations. The  Gated Recurrent Unit (GRU) 
-                  
+    recommendations. At the heart of it is a Gated Recurrent Unit (GRU), a recurrent 
+    network architecture that is able to form long-term memories.
+
+    Predictions are made by processing a user's actions so far one by one, in chrono-
+    logical order:
+
                                           iid_3_predictions
                                                   |
                  0 --> [ GRU ] --> [ GRU ] --> [ GRU ]
                           |           |           |
                         iid_0       iid_1       iid_2
+    
+    here 'iid' are item ids, which can represent page views, purchases, or some other 
+    action. The GRU builds up a memory of the actions so far and predicts what the 
+    next action will be based on what other users with similar histories did next.
+    While originally devised to make recommendations based on (often short) user 
+    sessions, the algorithm can be used with long user histories as well.
 
-    :param batch_size: Number of examples in a mini-batch
-    :param sample_size: Number of negative samples used for bpr, bpr-max, top1, top1-max
-        loss calculation. This number includes samples from the same minibatch.
-    :param alpha: Sampling weight parameter, 0 is uniform, 1 is popularity-based
-    :param embedding_size: Size of item embeddings, None for no embeddings
-    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout.
+    For the mathematical details of GRU see "Empirical Evaluation of Gated Recurrent 
+    Neural Networks on Sequence Modeling" by Chung et al.
+
     :param num_layers: Number of hidden layers in the RNN
     :param hidden_size: Number of neurons in the hidden layer(s)
+    :param embedding_size: Size of item embeddings. If None, no embeddings are used and 
+        the input to the network is a one-of-N binary vector.
+    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout.
     :param activation: Final layer activation function, one of "identity", "tanh",
         "softmax", "relu", "elu-<X>", "leaky-<X>"
     :param loss_fn: Loss function. One of "cross-entropy", "top1", "top1-max", "bpr",
         "bpr-max"
+    :param sample_size: Number of negative samples used for bpr, bpr-max, top1, top1-max
+        loss calculation. This number includes samples from the same minibatch.
+    :param alpha: Sampling weight parameter, 0 is uniform, 1 is popularity-based
     :param optimizer: Gradient descent optimizer, one of "sgd", "adagrad"
+    :param batch_size: Number of examples in a mini-batch
     :param learning_rate: Gradient descent initial learning rate
     :param momentum: Momentum when using the sgd optimizer
     :param clip_norm: Clip the gradient's l2 norm, None for no clipping
@@ -195,8 +209,9 @@ class SessionRNN(Algorithm):
         algorithm's stopping criterion. If no validation data is provided or early
         stopping is disabled, training will continue for exactly num_epochs.
 
-        :param train_data: The training data matrix.
+        :param train_data: The training data matrix. Timestamps required.
         :param validation_data: Validation in and out matrices. None for no validation.
+            Timestamps required.
         """
         X = to_datam(X, timestamps=True)
         if validation_data:
@@ -220,9 +235,10 @@ class SessionRNN(Algorithm):
 
     def predict(self, X: Matrix) -> csr_matrix:
         """
-        Predict recommendations for each user with at least a single event in their history.
+        Predict recommendations for each user with at least a single event in their 
+        history.
 
-        :param X: Data matrix, should have same shape as training matrix
+        :param X: Data matrix, same shape as training matrix. Timestamps required.
         """
         check_is_fitted(self)
 
@@ -288,7 +304,7 @@ class SessionRNN(Algorithm):
         If performance improved over previous epoch, store the model and update
         best value. If performance stagnates, stop training.
 
-        :param validation_data: validation data interaction matrices.
+        :param validation_data: Validation data interaction matrices.
         """
         self.model_.train(False)
         X_true = to_csr_matrix(validation_data[1], binary=True)
@@ -312,7 +328,7 @@ class SessionRNN(Algorithm):
         original paper and should not generally be used, as the results are heavily
         skewed towards users/sessions with many actions.
 
-        :param X: Data to evaluate on
+        :param X: Data to evaluate on. Timestamps required.
         :param K: Metrics are calculated on the top K recommendations
         """
         check_is_fitted(self)

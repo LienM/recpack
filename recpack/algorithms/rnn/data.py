@@ -1,5 +1,5 @@
 """
-Data conversion and manipulation
+Data format conversion and manipulation
 """
 import numpy as np
 import pandas as pd
@@ -11,29 +11,58 @@ from typing import Tuple
 
 
 def data_m_to_tensor(
-    dm: DataM,
+    data_m: DataM,
     batch_size: int,
     device: str = "cpu",
     shuffle: bool = False,
     include_last: bool = False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
-    Converts a data matrix with timestamp information to tensor format.
+    Converts a data matrix with timestamp information to torch tensors.
 
-    The 
+    Information about the interactions is split over three different tensors
+    of identical shape, containing item id, next item id and user id of the
+    interaction.
 
-    As an example, with following interactions (sorted by time):
-        uid  0    1      2      3
-        iid  0 1  2 3 4  5 6 7  8 9
-    The returned tensors for a batch size of two would be
-        [[0, 5],      [[1, 6],        [[0, 2],
-         [2, 6],       [3, 7],         [1, 2],
-         [3, 8]]   ,   [4, 9]]   and   [1, 3]]
-    Containing input item ids, next item ids, and user/session ids. Grouped by
-    users, ordered by time. Users at boundaries may be split across columns.
+    As an example, take following interactions (ordered by time for each user):
+
+        uid       0 0 0  1 1 1  2 2  3 3 3
+        iid       0 1 2  3 4 5  6 7  8 9 10
+
+    First, the last interaction of each user is dropped because we don't know
+    what the user's next action will be, so we can not train on it:
+
+        uid       0 0  1 1  2  3 3
+        iid_in    0 1  3 4  6  8 9
+        iid_next  1 2  4 5  7  9 10
+                        ^       ^
+    The returned tensors for a batch size of two would be:
+
+        iid_in        iid_next      uid
+
+        [[0, 4],      [[1, 5],      [[0, 1],
+         [1, 6],       [2, 7],       [0, 2],
+         [3, 8]]   ,   [4, 9]]   ,   [1, 3]]
+
+    Note that these are simply the interactions from above, laid out column by
+    column. The last interaction (uid: 3, iid_in: 9) is dropped because the
+    number of interactions (7) is not a multiple of the batch size (2).
+
+    :param data_m: DataM object to be converted to tensors, must have timestamps
+    :param batch_size: Number of actions per batch. If the number of actions is
+        not divisible by batch_size, up to (batch_size - 1) actions will be
+        dropped. In cases where this is unacceptable, use a batch_size of 1.
+    :param device: Torch device to store the tensors on.
+    :param shuffle: Randomize the position of users/sessions in the tensors. If
+        False, actions will be ordered by user id.
+    :param include_last: Whether to include the last interaction of each user.
+        If true, the value of the next item id is undefined for the last action.
+    :return: Three tensors of shape (N, B), where B is the batch size and N is
+        the number of complete batches that can be created. They contain input
+        item ids, next item ids and user ids, respectively.
     """
     # Convert the item and user ids to 1D tensors
-    df = dm.dataframe
+    df = data_m.dataframe
     if shuffle:
         df = shuffle_and_sort(df)
     else:
@@ -80,7 +109,7 @@ def batchify(data: Tensor, batch_size: int) -> Tensor:
 
     :param data: One-dimensional tensor to be split into batches
     :param batch_size: How many elements per batch
-    :return: A tensor of shape (N, B), where B is the batch size and N is the number 
+    :return: A tensor of shape (N, B), where B is the batch size and N is the number
         of complete batches that can be created
     """
     nbatch = data.size(0) // batch_size
