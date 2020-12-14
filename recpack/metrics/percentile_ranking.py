@@ -1,6 +1,7 @@
 from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import GlobalMetricK
+from recpack.util import get_top_K_ranks
 
 
 class PercentileRanking(GlobalMetricK):
@@ -29,7 +30,8 @@ class PercentileRanking(GlobalMetricK):
         self.verify_shape(y_true, y_pred)
 
         denominator = y_true.sum()
-        ranking = self.get_top_K_ranks(y_pred)
+        ranking = get_top_K_ranks(y_pred, self.K)
+        self.y_pred_top_K_ = ranking
 
         # Ranking starts at 0 for this metric
         ranking.data -= 1

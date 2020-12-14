@@ -4,6 +4,8 @@ import scipy.sparse
 from scipy.sparse import csr_matrix
 import numpy as np
 
+from recpack.util import get_top_K_ranks
+
 
 def compute_hits(y_true, y_pred):
     # Compute hits matrix:
@@ -67,7 +69,8 @@ class IPSHitRateK(ElementwiseMetricK, IPSMetric):
         self.verify_shape(y_true, y_pred)
 
         # Per user get a set of the topK predicted items
-        y_pred_top_K = self.get_top_K_ranks(y_pred)
+        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
+        self.y_pred_top_K_ = y_pred_top_K
 
         hits = compute_hits(y_true, y_pred_top_K)
 

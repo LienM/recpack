@@ -94,3 +94,18 @@ def larger_matrix():
     )
 
     return pv
+
+
+@pytest.fixture(scope="function")
+def data():
+    pred_users, pred_items, pred_values = (
+        [0, 0, 0, 2, 2, 2],
+        [0, 2, 3, 1, 3, 4],
+        [0.3, 0.2, 0.1, 0.23, 0.3, 0.5],
+    )
+
+    pred = sp.csr_matrix(
+        (pred_values, (pred_users, pred_items)), shape=(10, 5)
+    )
+
+    return pred
