@@ -5,7 +5,7 @@ import scipy.sparse
 from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import ElementwiseMetricK
-
+from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
@@ -18,7 +18,8 @@ class PrecisionK(ElementwiseMetricK):
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
         self.verify_shape(y_true, y_pred)
 
-        y_pred_top_K = self.get_top_K_ranks(y_pred)
+        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
+        self.y_pred_top_K_ = y_pred_top_K
 
         scores = scipy.sparse.lil_matrix(y_pred.shape)
 

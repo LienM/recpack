@@ -51,3 +51,51 @@ def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
     )
 
     return sparse_matrix
+
+
+def get_top_K_ranks(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.sparse.csr_matrix:
+    """
+    Return csr_matrix of top K item ranks for every user.
+
+    :param data: Predicted affinity of users for items.
+    :type data: csr_matrix
+    :param k: Value for K; k could be None.
+    :type k: int or None
+    :return: Sparse matrix containing ranks of top K predictions.
+    :rtype: csr_matrix
+    """
+    U, I, V = [], [], []
+    for row_ix, (le, ri) in enumerate(
+            zip(data.indptr[:-1], data.indptr[1:])):
+        K_row_pick = min(k, ri - le) if k is not None else ri-le
+
+        if K_row_pick != 0:
+
+            top_k_row = data.indices[
+                le
+                + np.argpartition(data.data[le:ri], list(range(-K_row_pick, 0)))[
+                    -K_row_pick:
+                ]
+            ]
+
+            for rank, col_ix in enumerate(reversed(top_k_row)):
+                U.append(row_ix)
+                I.append(col_ix)
+                V.append(rank + 1)
+
+    data_top_K = scipy.sparse.csr_matrix((V, (U, I)), shape=data.shape)
+
+    return data_top_K
+
+
+def get_top_K_values(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.sparse.csr_matrix:
+    """
+    Return csr_matrix of top K items for every user. Which is equal to the K nearest neighbours.
+    @param data: Predicted affinity of users for items.
+    @param k: Value for K; k could be None.
+    @return: Sparse matrix containing values of top K predictions.
+    """
+    top_K_ranks = get_top_K_ranks(data, k)
+    top_K_ranks[top_K_ranks > 0] = 1  # ranks to binary
+
+    return top_K_ranks.multiply(data)  # elementwise multiplication

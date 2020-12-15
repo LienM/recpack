@@ -8,7 +8,7 @@ import scipy.sparse
 
 from tqdm.auto import tqdm
 
-from recpack.data.data_matrix import DataM
+from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX
 
 logger = logging.getLogger("recpack")
 
@@ -130,6 +130,46 @@ class StrongGeneralizationSplitter(Splitter):
         return u_splitter.split(data)
 
 
+class UserInteractionTimeSplitter(Splitter):
+    """
+    Users are split based on the time of their interactions. A user's interactions will 
+    all be placed in one of the two sets, never in both.
+
+    :param t: Timestamp to split on. By default, users whose last interaction has 
+              time < t are placed in the first set, other users in the second. Which 
+              interaction to split on can be controlled by the `on` parameter.
+    :param on: Which user interaction to split on, one of "min", "max", "median", "mean".
+               Defaults to "max", i.e. the user's latest interaction.
+    """
+
+    def __init__(self, t: float, on: str = "max"):
+        super().__init__()
+        assert on in ["min", "max", "median", "mean"]
+        self.t = t
+        self.on = on
+
+    @property
+    def name(self):
+        return f"user_interaction_time_split_t={self.t}_on={self.on}"
+
+    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+        """
+        Splits the users into two sets based on the time of their interactions.
+
+        :param data: Data matrix to be split. Must contain timestamps.
+        :return: A tuple containing a matrix with all users whose interaction specified 
+                 by the `on` parameter occured strictly before time `t`, and a matrix 
+                 with users whose interaction occured at or after time `t`.
+        """
+        df = data.dataframe
+        ts_grouped_by_user = df.groupby(USER_IX)[TIMESTAMP_IX]
+        ts_user = getattr(ts_grouped_by_user, self.on)()
+        mask = df[USER_IX].map(ts_user) < self.t
+
+        logger.debug(f"{self.name} - Split successful")
+        return DataM(df[mask], shape=data.shape), DataM(df[~mask], shape=data.shape)
+
+
 class ItemSplitter(Splitter):
     pass
 
@@ -180,7 +220,7 @@ class PercentageInteractionSplitter(Splitter):
 class TimestampSplitter(Splitter):
     """
     Use this class if you want to split your data on a timestamp.
-    Training data will be all data in the interval [t_alpha, t),
+    Training data will be all data in the interval [t-t_alpha, t),
     the test data will be the data in the interval [t, t+t_delta).
     If t_alpha or t_delta are omitted, all data before/after t is used.
 
@@ -215,8 +255,8 @@ class TimestampSplitter(Splitter):
         :param data: recpack.DataM containing the data values matrix
                      and potentially timestamp matrix which will be split.
         :type data: class:`recpack.DataM`
-        :return: A tuple containing the training, validation and test data objects in that order.
-        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        :return: A tuple containing the training and test data objects, in that order.
+        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`)
         """
 
         if self.t_alpha is None:
@@ -242,6 +282,43 @@ class TimestampSplitter(Splitter):
         return tr_data, te_data
 
 
+class MostRecentSplitter(Splitter):
+    """
+    Splits the n most recent actions of each user into a separate set.
+
+    :param n: Number of most recent actions. If negative, all but the |n| earliest 
+              actions are split off.
+    """
+
+    def __init__(self, n: int):
+        super().__init__()
+        self.n = n
+
+    @property
+    def name(self):
+        return f"most_recent_split_n{self.n}"
+
+    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+        """
+        Returns a data matrix with all but the n most recent actions of each user 
+        and a data matrix with the n most recent actions of each user.
+
+        :param data: Data matrix to be split. Must contain timestamps.
+        :return: A tuple containing a matrix with all but n most recent and matrix 
+                 with n most recent actions of each user.
+        """
+        df = data.dataframe
+        pos = df.groupby(USER_IX)[TIMESTAMP_IX].rank(method="first")
+        cnt = df[USER_IX].map(df[USER_IX].value_counts())
+        if self.n >= 0:
+            mask = pos <= cnt - self.n
+        else:
+            mask = pos <= -self.n
+
+        logger.debug(f"{self.name} - Split successful")
+        return DataM(df[mask], shape=data.shape), DataM(df[~mask], shape=data.shape)
+
+
 def batch(iterable, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
@@ -264,8 +341,8 @@ class FoldIterator:
         self.batch_size = batch_size
         assert self.batch_size > 0  # Avoid inf loops
 
-        self.data_m_in.eliminate_timestamps()
-        self.data_m_out.eliminate_timestamps()
+        self.data_m_in.eliminate_timestamps(inplace=True)
+        self.data_m_out.eliminate_timestamps(inplace=True)
 
         # users need history, but absence of true labels is allowed (some
         # metrics don't require true labels).

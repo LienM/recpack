@@ -1,3 +1,4 @@
+import numpy
 import pytest
 
 from scipy.sparse import csr_matrix
@@ -7,7 +8,7 @@ from recpack.algorithms.util import (
     StoppingCriterion,
     naive_sparse2tensor,
     naive_tensor2sparse,
-    EarlyStoppingException,
+    EarlyStoppingException
 )
 from recpack.metrics.recall import recall_k
 from recpack.metrics.dcg import ndcg_k
@@ -151,3 +152,4 @@ def test_csr_tensor_conversions(larger_matrix):
     csr_again = naive_tensor2sparse(tensor)
 
     assert isinstance(csr_again, csr_matrix)
+

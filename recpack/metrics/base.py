@@ -6,6 +6,7 @@ from scipy.sparse import csr_matrix
 import pandas as pd
 from sklearn.base import BaseEstimator
 
+from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
@@ -115,40 +116,6 @@ class MetricTopK(Metric):
     @property
     def name(self):
         return f"{super().name}_{self.K}"
-
-    def get_top_K_ranks(self, y_pred: csr_matrix) -> csr_matrix:
-        """
-        Return csr_matrix of top K item ranks for every user.
-
-        :param y_pred: Predicted affinity of users for items.
-        :type y_pred: csr_matrix
-        :return: Sparse matrix containing ranks of top K predictions.
-        :rtype: csr_matrix
-        """
-        U, I, V = [], [], []
-        for row_ix, (le, ri) in enumerate(
-                zip(y_pred.indptr[:-1], y_pred.indptr[1:])):
-            K_row_pick = min(self.K, ri - le)
-
-            if K_row_pick != 0:
-
-                top_k_row = y_pred.indices[
-                    le
-                    + np.argpartition(y_pred.data[le:ri], list(range(-K_row_pick, 0)))[
-                        -K_row_pick:
-                    ]
-                ]
-
-                for rank, col_ix in enumerate(reversed(top_k_row)):
-                    U.append(row_ix)
-                    I.append(col_ix)
-                    V.append(rank + 1)
-
-        y_pred_top_K = csr_matrix((V, (U, I)), shape=y_pred.shape)
-
-        self.y_pred_top_K_ = y_pred_top_K
-
-        return y_pred_top_K
 
     @property
     def indices(self):

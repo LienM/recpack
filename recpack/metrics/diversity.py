@@ -3,6 +3,7 @@ from scipy.spatial import distance
 from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import FittedMetric, ListwiseMetricK
+from recpack.util import get_top_K_ranks
 
 
 class IntraListDiversityK(FittedMetric, ListwiseMetricK):
@@ -44,7 +45,8 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
         self.verify_shape(y_true, y_pred)
         # resolve top K items per user
-        y_pred_top_K = self.get_top_K_ranks(y_pred)
+        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
+        self.y_pred_top_K_ = y_pred_top_K
 
         scores = csr_matrix(np.zeros((y_pred_top_K.shape[0], 1)))
 

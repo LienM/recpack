@@ -1,10 +1,10 @@
 import logging
-from typing import List, Set, Tuple, Union
+from typing import List, Set, Tuple, Union, Callable
 
 import pandas as pd
 import numpy as np
-
 import scipy.sparse
+import operator
 
 from recpack.util import groupby2
 
@@ -19,14 +19,29 @@ TIMESTAMP_IX = "ts"
 
 
 class DataM:
+    """
+    Stores information about interactions between users and items.
+
+    :param df: Dataframe containing user-item interactions. Must contain at least
+               item ids and user ids.
+    :param item_ix: Item ids column name
+    :param user_ix: User ids column name
+    :param value_ix: Interaction values column name
+    :param timestamp_ix: Interaction timestamps column name
+    :param shape: The desired shape of the matrix, i.e. the number of users and items.
+                  If no shape is specified, the number of users will be equal to the
+                  maximum user id plus one, the number of items to the maximum item
+                  id plus one.
+    """
+
     def __init__(
         self,
-        df,
-        item_ix=ITEM_IX,
-        user_ix=USER_IX,
-        value_ix=VALUE_IX,
-        timestamp_ix=TIMESTAMP_IX,
-        shape=None,
+        df: pd.DataFrame,
+        item_ix: str = ITEM_IX,
+        user_ix: str = USER_IX,
+        value_ix: str = VALUE_IX,
+        timestamp_ix: str = TIMESTAMP_IX,
+        shape: Tuple[int, int] = None,
     ):
         col_mapper = {
             item_ix: ITEM_IX,
@@ -42,7 +57,15 @@ class DataM:
 
     @property
     def values(self) -> scipy.sparse.csr_matrix:
+        """
+        All user-item interactions as a sparse matrix of size (users, items).
 
+        Each entry is the sum of interaction values for that user and item. If no
+        interaction values are known, the entry is the total number of interactions
+        between that user and item.
+
+        If there are no interactions between a user and item, the entry is 0.
+        """
         if VALUE_IX in self._df:
             values = self._df[VALUE_IX]
         else:
@@ -56,7 +79,18 @@ class DataM:
         return matrix
 
     @property
+    def dataframe(self) -> pd.DataFrame:
+        """
+        All interactions as a pandas DataFrame.
+
+        The item ids, user ids, interaction values and timestamps are stored in columns
+        `ITEM_IX`, `USER_IX`, `VALUE_IX` and `TIMESTAMP_IX` respectively.
+        """
+        return self._df.copy()
+
+    @property
     def timestamps(self) -> pd.Series:
+        """Timestamps of interactions as a pandas Series, indexed by user and item id."""
         if TIMESTAMP_IX not in self._df:
             raise AttributeError(
                 "No timestamp column, so timestamps could not be retrieved"
@@ -64,16 +98,25 @@ class DataM:
         index = pd.MultiIndex.from_frame(self._df[[USER_IX, ITEM_IX]])
         return self._df[[TIMESTAMP_IX]].set_index(index)[TIMESTAMP_IX]
 
-    def eliminate_timestamps(self):
-        if TIMESTAMP_IX in self._df:
-            self._df.drop(columns=[TIMESTAMP_IX], inplace=True, errors="ignore")
+    def eliminate_timestamps(self, inplace: bool = False):
+        """
+        Remove all timestamp information.
+
+        :param inplace: Modify the data matrix in place. If False, returns a new object.
+        """
+        df = self._df
+        if TIMESTAMP_IX in df:
+            df = df.drop(columns=[TIMESTAMP_IX], inplace=inplace, errors="ignore")
+        return None if inplace else DataM(df, shape=self.shape)
 
     @property
     def indices(self) -> Tuple[List[int], List[int]]:
+        """All user-item combinations that have at least one interaction."""
         return self.values.nonzero()
 
     @property
     def shape(self) -> Tuple[int, int]:
+        """The shape of the matrix, i.e. the number of users and items."""
         return (self.total_users, self.total_items)
 
     def _apply_mask(self, mask, inplace=False):
@@ -83,42 +126,50 @@ class DataM:
         else:
             return DataM(c_df, shape=self.shape)
 
-    def timestamps_gt(self, timestamp, inplace=False):
-        logger.debug("Performing t > timestamp")
+    def timestamps_cmp(self, op: Callable, timestamp: float, inplace: bool = False):
+        """
+        Filter interactions based on timestamp.
 
-        mask = self._df[TIMESTAMP_IX] > timestamp
+        :param op: Comparison operator. Keep only interactions for which op(t, timestamp) is True.
+        :param timestamp: Timestamp to compare against in seconds from epoch.
+        :param inplace: Modify the data matrix in place. If False, returns a new object.
+        """
+        logger.debug(f"Performing {op.__name__}(t, timestamp)")
+
+        mask = op(self._df[TIMESTAMP_IX], timestamp)
+
         return self._apply_mask(mask, inplace=inplace)
 
-    def timestamps_lt(self, timestamp, inplace=False):
-        logger.debug("Performing t < timestamp")
+    def timestamps_gt(self, timestamp: float, inplace: bool = False):
+        """Keep only interactions where t > timestamp. See `timestamps_cmp` for more info."""
+        return self.timestamps_cmp(operator.gt, timestamp, inplace)
 
-        mask = self._df[TIMESTAMP_IX] < timestamp
-        return self._apply_mask(mask, inplace=inplace)
+    def timestamps_lt(self, timestamp: float, inplace: bool = False):
+        """Keep only interactions where t < timestamp. See `timestamps_cmp` for more info."""
+        return self.timestamps_cmp(operator.lt, timestamp, inplace)
 
-    def timestamps_gte(self, timestamp, inplace=False):
-        logger.debug("Performing t => timestamp")
+    def timestamps_gte(self, timestamp: float, inplace: bool = False):
+        """Keep only interactions where t >= timestamp. See `timestamps_cmp` for more info."""
+        return self.timestamps_cmp(operator.ge, timestamp, inplace)
 
-        mask = self._df[TIMESTAMP_IX] >= timestamp
-        return self._apply_mask(mask, inplace=inplace)
-
-    def timestamps_lte(self, timestamp, inplace=False):
-        logger.debug("Performing t <= timestamp")
-
-        mask = self._df[TIMESTAMP_IX] <= timestamp
-        return self._apply_mask(mask, inplace=inplace)
+    def timestamps_lte(self, timestamp: float, inplace: bool = False):
+        """Keep only interactions where t <= timestamp. See `timestamps_cmp` for more info."""
+        return self.timestamps_cmp(operator.le, timestamp, inplace)
 
     def users_in(self, U: Union[Set[int], List[int]], inplace=False):
+        """Keep only interactions by one of the specified users."""
         logger.debug("Performing users_in comparison")
 
         mask = self._df[USER_IX].isin(U)
 
         return self._apply_mask(mask, inplace=inplace)
 
-    def indices_in(self, u_i_lists, inplace=False):
+    def indices_in(self, u_i_lists: Tuple[List[int], List[int]], inplace=False):
+        """Keep only interactions between the specified user-item combinations."""
         logger.debug("Performing indices_in comparison")
 
         # Data is temporarily duplicated across a MultiIndex and the [USER_IX, ITEM_IX] columns for fast multi-indexing.
-        # This index can be dropped safely, as the data is still there in the original columns. 
+        # This index can be dropped safely, as the data is still there in the original columns.
         index = pd.MultiIndex.from_frame(self._df[[USER_IX, ITEM_IX]])
         tuples = list(zip(*u_i_lists))
         c_df = self._df.set_index(index)
@@ -132,23 +183,43 @@ class DataM:
             self._df = c_df
 
     @property
-    def user_history(self):
+    def user_history(self) -> Set[Tuple[int, List[int]]]:
+        """The set of all active users and the items they've interacted with."""
         return groupby2(*self.indices)
 
     @property
-    def active_users(self):
+    def active_users(self) -> Set[int]:
+        """The set of all users with at least one interaction."""
         U, _ = self.indices
         return set(U)
 
     @property
-    def active_user_count(self):
+    def active_user_count(self) -> int:
+        """The number of users with at least one interaction."""
         U, _ = self.indices
         return len(set(U))
 
     @property
-    def binary_values(self):
+    def interaction_count(self) -> int:
+        """The total number of interactions."""
+        return len(self._df)
+
+    @property
+    def binary_values(self) -> scipy.sparse.csr_matrix:
+        """
+        All user-item interactions as a sparse, binary matrix of size (users, items).
+
+        An entry is 1 if there is at least one interaction between that user and item
+        and either:
+            - No interaction values are known, or
+            - The sum of interaction values for that user and item is strictly positive
+
+        In all other cases the entry is 0.
+        """
         values = self.values
         values[values > 0] = 1
+        values[values < 0] = 0
+        values.eliminate_zeros()
         return values
 
     def copy(self):
