@@ -95,7 +95,7 @@ class KUNN(Algorithm):
         Cu_rooted = self._get_rooted_counts(X, 1)
         Ci_rooted = self._get_rooted_counts(X, 0)
 
-        Xscaled = X.multiply(Cu_rooted.T).multiply(Ci_rooted)
+        Xscaled = csr_matrix(X.multiply(Cu_rooted.T).multiply(Ci_rooted))
 
         return Xscaled, Cu_rooted, Ci_rooted
 

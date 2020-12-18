@@ -25,3 +25,46 @@ def test_kunn_calculate_scaled_matrices():
     numpy.testing.assert_almost_equal(Cu_rooted, expected_Cu_rooted)
     numpy.testing.assert_almost_equal(Ci_rooted, expected_Ci_rooted)
 
+
+def test_kunn_fit():
+    kunn = KUNN(Ku=1, Ki=1)
+
+    values = [1, 1, 1, 1, 1, 1, 1]
+    users = [0, 0, 1, 1, 2, 2, 2]
+    items = [1, 2, 0, 2, 0, 1, 2]
+    test_matrix = csr_matrix((values, (users, items)))
+
+    kunn.fit(test_matrix)
+
+    knni_values = [5 / (6 * sqrt(3)), 5 / (6 * sqrt(3)), 5 / (6 * sqrt(2))]
+    knni_items_x = [0, 1, 2]
+    knni_items_y = [2, 2, 1]
+    knni_true = csr_matrix((knni_values, (knni_items_x, knni_items_y)))
+
+    numpy.testing.assert_almost_equal(knni_true.todense(), kunn.knn_i_.todense())
+
+
+def test_kunn_predict():
+    kunn = KUNN(Ku=1, Ki=1)
+
+    values = [1, 1, 1, 1, 1, 1, 1]
+    users = [0, 0, 1, 1, 2, 2, 2]
+    items = [1, 2, 0, 2, 0, 1, 2]
+    test_matrix = csr_matrix((values, (users, items)), shape=(5, 3))
+
+    kunn.fit(test_matrix)
+
+    # Test the prediction
+    values_pred = [1, 1, 1, 1]
+    users_pred = [3, 3, 4, 4]
+    items_pred = [0, 1, 1, 2]
+    pred_matrix = csr_matrix((values_pred, (users_pred, items_pred)), shape=test_matrix.shape)
+    prediction = kunn.predict(pred_matrix)
+
+    pred_true_values = [7 / 36, 7 / 36, (17 + 5 * sqrt(3)) / 36,
+                        (6 + 5 * sqrt(2)) / 24, (9 + 5 * sqrt(3)) / 36]
+    pred_true_users = [3, 3, 3, 4, 4]
+    pred_true_items = [0, 1, 2, 1, 2]
+    pred_true = csr_matrix((pred_true_values, (pred_true_users, pred_true_items)), shape=prediction.shape)
+
+    numpy.testing.assert_almost_equal(prediction.todense(), pred_true.todense())
