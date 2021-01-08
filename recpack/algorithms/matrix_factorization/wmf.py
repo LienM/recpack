@@ -6,6 +6,7 @@ from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm
 
 from recpack.algorithms import Algorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -38,19 +39,20 @@ class WeightedMatrixFactorization(Algorithm):
         self.regularization = regularization
         self.iterations = iterations
 
-    def fit(self, X: csr_matrix) -> Algorithm:
+    def fit(self, X: Matrix) -> Algorithm:
         """
         Calculate the user- and item-factors which will be approximate X after applying a dot-product.
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
         :return: The fitted WeightedMatrixFactorizationAlgorithm itself.
         """
+        X = to_csr_matrix(X)
         self.num_users, self.num_items = X.shape
         self.known_users = set(X.nonzero()[0])
         self.user_factors_, self.item_factors_ = self._alternating_least_squares(X)
 
         return self
 
-    def predict(self, X: csr_matrix, user_ids: np.array = None) -> csr_matrix:
+    def predict(self, X: Matrix) -> csr_matrix:
         """
         The prediction can easily be calculated as the dotproduct of the recalculated user-factor and the item-factor.
         :param X: Sparse user-item matrix which will be used to do the predictions; only the set of users will be used.
@@ -59,6 +61,7 @@ class WeightedMatrixFactorization(Algorithm):
         """
         check_is_fitted(self)
 
+        X = to_csr_matrix(X)
         U = set(X.nonzero()[0])
         U_conf = self._generate_confidence(X)
         U_user_factors = self._least_squares(U_conf, self.item_factors_, self.num_users, U)

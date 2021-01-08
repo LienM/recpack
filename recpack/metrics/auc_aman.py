@@ -35,7 +35,6 @@ class AUCAMAN(ElementwiseMetricK):
 
         _, items = y_true.shape
         assert items > 1
-        self.K = items
 
         y_pred_top_K = get_top_K_ranks(y_pred)
         self.y_pred_top_K_ = y_pred_top_K
@@ -43,12 +42,14 @@ class AUCAMAN(ElementwiseMetricK):
 
         # Elementwise multiplication of top K predicts and true interactions
         scores[y_pred_top_K.multiply(y_true).astype(np.bool)] = 1
+        # Element-wise multiplication. Result is a matrix with the rank of the predictions and the
         scores = scores.multiply(y_pred_top_K)
         scores.data = (items - scores.data) / (items - 1)
 
         scores = scores.tocsr()
-
         self.scores_ = scores
+
+        # Value is the mean of the scores. 1 / |U_t| * sum_(u in U_t) scores
         self.value_ = scores.data.mean()
 
         return

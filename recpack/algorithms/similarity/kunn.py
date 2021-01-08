@@ -6,6 +6,7 @@ from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms import Algorithm
+from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -25,17 +26,20 @@ class KUNN(Algorithm):
         self.Ku = Ku
         self.Ki = Ki
 
-    def fit(self, X: csr_matrix) -> Algorithm:
+    def fit(self, X: Matrix) -> Algorithm:
         """
         Calculate the score matrix for items based on the binary matrix .
         :param X: Sparse binary user-item matrix which will be used to fit the algorithm.
         :return: The fitted KUNN Algorithm itself.
         """
-        X[X > 0] = 1  # To make sure the input is interpreted as a binary matrix
+        X = to_csr_matrix(X, binary=True)  # To make sure the input is interpreted as a binary matrix
         self.training_interactions_ = csr_matrix(X, copy=True)
         Xscaled, Cu_rooted, _ = self._calculate_scaled_matrices(X)
 
-        sim_i = csr_matrix(X.T.multiply(Cu_rooted) * Xscaled)
+        # Element-wise multiplication with Cu_rooted. Result is x.T_iu / sqrt(c_u).
+        XtCu = csr_matrix(X.T.multiply(Cu_rooted))
+        # Matrix multiplication. Result is XtCu * Xscaled
+        sim_i = csr_matrix(XtCu * Xscaled)
         # Eliminate self-similarity
         sim_i.setdiag(0)
 
@@ -43,7 +47,7 @@ class KUNN(Algorithm):
 
         return self
 
-    def predict(self, X: csr_matrix, user_ids: np.array = None) -> csr_matrix:
+    def predict(self, X: Matrix) -> csr_matrix:
         """
         The prediction can easily be calculated by computing score matrix for users and add this to the already
         calculated score matrix for items.
@@ -54,26 +58,39 @@ class KUNN(Algorithm):
         """
         check_is_fitted(self)
 
-        X[X > 0] = 1
+        X = to_csr_matrix(X, binary=True)
         users_to_predict = set(X.nonzero()[0])
         num_users = X.shape[0]
 
-        # Combine the memoize training interactions with the predict interactions
-        combined = self.training_interactions_ + X
-        Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(combined)
-        users_combined = set(combined.nonzero()[0])
+        # Combine the memoized training interactions with the predict interactions
+        Combined = self.training_interactions_ + X
+        Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(Combined)
+        users_combined = set(Combined.nonzero()[0])
 
-        sim_u = csr_matrix(combined.multiply(Ci_rooted) * Xscaled.T)
+        # Element-wise multiplication with Ci_rooted. Result is combined_ui / sqrt(c_i).
+        CombinedCi = csr_matrix(Combined.multiply(Ci_rooted))
+        # Matrix multiplication. Result is CombinedCi * Xscaled.T
+        sim_u = csr_matrix(CombinedCi * Xscaled.T)
+        # Eliminate self-similarity
         sim_u.setdiag(0)
 
         # Make sure to remove the 'illegal' similarities between the target users themselves. Such that there are only
         # similarities between the already known training users.
+        # Create a mask with 1's on the columns of the target users. Subtract the element-wise multiplication of the
+        # mask with the user similarity to remove the 'illegal' similarities.
         mask = self._create_mask(users_combined, users_to_predict, sim_u.shape)
         sim_u -= sim_u.multiply(mask)
 
         knn_u = get_top_K_values(sim_u, self.Ku)
-        Su = csr_matrix(knn_u * combined.multiply(Cu_rooted.T))
-        Si = csr_matrix(combined.multiply(Ci_rooted) * self.knn_i_)
+
+        # Element-wise multiplication. Result is combined_ui / sqrt(c.T_u)
+        CombinedCTu = csr_matrix(Combined.multiply(Cu_rooted.T))
+        # Matrix multiplication. Result is knn_u * CombinedCTu
+        Su = csr_matrix(knn_u * CombinedCTu)
+
+        # Element-wise multiplication. Result is combined_ui / sqrt(c_i). -- Already calculated => CombinedCi
+        # Matrix multiplication. Result is CombinedCi * knn_i
+        Si = csr_matrix(CombinedCi * self.knn_i_)
 
         self.S_ = Si + Su
 
