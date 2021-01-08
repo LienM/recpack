@@ -36,6 +36,7 @@ class KUNN(Algorithm):
         Xscaled, Cu_rooted, _ = self._calculate_scaled_matrices(X)
 
         sim_i = csr_matrix(X.T.multiply(Cu_rooted) * Xscaled)
+        # Eliminate self-similarity
         sim_i.setdiag(0)
 
         self.knn_i_ = get_top_K_values(sim_i, self.Ki)
