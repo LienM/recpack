@@ -96,6 +96,7 @@ class KUNN(Algorithm):
         Cu_rooted = self._get_rooted_counts(X, 1)
         Ci_rooted = self._get_rooted_counts(X, 0)
 
+        # Element-wise multiplication. Result is x_ui_scaled = x_ui / (sqrt(c_u) * sqrt(c_i) )
         Xscaled = csr_matrix(X.multiply(Cu_rooted.T).multiply(Ci_rooted))
 
         return Xscaled, Cu_rooted, Ci_rooted
