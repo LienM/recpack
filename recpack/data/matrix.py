@@ -1,5 +1,11 @@
 """
 Conversion and validation of the various matrix data types supported by recpack.
+
+In this module the Matrix type is defined, as the union of the DataM object,
+and csr_matrix, the typically used sparse represenation.
+
+This allows you to use the classes that support Matrix as parameter type
+to be used without the use of the DataM object.
 """
 import pandas as pd
 
@@ -17,7 +23,7 @@ def to_csr_matrix(
     X: Union[Matrix, Tuple[Matrix, ...]], binary: bool = None
 ) -> csr_matrix:
     """
-    Converts any matrix to a scipy csr_matrix.
+    Convert a matrix-like object to a scipy csr_matrix.
 
     :param X: Matrix-like object or tuple of objects to convert
     :param binary: Ensure matrix is binary, sets non-zero values to 1 if not

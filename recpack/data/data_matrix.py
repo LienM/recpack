@@ -22,6 +22,11 @@ class DataM:
     """
     Stores information about interactions between users and items.
 
+    The data is stored in as a dataframe, properties as well as functions
+    are provided to access this data in intuitive ways.
+
+    TODO: add usage example here?
+
     :param df: Dataframe containing user-item interactions. Must contain at least
                item ids and user ids.
     :param item_ix: Item ids column name
@@ -60,9 +65,9 @@ class DataM:
         """
         All user-item interactions as a sparse matrix of size (users, items).
 
-        Each entry is the sum of interaction values for that user and item. If no
-        interaction values are known, the entry is the total number of interactions
-        between that user and item.
+        Each entry is the sum of interaction values for that user and item.
+        If the value_ix is not present in the dataframe,
+        the entry is the total number of interactions between that user and item.
 
         If there are no interactions between a user and item, the entry is 0.
         """
@@ -85,12 +90,16 @@ class DataM:
 
         The item ids, user ids, interaction values and timestamps are stored in columns
         `ITEM_IX`, `USER_IX`, `VALUE_IX` and `TIMESTAMP_IX` respectively.
+
+        TODO: the names of these fields are not rendered as the the defaults they are.
         """
         return self._df.copy()
 
     @property
     def timestamps(self) -> pd.Series:
-        """Timestamps of interactions as a pandas Series, indexed by user and item id."""
+        """
+        Timestamps of interactions as a pandas Series, indexed by user and item id.
+        """
         if TIMESTAMP_IX not in self._df:
             raise AttributeError(
                 "No timestamp column, so timestamps could not be retrieved"
@@ -102,6 +111,7 @@ class DataM:
         """
         Remove all timestamp information.
 
+        :type inplace: bool
         :param inplace: Modify the data matrix in place. If False, returns a new object.
         """
         df = self._df
@@ -111,7 +121,11 @@ class DataM:
 
     @property
     def indices(self) -> Tuple[List[int], List[int]]:
-        """All user-item combinations that have at least one interaction."""
+        """
+        Return all user-item combinations that have at least one interaction.
+
+        Returns a tuple of a list of user indices, and a list of item indices
+        """
         return self.values.nonzero()
 
     @property
@@ -130,7 +144,8 @@ class DataM:
         """
         Filter interactions based on timestamp.
 
-        :param op: Comparison operator. Keep only interactions for which op(t, timestamp) is True.
+        :param op: Comparison operator.
+            Keep only interactions for which op(t, timestamp) is True.
         :param timestamp: Timestamp to compare against in seconds from epoch.
         :param inplace: Modify the data matrix in place. If False, returns a new object.
         """
@@ -141,23 +156,75 @@ class DataM:
         return self._apply_mask(mask, inplace=inplace)
 
     def timestamps_gt(self, timestamp: float, inplace: bool = False):
-        """Keep only interactions where t > timestamp. See `timestamps_cmp` for more info."""
+        """select interactions after a given timestamp.
+
+        Performs timestamps_cmp operation to select rows for which t > timestamp.
+
+        :param timestamp: The timestamp with which
+            the interactions timestamp is compared.
+        :type timestamp: float
+        :param inplace: Apply the selection in place if True, defaults to False
+        :type inplace: bool, optional
+        :return: None if `inplace`, otherwise returns a new DataM object
+        :rtype: Union[DataM, None]
+        """
         return self.timestamps_cmp(operator.gt, timestamp, inplace)
 
     def timestamps_lt(self, timestamp: float, inplace: bool = False):
-        """Keep only interactions where t < timestamp. See `timestamps_cmp` for more info."""
+        """select interactions up to a given timestamp.
+
+        Performs timestamps_cmp operation to select rows for which t < timestamp.
+
+        :param timestamp: The timestamp with which
+            the interactions timestamp is compared.
+        :type timestamp: float
+        :param inplace: Apply the selection in place if True, defaults to False
+        :type inplace: bool, optional
+        :return: None if `inplace`, otherwise returns a new DataM object
+        :rtype: Union[DataM, None]
+        """
         return self.timestamps_cmp(operator.lt, timestamp, inplace)
 
     def timestamps_gte(self, timestamp: float, inplace: bool = False):
-        """Keep only interactions where t >= timestamp. See `timestamps_cmp` for more info."""
+        """select interactions after and including a given timestamp.
+
+        Performs timestamps_cmp operation to select rows for which t >= timestamp.
+
+        :param timestamp: The timestamp with which
+            the interactions timestamp is compared.
+        :type timestamp: float
+        :param inplace: Apply the selection in place if True, defaults to False
+        :type inplace: bool, optional
+        :return: None if `inplace`, otherwise returns a new DataM object
+        :rtype: Union[DataM, None]
+        """
         return self.timestamps_cmp(operator.ge, timestamp, inplace)
 
     def timestamps_lte(self, timestamp: float, inplace: bool = False):
-        """Keep only interactions where t <= timestamp. See `timestamps_cmp` for more info."""
+        """select interactions up to and including a given timestamp.
+
+        Performs timestamps_cmp operation to select rows for which t <= timestamp.
+
+        :param timestamp: The timestamp with which
+            the interactions timestamp is compared.
+        :type timestamp: float
+        :param inplace: Apply the selection in place if True, defaults to False
+        :type inplace: bool, optional
+        :return: None if `inplace`, otherwise returns a new DataM object
+        :rtype: Union[DataM, None]
+        """
         return self.timestamps_cmp(operator.le, timestamp, inplace)
 
     def users_in(self, U: Union[Set[int], List[int]], inplace=False):
-        """Keep only interactions by one of the specified users."""
+        """Keep only interactions by one of the specified users.
+
+        :param U: A Set or List of users to select the interactions from.
+        :type U: Union[Set[int], List[int]]
+        :param inplace: Apply the selection in place or not, defaults to False
+        :type inplace: bool, optional
+        :return: None if `inplace`, otherwise returns a new DataM object
+        :rtype: Union[DataM, None]
+        """
         logger.debug("Performing users_in comparison")
 
         mask = self._df[USER_IX].isin(U)
@@ -165,11 +232,25 @@ class DataM:
         return self._apply_mask(mask, inplace=inplace)
 
     def indices_in(self, u_i_lists: Tuple[List[int], List[int]], inplace=False):
-        """Keep only interactions between the specified user-item combinations."""
+        """Select interactions between the specified user-item combinations.
+
+        :param u_i_lists: two lists as a tuple, the first list are the indices of users,
+                    and the second are indices of items,
+                    both should be of the same length.
+        :type u_i_lists: Tuple[List[int], List[int]]
+        :param inplace: Apply the selection in place to the object,
+                            defaults to False
+        :type inplace: bool, optional
+        :return: None if inplace is True,
+            otherwise a new DataM object with the selection of events.
+        :rtype: Union[DataM, None]
+        """
         logger.debug("Performing indices_in comparison")
 
-        # Data is temporarily duplicated across a MultiIndex and the [USER_IX, ITEM_IX] columns for fast multi-indexing.
-        # This index can be dropped safely, as the data is still there in the original columns.
+        # Data is temporarily duplicated across a MultiIndex and
+        #   the [USER_IX, ITEM_IX] columns for fast multi-indexing.
+        # This index can be dropped safely,
+        #   as the data is still there in the original columns.
         index = pd.MultiIndex.from_frame(self._df[[USER_IX, ITEM_IX]])
         tuples = list(zip(*u_i_lists))
         c_df = self._df.set_index(index)
@@ -211,7 +292,7 @@ class DataM:
 
         An entry is 1 if there is at least one interaction between that user and item
         and either:
-            - No interaction values are known, or
+            - The value_ix is not present in the dataframe,
             - The sum of interaction values for that user and item is strictly positive
 
         In all other cases the entry is 0.
@@ -223,6 +304,11 @@ class DataM:
         return values
 
     def copy(self):
+        """Create a copy of this dataM object.
+
+        :return: Copy of this object
+        :rtype: DataM
+        """
         return DataM(self._df.copy(), shape=self.shape)
 
     @classmethod
@@ -235,4 +321,11 @@ class DataM:
         timestamp_ix=None,
         shape=None,
     ):
+        """Create a DataM object based on a dataframe
+
+        .. deprecated:: 0.0.1
+            This function will be removed in 1.0.0,
+            the functionality is replaced by the __init__ operation.
+
+        """
         return DataM(df, item_ix, user_ix, value_ix, timestamp_ix, shape)

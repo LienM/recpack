@@ -4,6 +4,19 @@ from recpack.util import to_tuple
 
 
 class DataSource(object):
+    """Load and preprocess a dataset into a `DataM` object
+
+    TODO: the interface as is, is not very logical in use.
+        eg. not possible to pass a path to the file.
+
+    :param object: [description]
+    :type object: [type]
+    :raises NotImplementedError: [description]
+    :raises NotImplementedError: [description]
+    :return: [description]
+    :rtype: [type]
+    """
+
     user_id = "user"
     item_id = "item"
     value_id = None
