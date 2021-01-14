@@ -17,6 +17,10 @@ logger = logging.getLogger("recpack")
 
 
 class DataFramePreprocessor:
+
+    ITEM_IX = "iid"
+    USER_IX = "uid"
+
     def __init__(
         self, item_id, user_id, timestamp_id=None, dedupe=False
     ):
@@ -125,20 +129,17 @@ class DataFramePreprocessor:
         for index, df in enumerate(dfs):
             self.update_id_mappings(df)
 
-        cleaned_item_id = "iid"
-        cleaned_user_id = "uid"
-
         data_ms = []
 
         for df in dfs:
-            df.loc[:, cleaned_item_id] = self.map_items(df)
-            df.loc[:, cleaned_user_id] = self.map_users(df)
+            df.loc[:, DataFramePreprocessor.ITEM_IX] = self.map_items(df)
+            df.loc[:, DataFramePreprocessor.USER_IX] = self.map_users(df)
 
             # Convert input data into internal data objects
             data_m = InteractionMatrix(
                 df,
-                cleaned_item_id,
-                cleaned_user_id,
+                DataFramePreprocessor.ITEM_IX,
+                DataFramePreprocessor.USER_IX,
                 timestamp_ix=self.timestamp_id,
                 shape=self.shape,
             )
@@ -165,5 +166,4 @@ class DataFramePreprocessor:
         )
 
     def apply_item_id_mapping(self, df: pd.DataFrame):
-        cleaned_item_id = "iid"
-        df.loc[:, cleaned_item_id] = self.map_items(df)
+        df.loc[:, DataFramePreprocessor.ITEM_IX] = self.map_items(df)
