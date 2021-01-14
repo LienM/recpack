@@ -6,9 +6,9 @@ from recpack.data.matrix import InteractionMatrix
 import recpack.splitters.splitter_base as splitter_base
 
 
-USER_IX = "uid"
-ITEM_IX = "iid"
-TIMESTAMP_IX = "ts"
+USER_IX = InteractionMatrix.USER_IX
+ITEM_IX = InteractionMatrix.ITEM_IX
+TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 
 @pytest.fixture(scope="function")
@@ -23,19 +23,19 @@ def data_m_w_timestamps():
     max_t = 100
 
     input_dict = {
-        "userId": [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        "movieId": [
+        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
-        "timestamp": [
+        InteractionMatrix.TIMESTAMP_IX: [
             np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
         ],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(["userId", "movieId"], inplace=True)
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
     data = InteractionMatrix(
-        df, "movieId", "userId", timestamp_ix="timestamp"
+        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
     )
     return data
 
@@ -52,19 +52,19 @@ def data_m_w_dups():
     max_t = 100
 
     input_dict = {
-        "userId": [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        "movieId": [
+        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
-        "timestamp": [
+        InteractionMatrix.TIMESTAMP_IX: [
             np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
         ],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(["userId", "movieId", "timestamp"], inplace=True)
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX, InteractionMatrix.TIMESTAMP_IX], inplace=True)
     data = InteractionMatrix(
-        df, "movieId", "userId", timestamp_ix="timestamp"
+        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
     )
     return data
 

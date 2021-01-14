@@ -11,8 +11,8 @@ num_interactions = 5000
 min_t = 0
 max_t = 100
 
-USER_IX = "uid"
-ITEM_IX = "iid"
+USER_IX = InteractionMatrix.USER_IX
+ITEM_IX = InteractionMatrix.ITEM_IX
 TIMESTAMP_IX = "ts"
 
 
@@ -21,19 +21,19 @@ def data_m():
     np.random.seed(42)
 
     input_dict = {
-        "userId": [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        "movieId": [
+        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
-        "timestamp": [
+        InteractionMatrix.TIMESTAMP_IX: [
             np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
         ],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(["userId", "movieId"], inplace=True)
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
     data = InteractionMatrix(
-        df, "movieId", "userId", timestamp_ix="timestamp"
+        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
     )
     return data
 
@@ -43,19 +43,19 @@ def data_m_w_dups():
     np.random.seed(42)
 
     input_dict = {
-        "userId": [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
-        "movieId": [
+        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
-        "timestamp": [
+        InteractionMatrix.TIMESTAMP_IX: [
             np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
         ],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(["userId", "movieId", "timestamp"], inplace=True)
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX, InteractionMatrix.TIMESTAMP_IX], inplace=True)
     data = InteractionMatrix(
-        df, "movieId", "userId", timestamp_ix="timestamp"
+        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
     )
     return data
 
@@ -64,15 +64,15 @@ def data_m_w_dups():
 def data_m_small():
     """Data matrix for test on validation split with users in train not in validation"""
     input_dict = {
-        "userId": [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
-        "movieId": [0, 1, 2, 0, 1, 2, 3, 3, 5, 6],
-        "timestamp": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        InteractionMatrix.USER_IX: [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+        InteractionMatrix.ITEM_IX: [0, 1, 2, 0, 1, 2, 3, 3, 5, 6],
+        InteractionMatrix.TIMESTAMP_IX: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(["userId", "movieId"], inplace=True)
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
     data = InteractionMatrix(
-        df, "movieId", "userId", timestamp_ix="timestamp"
+        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
     )
     return data
 
