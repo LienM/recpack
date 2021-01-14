@@ -61,10 +61,6 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
     assert org_row[2] in two_values.values
 
 
-# def test_dataframe_preprocessor_filter_no_duplicates(dataframe):
-#     pass
-
-
 def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
     processor = DataFramePreprocessor("iid", "uid", "timestamp", dedupe=False)
 

@@ -8,7 +8,7 @@ import scipy.sparse
 
 from tqdm.auto import tqdm
 
-from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX
+from recpack.data.matrix import InteractionMatrix
 
 logger = logging.getLogger("recpack")
 
@@ -39,11 +39,11 @@ class UserSplitter(Splitter):
         """
         Splits a user-interaction matrix by the user indices.
 
-        :param data: recpack.DataM containing the data values matrix
+        :param data: recpack.InteractionMatrix containing the data values matrix
                      and potentially timestamp matrix which will be split.
-        :type data: class:`recpack.DataM`
+        :type data: class:`recpack.InteractionMatrix`
         :return: A tuple containing the training, validation and test data objects in that order.
-        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        :rtype: tuple(class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`)
         """
         tr_data = data.users_in(self.users_in)
         te_data = data.users_in(self.users_out)
@@ -83,11 +83,11 @@ class StrongGeneralizationSplitter(Splitter):
         Splits a user-interaction matrix by randomly shuffling users,
         and filling up the different data slices with the right percentages of data.
 
-        :param data: recpack.DataM containing the data values matrix
+        :param data: recpack.InteractionMatrix containing the data values matrix
                      and potentially timestamp matrix which will be split.
-        :type data: class:`recpack.DataM`
+        :type data: class:`recpack.InteractionMatrix`
         :return: A tuple containing the training, validation and test data objects in that order.
-        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`, class:`recpack.DataM`)
+        :rtype: tuple(class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`)
         """
         sp_mat = data.values
 
@@ -136,38 +136,45 @@ class UserInteractionTimeSplitter(Splitter):
     all be placed in one of the two sets, never in both.
 
     :param t: Timestamp to split on. By default, users whose last interaction has 
-              time < t are placed in the first set, other users in the second. Which 
-              interaction to split on can be controlled by the `on` parameter.
-    :param on: Which user interaction to split on, one of "min", "max", "median", "mean".
-               Defaults to "max", i.e. the user's latest interaction.
+              time < t are placed in the first set, other users in the second.
     """
 
-    def __init__(self, t: float, on: str = "max"):
+    def __init__(self, t: float):
         super().__init__()
-        assert on in ["min", "max", "median", "mean"]
         self.t = t
-        self.on = on
 
     @property
     def name(self):
-        return f"user_interaction_time_split_t={self.t}_on={self.on}"
+        return f"user_interaction_time_split_t={self.t}"
 
-    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """
         Splits the users into two sets based on the time of their interactions.
 
         :param data: Data matrix to be split. Must contain timestamps.
-        :return: A tuple containing a matrix with all users whose interaction specified 
-                 by the `on` parameter occured strictly before time `t`, and a matrix 
-                 with users whose interaction occured at or after time `t`.
+        :return: A tuple containing a matrix with all users whose last interaction occured strictly before time `t`, and a matrix 
+                 with users whose interactions occured at or after time `t`.
         """
-        df = data.dataframe
-        ts_grouped_by_user = df.groupby(USER_IX)[TIMESTAMP_IX]
-        ts_user = getattr(ts_grouped_by_user, self.on)()
-        mask = df[USER_IX].map(ts_user) < self.t
+        tr_u = []
+        te_u = []
+
+        for uid, user_history in tqdm(data.sorted_interaction_history):
+
+            last_interaction = user_history[-1]
+
+            last_interaction_time = data.get_timestamp(last_interaction)
+
+            if last_interaction_time < self.t:
+                tr_u.append(uid)
+
+            else:
+                te_u.append(uid)
+
+        tr_data = data.users_in(tr_u)
+        te_data = data.users_in(te_u)
 
         logger.debug(f"{self.name} - Split successful")
-        return DataM(df[mask], shape=data.shape), DataM(df[~mask], shape=data.shape)
+        return tr_data, te_data
 
 
 class ItemSplitter(Splitter):
@@ -180,11 +187,11 @@ class InteractionSplitter(Splitter):
 
 class PercentageInteractionSplitter(Splitter):
     # TODO Add documentation
-    def __init__(self, in_perc, seed=None):
+    def __init__(self, in_perc, seed: int = 42):
         super().__init__()
         self.in_perc = in_perc
 
-        self.seed = seed if seed else 12345
+        self.seed = seed
 
     def split(self, data):
         """
@@ -192,25 +199,23 @@ class PercentageInteractionSplitter(Splitter):
         Returns 2 sparse matrices in and out
         """
 
-        tr_u, tr_i = [], []
-        te_u, te_i = [], []
+        tr_interactions = []
+        te_interactions = []
 
-        for u, user_history in tqdm(
-                data.user_history, desc="split user ratings"):
+        for u, interaction_history in tqdm(
+                data.interaction_history):
+
             rstate = np.random.RandomState(self.seed + u)
 
-            rstate.shuffle(user_history)
-            hist_len = len(user_history)
+            rstate.shuffle(interaction_history)
+            hist_len = len(interaction_history)
             cut = int(np.ceil(hist_len * self.in_perc))
 
-            tr_i.extend(user_history[:cut])
-            tr_u.extend([u] * len(user_history[:cut]))
+            tr_interactions.extend(interaction_history[:cut])
+            te_interactions.extend(interaction_history[cut:])
 
-            te_i.extend(user_history[cut:])
-            te_u.extend([u] * len(user_history[cut:]))
-
-        tr_data = data.indices_in((tr_u, tr_i))
-        te_data = data.indices_in((te_u, te_i))
+        tr_data = data.interactions_in(tr_interactions)
+        te_data = data.interactions_in(te_interactions)
 
         logger.debug(f"{self.name} - Split successful")
 
@@ -248,15 +253,15 @@ class TimestampSplitter(Splitter):
 
         return base_name
 
-    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """
         Split the input data by using the timestamps provided in the timestamp field of data.
 
-        :param data: recpack.DataM containing the data values matrix
+        :param data: recpack.InteractionMatrix containing the data values matrix
                      and potentially timestamp matrix which will be split.
-        :type data: class:`recpack.DataM`
+        :type data: class:`recpack.InteractionMatrix`
         :return: A tuple containing the training and test data objects, in that order.
-        :rtype: tuple(class:`recpack.DataM`, class:`recpack.DataM`)
+        :rtype: tuple(class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`)
         """
 
         if self.t_alpha is None:
@@ -298,7 +303,7 @@ class MostRecentSplitter(Splitter):
     def name(self):
         return f"most_recent_split_n{self.n}"
 
-    def split(self, data: DataM) -> Tuple[DataM, DataM]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """
         Returns a data matrix with all but the n most recent actions of each user 
         and a data matrix with the n most recent actions of each user.
@@ -307,16 +312,21 @@ class MostRecentSplitter(Splitter):
         :return: A tuple containing a matrix with all but n most recent and matrix 
                  with n most recent actions of each user.
         """
-        df = data.dataframe
-        pos = df.groupby(USER_IX)[TIMESTAMP_IX].rank(method="first")
-        cnt = df[USER_IX].map(df[USER_IX].value_counts())
-        if self.n >= 0:
-            mask = pos <= cnt - self.n
-        else:
-            mask = pos <= -self.n
+        tr_interactions = []
+        te_interactions = []
+
+        for u, interaction_history in tqdm(
+                data.sorted_interaction_history):
+
+            tr_interactions.extend(interaction_history[:-self.n])
+            te_interactions.extend(interaction_history[-self.n:])
+
+        tr_data = data.interactions_in(tr_interactions)
+        te_data = data.interactions_in(te_interactions)
 
         logger.debug(f"{self.name} - Split successful")
-        return DataM(df[mask], shape=data.shape), DataM(df[~mask], shape=data.shape)
+
+        return tr_data, te_data
 
 
 def batch(iterable, n=1):

@@ -4,23 +4,212 @@ import pytest
 
 from recpack.data.matrix import (
     to_csr_matrix,
-    to_datam,
-    to_same_type,
     UnsupportedTypeError,
     InvalidConversionError,
-    _get_timestamps,
+    InteractionMatrix
 )
-from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX, VALUE_IX
 from scipy.sparse import csr_matrix
 
+
+USER_IX = "uid"
+ITEM_IX = "iid"
+TIMESTAMP_IX = "ts"
+
+
+@pytest.fixture(scope="function")
+def df():
+    data = {TIMESTAMP_IX: [3, 2, 1, 1], ITEM_IX: [
+        1, 1, 2, 3], USER_IX: [0, 1, 1, 2]}
+    df = pd.DataFrame.from_dict(data)
+
+    return df
+
+
+@pytest.fixture(scope="function")
+def df_w_duplicate():
+    data = {
+        TIMESTAMP_IX: [3, 2, 4, 1, 1],
+        ITEM_IX: [1, 1, 1, 2, 3],
+        USER_IX: [0, 1, 1, 1, 2],
+    }
+    df = pd.DataFrame.from_dict(data)
+
+    return df
+
+
+def test_create_data_M_from_pandas_df(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+    assert d.timestamps is not None
+    assert d.values is not None
+
+    assert d.shape == (3, 4)
+
+    d2 = InteractionMatrix(df, ITEM_IX, USER_IX)
+    with pytest.raises(AttributeError):
+        d2.timestamps
+    assert d2.values is not None
+    assert d2.shape == (3, 4)
+
+
+def test_values_no_dups(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+    assert (
+        d.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+
+def test_values_w_dups(df_w_duplicate):
+    d_w_duplicate = InteractionMatrix(
+        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
+    )
+    assert (
+        d_w_duplicate.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 2, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+
+def test_binary_values_w_dups(df_w_duplicate):
+    d_w_duplicate = InteractionMatrix(
+        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
+    )
+
+    binary_values = d_w_duplicate.binary_values
+
+    assert (
+        binary_values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+
+def test_timestamps_no_dups(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    assert (d.timestamps.values == np.array([3, 2, 1, 1])).all()
+
+
+def test_timestamps_w_dups(df_w_duplicate):
+    d = InteractionMatrix(
+        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
+    )
+
+    assert (d.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
+
+
+def test_timestamps_gt_w_dups(df_w_duplicate):
+    d_w_duplicate = InteractionMatrix(
+        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
+    )
+
+    filtered_d_w_duplicate = d_w_duplicate.timestamps_gt(2)
+
+    assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 4])).all()
+
+    assert (
+        filtered_d_w_duplicate.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+    ).all()
+
+
+def test_timestamps_lt_w_dups(df_w_duplicate):
+    d_w_duplicate = InteractionMatrix(
+        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
+    )
+
+    filtered_d_w_duplicate = d_w_duplicate.timestamps_lt(2)
+
+    # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
+
+    assert (filtered_d_w_duplicate.timestamps.values == np.array([1, 1])).all()
+    assert (
+        filtered_d_w_duplicate.values.toarray()
+        == np.array([[0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+
+def test_timestamps_gte_w_dups(df_w_duplicate):
+    d_w_duplicate = InteractionMatrix(
+        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
+    )
+
+    filtered_d_w_duplicate = d_w_duplicate.timestamps_gte(2)
+
+    assert (filtered_d_w_duplicate.timestamps.values ==
+            np.array([3, 2, 4])).all()
+
+    assert (
+        filtered_d_w_duplicate.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+    ).all()
+
+
+def test_timestamps_lte_w_dups(df_w_duplicate):
+    d_w_duplicate = InteractionMatrix(
+        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
+    )
+
+    filtered_d_w_duplicate = d_w_duplicate.timestamps_lte(2)
+
+    # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
+
+    assert (filtered_d_w_duplicate.timestamps.values ==
+            np.array([2, 1, 1])).all()
+    assert (
+        filtered_d_w_duplicate.values.toarray()
+        == np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+
+def test_indices_in(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    U = [0, 1]
+    I = [1, 2]
+
+    filtered_df = d.indices_in((U, I))
+
+    assert (filtered_df.timestamps.values == np.array([3, 1])).all()
+    assert (
+        filtered_df.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]], dtype=np.int32)
+    ).all()
+
+
+def test_binary_user_history(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+    # TODO Refactor test some more
+    histories = d.binary_user_history
+    expected_histories = {0: [1], 1: [1, 2], 2: [3]}
+    for i, hist in histories:
+        assert sorted(hist) == expected_histories[i]
+
+
+def test_sorted_interaction_history_no_timestamps_raises(df):
+    df_no_timestamps = df.drop(
+        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False)
+    d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
+
+    with pytest.raises(AttributeError):
+        for uid, user_history in d.sorted_interaction_history:
+            pass
+
+
+def test_sorted_interaction_history(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    # TODO Fix this test.
+    # for uid, user_history in d.sorted_user_history:
+    # expected_histories = {0: [1], 1: [1, 2], 2: [3]}
+    # for i, hist in histories:
+    #     assert sorted(hist) == expected_histories[i]
 
 # fmt: off
 @pytest.fixture
 def m_csr():
-    m = [[1, 2, 0, 0], 
-         [0, 3, 4, 0], 
+    m = [[1, 1, 0, 0], 
+         [0, 1, 2, 0], 
          [0, 0, 0, 0]]
-    return csr_matrix(m, dtype=np.float)
+    return csr_matrix(m, dtype=np.int32)
 
 
 @pytest.fixture
@@ -28,7 +217,7 @@ def m_csr_binary():
     m = [[1, 1, 0, 0], 
          [0, 1, 1, 0], 
          [0, 0, 0, 0]]
-    return csr_matrix(m)
+    return csr_matrix(m, dtype=np.int32)
 
 
 @pytest.fixture
@@ -37,88 +226,68 @@ def m_datam():
         {
             USER_IX: [0, 0, 1, 1, 1],
             ITEM_IX: [0, 1, 1, 2, 2],
-            VALUE_IX: [1, 2, 3, 2, 2],
             TIMESTAMP_IX: [3, 2, 4, 1, 2],
         }
     )
-    return DataM(df, shape=(3, 4))
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, shape=(3, 4))
 # fmt: on
 
 
 def matrix_equal(a, b):
     if type(a) != type(b):
         return False
-    if isinstance(a, csr_matrix):
-        return np.array_equal(a.toarray(), b.toarray())
-    if isinstance(a, DataM):
-        ts_a = _get_timestamps(a)
-        ts_b = _get_timestamps(b)
-        return matrix_equal(a.values, b.values) and (
-            (ts_a is None and ts_b is None) or (ts_a is not None and ts_a.equals(ts_b))
-        )
+    return np.array_equal(a.toarray(), b.toarray())
 
 
-def test_to_csr_matrix(m_csr, m_datam):
+def test_to_csr_matrix_csr(m_csr):
     # csr_matrix -> csr_matrix
     result = to_csr_matrix(m_csr)
     assert result is m_csr
-    # DataM -> csr_matrix
+
+
+def test_to_csr_matrix_interaction_matrix(m_csr, m_datam):
+    # InteractionMatrix -> csr_matrix
     result = to_csr_matrix(m_datam)
     assert matrix_equal(result, m_csr)
+
+
+def test_to_csr_matrix_tup_interaction_matrix(m_csr, m_datam):
     # tuple -> tuple
     result = to_csr_matrix((m_datam, m_datam))
     assert all(matrix_equal(r, m_csr) for r in result)
+
+
+def test_to_csr_matrix_tup_interaction_matrix2(m_csr, m_datam):
     # tuple(Matrix, tuple(Matrix, Matrix))
     # Useful for when validation data and train data need to be converted
     result_1, (r_2_1, r_2_2) = to_csr_matrix((m_datam, (m_datam, m_datam)))
     assert matrix_equal(result_1, m_csr)
     assert matrix_equal(r_2_1, m_csr)
     assert matrix_equal(r_2_2, m_csr)
+
+
+def test_to_csr_matrix_unsupported_type():
     # unsupported type
     with pytest.raises(UnsupportedTypeError):
         result = to_csr_matrix([1, 2, 3])
 
 
-def test_to_datam(m_csr, m_datam):
-    # DataM -> DataM
-    result = to_datam(m_datam)
-    assert result is m_datam
-    # csr_matrix -> DataM
-    result = to_datam(m_csr)
-    assert matrix_equal(result.values, m_datam.values)
-    # tuple -> tuple
-    result = to_datam((m_csr, m_csr))
-    assert all(matrix_equal(r.values, m_datam.values) for r in result)
-    # unsupported type
-    with pytest.raises(UnsupportedTypeError):
-        result = to_datam([1, 2, 3])
-    # missing timestamp information
-    with pytest.raises(InvalidConversionError):
-        result = to_datam(m_csr, timestamps=True)
-
-
-def test_to_same_type(m_csr, m_datam):
-    # csr_matrix -> DataM
-    result = to_same_type(m_csr, m_datam)
-    assert matrix_equal(result.values, m_datam.values)
-    # DataM -> csr_matrix
-    result = to_same_type(m_datam, m_csr)
-    assert matrix_equal(result, m_csr)
-    # unsupported type
-    with pytest.raises(UnsupportedTypeError):
-        result = to_csr_matrix([1, 2, 3])
-
-
-def test_to_binary(m_csr, m_datam, m_csr_binary):
+def test_to_binary_csr(m_csr, m_datam, m_csr_binary):
     # csr_matrix -> csr_matrix
     result = to_csr_matrix(m_csr, binary=True)
     assert matrix_equal(result, m_csr_binary)
     assert result.dtype == m_csr.dtype
     result = to_csr_matrix(m_csr_binary, binary=True)
     assert result is m_csr_binary
-    # DataM -> csr_matrix
+
+
+def test_to_binary_csr2(m_csr, m_datam, m_csr_binary):
+    # InteractionMatrix -> csr_matrix
     result = to_csr_matrix(m_datam, binary=True)
     assert matrix_equal(result, m_csr_binary)
+
+
+def test_to_binary_csr3(m_csr, m_datam, m_csr_binary):
     # tuple -> tuple
     result = to_csr_matrix((m_csr, m_datam), binary=True)
     assert matrix_equal(result[0], m_csr_binary)

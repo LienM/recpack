@@ -1,4 +1,5 @@
 import os.path
+from recpack.data.matrix import InteractionMatrix
 
 # from unittest.mock import MagicMock
 
@@ -7,7 +8,6 @@ import scipy.sparse
 import pytest
 import torch.nn as nn
 
-from recpack.data.matrix import to_datam
 from recpack.splitters.scenarios import StrongGeneralization
 from recpack.algorithms.metric_learning.cml import (
     CML,
@@ -114,7 +114,7 @@ def test_cml_predict(cml, larger_matrix):
 def test_cml_predict_w_approximate(cml, larger_matrix):
     cml.approximate_user_vectors = True
 
-    dm = to_datam(larger_matrix)
+    dm = InteractionMatrix.from_csr_matrix(larger_matrix)
     s = StrongGeneralization(0.7, 1.0, validation=True)
 
     s.split(dm)

@@ -1,5 +1,5 @@
 import recpack
-from recpack.data.data_matrix import DataM
+from recpack.data.matrix import InteractionMatrix
 import recpack.metrics
 import recpack.pipeline
 import recpack.algorithms
@@ -16,7 +16,7 @@ def generate_data():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    data = DataM.create_from_dataframe(
+    data = InteractionMatrix(
         df, "movieId", "userId", timestamp_ix="timestamp"
     )
     return data
