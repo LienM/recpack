@@ -352,7 +352,8 @@ class InteractionMatrix(DataMatrix):
     def interaction_history(self):
         """The interactions per user
 
-        :yield: tuples of user, list of item ids for each interaction of the user.
+        :yield: tuples of user, list of interaction ids
+            for each interaction of the user.
         :rtype: List[Tuple[int, List[int]]]
         """
         for uid, user_history in self._df.groupby("uid"):
@@ -363,7 +364,7 @@ class InteractionMatrix(DataMatrix):
         """The interactions per user, sorted by timestamp (ascending).
 
         :raises AttributeError: If there is no timestamp column can't sort
-        :yield: tuple of user id, list of items sorted timestamp
+        :yield: tuple of user id, list of interaction ids sorted by timestamp
         :rtype: List[Tuple[int, List[int]]]
         """
         if not self.has_timestamps:
