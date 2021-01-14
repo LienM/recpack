@@ -166,13 +166,13 @@ class InteractionMatrix(DataMatrix):
         """
         interaction_m = self if inplace else self.copy()
 
-        df = interaction_m._df
-        if InteractionMatrix.TIMESTAMP_IX in df:
-            df = df.drop(
+        if InteractionMatrix.TIMESTAMP_IX in interaction_m._df:
+            interaction_m._df.drop(
                 columns=[InteractionMatrix.TIMESTAMP_IX],
-                inplace=inplace,
+                inplace=True,
                 errors="ignore",
             )
+
         # Set boolean to False
         interaction_m.has_timestamps = False
         return None if inplace else interaction_m

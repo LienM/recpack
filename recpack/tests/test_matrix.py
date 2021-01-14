@@ -204,16 +204,18 @@ def test_eliminate_timestamps(df):
     d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
     assert d.timestamps is not None
-    d2 = d.eliminate_timestamps()
 
+    d2 = d.eliminate_timestamps()
     assert d.timestamps is not None
     with pytest.raises(AttributeError):
         d2.timestamps
+    assert InteractionMatrix.TIMESTAMP_IX not in d2._df
 
     t = d.eliminate_timestamps(inplace=True)
     assert t is None
     with pytest.raises(AttributeError):
         d.timestamps
+    assert InteractionMatrix.TIMESTAMP_IX not in d._df
 
 
 def test_users_in(df):
