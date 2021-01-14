@@ -11,9 +11,9 @@ from recpack.data.matrix import (
 from scipy.sparse import csr_matrix
 
 
-USER_IX = "uid"
-ITEM_IX = "iid"
-TIMESTAMP_IX = "ts"
+USER_IX = InteractionMatrix.USER_IX
+ITEM_IX = InteractionMatrix.ITEM_IX
+TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 
 @pytest.fixture(scope="function")
