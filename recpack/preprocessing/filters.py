@@ -27,7 +27,7 @@ class Filter(ABC):
         :param df: DataFrame to filter
         :type df: pd.DataFrame
         """
-        pass
+        raise NotImplementedError
 
     def __str__(self):
         attrs = self.__dict__.copy()
