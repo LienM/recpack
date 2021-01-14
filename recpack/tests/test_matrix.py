@@ -6,7 +6,7 @@ from recpack.data.matrix import (
     to_csr_matrix,
     UnsupportedTypeError,
     InvalidConversionError,
-    InteractionMatrix
+    InteractionMatrix,
 )
 from scipy.sparse import csr_matrix
 
@@ -18,8 +18,7 @@ TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 @pytest.fixture(scope="function")
 def df():
-    data = {TIMESTAMP_IX: [3, 2, 1, 1], ITEM_IX: [
-        1, 1, 2, 3], USER_IX: [0, 1, 1, 2]}
+    data = {TIMESTAMP_IX: [3, 2, 1, 1], ITEM_IX: [1, 1, 2, 3], USER_IX: [0, 1, 1, 2]}
     df = pd.DataFrame.from_dict(data)
 
     return df
@@ -89,9 +88,7 @@ def test_timestamps_no_dups(df):
 
 
 def test_timestamps_w_dups(df_w_duplicate):
-    d = InteractionMatrix(
-        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
-    )
+    d = InteractionMatrix(df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
     assert (d.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
 
@@ -134,8 +131,7 @@ def test_timestamps_gte_w_dups(df_w_duplicate):
 
     filtered_d_w_duplicate = d_w_duplicate.timestamps_gte(2)
 
-    assert (filtered_d_w_duplicate.timestamps.values ==
-            np.array([3, 2, 4])).all()
+    assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 2, 4])).all()
 
     assert (
         filtered_d_w_duplicate.values.toarray()
@@ -152,8 +148,7 @@ def test_timestamps_lte_w_dups(df_w_duplicate):
 
     # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
 
-    assert (filtered_d_w_duplicate.timestamps.values ==
-            np.array([2, 1, 1])).all()
+    assert (filtered_d_w_duplicate.timestamps.values == np.array([2, 1, 1])).all()
     assert (
         filtered_d_w_duplicate.values.toarray()
         == np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
@@ -186,7 +181,8 @@ def test_binary_user_history(df):
 
 def test_sorted_interaction_history_no_timestamps_raises(df):
     df_no_timestamps = df.drop(
-        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False)
+        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False
+    )
     d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
 
     with pytest.raises(AttributeError):
@@ -202,6 +198,64 @@ def test_sorted_interaction_history(df):
     # expected_histories = {0: [1], 1: [1, 2], 2: [3]}
     # for i, hist in histories:
     #     assert sorted(hist) == expected_histories[i]
+
+
+def test_eliminate_timestamps(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    assert d.timestamps is not None
+    d2 = d.eliminate_timestamps()
+
+    assert d.timestamps is not None
+    with pytest.raises(AttributeError):
+        d2.timestamps
+
+    t = d.eliminate_timestamps(inplace=True)
+    assert t is None
+    with pytest.raises(AttributeError):
+        d.timestamps
+
+
+def test_users_in(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    d2 = d.users_in([0, 1])
+    assert d2.shape == (3, 4)
+    assert len(list(d2.binary_user_history)) == 2
+
+    # user_id 2 is not known to the dataframe
+    d.users_in([2, 3], inplace=True)
+    assert len(list(d.binary_user_history)) == 1
+
+
+def test_interactions_in(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    d2 = d.interactions_in([0, 1])
+    assert d2.shape == (3, 4)
+    assert (
+        d2.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+    ).all()
+
+    # interaction_id 10 is not known to the dataframe
+    d.interactions_in([0, 1, 10], inplace=True)
+    assert (
+        d.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+    ).all()
+
+
+def test_get_timestamp(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    ts = d.get_timestamp(3)
+    assert ts == 1
+
+    # Unknown interaction id, will raise exception
+    with pytest.raises(IndexError):
+        ts = d.get_timestamp(10)
+
 
 # fmt: off
 @pytest.fixture

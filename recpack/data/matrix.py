@@ -173,6 +173,8 @@ class InteractionMatrix(DataMatrix):
                 inplace=inplace,
                 errors="ignore",
             )
+        # Set boolean to False
+        interaction_m.has_timestamps = False
         return None if inplace else interaction_m
 
     @property
