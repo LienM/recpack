@@ -10,14 +10,14 @@ import pandas as pd
 def generate_data():
     # TODO move this test input to a conftest file as a fixture
     input_dict = {
-        "userId": [1, 1, 1, 0, 0, 0],
-        "movieId": [1, 3, 4, 0, 2, 4],
-        "timestamp": [15, 26, 29, 10, 22, 34],
+        InteractionMatrix.USER_IX: [1, 1, 1, 0, 0, 0],
+        InteractionMatrix.ITEM_IX: [1, 3, 4, 0, 2, 4],
+        InteractionMatrix.TIMESTAMP_IX: [15, 26, 29, 10, 22, 34],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
     data = InteractionMatrix(
-        df, "movieId", "userId", timestamp_ix="timestamp"
+        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
     )
     return data
 

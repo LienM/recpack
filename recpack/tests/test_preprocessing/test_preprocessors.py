@@ -1,21 +1,22 @@
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
+from recpack.data.matrix import InteractionMatrix
 
 
 def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
-    processor = DataFramePreprocessor("iid", "uid", timestamp_id="timestamp", dedupe=False)
+    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_id=InteractionMatrix.TIMESTAMP_IX, dedupe=False)
 
     data_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(dataframe["iid"].unique())
-    assert len(processor.user_id_mapping.keys()) == len(dataframe["uid"].unique())
+    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
-    assert data_m.shape[0] == len(dataframe["uid"].unique())
-    assert data_m.shape[1] == len(dataframe["iid"].unique())
+    assert data_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert data_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
 
 
 def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
-    processor = DataFramePreprocessor("iid", "uid", timestamp_id="timestamp", dedupe=True)
+    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_id=InteractionMatrix.TIMESTAMP_IX, dedupe=True)
 
     org_row = dataframe.loc[3, :].values
     row = org_row.copy()
@@ -26,18 +27,18 @@ def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
 
     data_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(dataframe["iid"].unique())
-    assert len(processor.user_id_mapping.keys()) == len(dataframe["uid"].unique())
+    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
-    assert data_m.shape[0] == len(dataframe["uid"].unique())
-    assert data_m.shape[1] == len(dataframe["iid"].unique())
+    assert data_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert data_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
 
     assert org_row[2] == data_m.timestamps[row[0], row[1]]
     assert not row[2] == data_m.timestamps[row[0], row[1]]
 
 
 def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
-    processor = DataFramePreprocessor("iid", "uid", timestamp_id="timestamp", dedupe=False)
+    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_id=InteractionMatrix.TIMESTAMP_IX, dedupe=False)
 
     org_row = dataframe.loc[3, :].values
     row = org_row.copy()
@@ -48,11 +49,11 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
 
     data_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(dataframe["iid"].unique())
-    assert len(processor.user_id_mapping.keys()) == len(dataframe["uid"].unique())
+    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
-    assert data_m.shape[0] == len(dataframe["uid"].unique())
-    assert data_m.shape[1] == len(dataframe["iid"].unique())
+    assert data_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert data_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
 
     two_values = data_m.timestamps[row[0], row[1]]
 
@@ -62,7 +63,7 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
 
 
 def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
-    processor = DataFramePreprocessor("iid", "uid", "timestamp", dedupe=False)
+    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX, dedupe=False)
 
     dataframe_2 = dataframe.copy()
 
@@ -81,14 +82,14 @@ def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
     # ---
     data_ms = processor.process_many(dataframe, dataframe_2)
 
-    unique_users = set(dataframe["uid"].unique()).union(dataframe_2["uid"].unique())
-    unique_items = set(dataframe["iid"].unique()).union(dataframe_2["iid"].unique())
+    unique_users = set(dataframe[InteractionMatrix.USER_IX].unique()).union(dataframe_2[InteractionMatrix.USER_IX].unique())
+    unique_items = set(dataframe[InteractionMatrix.ITEM_IX].unique()).union(dataframe_2[InteractionMatrix.ITEM_IX].unique())
 
     assert len(processor.item_id_mapping.keys()) == len(unique_items)
     assert len(processor.user_id_mapping.keys()) == len(unique_users)
 
-    assert len(processor.item_id_mapping.keys()) != len(dataframe_2["iid"].unique())
-    assert len(processor.user_id_mapping.keys()) != len(dataframe_2["uid"].unique())
+    assert len(processor.item_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.USER_IX].unique())
 
     assert data_ms[0].shape[0] == len(unique_users)
     assert data_ms[0].shape[1] == len(unique_items)
