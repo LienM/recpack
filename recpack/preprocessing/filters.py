@@ -106,10 +106,6 @@ class NMostPopular(Filter):
         return df[df[self.item_id].isin(items_of_interest)]
 
 
-class EventsSince(Filter):
-    pass
-
-
 class MinItemsPerUser(Filter):
     def __init__(
         self,
