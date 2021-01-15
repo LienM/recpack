@@ -153,7 +153,7 @@ class UserInteractionTimeSplitter(Splitter):
 
         :param data: Data matrix to be split. Must contain timestamps.
         :return: A tuple containing a matrix with all users whose last interaction occured strictly before time `t`, and a matrix 
-                 with users whose interactions occured at or after time `t`.
+                 with users that have at least one interaction at or after time `t`.
         """
         tr_u = []
         te_u = []
