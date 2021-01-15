@@ -17,7 +17,8 @@ TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 @pytest.fixture(scope="function")
 def df():
-    data = {TIMESTAMP_IX: [3, 2, 1, 1], ITEM_IX: [1, 1, 2, 3], USER_IX: [0, 1, 1, 2]}
+    data = {TIMESTAMP_IX: [3, 2, 1, 1], ITEM_IX: [
+        1, 1, 2, 3], USER_IX: [0, 1, 1, 2]}
     df = pd.DataFrame.from_dict(data)
 
     return df
@@ -84,12 +85,13 @@ def test_binary_values_w_dups(df_w_duplicate):
 
 
 def test_timestamps_w_dups(df_w_duplicate):
-    d = InteractionMatrix(df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+    d = InteractionMatrix(df_w_duplicate, ITEM_IX,
+                          USER_IX, timestamp_ix=TIMESTAMP_IX)
 
     print(d.timestamps)
     print(type(d.timestamps))
 
-    print(d.timestamps[(1,1)])
+    print(d.timestamps[(1, 1)])
 
     assert (d.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
 
@@ -132,7 +134,8 @@ def test_timestamps_gte_w_dups(df_w_duplicate):
 
     filtered_d_w_duplicate = d_w_duplicate.timestamps_gte(2)
 
-    assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 2, 4])).all()
+    assert (filtered_d_w_duplicate.timestamps.values ==
+            np.array([3, 2, 4])).all()
 
     assert (
         filtered_d_w_duplicate.values.toarray()
@@ -149,7 +152,8 @@ def test_timestamps_lte_w_dups(df_w_duplicate):
 
     # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
 
-    assert (filtered_d_w_duplicate.timestamps.values == np.array([2, 1, 1])).all()
+    assert (filtered_d_w_duplicate.timestamps.values ==
+            np.array([2, 1, 1])).all()
     assert (
         filtered_d_w_duplicate.values.toarray()
         == np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
@@ -260,19 +264,28 @@ def test_get_timestamp(df):
         ts = d.get_timestamp(10)
 
 
-# fmt: off
+def test_from_csr_matrix(data):
+    data_m = InteractionMatrix.from_csr_matrix(data)
+
+    assert not data_m.has_timestamps
+
+    assert (data_m.values.toarray() == data.toarray()).all()
+
+# ----- TEST CONVERSIONS
+
+
 @pytest.fixture
 def m_csr():
-    m = [[1, 1, 0, 0], 
-         [0, 1, 2, 0], 
+    m = [[1, 1, 0, 0],
+         [0, 1, 2, 0],
          [0, 0, 0, 0]]
     return csr_matrix(m, dtype=np.int32)
 
 
 @pytest.fixture
 def m_csr_binary():
-    m = [[1, 1, 0, 0], 
-         [0, 1, 1, 0], 
+    m = [[1, 1, 0, 0],
+         [0, 1, 1, 0],
          [0, 0, 0, 0]]
     return csr_matrix(m, dtype=np.int32)
 
@@ -287,7 +300,6 @@ def m_datam():
         }
     )
     return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, shape=(3, 4))
-# fmt: on
 
 
 def matrix_equal(a, b):

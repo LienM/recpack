@@ -102,15 +102,15 @@ class Scenario(ABC):
         """
         Warns user if any of the sets is unusually small or empty
         """
-        n_train = self.train_X.interaction_count
-        n_test_in = self.test_data_in.interaction_count
-        n_test_out = self.test_data_out.interaction_count
+        n_train = self.train_X.num_interactions
+        n_test_in = self.test_data_in.num_interactions
+        n_test_out = self.test_data_out.num_interactions
         n_test = n_test_in + n_test_out
         n_total = n_train + n_test
 
         if self.validation:
-            n_val_in = self._validation_data_in.interaction_count
-            n_val_out = self._validation_data_out.interaction_count
+            n_val_in = self._validation_data_in.num_interactions
+            n_val_out = self._validation_data_out.num_interactions
             n_val = n_val_in + n_val_out
             n_total += n_val
 

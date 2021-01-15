@@ -128,7 +128,7 @@ def test_user_interaction_time_splitter(
 
     # No users are ever discarded
     assert (
-        tr.active_user_count + te.active_user_count == data_m_sessions.active_user_count
+        tr.num_active_users + te.num_active_users == data_m_sessions.num_active_users
     )
 
     # Users can have interactions in only one of the sets, never both
@@ -139,8 +139,8 @@ def test_user_interaction_time_splitter(
     assert (te._df[USER_IX].value_counts() == 3).all()
 
     # The 'on' parameter controls which user interaction is used to split on
-    assert tr.active_user_count == n_tr_expected
-    assert te.active_user_count == n_te_expected
+    assert tr.num_active_users == n_tr_expected
+    assert te.num_active_users == n_te_expected
 
 
 @pytest.mark.parametrize("t", [20, 15])
@@ -239,7 +239,7 @@ def test_most_recent_splitter(data_m_w_dups, n):
     tr, te = splitter.split(m)
 
     # All users should have actions in both train and test sets
-    assert tr.active_user_count == te.active_user_count == m.active_user_count
+    assert tr.num_active_users == te.num_active_users == m.num_active_users
 
     for uid in tr.active_users:
         u_actions_tr = tr._df[tr._df[USER_IX] == uid]

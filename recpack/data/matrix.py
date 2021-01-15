@@ -389,13 +389,13 @@ class InteractionMatrix(DataMatrix):
         return set(U)
 
     @property
-    def active_user_count(self) -> int:
+    def num_active_users(self) -> int:
         """The number of users with at least one interaction."""
         U, _ = self.indices
         return len(set(U))
 
     @property
-    def interaction_count(self) -> int:
+    def num_interactions(self) -> int:
         """The total number of interactions."""
         return len(self._df)
 
@@ -432,8 +432,8 @@ class InteractionMatrix(DataMatrix):
         for uid, iid in zip(multiple_uids, multiple_iids):
             interaction_cnt = X[uid, iid]
 
-            np.append(uids, interaction_cnt * [uid])
-            np.append(iids, interaction_cnt * [iid])
+            uids = np.append(uids, interaction_cnt * [uid])
+            iids = np.append(iids, interaction_cnt * [iid])
             # iids.extend(interaction_cnt * [iid])
 
         df = pd.DataFrame({cls.USER_IX: uids, cls.ITEM_IX: iids})
@@ -465,7 +465,6 @@ def to_csr_matrix(
     :raises: UnsupportedTypeError
     """
     if isinstance(X, (tuple, list)):
-        # TODO Not sure how this works, find out
         return type(X)(to_csr_matrix(x, binary=binary) for x in X)
     if isinstance(X, csr_matrix):
         res = X
