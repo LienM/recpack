@@ -1,3 +1,5 @@
+from itertools import islice
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -36,72 +38,75 @@ def df_w_duplicate():
     return df
 
 
-def test_init(df):
+@pytest.fixture(scope="function")
+def interaction_m(df):
     d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
-    assert d.timestamps is not None
-    assert d.values is not None
 
-    assert d.shape == (3, 4)
+    return d
 
+
+@pytest.fixture(scope="function")
+def interaction_m_w_duplicate(df_w_duplicate):
+    d = InteractionMatrix(df_w_duplicate, ITEM_IX,
+                          USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    return d
+
+
+def test_init_w_timestamps(interaction_m):
+    assert interaction_m.timestamps is not None
+    assert interaction_m.values is not None
+
+    assert interaction_m.shape == (3, 4)
+
+    assert (
+        interaction_m.values.toarray()
+        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+    ).all()
+
+    assert interaction_m.has_timestamps
+
+
+def test_init_without_timestamps(df):
     d2 = InteractionMatrix(df, ITEM_IX, USER_IX)
     with pytest.raises(AttributeError):
         d2.timestamps
     assert d2.values is not None
     assert d2.shape == (3, 4)
+    assert not d2.has_timestamps
+
+
+def test_values_w_dups(interaction_m_w_duplicate):
 
     assert (
-        d.values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
-    ).all()
-
-
-def test_values_w_dups(df_w_duplicate):
-    d_w_duplicate = InteractionMatrix(
-        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
-    )
-    assert (
-        d_w_duplicate.values.toarray()
+        interaction_m_w_duplicate.values.toarray()
         == np.array([[0, 1, 0, 0], [0, 2, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
     ).all()
 
 
-def test_binary_values_w_dups(df_w_duplicate):
-    d_w_duplicate = InteractionMatrix(
-        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
-    )
+def test_binary_values_w_dups(interaction_m_w_duplicate):
 
-    binary_values = d_w_duplicate.binary_values
+    binary_values = interaction_m_w_duplicate.binary_values
 
     assert (
         binary_values.toarray()
         == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
     ).all()
 
-# TODO FIX
-# def test_timestamps_no_dups(df):
-#     d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
-#     assert (d.timestamps.values == np.array([3, 2, 1, 1])).all()
+def test_timestamps_no_dups(interaction_m):
+    assert (interaction_m.timestamps.values == np.array([3, 2, 1, 1])).all()
 
 
-def test_timestamps_w_dups(df_w_duplicate):
-    d = InteractionMatrix(df_w_duplicate, ITEM_IX,
-                          USER_IX, timestamp_ix=TIMESTAMP_IX)
+def test_timestamps_w_dups(interaction_m_w_duplicate):
 
-    print(d.timestamps)
-    print(type(d.timestamps))
-
-    print(d.timestamps[(1, 1)])
-
-    assert (d.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
+    assert (interaction_m_w_duplicate.timestamps.values ==
+            np.array([3, 2, 4, 1, 1])).all()
 
 
-def test_timestamps_gt_w_dups(df_w_duplicate):
-    d_w_duplicate = InteractionMatrix(
-        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
-    )
+def test_timestamps_gt_w_dups(interaction_m_w_duplicate):
 
-    filtered_d_w_duplicate = d_w_duplicate.timestamps_gt(2)
+    filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_gt(2)
 
     assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 4])).all()
 
@@ -111,12 +116,9 @@ def test_timestamps_gt_w_dups(df_w_duplicate):
     ).all()
 
 
-def test_timestamps_lt_w_dups(df_w_duplicate):
-    d_w_duplicate = InteractionMatrix(
-        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
-    )
+def test_timestamps_lt_w_dups(interaction_m_w_duplicate):
 
-    filtered_d_w_duplicate = d_w_duplicate.timestamps_lt(2)
+    filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_lt(2)
 
     # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
 
@@ -127,12 +129,9 @@ def test_timestamps_lt_w_dups(df_w_duplicate):
     ).all()
 
 
-def test_timestamps_gte_w_dups(df_w_duplicate):
-    d_w_duplicate = InteractionMatrix(
-        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
-    )
+def test_timestamps_gte_w_dups(interaction_m_w_duplicate):
 
-    filtered_d_w_duplicate = d_w_duplicate.timestamps_gte(2)
+    filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_gte(2)
 
     assert (filtered_d_w_duplicate.timestamps.values ==
             np.array([3, 2, 4])).all()
@@ -143,12 +142,9 @@ def test_timestamps_gte_w_dups(df_w_duplicate):
     ).all()
 
 
-def test_timestamps_lte_w_dups(df_w_duplicate):
-    d_w_duplicate = InteractionMatrix(
-        df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX
-    )
+def test_timestamps_lte_w_dups(interaction_m_w_duplicate):
 
-    filtered_d_w_duplicate = d_w_duplicate.timestamps_lte(2)
+    filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_lte(2)
 
     # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
 
@@ -160,49 +156,18 @@ def test_timestamps_lte_w_dups(df_w_duplicate):
     ).all()
 
 
-def test_indices_in(df):
-    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+def test_indices_in(interaction_m):
 
     U = [0, 1]
     I = [1, 2]
 
-    filtered_df = d.indices_in((U, I))
+    filtered_df = interaction_m.indices_in((U, I))
 
     assert (filtered_df.timestamps.values == np.array([3, 1])).all()
     assert (
         filtered_df.values.toarray()
         == np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]], dtype=np.int32)
     ).all()
-
-
-def test_binary_user_history(df):
-    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
-    # TODO Refactor test some more
-    histories = d.binary_user_history
-    expected_histories = {0: [1], 1: [1, 2], 2: [3]}
-    for i, hist in histories:
-        assert sorted(hist) == expected_histories[i]
-
-
-def test_sorted_interaction_history_no_timestamps_raises(df):
-    df_no_timestamps = df.drop(
-        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False
-    )
-    d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
-
-    with pytest.raises(AttributeError):
-        for uid, user_history in d.sorted_interaction_history:
-            pass
-
-
-def test_sorted_interaction_history(df):
-    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
-
-    # TODO Fix this test.
-    # for uid, user_history in d.sorted_user_history:
-    # expected_histories = {0: [1], 1: [1, 2], 2: [3]}
-    # for i, hist in histories:
-    #     assert sorted(hist) == expected_histories[i]
 
 
 def test_eliminate_timestamps(df):
@@ -262,6 +227,78 @@ def test_get_timestamp(df):
     # Unknown interaction id, will raise exception
     with pytest.raises(IndexError):
         ts = d.get_timestamp(10)
+
+
+def test_binary_user_history(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+    # TODO Refactor test some more
+    histories = d.binary_user_history
+    expected_histories = {0: [1], 1: [1, 2], 2: [3]}
+    for i, hist in histories:
+        assert sorted(hist) == expected_histories[i]
+
+
+def test_interaction_history(interaction_m):
+
+    for uid, user_history in interaction_m.interaction_history:
+        hist = list(user_history)
+
+        assert len(hist) == interaction_m.values[uid, :].nnz
+
+
+def test_sorted_interaction_history_no_timestamps_raises(df):
+    df_no_timestamps = df.drop(
+        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False
+    )
+    d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
+
+    with pytest.raises(AttributeError):
+        for uid, user_history in d.sorted_interaction_history:
+            pass
+
+
+def test_sorted_interaction_history2(interaction_m_w_duplicate):
+
+    cnt_users = 0
+
+    for uid, user_history in interaction_m_w_duplicate.sorted_interaction_history:
+        hist = list(user_history)
+        for id1, id2 in zip(hist, islice(hist, 1, None)):
+            t1 = interaction_m_w_duplicate.get_timestamp(id1)
+            t2 = interaction_m_w_duplicate.get_timestamp(id2)
+
+            assert t1 <= t2
+
+        cnt_users += 1
+
+    assert cnt_users == interaction_m_w_duplicate.num_active_users
+
+
+def test_sorted_interaction_history(interaction_m):
+
+    for uid, user_history in interaction_m.sorted_interaction_history:
+        hist = list(user_history)
+        for id1, id2 in zip(hist, islice(hist, 1, None)):
+            t1 = interaction_m.get_timestamp(id1)
+            t2 = interaction_m.get_timestamp(id2)
+
+            assert t1 <= t2
+
+
+def test_active_users(interaction_m):
+    assert interaction_m.active_users == {0, 1, 2}
+
+
+def test_num_active_users(interaction_m):
+    assert interaction_m.num_active_users == 3
+
+
+def test_num_interactions(interaction_m):
+    assert interaction_m.num_interactions == 4
+
+
+def test_num_interactions2(interaction_m_w_duplicate):
+    assert interaction_m_w_duplicate.num_interactions == 5
 
 
 def test_from_csr_matrix(data):

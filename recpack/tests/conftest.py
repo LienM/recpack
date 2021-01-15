@@ -1,5 +1,4 @@
 import scipy.sparse
-import numpy as np
 import pytest
 
 from recpack.data.matrix import InteractionMatrix
