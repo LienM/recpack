@@ -3,114 +3,177 @@ import pandas as pd
 
 
 from recpack.preprocessing.filters import MinItemsPerUser, MinUsersPerItem
-from recpack.data.matrix import InteractionMatrix, to_binary
+from recpack.data.matrix import InteractionMatrix
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
 from recpack.util import to_tuple
 
 # TODO Refactor so that it downloads the datasets and names the fields consistently
 
 
-def load_citeulike(self, path, min_ui=5, min_iu=1):
+class Dataset(object):
+    user_id = "user"
+    item_id = "item"
+    value_id = None
+    timestamp_id = None
 
-    # Different on purpose from the InteractionMatrix ones to avoid name colisions.
-    USER_IX = "user"
-    ITEM_IX = "item"
+    def __init__(self):
+        super().__init__()
 
-    # TODO: Download if not at path
+    @property
+    def name(self):
+        raise NotImplementedError("Need to override name")
 
-    # Load from path
-    u_i_pairs = []
-    with open(path, "r") as f:
+    # def get_params(self):
+    #     TODO This method is broken.
+    #     params = super().get_params() if hasattr(super(), "get_params") else dict()
+    #     params["data_source"] = self.name
+    #     return params
 
-        for user, line in enumerate(f.readlines()):
-            item_cnt = line.strip("\n").split(" ")[0]  # First element is a count
-            items = line.strip("\n").split(" ")[1:]
-            assert len(items) == int(item_cnt)
+    def load_df(self):
+        raise NotImplementedError("Need to override `load_df` or `preprocess`")
 
-            for item in items:
-                assert item.isdecimal()  # Make sure the identifiers are correct.
-                u_i_pairs.append((user, item))
+    @property
+    def preprocessor(self):
+        preprocessor = DataFramePreprocessor(
+            self.item_id, self.user_id, self.value_id, self.timestamp_id, dedupe=True
+        )
+        return preprocessor
 
-    df = pd.DataFrame(u_i_pairs, columns=[USER_IX, ITEM_IX])
+    def preprocess(self):
+        """
+        Return a dataset of type InteractionMatrix
+        """
+        df = to_tuple(self.load_df())
+        data_m = self.preprocessor.process(df)
+        return data_m
 
-    # Process to InteractionMatrix object
-    preprocessor = DataFramePreprocessor(ITEM_IX, USER_IX, dedupe=True)
-    preprocessor.add_filter(MinItemsPerUser(min_iu, USER_IX, ITEM_IX))
-    preprocessor.add_filter(MinUsersPerItem(min_ui, USER_IX, ITEM_IX))
+    @property
+    def item_id_mapping(self):
+        return self.preprocessor.item_id_mapping
 
-    return preprocessor.process(df)
-
-
-def load_ml_20m(path, min_rating=4, min_ui=5, min_iu=1):
-    USER_IX = "userId"
-    ITEM_IX = "itemId"
-    TIMESTAMP_IX = "timestamp"
-    RATING_IX = "rating"
-    # Also has a rating, which we will ignore for now
-    # If we add a RatingMatrix it should be added as an option to load
-
-    # TODO: download from path
-
-    df = pd.read_csv(path)
-
-    # keep only the rows that have a high enough rating
-    interactions = df[df[RATING_IX] >= min_rating]
-
-    # Process to InteractionMatrix object
-    preprocessor = DataFramePreprocessor(
-        ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, dedupe=True
-    )
-    preprocessor.add_filter(MinItemsPerUser(min_iu, USER_IX, ITEM_IX))
-    preprocessor.add_filter(MinUsersPerItem(min_ui, USER_IX, ITEM_IX))
-
-    data = preprocessor.process(interactions)
-    return to_binary(data)
+    @property
+    def user_id_mapping(self):
+        return self.preprocessor.user_id_mapping
 
 
-def load_rsc_2015(path, nrows=None, min_ui=5, min_iu=1):
-    # On purpose different from the InteractionMatrix ones, to avoid column colision.
-    USER_IX = "session"
-    ITEM_IX = "item"
-    TIMESTAMP_IX = "timestamp"
+class CiteULike(Dataset):
+    @property
+    def name(self):
+        return "citeulike"
 
-    df = pd.read_csv(
-        path,
-        names=[USER_IX, TIMESTAMP_IX, ITEM_IX],
-        dtype={USER_IX: np.int64, TIMESTAMP_IX: np.str, ITEM_IX: np.int64},
-        parse_dates=[TIMESTAMP_IX],
-        usecols=[0, 1, 2],
-        nrows=nrows,
-    )
+    user_id = "user_id"
+    item_id = "item_id"
 
-    df[TIMESTAMP_IX] = (
-        df[TIMESTAMP_IX].astype(int) / 1e9
-    )  # pandas datetime -> seconds from epoch
+    @classmethod
+    def load_df(cls, data_file):
+        # TODO Download data
+        u_i_pairs = []
+        with open(data_file, "r") as f:
+            for user, line in enumerate(f.readlines()):
+                items = line.strip("\n").split(" ")[1:]  # First element is a count
+                item_cnt = line.strip("\n").split(" ")[0]
+                assert len(items) == int(item_cnt)
+                for item in items:
+                    assert item.isdecimal()  # Make sure the identifiers are correct.
+                    u_i_pairs.append((user, item))
 
-    # Process to dataframe
-    preprocessor = DataFramePreprocessor(
-        ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, dedupe=True
-    )
+        return pd.DataFrame(u_i_pairs, columns=[cls.user_id, cls.item_id])
 
-    filter_users = MinItemsPerUser(
-        min_iu,
-        item_id=ITEM_IX,
-        user_id=USER_IX,
-        timestamp_id=TIMESTAMP_IX,
-        count_duplicates=True,
-    )
-    filter_items = MinUsersPerItem(
-        min_ui,
-        item_id=ITEM_IX,
-        user_id=USER_IX,
-        timestamp_id=TIMESTAMP_IX,
-        count_duplicates=True,
-    )
+    def preprocess(self, data_file, min_iu=5):
+        df = self.load_df(data_file)
+        preprocessor = self.preprocessor
+        preprocessor.add_filter(MinItemsPerUser(min_iu, self.user_id, self.item_id))
 
-    # add the filters
-    preprocessor.add_filter(filter_users)
-    preprocessor.add_filter(filter_items)
-    # Apply user filter a second time to remove users
-    # with too few items in their history after the items filter.
-    preprocessor.add_filter(filter_users)
+        view_data = preprocessor.process(df)
+        return view_data
 
-    return preprocessor.process(df)
+
+class ML20MDataset(Dataset):
+    @property
+    def name(self):
+        return "ML"
+
+    user_id = "userId"
+    item_id = "movieId"
+    value_id = "rating"
+
+    def load_df(self, path=None):
+        df = pd.read_csv(path)
+        return df
+
+    def preprocess(self, path, min_rating=4, min_iu=5):
+        df = self.load_df(path=path)
+        preferences = df[df[self.value_id] >= min_rating]
+        preprocessor = self.preprocessor
+        preprocessor.add_filter(MinItemsPerUser(min_iu, self.user_id, self.item_id))
+
+        view_data, = preprocessor.process(preferences)
+        return InteractionMatrix(view_data.binary_values)
+
+
+class RSC2015(Dataset):
+    """
+    RecSys Challenge 2015 clicks dataset.
+    """
+
+    user_id = "sid"
+    item_id = "iid"
+    timestamp_id = "time"
+
+    def load_df(self, path: str, nrows: int = None) -> pd.DataFrame:
+        """
+        Loads the dataset as a pandas dataframe, unfiltered.
+        """
+        df = pd.read_csv(
+            path,
+            names=["sid", "time", "iid"],
+            dtype={"sid": np.int64, "time": np.str, "iid": np.int64},
+            parse_dates=["time"],
+            usecols=[0, 1, 2],
+            nrows=nrows,
+        )
+        df["time"] = (
+            df["time"].astype(int) / 1e9
+        )  # pandas datetime -> seconds from epoch
+        return df
+
+    def preprocess(
+        self, path: str, min_iu: int = 2, min_ui: int = 5, nrows: int = None
+    ) -> InteractionMatrix:
+        """
+        Loads the dataset as a InteractionMatrix. By default, users with fewer than 2 clicks
+        and items with fewer than 5 clicks are removed.
+        """
+        df = self.load_df(path, nrows=nrows)
+
+        filter_users = MinItemsPerUser(
+            min_iu,
+            item_id=self.item_id,
+            user_id=self.user_id,
+            timestamp_id=self.timestamp_id,
+            count_duplicates=True,
+        )
+        filter_items = MinUsersPerItem(
+            min_ui,
+            item_id=self.item_id,
+            user_id=self.user_id,
+            timestamp_id=self.timestamp_id,
+            count_duplicates=True,
+        )
+        preprocessor = self.preprocessor
+        preprocessor.add_filter(filter_users)
+        preprocessor.add_filter(filter_items)
+        preprocessor.add_filter(filter_users)
+
+        return preprocessor.process(df)
+
+    @property
+    def name(self):
+        return "rsc2015"
+
+    @property
+    def preprocessor(self):
+        preprocessor = DataFramePreprocessor(
+            self.item_id, self.user_id, timestamp_id=self.timestamp_id, dedupe=False
+        )
+        return preprocessor
