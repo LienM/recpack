@@ -229,10 +229,8 @@ def test_get_timestamp(df):
         ts = d.get_timestamp(10)
 
 
-def test_binary_user_history(df):
-    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
-    # TODO Refactor test some more
-    histories = d.binary_user_history
+def test_binary_user_history(interaction_m_w_duplicate):
+    histories = interaction_m_w_duplicate.binary_user_history
     expected_histories = {0: [1], 1: [1, 2], 2: [3]}
     for i, hist in histories:
         assert sorted(hist) == expected_histories[i]
