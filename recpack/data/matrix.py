@@ -413,7 +413,6 @@ class InteractionMatrix(DataMatrix):
         """
         return to_binary(self.values)
 
-    # TODO Write a test for this
     @classmethod
     def from_csr_matrix(cls, X: csr_matrix) -> "InteractionMatrix":
         """
