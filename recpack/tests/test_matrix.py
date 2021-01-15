@@ -193,11 +193,11 @@ def test_users_in(df):
 
     d2 = d.users_in([0, 1])
     assert d2.shape == (3, 4)
-    assert len(list(d2.binary_user_history)) == 2
+    assert len(list(d2.binary_item_history)) == 2
 
     # user_id 2 is not known to the dataframe
     d.users_in([2, 3], inplace=True)
-    assert len(list(d.binary_user_history)) == 1
+    assert len(list(d.binary_item_history)) == 1
 
 
 def test_interactions_in(df):
@@ -218,19 +218,29 @@ def test_interactions_in(df):
     ).all()
 
 
-def test_get_timestamp(df):
-    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+def test_get_timestamp_raises(df):
+    df_no_timestamps = df.drop(
+        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False
+    )
 
-    ts = d.get_timestamp(3)
+    d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
+
+    # Unknown interaction id, will raise exception
+    with pytest.raises(AttributeError):
+        d.get_timestamp(0)
+
+
+def test_get_timestamp(interaction_m):
+    ts = interaction_m.get_timestamp(3)
     assert ts == 1
 
     # Unknown interaction id, will raise exception
     with pytest.raises(IndexError):
-        ts = d.get_timestamp(10)
+        ts = interaction_m.get_timestamp(10)
 
 
-def test_binary_user_history(interaction_m_w_duplicate):
-    histories = interaction_m_w_duplicate.binary_user_history
+def test_binary_item_history(interaction_m_w_duplicate):
+    histories = interaction_m_w_duplicate.binary_item_history
     expected_histories = {0: [1], 1: [1, 2], 2: [3]}
     for i, hist in histories:
         assert sorted(hist) == expected_histories[i]

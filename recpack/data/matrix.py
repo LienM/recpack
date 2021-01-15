@@ -337,7 +337,7 @@ class InteractionMatrix(DataMatrix):
         return None if inplace else interaction_m
 
     @property
-    def binary_user_history(self):
+    def binary_item_history(self):
         """The unique interactions per user
 
         :yield: tuples of user, list of distinct items the user interacted with.
