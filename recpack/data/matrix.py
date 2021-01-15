@@ -478,14 +478,11 @@ def to_csr_matrix(
 
 def to_binary(X: csr_matrix) -> csr_matrix:
     """
-    Checks if a matrix is binary, sets all non-zero values to 1 if not.
+    Converts a matrix to binary by setting all non-zero values to 1.
     """
     X_binary = X.astype(bool).astype(X.dtype)
-    is_binary = (X_binary != X).nnz == 0
-    if not is_binary:
-        warn("Expected a binary matrix. Setting all non-zero values to 1.")
-        return X_binary
-    return X
+
+    return X_binary
 
 
 def _is_supported(t: Any) -> bool:
@@ -511,14 +508,3 @@ class UnsupportedTypeError(Exception):
                 ", ".join(t.__name__ for t in _supported_types), type(X).__name__
             )
         )
-
-
-class InvalidConversionError(Exception):
-    """
-    Raised when converting between two incompatible matrix formats.
-
-    :param message: Reason the conversion failed
-    """
-
-    def __init__(self, message: str):
-        super().__init__(message)
