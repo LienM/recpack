@@ -41,7 +41,7 @@ class AvgReciprocalHitRateK(ElementwiseMetricK):
 
         # Elementwise multiplication of top K predicts and true interactions
         scores[y_pred_top_K.multiply(y_true).astype(np.bool)] = 1
-        y_pred_top_K.data = 1.0 / y_pred_top_K.data  # HitRateK times the inverse of its rank
+        y_pred_top_K.data = 1.0 / y_pred_top_K.data  # ReciprocalHitRateK times the inverse of its rank
         scores = scores.multiply(y_pred_top_K)
 
         scores = scores.tocsr()
