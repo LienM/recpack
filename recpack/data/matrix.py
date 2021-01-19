@@ -141,7 +141,7 @@ class InteractionMatrix(DataMatrix):
             ].values[0]
         except KeyError as e:
             raise KeyError(f"Id {interactionid} not present in data")
-    # TODO This doesn't work with duplicates. FIX!
+
     @property
     def timestamps(self) -> pd.Series:
         """Timestamps of interactions as a pandas Series, indexed by user and item id.
@@ -304,6 +304,9 @@ class InteractionMatrix(DataMatrix):
         logger.debug("Performing interactions_in comparison")
 
         mask = self._df[InteractionMatrix.INTERACTION_IX].isin(interaction_ids)
+
+        if not mask.any():
+            raise KeyError(f"Ids {interaction_ids} not present in data")
 
         return self._apply_mask(mask, inplace=inplace)
 
