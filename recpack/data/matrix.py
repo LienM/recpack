@@ -131,11 +131,13 @@ class InteractionMatrix(DataMatrix):
             raise AttributeError(
                 "No timestamp column, so timestamps could not be retrieved"
             )
-        return self._df.loc[
-            self._df[InteractionMatrix.INTERACTION_IX] == interactionid,
-            InteractionMatrix.TIMESTAMP_IX,
-        ].values[0]
-
+        try:
+            return self._df.loc[
+                self._df[InteractionMatrix.INTERACTION_IX] == interactionid,
+                InteractionMatrix.TIMESTAMP_IX,
+            ].values[0]
+        except KeyError as e:
+            raise KeyError(f"Id {interactionid} not present in data")
     # TODO This doesn't work with duplicates. FIX!
     @property
     def timestamps(self) -> pd.Series:
