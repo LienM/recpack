@@ -74,10 +74,12 @@ class InteractionMatrix(DataMatrix):
         self._df = df.rename(columns=col_mapper)
 
         num_users = (
-            self._df[InteractionMatrix.USER_IX].max() + 1 if shape is None else shape[0]
+            self._df[InteractionMatrix.USER_IX].max(
+            ) + 1 if shape is None else shape[0]
         )
         num_items = (
-            self._df[InteractionMatrix.ITEM_IX].max() + 1 if shape is None else shape[1]
+            self._df[InteractionMatrix.ITEM_IX].max(
+            ) + 1 if shape is None else shape[1]
         )
 
         self.shape = (num_users, num_items)
@@ -114,7 +116,8 @@ class InteractionMatrix(DataMatrix):
         ].values
         indices = indices[:, 0], indices[:, 1]
 
-        matrix = csr_matrix((values, indices), shape=self.shape, dtype=np.int32)
+        matrix = csr_matrix((values, indices),
+                            shape=self.shape, dtype=np.int32)
         return matrix
 
     def get_timestamp(self, interactionid: int) -> int:
@@ -327,7 +330,8 @@ class InteractionMatrix(DataMatrix):
         # This index can be dropped safely,
         #   as the data is still there in the original columns.
         index = pd.MultiIndex.from_frame(
-            interaction_m._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]]
+            interaction_m._df[[InteractionMatrix.USER_IX,
+                               InteractionMatrix.ITEM_IX]]
         )
         tuples = list(zip(*u_i_lists))
         c_df = interaction_m._df.set_index(index)
@@ -399,6 +403,12 @@ class InteractionMatrix(DataMatrix):
     def num_interactions(self) -> int:
         """The total number of interactions."""
         return len(self._df)
+
+    @property
+    def density(self) -> float:
+        num_users, num_items = self.shape
+        density = self.values.nnz / (num_users * num_items)
+        return density
 
     @property
     def binary_values(self) -> csr_matrix:
@@ -504,6 +514,7 @@ class UnsupportedTypeError(Exception):
         assert not _is_supported(X)
         super().__init__(
             "Recpack only supports matrix types {}. Received {}.".format(
-                ", ".join(t.__name__ for t in _supported_types), type(X).__name__
+                ", ".join(t.__name__ for t in _supported_types), type(
+                    X).__name__
             )
         )

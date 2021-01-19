@@ -75,7 +75,7 @@ class CiteULike(Dataset):
                 assert len(items) == int(item_cnt)
                 for item in items:
                     assert item.isdecimal()  # Make sure the identifiers are correct.
-                    u_i_pairs.append((user, item))
+                    u_i_pairs.append((user, int(item)))
 
         return pd.DataFrame(u_i_pairs, columns=[cls.user_id, cls.item_id])
 
