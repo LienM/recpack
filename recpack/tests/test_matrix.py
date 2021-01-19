@@ -1,4 +1,5 @@
 from itertools import islice
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -200,6 +201,23 @@ def test_users_in(df):
     assert len(list(d.binary_item_history)) == 1
 
 
+def test_interactions_in_empty_set(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+    with warnings.catch_warnings(record=True) as w:
+        d2 = d.interactions_in([])
+        assert d2.shape == (3, 4)
+        assert (
+            d2.values.toarray()
+            == np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+        ).all()
+
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        assert len(w) == 1
+
+        assert "No interaction IDs given, returning empty InteractionMatrix." in str(w[-1].message)
+
+
 def test_interactions_in(df):
     d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
@@ -210,12 +228,19 @@ def test_interactions_in(df):
         == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
     ).all()
 
-    # interaction_id 10 is not known to the dataframe
-    d.interactions_in([0, 1, 10], inplace=True)
-    assert (
-        d.values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
-    ).all()
+    with warnings.catch_warnings(record=True) as w:
+        # Cause all warnings to always be triggered.
+        warnings.simplefilter("always")
+        # interaction_id 10 is not known to the dataframe
+        d.interactions_in([0, 1, 10], inplace=True)
+        assert (
+            d.values.toarray()
+            == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+        ).all()
+
+        assert len(w) == 1
+
+        assert "IDs {10} not present in data" in str(w[-1].message)
 
 
 def test_get_timestamp_raises(df):
@@ -225,18 +250,20 @@ def test_get_timestamp_raises(df):
 
     d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
 
-    # Unknown interaction id, will raise exception
+    # No timestamps, will raise exception
     with pytest.raises(AttributeError):
         d.get_timestamp(0)
+
+
+def test_get_timestamp_raises_keyerror(interaction_m):
+    # Unknown interaction id, will raise exception
+    with pytest.raises(KeyError):
+        interaction_m.get_timestamp(100)
 
 
 def test_get_timestamp(interaction_m):
     ts = interaction_m.get_timestamp(3)
     assert ts == 1
-
-    # Unknown interaction id, will raise exception
-    with pytest.raises(IndexError):
-        ts = interaction_m.get_timestamp(10)
 
 
 def test_binary_item_history(interaction_m_w_duplicate):
@@ -295,6 +322,10 @@ def test_sorted_interaction_history(interaction_m):
 
 def test_active_users(interaction_m):
     assert interaction_m.active_users == {0, 1, 2}
+
+
+def test_density(interaction_m):
+    np.testing.assert_almost_equal(interaction_m.density, 1/3)
 
 
 def test_num_active_users(interaction_m):

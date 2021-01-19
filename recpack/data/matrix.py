@@ -1,6 +1,7 @@
 import logging
 import operator
 from typing import List, Set, Tuple, Union, Callable, Any
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -139,8 +140,9 @@ class InteractionMatrix(DataMatrix):
                 self._df[InteractionMatrix.INTERACTION_IX] == interactionid,
                 InteractionMatrix.TIMESTAMP_IX,
             ].values[0]
-        except KeyError as e:
-            raise KeyError(f"Id {interactionid} not present in data")
+        except IndexError as e:
+            raise KeyError(
+                f"Interaction ID {interactionid} not present in data")
 
     @property
     def timestamps(self) -> pd.Series:
@@ -305,8 +307,14 @@ class InteractionMatrix(DataMatrix):
 
         mask = self._df[InteractionMatrix.INTERACTION_IX].isin(interaction_ids)
 
-        if not mask.any():
-            raise KeyError(f"Ids {interaction_ids} not present in data")
+        unknown_interaction_ids = set(interaction_ids).difference(
+            self._df[InteractionMatrix.INTERACTION_IX].unique())
+
+        if unknown_interaction_ids:
+            warnings.warn(f"IDs {unknown_interaction_ids} not present in data")
+        if not interaction_ids:
+            warnings.warn(
+                "No interaction IDs given, returning empty InteractionMatrix.")
 
         return self._apply_mask(mask, inplace=inplace)
 
