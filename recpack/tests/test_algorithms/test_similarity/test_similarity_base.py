@@ -12,10 +12,6 @@ def test_check_fit_complete(pageviews):
     with warnings.catch_warnings(record=True) as w:
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
-        # Trigger a warning.
-        a.fit(pageviews)
-        # Expected a binary matrix, warn that default binary conversion is used
-        assert len(w) == 1
 
         a.fit(pv_copy)
         # The algorithm might also throw a warning

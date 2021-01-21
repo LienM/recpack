@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse
 
 from sklearn.pipeline import Pipeline
-from recpack.data.data_matrix import DataM
+from recpack.data.matrix import InteractionMatrix
 
 from recpack.data.data_source import DataSource
 
@@ -333,8 +333,8 @@ class Experiment(IExperiment):
 
         # HACK to remove zero rows
         # TODO: should map ids again for propper saving of detailed metrics
-        X_test = DataM(X_test.values[X_test.values.getnnz(axis=1) > 0])
-        y_test = DataM(y_test.values[y_test.values.getnnz(axis=1) > 0])
+        X_test = InteractionMatrix(X_test.values[X_test.values.getnnz(axis=1) > 0])
+        y_test = InteractionMatrix(y_test.values[y_test.values.getnnz(axis=1) > 0])
         recommendations = recommendations[recommendations.getnnz(axis=1) > 0]
         # END of hack
 

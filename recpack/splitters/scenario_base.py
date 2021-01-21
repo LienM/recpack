@@ -3,7 +3,7 @@ from typing import Tuple, Union
 from warnings import warn
 
 import recpack.splitters.splitter_base as splitter_base
-from recpack.data.data_matrix import DataM
+from recpack.data.matrix import InteractionMatrix
 
 
 class Scenario(ABC):
@@ -20,7 +20,7 @@ class Scenario(ABC):
             self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8)
 
     @abstractmethod
-    def split(self, data_m: DataM):
+    def split(self, data_m: InteractionMatrix):
         """
         Method to be implemented in all classes that inherit
         from Scenario. Used to create the required data objects.
@@ -30,23 +30,23 @@ class Scenario(ABC):
         train_X, train_y, test_in, test_out
 
         :param data_m: Interaction matrix
-        :type data: DataM
+        :type data: InteractionMatrix
         """
         pass
 
     @property
-    def training_data(self) -> Union[Tuple[DataM, DataM], DataM]:
+    def training_data(self) -> Union[Tuple[InteractionMatrix, InteractionMatrix], InteractionMatrix]:
         return (
             (self.train_X, self.train_y) if hasattr(self, "train_y") else self.train_X
         )
 
     @property
-    def validation_data(self) -> Union[Tuple[DataM, DataM], None]:
+    def validation_data(self) -> Union[Tuple[InteractionMatrix, InteractionMatrix], None]:
         """
         Returns validation data.
 
-        :return: Validation data matrices as DataM in, DataM out.
-        :rtype: Tuple[DataM, DataM]
+        :return: Validation data matrices as InteractionMatrix in, InteractionMatrix out.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         # TODO: make sure the users in and out match (Here? or elsewhere?)
         if not hasattr(self, "_validation_data_in"):
@@ -63,12 +63,12 @@ class Scenario(ABC):
         )
 
     @property
-    def test_data(self) -> Tuple[DataM, DataM]:
+    def test_data(self) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """
         Returns test data.
 
-        :return: Test data matrices as DataM in, DataM out.
-        :rtype: Tuple[DataM, DataM]
+        :return: Test data matrices as InteractionMatrix in, InteractionMatrix out.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         # make sure users match.
         in_users = self.test_data_in.active_users
@@ -102,15 +102,15 @@ class Scenario(ABC):
         """
         Warns user if any of the sets is unusually small or empty
         """
-        n_train = self.train_X.interaction_count
-        n_test_in = self.test_data_in.interaction_count
-        n_test_out = self.test_data_out.interaction_count
+        n_train = self.train_X.num_interactions
+        n_test_in = self.test_data_in.num_interactions
+        n_test_out = self.test_data_out.num_interactions
         n_test = n_test_in + n_test_out
         n_total = n_train + n_test
 
         if self.validation:
-            n_val_in = self._validation_data_in.interaction_count
-            n_val_out = self._validation_data_out.interaction_count
+            n_val_in = self._validation_data_in.num_interactions
+            n_val_out = self._validation_data_out.num_interactions
             n_val = n_val_in + n_val_out
             n_total += n_val
 

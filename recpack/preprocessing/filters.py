@@ -27,7 +27,7 @@ class Filter(ABC):
         :param df: DataFrame to filter
         :type df: pd.DataFrame
         """
-        pass
+        raise NotImplementedError
 
     def __str__(self):
         attrs = self.__dict__.copy()
@@ -104,10 +104,6 @@ class NMostPopular(Filter):
         items_of_interest = list(cnt_users_per_item[0 : self.N].index)
 
         return df[df[self.item_id].isin(items_of_interest)]
-
-
-class EventsSince(Filter):
-    pass
 
 
 class MinItemsPerUser(Filter):

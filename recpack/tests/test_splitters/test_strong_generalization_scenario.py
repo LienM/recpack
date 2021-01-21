@@ -98,7 +98,7 @@ def test_strong_generalization_split_w_validation(
     )
     assert abs(tr_and_val_to_te_perc - perc_users_train) < diff_allowed
 
-    assert val_data_in.active_user_count > 0
+    assert val_data_in.num_active_users > 0
 
     assert val_data_out.active_users == val_data_in.active_users
     assert te_data_out.active_users == te_data_in.active_users

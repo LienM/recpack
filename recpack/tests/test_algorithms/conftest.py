@@ -1,9 +1,10 @@
-import scipy.sparse as sp
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.sparse as sp
 
-from recpack.data.matrix import to_datam
+
+from recpack.data.matrix import InteractionMatrix
 
 
 @pytest.fixture(scope="function")
@@ -21,7 +22,7 @@ def pageviews():
 
 @pytest.fixture(scope="function")
 def pageviews_data_m(pageviews):
-    return to_datam(pageviews)
+    return InteractionMatrix.from_csr_matrix(pageviews)
 
 
 @pytest.fixture(scope="function")

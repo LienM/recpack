@@ -20,11 +20,11 @@ Pipelines then allow easy comparison between algorithms.
 
 ### Load and preprocess data
 
-At the core of RecPack is the DataM object. 
-This DataM object represents your data. 
+At the core of RecPack is the InteractionMatrix object. 
+This InteractionMatrix object represents your data. 
 It provides a number of easy, heavily optimized operations for indexing into and slicing your data. 
 
-Currently RecPack provides an easy to use Preprocessor to transform a Pandas DataFrame into a DataM.  
+Currently RecPack provides an easy to use Preprocessor to transform a Pandas DataFrame into a InteractionMatrix.  
 If for some reason you are unable to load your data into a Pandas DataFrame, you can extend the Preprocessor base class. 
 Under the hood, this DataFramePreprocessor maps user and item indices to a sequence of consecutive integers.
 This is required by many algorithms to allow for easy computation and avoid singularity. 
@@ -34,17 +34,17 @@ This is required by many algorithms to allow for easy computation and avoid sing
 import pandas as pd
 
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
-from recpack.data.data_matrix import DataM
+from recpack.data.matrix import InteractionMatrix
 
 pv_frame = pd.read_csv("pageviews.csv")
 pur_frame = pd.read_csv("purchases.csv")
 
 prep = DataFramePreprocessor("itemId", "userId")
-pv_m, pur_m = prep.process(pv_frame, pur_frame) # Transform to DataM objects.
+pv_m, pur_m = prep.process(pv_frame, pur_frame) # Transform to InteractionMatrix objects.
 
 ```
 
-Important to note is that when you use multiple data inputs as in the example above, you want to process them together, so that all resulting DataM objects have the same size. 
+Important to note is that when you use multiple data inputs as in the example above, you want to process them together, so that all resulting InteractionMatrix objects have the same size. 
 
 ### Using an algorithm
 

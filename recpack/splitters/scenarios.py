@@ -23,7 +23,8 @@ class StrongGeneralization(Scenario):
         self.perc_users_train = perc_users_train
         self.perc_interactions_in = perc_interactions_in
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_train)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            perc_users_train)
         self.interaction_split = splitter_base.PercentageInteractionSplitter(
             perc_interactions_in
         )
@@ -42,7 +43,8 @@ class StrongGeneralization(Scenario):
         else:
             self.train_X = train_val_data
 
-        self.test_data_in, self.test_data_out = self.interaction_split.split(test_data)
+        self.test_data_in, self.test_data_out = self.interaction_split.split(
+            test_data)
 
         self.validate()
 
@@ -146,7 +148,8 @@ class Timed(Scenario):
                 "t_validation should be provided when using validation split."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, t_delta, t_alpha)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -248,9 +251,11 @@ class StrongGeneralizationTimed(Scenario):
                 "t_validation should be provided when using validation split."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, t_delta, t_alpha)
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(perc_users_in)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            perc_users_in)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -267,7 +272,8 @@ class StrongGeneralizationTimed(Scenario):
 
         if self.validation:
             # Split 80-20 train and val data.
-            train_data, validation_data = self.validation_splitter.split(tr_val_data)
+            train_data, validation_data = self.validation_splitter.split(
+                tr_val_data)
             # Split validation data into input and output on t_validation
             (
                 self._validation_data_in,
@@ -278,7 +284,8 @@ class StrongGeneralizationTimed(Scenario):
         else:
             self.train_X = tr_val_data
 
-        self.test_data_in, self.test_data_out = self.timestamp_spl.split(te_data)
+        self.test_data_in, self.test_data_out = self.timestamp_spl.split(
+            te_data)
 
         self.validate()
 
@@ -327,7 +334,7 @@ class StrongGeneralizationTimedMostRecent(Scenario):
     :param validation: Create validation sets
     """
 
-    def __init__(self, t: float, t_validation: float = None, n: int = 1, 
+    def __init__(self, t: float, t_validation: float = None, n: int = 1,
                  validation: bool = False):
         super().__init__(validation=validation)
         self.t = t
@@ -337,18 +344,20 @@ class StrongGeneralizationTimedMostRecent(Scenario):
             raise Exception(
                 "t_validation should be provided when using validation split.")
 
-        self.user_splitter_test = splitter_base.UserInteractionTimeSplitter(t, on="max")
+        self.user_splitter_test = splitter_base.UserInteractionTimeSplitter(
+            t)
         if self.validation:
             assert self.t_validation < self.t
             self.user_splitter_val = splitter_base.UserInteractionTimeSplitter(
-                t_validation, on="max"
+                t_validation
             )
         self.most_recent_splitter = splitter_base.MostRecentSplitter(n)
 
     def split(self, data):
         tr_val_data, te_data = self.user_splitter_test.split(data)
 
-        self.test_data_in, self.test_data_out = self.most_recent_splitter.split(te_data)
+        self.test_data_in, self.test_data_out = self.most_recent_splitter.split(
+            te_data)
 
         if self.validation:
             self.train_X, val_data = self.user_splitter_val.split(tr_val_data)
@@ -387,7 +396,8 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
             raise Exception(
                 "t_validation should be provided when using validation split."
             )
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, t_delta, t_alpha)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -403,7 +413,8 @@ class TimedOutOfDomainPredictAndEvaluate(Scenario):
 
         if self.validation:
             d_1_lt_val, _ = self.validation_time_splitter.split(d_1_lt)
-            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(d_2_lt)
+            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(
+                d_2_lt)
             self.train_X = d_1_lt_val
 
             self._validation_data_in, self._validation_data_out = (
@@ -439,7 +450,8 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
                 "t_validation should be provided when using validation split."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, t_delta, t_alpha)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -455,7 +467,8 @@ class TrainInTimedOutOfDomainEvaluate(Scenario):
 
         if self.validation:
             d_1_lt_val, _ = self.validation_time_splitter.split(d_1_lt)
-            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(d_2_lt)
+            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(
+                d_2_lt)
             self.train_X = d_1_lt_val
 
             self._validation_data_in, self._validation_data_out = (
@@ -486,7 +499,8 @@ class TrainInTimedOutOfDomainWithLabelsEvaluate(TrainInTimedOutOfDomainEvaluate)
 
         if self.validation:
             d_1_lt_val, _ = self.validation_time_splitter.split(d_1_lt)
-            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(d_2_lt)
+            d_2_lt_val, d_2_gt_val = self.validation_time_splitter.split(
+                d_2_lt)
             self.train_X = d_1_lt_val
 
             self._validation_data_in, self._validation_data_out = (

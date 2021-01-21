@@ -7,13 +7,13 @@ import pytest
 def data():
     # TODO move this test input to a conftest file as a fixture
     input_dict = {
-        "userId": [2, 2, 2, 0, 0, 0],
-        "movieId": [1, 3, 4, 0, 2, 4],
+        InteractionMatrix.USER_IX: [2, 2, 2, 0, 0, 0],
+        InteractionMatrix.ITEM_IX: [1, 3, 4, 0, 2, 4],
         "values": [1, 2, 1, 1, 1, 2],
     }
 
     matrix = scipy.sparse.csr_matrix(
-        (input_dict["values"], (input_dict["userId"], input_dict["movieId"])),
+        (input_dict["values"], (input_dict[InteractionMatrix.USER_IX], input_dict[InteractionMatrix.ITEM_IX])),
         shape=(10, 5),
     )
     return matrix
