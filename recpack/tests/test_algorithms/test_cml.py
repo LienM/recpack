@@ -30,6 +30,7 @@ def cml():
         seed=42,
         batch_size=20,
         U=10,
+        save_best_to_file=False
     )
 
     return cml1

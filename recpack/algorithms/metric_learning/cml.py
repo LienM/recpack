@@ -37,9 +37,10 @@ class CML(Algorithm):
         batch_size: int = 50000,
         U: int = 20,
         stopping_criterion: str = "recall",
-        save_best_to_file=False,
+        save_best_to_file=True,
         approximate_user_vectors=False,
         disentangle=False,
+        train_before_predict=True
     ):
         """
         Pytorch Implementation of
@@ -92,6 +93,7 @@ class CML(Algorithm):
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
         self.approximate_user_vectors = approximate_user_vectors
         self.disentangle = disentangle
+        self.train_before_predict = train_before_predict
 
     def _init_model(self, X):
         """
@@ -229,6 +231,8 @@ class CML(Algorithm):
 
         return X_pred
 
+    # Predict using approximate nearest neighbours in Annoy? 
+
     def predict(self, X: Matrix) -> csr_matrix:
         """
         Predict recommendations for each user with at least a single event in their history.
@@ -245,26 +249,29 @@ class CML(Algorithm):
 
         assert X.shape == (self.model_.num_users, self.model_.num_items)
 
+        if self.train_before_predict:
+            self._train_epoch(X)
+
         # Extract embedding matrices
         W_as_tensor = self.model_.W.state_dict()["weight"]
         H_as_tensor = self.model_.H.state_dict()["weight"]
 
         users = set(X.nonzero()[0])
 
-        if self.approximate_user_vectors:
-            users_to_predict_for = users
-        else:
-            users_to_predict_for = users.intersection(self.known_users_)
-            users_we_cannot_predict_for = users.difference(self.known_users_)
+        # if self.approximate_user_vectors:
+        #     users_to_predict_for = users
+        # else:
+        #     users_to_predict_for = users.intersection(self.known_users_)
+        #     users_we_cannot_predict_for = users.difference(self.known_users_)
 
-            if users_we_cannot_predict_for:
-                warnings.warn(
-                    f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
-                )
+        #     if users_we_cannot_predict_for:
+        #         warnings.warn(
+        #             f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
+        #         )
 
-            W_as_tensor = self.approximate_W(X, W_as_tensor, H_as_tensor)
+        #     W_as_tensor = self.approximate_W(X, W_as_tensor, H_as_tensor)
 
-        X_pred = self._batch_predict(users_to_predict_for, W_as_tensor, H_as_tensor)
+        X_pred = self._batch_predict(users, W_as_tensor, H_as_tensor)
 
         self._check_prediction(X_pred, X)
 
@@ -340,7 +347,12 @@ class CML(Algorithm):
                 validation_users, :
             ]
 
-            X_val_pred = self.predict(val_data_in_selection)
+            # Extract embedding matrices
+            W_as_tensor = self.model_.W.state_dict()["weight"]
+            H_as_tensor = self.model_.H.state_dict()["weight"]
+
+
+            X_val_pred = self._batch_predict(validation_users, W_as_tensor, H_as_tensor)
             X_val_pred[val_data_in_selection.nonzero()] = 0
             better = self.stopping_criterion.update(val_data_out_selection, X_val_pred)
 
