@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 import tempfile
 from typing import Tuple
@@ -42,6 +43,7 @@ class CML(Algorithm):
         disentangle=False,
         train_before_predict=True
     ):
+        #TODO Add documentation
         """
         Pytorch Implementation of
         Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
@@ -164,7 +166,7 @@ class CML(Algorithm):
         self._init_model(X)
         try:
             for epoch in range(self.num_epochs):
-                self._train_epoch(X)
+                self._train_epoch(X, self.model_, self.optimizer)
                 self._evaluate(validation_data)
         except EarlyStoppingException:
             pass
@@ -250,26 +252,15 @@ class CML(Algorithm):
         assert X.shape == (self.model_.num_users, self.model_.num_items)
 
         if self.train_before_predict:
-            self._train_epoch(X)
+            model = self._train_users_only(X)
+        else:
+            model = self.model_
 
         # Extract embedding matrices
-        W_as_tensor = self.model_.W.state_dict()["weight"]
-        H_as_tensor = self.model_.H.state_dict()["weight"]
+        W_as_tensor = model.W.state_dict()["weight"]
+        H_as_tensor = model.H.state_dict()["weight"]
 
         users = set(X.nonzero()[0])
-
-        # if self.approximate_user_vectors:
-        #     users_to_predict_for = users
-        # else:
-        #     users_to_predict_for = users.intersection(self.known_users_)
-        #     users_we_cannot_predict_for = users.difference(self.known_users_)
-
-        #     if users_we_cannot_predict_for:
-        #         warnings.warn(
-        #             f"Cannot make predictions for users: {users_we_cannot_predict_for}. No embeddings for these users."
-        #         )
-
-        #     W_as_tensor = self.approximate_W(X, W_as_tensor, H_as_tensor)
 
         X_pred = self._batch_predict(users, W_as_tensor, H_as_tensor)
 
@@ -277,7 +268,15 @@ class CML(Algorithm):
 
         return X_pred
 
-    def _train_epoch(self, train_data: csr_matrix):
+    def _train_users_only(self, train_data: csr_matrix) -> nn.Module:
+        model = deepcopy(self.model_)
+        optimizer = optim.Adagrad(model.W.parameters(), lr=self.learning_rate)
+
+        self._train_epoch(train_data, model, optimizer)
+
+        return model
+
+    def _train_epoch(self, train_data: csr_matrix, model: nn.Module, optimizer: optim.Optimizer):
         """
         Train model for a single epoch. Uses sampler to generate samples,
         and loop through them in batches of self.batch_size.
@@ -287,7 +286,7 @@ class CML(Algorithm):
         :type train_data: csr_matrix
         """
         train_loss = 0.0
-        self.model_.train()
+        model.train()
 
         for users, positives_batch, negatives_batch in tqdm(
             warp_sample_pairs(train_data, U=self.U, batch_size=self.batch_size)
@@ -300,8 +299,8 @@ class CML(Algorithm):
 
             current_batch_size = users.shape[0]
 
-            dist_pos_interaction = self.model_.forward(users, positives_batch)
-            dist_neg_interaction_flat = self.model_.forward(
+            dist_pos_interaction = model.forward(users, positives_batch)
+            dist_neg_interaction_flat = model.forward(
                 users.repeat_interleave(self.U),
                 negatives_batch.reshape(current_batch_size * self.U, 1).squeeze(-1),
             )
@@ -314,7 +313,7 @@ class CML(Algorithm):
             )
             loss.backward()
             train_loss += loss.item()
-            self.optimizer.step()
+            optimizer.step()
 
         logger.info(f"training loss = {train_loss}")
 

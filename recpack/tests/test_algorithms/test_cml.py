@@ -61,7 +61,7 @@ def test_cml_training_epoch(cml, larger_matrix):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    cml._train_epoch(larger_matrix)
+    cml._train_epoch(larger_matrix, cml.model_, cml.optimizer)
 
     device = cml.device
 
@@ -78,7 +78,7 @@ def test_cml_training_epoch_w_disentanglement(cml, larger_matrix):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    cml._train_epoch(larger_matrix)
+    cml._train_epoch(larger_matrix, cml.model_, cml.optimizer)
 
     device = cml.device
 
@@ -109,6 +109,38 @@ def test_cml_predict(cml, larger_matrix):
     assert isinstance(X_pred, scipy.sparse.csr_matrix)
 
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
+
+
+# Test if matrix changed between before and after approximate?
+def test_cml_predict_w_extra_train_users_only(cml, larger_matrix):
+    cml.train_before_predict = True
+
+    dm = InteractionMatrix.from_csr_matrix(larger_matrix)
+    s = StrongGeneralization(0.7, 1.0, validation=True)
+
+    s.split(dm)
+
+    cml.fit(s.training_data, s.validation_data)
+
+    assert cml.known_users_ == set(s.training_data.binary_values.nonzero()[0])
+
+    # TODO See if nothing was changed about the model. No parameter updates
+
+
+    X_pred = cml.predict(s.test_data_in)
+
+    # Known users should not be changed
+    assert cml.known_users_ == set(s.training_data.binary_values.nonzero()[0])
+
+    W_as_tensor = cml.model_.W.state_dict()["weight"]
+    H_as_tensor = cml.model_.H.state_dict()["weight"]
+
+    # W_as_tensor_approximated = cml.approximate_W(s._validation_data_in.binary_values, W_as_tensor, H_as_tensor)
+
+    # # W_as_tensor_approximated should have changed in comparison to before
+    # with np.testing.assert_raises(AssertionError):
+    #     np.testing.assert_array_equal(W_as_tensor.detach().cpu().numpy(), W_as_tensor_approximated.detach().cpu().numpy())
+
 
 
 # Test if matrix changed between before and after approximate?
