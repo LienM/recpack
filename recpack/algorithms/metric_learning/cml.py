@@ -270,7 +270,7 @@ class CML(Algorithm):
 
     def _train_users_only(self, train_data: csr_matrix) -> nn.Module:
         model = deepcopy(self.model_)
-        optimizer = optim.Adagrad(model.W.parameters(), lr=self.learning_rate)
+        optimizer = optim.Adagrad(model.W.parameters(), lr=0.1)
 
         self._train_epoch(train_data, model, optimizer)
 
