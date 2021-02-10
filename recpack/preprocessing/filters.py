@@ -106,6 +106,32 @@ class NMostPopular(Filter):
         return df[df[self.item_id].isin(items_of_interest)]
 
 
+class NMostRecent(Filter):
+    """Select only events on the N most recently visited items.
+
+    :param N: Number of items to retain.
+    :type N: int
+    :param item_id: Name of the column in which item identifiers are listed.
+    :type item_id: str
+    :param user_id: Name of the column in which user identifiers are listed.
+    :type user_id: str
+    :param timestamp_id: Name of the column in which timestamps are listed, defaults to None
+    :type timestamp_id: str, optional
+    """
+
+    def __init__(self, N: int, item_id: str, user_id: str, timestamp_id: str):
+        self.N = N
+        super().__init__(item_id, user_id, timestamp_id=timestamp_id)
+
+    def apply(self, df):
+        sorted_df = df[[self.item_id, self.timestamp_id]].sort_values(
+            by=self.timestamp_id, ascending=False
+        )
+        ids = sorted_df[[self.item_id]].drop_duplicates()
+
+        return df[df[self.item_id].isin(ids[: self.N][self.item_id])]
+
+
 class MinItemsPerUser(Filter):
     def __init__(
         self,
@@ -146,3 +172,22 @@ class MinItemsPerUser(Filter):
         )
 
         return df[df[self.user_id].isin(users_of_interest)]
+
+
+class MinRating(Filter):
+    """Filter all interactions with a minimum rating.
+
+    This way rating data can be turned into a implicit dataset.
+
+    :param rating_ix: the column that will contain ratings in the dataframe
+    :type str:
+    :param min_rating: The minimum rating for a rating to be considered an interaction, defaults to 1
+    :type min_rating: int, optional
+    """
+
+    def __init__(self, rating_ix: str, min_rating: int = 1):
+        self.rating_ix = rating_ix
+        self.min_rating = min_rating
+
+    def apply(self, df):
+        return df[df[self.rating_ix] >= self.min_rating]
