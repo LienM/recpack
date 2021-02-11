@@ -4,7 +4,9 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 # TODO Improve interface so that arguments known to the Preprocessor don't
-# have to be duplidated.
+#   have to be duplidated.
+# TODO: Make the names uniform.
+#   In other places we have started using _ix io _id as suffix
 
 
 class Filter(ABC):
@@ -176,7 +178,7 @@ class MinItemsPerUser(Filter):
 
 class MinRating(Filter):
     """
-    Create a dataframe of only ratings above min_rating. 
+    Create a dataframe of only ratings above min_rating.
     This filter is used to turn a rating dataset into an interaction dataset.
 
     :param rating_ix: the column that will contain ratings in the dataframe
@@ -185,7 +187,15 @@ class MinRating(Filter):
     :type min_rating: int, optional
     """
 
-    def __init__(self, rating_ix: str, min_rating: int = 1):
+    def __init__(
+        self,
+        rating_ix: str,
+        item_id: str,
+        user_id: str,
+        timestamp_id: str = None,
+        min_rating: int = 1,
+    ):
+        super().__init__(item_id, user_id, timestamp_id)
         self.rating_ix = rating_ix
         self.min_rating = min_rating
 

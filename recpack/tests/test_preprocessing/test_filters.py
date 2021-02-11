@@ -133,7 +133,13 @@ def test_min_rating(rating_dataframe):
 
     df = rating_dataframe
 
-    myfilter = filters.MinRating("rating", 4)
+    myfilter = filters.MinRating(
+        "rating",
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+        min_rating=4,
+    )
     filtered_df = myfilter.apply(df)
 
     assert filtered_df.shape == (4, 4)
