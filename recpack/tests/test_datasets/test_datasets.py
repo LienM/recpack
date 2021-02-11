@@ -122,7 +122,7 @@ def test_recsys_challenge_2015():
 
     data = d.load_interaction_matrix()
 
-    assert data.shape == (15, 20)
+    assert data.shape == (54, 291)
 
     # We can't just download this dataset, since it requires Kaggle access
     with pytest.raises(NotImplementedError):

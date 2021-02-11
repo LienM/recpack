@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import pandas as pd
+from typing import List
 from urllib.request import urlretrieve
 import zipfile
 
@@ -10,7 +11,7 @@ from recpack.preprocessing.preprocessors import DataFramePreprocessor
 from recpack.util import to_tuple
 
 
-def _fetch_remote(url, filename):
+def _fetch_remote(url: str, filename: str) -> str:
     """Fetch data from remote url and save locally
 
     :param url: url to fetch data from
@@ -26,9 +27,15 @@ def _fetch_remote(url, filename):
 
 
 class Dataset:
-    """Handle public datasets.
+    """Represents a collaborative filtering dataset,
+        containing users who interacted in some way with a set of items.
 
-    If available at a public url the dataset will downloaded if not present
+    Every Dataset has a set of preprocessing defaults,
+    i.e. filters that are commonly applied to the dataset before use in recommendation algorithms.
+    These can be disabled and a different set of filters can be applied.
+
+    A Dataset is transformed into an InteractionMatrix
+
     :param filename: Where to look for the file with data.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
@@ -39,7 +46,7 @@ class Dataset:
     ITEM_IX = "item_id"
     TIMESTAMP_IX = "seconds_since_epoch"
 
-    def __init__(self, filename, preprocess_default=True):
+    def __init__(self, filename: str, preprocess_default=True):
         self.filename = filename
         self.preprocessor = DataFramePreprocessor(
             self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX, dedupe=False
@@ -49,14 +56,15 @@ class Dataset:
                 self.add_filter(f)
 
     @property
-    def _default_filters(self):
-        # Return a list of filters to be added to the preprocessor
-        # if default is enabled.
+    def _default_filters(self) -> List[Filter]:
+        """The default filters to apply to a dataframe.
 
-        return [
-            MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
-            MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
-        ]
+        Should be defined for a dataset if there is default preprocessing.
+
+        :return: A list of filters
+        :rtype: List[Filter]
+        """
+        return []
 
     def add_filter(self, _filter: Filter):
         """Add a filter to be used when calling load_interaction_matrix()
@@ -81,10 +89,15 @@ class Dataset:
     def _download_dataset(self):
         raise NotImplementedError("Should still be implemented")
 
-    def load_dataframe(self):
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the dataframe from file, and return it as a pandas DataFrame.
+
+        :return: The interaction data as a dataframe with a row per interaction.
+        :rtype: pd.DataFrame
+        """
         raise NotImplementedError("Needs to be implemented")
 
-    def load_interaction_matrix(self):
+    def load_interaction_matrix(self) -> InteractionMatrix:
         """Parse the loaded dataframe into an InteractionMatrix.
 
         During parsing the added filters are applied in order.
@@ -114,6 +127,20 @@ class CiteULike(Dataset):
 
     TIMESTAMP_IX = None
 
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the CiteULike dataset
+
+        Filters users and items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
+            MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
+        ]
+
     def _download_dataset(self):
         """Download thee users.dat file from the github repository.
         The file is saved at the specified `self.filename`
@@ -123,15 +150,15 @@ class CiteULike(Dataset):
         )
         _fetch_remote(DATASETURL, self.filename)
 
-    def load_dataframe(self):
-        """Load the data from file, and return a dataframe.
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return as a Pandas DataFrame.
 
         Downloads the data file if it is not yet present.
         The output will contain a dataframe with a user_id and item_id column.
         Each interaction is stored in a separate row.
 
         :return: The interactions as a dataframe, with a row for each interaction.
-        :rtype: pd.DataFrame
+        :rtype: pandas.DataFrame
         """
 
         # This will download the dataset if necessary
@@ -180,6 +207,20 @@ class MovieLens25M(Dataset):
     TIMESTAMP_IX = "timestamp"
     RATING_IX = "rating"
 
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the Movielens 25M dataset
+
+        Filters users and items with not enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
+            MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
+        ]
+
     def _download_dataset(self):
         """Downloads the dataset.
 
@@ -200,14 +241,14 @@ class MovieLens25M(Dataset):
         # Rename the ratings file to the specified filename
         os.rename(os.path.join(dir_f, "ml-25m/ratings.csv"), self.filename)
 
-    def load_dataframe(self):
-        """Load the data from file, and return a dataframe.
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return as a Pandas DataFrame.
 
         Downloads the data file if it is not yet present.
-        The output will contain the data of the CSV file, in Dataframe format.
+        The output will contain the data of the CSV file as a Pandas DataFrame.
 
-        :return: The interactions as a dataframe, with a row for each interaction.
-        :rtype: pd.DataFrame
+        :return: The interactions as a Pandas DataFrame, with a row for each interaction.
+        :rtype: pandas.DataFrame
         """
 
         self.fetch_dataset()
@@ -239,19 +280,19 @@ class RecsysChallenge2015(Dataset):
         )
 
     @property
-    def _default_filters(self):
-        # Return a list of filters to be added to the preprocessor
-        # if default is enabled.
-        # TODO: this had a different preprocessing in the function compared to the others.
-        # Do we try to unify this, and make all defaults the same,
-        # or was there a particular reason for this one?
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the RecsysChallenge 2015 dataset
+
+        Filters items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
         return [
-            MinItemsPerUser(3, self.USER_IX, self.ITEM_IX, count_duplicates=True),
             MinUsersPerItem(5, self.USER_IX, self.ITEM_IX, count_duplicates=True),
-            MinItemsPerUser(3, self.USER_IX, self.ITEM_IX, count_duplicates=True),
         ]
 
-    def load_dataframe(self):
+    def load_dataframe(self) -> pd.DataFrame:
         """Load the data from file, and return a dataframe.
 
         The output will contain a dataframe with a user_id, item_id and seconds_since_epoch column.
