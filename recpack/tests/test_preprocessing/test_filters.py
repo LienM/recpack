@@ -142,9 +142,9 @@ def test_min_rating(rating_dataframe):
     )
     filtered_df = myfilter.apply(df)
 
-    assert filtered_df.shape == (4, 4)
+    assert filtered_df.shape == (4, 3)
 
-    assert filtered_df.rating.min() == 4
+    assert "rating" not in filtered_df.columns
 
 
 def test_apply_all(dataframe):

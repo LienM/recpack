@@ -181,6 +181,8 @@ class MinRating(Filter):
     Create a dataframe of only ratings above min_rating.
     This filter is used to turn a rating dataset into an interaction dataset.
 
+    After filtering, the rating_ix column will also be removed from the dataframe.
+
     :param rating_ix: the column that will contain ratings in the dataframe
     :type str:
     :param min_rating: The minimum rating for a rating to be considered an interaction, defaults to 1
@@ -200,4 +202,4 @@ class MinRating(Filter):
         self.min_rating = min_rating
 
     def apply(self, df):
-        return df[df[self.rating_ix] >= self.min_rating]
+        return df[df[self.rating_ix] >= self.min_rating].drop(columns=self.rating_ix)
