@@ -267,7 +267,7 @@ class RecsysChallenge2015(Dataset):
 
 
     Default processing makes sure that:
-    - Each remaining  item has been interacted with by at least 5 users.dat
+    - Each remaining  item has been interacted with by at least 5 users.
     """
 
     USER_IX = "session"
