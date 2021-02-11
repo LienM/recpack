@@ -175,9 +175,9 @@ class MinItemsPerUser(Filter):
 
 
 class MinRating(Filter):
-    """Filter all interactions with a minimum rating.
-
-    This way rating data can be turned into a implicit dataset.
+    """
+    Create a dataframe of only ratings above min_rating. 
+    This filter is used to turn a rating dataset into an interaction dataset.
 
     :param rating_ix: the column that will contain ratings in the dataframe
     :type str:
