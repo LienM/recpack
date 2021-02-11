@@ -1,54 +1,71 @@
 import os
 import pytest
+from tempfile import NamedTemporaryFile
+from unittest.mock import MagicMock
+
 
 from recpack.data import datasets
 from recpack.preprocessing.filters import NMostPopular
 
 
-def test_fetch_dataset():
-    file_name = "/tmp/citeulike.dat"
-    # We'll test using citeulike
-    d = datasets.CiteULike("/tmp/citeulike.dat")
+@pytest.fixture()
+def demo_data():
+    s = """2 1 2\n3 2 1 3\n1 2"""
+    return s
 
-    # The file should not exist yet.
-    assert not os.path.exists(file_name)
 
-    # Fetch dataset will download the file
-    d.fetch_dataset()
+def test_fetch_dataset(demo_data):
+    """Test that
 
-    # Now file should exist
-    assert os.path.exists(file_name)
+    :param demo_data: [description]
+    :type demo_data: [type]
+    """
 
-    # This should load the full dataframe.
-    df = d.load_dataframe()
-    assert df.shape == (204986, 2)
+    with NamedTemporaryFile() as f:
 
-    # We'll overwrite the file with some other content in the same format
-    with open(file_name, "w") as f:
-        f.write("2 1 2\n")
-        f.write("1 2")
+        # We'll test using citeulike style data
+        d = datasets.CiteULike(f.name)
 
-    # Dataframe gets reloaded from file
-    df2 = d.load_dataframe()
-    assert df2.shape == (3, 2)
+        def download_mock():
+            with open(f.name, "w") as fw:
+                fw.write(demo_data)
 
-    # Fetching with the file already existing does not overwrite the file
-    d.fetch_dataset()
+        d._download_dataset = download_mock
 
-    # No changes in dataframe, since file was not changed
-    df2_bis = d.load_dataframe()
-    assert df2_bis.shape == df2.shape
+        # Fetch dataset will download the file
+        # We have to force here, because of the temporary file used
+        d.fetch_dataset(force=True)
 
-    # With the force=True parameter the dataset will be downloaded,
-    # overwriting of the already existing file
-    d.fetch_dataset(force=True)
+        # Now file should exist
+        assert os.path.exists(f.name)
 
-    # Dataframe should be the same as the first download
-    df_bis = d.load_dataframe()
-    assert df_bis.shape == df.shape
+        # This should load the full dataframe.
+        df = d.load_dataframe()
+        assert df.shape == (6, 2)
 
-    # Clean up again
-    os.remove(file_name)
+        # We'll overwrite the file with some other content in the same format
+        with open(f.name, "w") as fw:
+            fw.write("2 1 2\n")
+            fw.write("1 2")
+
+        # Dataframe gets reloaded from file
+        df2 = d.load_dataframe()
+        assert df2.shape == (3, 2)
+
+        # Fetching with the file already existing does not overwrite the file
+        d.fetch_dataset()
+
+        # No changes in dataframe, since file was not changed
+        df2_bis = d.load_dataframe()
+        assert df2_bis.shape == df2.shape
+
+        # With the force=True parameter the dataset will be downloaded,
+        # overwriting of the already existing file
+        d.fetch_dataset(force=True)
+
+        # Dataframe should be the same as the first download
+        df_bis = d.load_dataframe()
+        assert df_bis.shape == df.shape
 
 
 def test_add_filter():
