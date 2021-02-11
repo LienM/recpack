@@ -200,6 +200,12 @@ class MovieLens25M(Dataset):
     d = MovieLens25M('path/to/file')
     d.add_filter(MinRating("rating", 3), index=0)
     ```
+
+    :param filename: Where to look for the file with data.
+    :type filename: str
+    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :type preprocess_default: bool, optional
+
     """
 
     USER_IX = "userId"
@@ -264,10 +270,14 @@ class RecsysChallenge2015(Dataset):
     Because downloading the data requires a Kaggle account we can't download it here,
     you should download the data manually and provide the path to the `yoochoose-clicks.dat` file.
 
-
-
     Default processing makes sure that:
     - Each remaining  item has been interacted with by at least 5 users.
+
+    :param filename: Where to look for the file with data.
+    :type filename: str
+    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :type preprocess_default: bool, optional
+
     """
 
     USER_IX = "session"
