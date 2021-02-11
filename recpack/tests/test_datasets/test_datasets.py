@@ -74,31 +74,31 @@ def test_citeulike():
     d = datasets.CiteULike(path_to_file)
 
     df = d.load_dataframe()
-    assert (df.columns == ["user", "item"]).all()
+    assert (df.columns == [d.USER_IX, d.ITEM_IX]).all()
 
     assert df.shape == (36872, 2)
-    assert df.user.nunique() == 1000
-    assert df.item.nunique() == 13689
+    assert df[d.USER_IX].nunique() == 1000
+    assert df[d.ITEM_IX].nunique() == 13689
 
     data = d.load_interaction_matrix()
 
     assert data.shape == (963, 1748)
 
 
-def test_movielens20m():
+def test_movielens25m():
     # To get sample we used head -10000 ratings.csv
     path_to_file = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), "datasets/ml-25m_sample.csv"
     )
 
-    d = datasets.MovieLens20M(path_to_file)
+    d = datasets.MovieLens25M(path_to_file)
 
     df = d.load_dataframe()
-    assert (df.columns == ["userId", "movieId", "rating", "timestamp"]).all()
+    assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()
 
     assert df.shape == (9999, 4)
-    assert df.userId.nunique() == 75
-    assert df.movieId.nunique() == 3287
+    assert df[d.USER_IX].nunique() == 75
+    assert df[d.ITEM_IX].nunique() == 3287
 
     data = d.load_interaction_matrix()
 
@@ -115,10 +115,10 @@ def test_recsys_challenge_2015():
     d = datasets.RecsysChallenge2015(path_to_file)
 
     df = d.load_dataframe()
-    assert (df.columns == ["session", "timestamp", "item"]).all()
+    assert (df.columns == [d.USER_IX, d.TIMESTAMP_IX, d.ITEM_IX]).all()
     assert df.shape == (1000, 3)
-    assert df.session.nunique() == 272
-    assert df.item.nunique() == 570
+    assert df[d.USER_IX].nunique() == 272
+    assert df[d.ITEM_IX].nunique() == 570
 
     data = d.load_interaction_matrix()
 
