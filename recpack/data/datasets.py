@@ -177,7 +177,11 @@ class CiteULike(Dataset):
                     u_i_pairs.append((user, int(item)))
 
         # Rename columns to default ones ?
-        df = pd.DataFrame(u_i_pairs, columns=[self.USER_IX, self.ITEM_IX])
+        df = pd.DataFrame(
+            u_i_pairs,
+            columns=[self.USER_IX, self.ITEM_IX],
+            dtype=np.int64,
+        )
         return df
 
 
@@ -258,7 +262,15 @@ class MovieLens25M(Dataset):
         """
 
         self.fetch_dataset()
-        df = pd.read_csv(self.filename)
+        df = pd.read_csv(
+            self.filename,
+            dtype={
+                self.USER_IX: np.int64,
+                self.TIMESTAMP_IX: np.int64,
+                self.ITEM_IX: np.int64,
+                self.RATING_IX: np.float,
+            },
+        )
 
         return df
 
