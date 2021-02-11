@@ -47,12 +47,12 @@ class EASE(SimilarityMatrixAlgorithm):
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         if self.density:
-            self._ensure_density()
+            self.prune()
 
         self._check_fit_complete()
         return self
 
-    def _ensure_density(self):
+    def prune(self):
         # Prune B (similarity matrix)
         # Steck et al. state that we can increase the sparsity in matrix B without significant impact on quality.
 
@@ -111,7 +111,7 @@ class EASE_Intercept(EASE):
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         if self.density:
-            self._ensure_density()
+            self.prune()
 
         self._check_fit_complete()
 
@@ -149,7 +149,7 @@ class EASE_XY(EASE):
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         if self.density:
-            self._ensure_density()
+            self.prune()
 
         self._check_fit_complete()
 
@@ -184,7 +184,7 @@ class EASE_AVG(EASE):
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
         if self.density:
-            self._ensure_density()
+            self.prune()
 
         self._check_fit_complete()
 
@@ -218,7 +218,7 @@ class EASE_AVG_Int(EASE_AVG):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
         if self.density:
-            self._ensure_density()
+            self.prune()
 
         self._check_fit_complete()
         return self
