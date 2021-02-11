@@ -59,4 +59,4 @@ def test_prune(data):
     assert density(algo.similarity_matrix_) > TARGET_DENSITY
     algo.prune()
 
-    assert density(algo.similarity_matrix_) == TARGET_DENSITY
+    numpy.testing.assert_almost_equal(density(algo.similarity_matrix_), TARGET_DENSITY)
