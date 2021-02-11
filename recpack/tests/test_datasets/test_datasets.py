@@ -1,7 +1,6 @@
 import os
 import pytest
 from tempfile import NamedTemporaryFile
-from unittest.mock import MagicMock
 
 
 from recpack.data import datasets

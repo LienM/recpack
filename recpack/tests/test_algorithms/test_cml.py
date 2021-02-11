@@ -1,8 +1,6 @@
 import os.path
 from recpack.data.matrix import InteractionMatrix
 
-# from unittest.mock import MagicMock
-
 import numpy as np
 import scipy.sparse
 import pytest
@@ -131,11 +129,16 @@ def test_cml_predict_w_approximate(cml, larger_matrix):
     W_as_tensor = cml.model_.W.state_dict()["weight"]
     H_as_tensor = cml.model_.H.state_dict()["weight"]
 
-    W_as_tensor_approximated = cml.approximate_W(s._validation_data_in.binary_values, W_as_tensor, H_as_tensor)
+    W_as_tensor_approximated = cml.approximate_W(
+        s._validation_data_in.binary_values, W_as_tensor, H_as_tensor
+    )
 
     # W_as_tensor_approximated should have changed in comparison to before
     with np.testing.assert_raises(AssertionError):
-        np.testing.assert_array_equal(W_as_tensor.detach().cpu().numpy(), W_as_tensor_approximated.detach().cpu().numpy())
+        np.testing.assert_array_equal(
+            W_as_tensor.detach().cpu().numpy(),
+            W_as_tensor_approximated.detach().cpu().numpy(),
+        )
 
 
 def test_covariance_loss():
