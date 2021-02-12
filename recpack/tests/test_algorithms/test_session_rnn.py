@@ -1,26 +1,24 @@
-import os
 import numpy as np
 import pandas as pd
 import pytest
-import torch
-import torch.nn as nn
 
 from scipy.sparse import csr_matrix
 from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX, VALUE_IX
-from recpack.splitters.scenarios import StrongGeneralizationTimedMostRecent
 from recpack.algorithms.rnn.session_rnn import SessionRNN
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 
 @pytest.fixture(scope="function")
-def data_m_sessions():
+def data_m_sessions() -> DataM:
     # (user, time) matrix, non-zero entries are item ids
     user_time = csr_matrix(
         [
             # 0  1  2  3  4  5  6  7
-            [1, 1, 2, 0, 0, 0, 0, 0],
-            [0, 1, 2, 3, 0, 2, 0, 0],
-            [0, 0, 0, 0, 1, 2, 3, 2],
+            [0, 1, 2, 0, 0, 0, 0, 0],
+            [1, 2, 0, 1, 3, 1, 0, 0],
+            [1, 2, 1, 2, 1, 0, 2, 1],
+            [1, 3, 1, 2, 1, 0, 2, 1],
+            [1, 2, 1, 2, 1, 2, 1, 2],
         ]
     )
     user_ids, timestamps = user_time.nonzero()
@@ -37,7 +35,7 @@ def data_m_sessions():
 
 @pytest.fixture(scope="function")
 def session_rnn():
-    rnn = SessionRNN(seed=42, batch_size=2)
+    rnn = SessionRNN(seed=42, batch_size=1)
     return rnn
 
 
@@ -75,6 +73,8 @@ def test_session_rnn_predict(session_rnn, data_m_sessions):
     session_rnn.fit(data_m_sessions)
 
     X_pred = session_rnn.predict(data_m_sessions)
+    scores = X_pred.toarray()
+    top_item = scores.argmax(axis=1)
 
     # Prediction matrix should have same shape as input matrix
     assert isinstance(X_pred, csr_matrix)
@@ -85,3 +85,10 @@ def test_session_rnn_predict(session_rnn, data_m_sessions):
 
     # All items should have a score
     assert len(set(X_pred.nonzero()[1])) == data_m_sessions.shape[1]
+
+    # Rnn should be able to learn simple repeating patterns
+    assert top_item[0] == 1
+    assert top_item[1] == 2
+    assert top_item[2] == 2
+    assert top_item[3] == 2
+    assert top_item[4] == 1

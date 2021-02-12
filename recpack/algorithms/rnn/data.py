@@ -45,7 +45,7 @@ def data_m_to_tensor(
          [3, 8]]   ,   [4, 9]]   ,   [1, 3]]
 
     Note that these are simply the interactions from above, laid out column by
-    column. The last interaction (uid: 3, iid_in: 9) is dropped because the
+    column. The last interaction (uid: 3, iid_in: 9) is discarded because the
     number of interactions (7) is not a multiple of the batch size (2).
 
     :param data_m: DataM object to be converted to tensors, must have timestamps
