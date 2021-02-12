@@ -35,7 +35,7 @@ def data_m_sessions() -> DataM:
 
 @pytest.fixture(scope="function")
 def session_rnn():
-    rnn = SessionRNN(seed=42, batch_size=1)
+    rnn = SessionRNN(seed=42, batch_size=1, embedding_size=5, hidden_size=10)
     return rnn
 
 

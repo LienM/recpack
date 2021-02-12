@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 
 from scipy.sparse import csr_matrix, lil_matrix
@@ -18,7 +19,7 @@ from recpack.algorithms.util import (
     EarlyStoppingException,
 )
 from recpack.metrics.recall import recall_k
-from recpack.data.data_matrix import DataM, ITEM_IX
+from recpack.data.data_matrix import DataM, ITEM_IX, USER_IX
 from recpack.data.matrix import Matrix, to_datam, to_csr_matrix
 from typing import Tuple, Optional, List
 
@@ -96,20 +97,20 @@ class SessionRNN(Algorithm):
         self,
         num_layers: int = 1,
         hidden_size: int = 100,
-        embedding_size: Optional[int] = None,
+        embedding_size: Optional[int] = 250,
         dropout: float = 0.0,
-        activation: str = "elu-1",
+        activation: str = "identity",
         loss_fn: str = "cross-entropy",
         sample_size: int = 5000,
         alpha: float = 0.5,
         optimizer: str = "adagrad",
-        batch_size: int = 250,
+        batch_size: int = 512,
         learning_rate: float = 0.03,
         momentum: float = 0.0,
         clip_norm: Optional[float] = 1.0,
         seed: int = 2,
         bptt: int = 1,
-        num_epochs: int = 20,
+        num_epochs: int = 5,
         stopping_criterion: str = "recall",
     ):
         self.num_layers = num_layers
@@ -243,25 +244,41 @@ class SessionRNN(Algorithm):
         check_is_fitted(self)
 
         X = to_datam(X, timestamps=True)
-        X_pred = lil_matrix(X.shape)
+
+        if X.interaction_count == 0:
+            return csr_matrix(X.shape)
+
+        num_users = X.active_user_count
+        num_items = self.model_.output_size
+        num_scores = num_users * num_items
+
+        data = np.zeros(num_scores, dtype=np.float32)
+        row = np.zeros(num_scores, dtype=np.int32)
+        col = np.tile(np.arange(num_items), num_users)
 
         with torch.no_grad():
             actions, _, uids = data_m_to_tensor(
                 X, batch_size=1, device=self.device, shuffle=False, include_last=True
             )
             is_last_action = uids != uids.roll(-1, dims=0)
+            is_last_action[-1] = True
 
+            i = 0  # User/session count
             self.model_.train(False)
             hidden = self.model_.init_hidden(1)
             for action, uid, is_last in tqdm(
                 zip(actions, uids, is_last_action), total=len(actions)
             ):
                 output, hidden = self.model_(action.unsqueeze(0), hidden)
-                if is_last:
-                    X_pred[uid.item()] = output.cpu().numpy().reshape(-1)
-                    hidden = hidden * 0
+                if not is_last:
+                    continue
+                start, end = i * num_items, (i + 1) * num_items
+                data[start:end] = F.softmax(output.reshape(-1), dim=0).cpu().numpy()
+                row[start:end] = uid.item()
+                hidden = hidden * 0
+                i = i + 1
 
-        X_pred = X_pred.tocsr()
+        X_pred = csr_matrix((data, (row, col)), shape=X.shape)
 
         self._check_prediction(X_pred, X.values)
 
@@ -275,6 +292,7 @@ class SessionRNN(Algorithm):
             X, batch_size=self.batch_size, device=self.device, shuffle=True
         )
         is_last_action = uids != uids.roll(-1, dims=0)
+        is_last_action[-1] = True
 
         loss, losses = 0.0, []
         self.model_.train(True)
@@ -315,61 +333,3 @@ class SessionRNN(Algorithm):
         # TODO: save using temp files
         # if better:
         #    self.save(self.stopping_criterion.best_value)
-
-    def session_based_evaluate(self, X: Matrix, K: int = 20) -> Tuple[float, float]:
-        """
-        Calculates Recall@K and MRR@K using the evaluation procedure from the 2016
-        paper by Hidasi et al.
-
-        Each user/session is fed to the rnn action by action. If the true next item is
-        in the top K predicted items it is considered a 'hit'. Recall is the fraction
-        of hits over all actions in the dataset. MRR is the reciprocal rank of the
-        true next item, averaged over all actions in the dataset.
-
-        This method is mainly provided to compare performance to that reported in the
-        original paper and should not generally be used, as the results are heavily
-        skewed towards users/sessions with many actions.
-
-        :param X: Data to evaluate on. Timestamps required.
-        :param K: Metrics are calculated on the top K recommendations
-        """
-        check_is_fitted(self)
-
-        X = to_datam(X, timestamps=True)
-
-        def recall(output, targets, K=K):
-            _, indices = output.topk(K, dim=1)
-            hits = (indices == targets.reshape(-1, 1)).sum().item()
-            return hits / targets.nelement()
-
-        def mrr(output, targets, K=K):
-            _, indices = output.topk(K, dim=1)
-            hits = (indices == targets.reshape(-1, 1)).nonzero()
-            ranks = hits[:, -1] + 1
-            reciprocal = torch.reciprocal(ranks.float())
-            return (torch.sum(reciprocal) / targets.nelement()).item()
-
-        with torch.no_grad():
-            mean_recall, mean_mrr = self._session_evaluate(X, [recall, mrr])
-            return mean_recall, mean_mrr
-
-    def _session_evaluate(self, X: DataM, metrics: List):
-        actions, targets, uids = data_m_to_tensor(
-            X, batch_size=1, device=self.device, shuffle=False
-        )
-        is_last_action = uids != uids.roll(-1, dims=0)
-
-        self.model_.train(False)
-        metric_scores = [[] for _ in metrics]
-        hidden = self.model_.init_hidden(1)
-        for action, target, is_last in tqdm(
-            zip(actions, targets, is_last_action), total=len(actions)
-        ):
-            output, hidden = self.model_(action.unsqueeze(0), hidden)
-            for m_idx, m in enumerate(metrics):
-                score = m(output, target)
-                metric_scores[m_idx].append(score)
-            hidden = hidden * ~is_last.view(
-                1, -1, 1
-            )  # Reset hidden state between users
-        return [np.mean(scores) for scores in metric_scores]

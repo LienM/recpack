@@ -18,35 +18,48 @@ def data_m_to_tensor(
     include_last: bool = False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
-    Converts a data matrix with timestamp information to torch tensors.
+    Converts a data matrix with interactions to torch tensors.
 
     Information about the interactions is split over three different tensors
     of identical shape, containing item id, next item id and user id of the
-    interaction.
+    interaction. Interactions are grouped by user and ordered by time along
+    the first dimension of the tensors. The second dimension corresponds to
+    the batch size.
 
-    As an example, take following interactions (ordered by time for each user):
+    As an example, take following interactions (already grouped by user and
+    ordered by time for clarity)::
 
-        uid       0 0 0  1 1 1  2 2  3 3 3
-        iid       0 1 2  3 4 5  6 7  8 9 10
+        time      0 1 2  3 4  5 6 7  8 9 10
+        iid       0 1 2  3 4  5 6 7  8 9 10
+        uid       0 0 0  1 1  2 2 2  3 3 3
 
-    First, the last interaction of each user is dropped because we don't know
-    what the user's next action will be, so we can not train on it:
+    The last interaction of a user is never used as an input during training
+    because we don't know what the next action will be. Removing it, we get::
 
-        uid       0 0  1 1  2  3 3
-        iid_in    0 1  3 4  6  8 9
-        iid_next  1 2  4 5  7  9 10
+        time      0 1  3  5 6  8 9
+        iid_in    0 1  3  5 6  8 9
+        iid_next  1 2  4  6 7  9 10
+        uid       0 0  1  2 2  3 3
                         ^       ^
-    The returned tensors for a batch size of two would be:
+    These interactions are turned into tensors by cutting them in ``batch_size``
+    pieces of equal length, which form the columns of the tensors::
 
         iid_in        iid_next      uid
 
-        [[0, 4],      [[1, 5],      [[0, 1],
+        [[0, 5],      [[1, 6],      [[0, 2],
          [1, 6],       [2, 7],       [0, 2],
          [3, 8]]   ,   [4, 9]]   ,   [1, 3]]
 
     Note that these are simply the interactions from above, laid out column by
-    column. The last interaction (uid: 3, iid_in: 9) is discarded because the
-    number of interactions (7) is not a multiple of the batch size (2).
+    column. Each row is a mini-batch, containing interactions that took place
+    after the corresponding user's interaction in the previous row. Using this
+    format a recurrent network can process many user histories in parallel.
+
+    The last interaction (iid_in: 9, uid: 3) is discarded because the number of
+    interactions (7) is not a multiple of the batch size (2). Some users may
+    also have their interactions split across different columns. This has neg-
+    ligible impact on training when using any moderately large dataset, but may
+    be undesirable for evaluation. In that case a batch size of 1 can be used.
 
     :param data_m: DataM object to be converted to tensors, must have timestamps
     :param batch_size: Number of actions per batch. If the number of actions is
@@ -57,9 +70,9 @@ def data_m_to_tensor(
         False, actions will be ordered by user id.
     :param include_last: Whether to include the last interaction of each user.
         If true, the value of the next item id is undefined for the last action.
-    :return: Three tensors of shape (N, B), where B is the batch size and N is
-        the number of complete batches that can be created. They contain input
-        item ids, next item ids and user ids, respectively.
+    :return: Three tensors containing input item ids, next item ids and user ids,
+        respectively. All of shape (N, B), where B is the batch size and N is
+        the number of complete batches that can be created.
     """
     # Convert the item and user ids to 1D tensors
     df = data_m.dataframe
