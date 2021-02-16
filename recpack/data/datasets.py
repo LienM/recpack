@@ -33,7 +33,7 @@ def _fetch_remote(url: str, filename: str) -> str:
 
 class Dataset:
     """Represents a collaborative filtering dataset,
-        containing users who interacted in some way with a set of items.
+    containing users who interacted in some way with a set of items.
 
     Every Dataset has a set of preprocessing defaults,
     i.e. filters that are commonly applied to the dataset before use in recommendation algorithms.

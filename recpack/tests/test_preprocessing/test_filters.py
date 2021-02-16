@@ -153,7 +153,7 @@ def test_min_rating(rating_dataframe):
 def test_deduplicate(dataframe):
     df = dataframe
 
-    myfilter = filters.DeduplicateInteractions(
+    myfilter = filters.Deduplicate(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
         InteractionMatrix.TIMESTAMP_IX,

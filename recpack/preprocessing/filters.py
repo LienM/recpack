@@ -205,7 +205,19 @@ class MinRating(Filter):
         return df[df[self.rating_ix] >= self.min_rating].drop(columns=self.rating_ix)
 
 
-class DeduplicateInteractions(Filter):
+class Deduplicate(Filter):
+    """Deduplicate entries with the same user and item.
+
+    Removes all but the first occurence of a user, item pair in the dataframe.
+
+    :param item_id: Name of the column in which item identifiers are listed.
+    :type item_id: str
+    :param user_id: Name of the column in which user identifiers are listed.
+    :type user_id: str
+    :param timestamp_id: Name of the column in which timestamps are listed, defaults to None
+    :type timestamp_id: str, optional
+    """
+
     def __init__(
         self,
         item_id: str,
