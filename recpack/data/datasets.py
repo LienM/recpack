@@ -77,7 +77,7 @@ class Dataset:
         If the index is specified, the filter is inserted at the specified index.
         Otherwise it is appended.
 
-        :param _filter: Filter to be applied to the laoded dataframe
+        :param _filter: Filter to be applied to the loaded dataframe
                     processing to interaction matrix.
         :type _filter: Filter
         :param index: The index to insert the filter at,
