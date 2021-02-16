@@ -54,7 +54,7 @@ class Dataset:
     def __init__(self, filename: str, preprocess_default=True):
         self.filename = filename
         self.preprocessor = DataFramePreprocessor(
-            self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX, dedupe=False
+            self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX
         )
         if preprocess_default:
             for f in self._default_filters:

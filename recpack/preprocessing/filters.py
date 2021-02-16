@@ -203,3 +203,16 @@ class MinRating(Filter):
 
     def apply(self, df):
         return df[df[self.rating_ix] >= self.min_rating].drop(columns=self.rating_ix)
+
+
+class DeduplicateInteractions(Filter):
+    def __init__(
+        self,
+        item_id: str,
+        user_id: str,
+        timestamp_id: str = None,
+    ):
+        super().__init__(item_id, user_id, timestamp_id)
+
+    def apply(self, df):
+        return df.drop_duplicates([self.user_id, self.item_id], keep="first")

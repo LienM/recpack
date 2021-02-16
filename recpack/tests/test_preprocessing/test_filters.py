@@ -150,6 +150,21 @@ def test_min_rating(rating_dataframe):
     assert "rating" not in filtered_df.columns
 
 
+def test_deduplicate(dataframe):
+    df = dataframe
+
+    myfilter = filters.DeduplicateInteractions(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    filtered_df = myfilter.apply(df)
+
+    # 4 duplicates
+    assert filtered_df.shape[0] == dataframe.shape[0] - 4
+
+
 def test_apply_all(dataframe):
 
     df = dataframe
