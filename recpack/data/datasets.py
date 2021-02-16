@@ -5,7 +5,12 @@ from typing import List
 from urllib.request import urlretrieve
 import zipfile
 
-from recpack.preprocessing.filters import Filter, MinItemsPerUser, MinUsersPerItem
+from recpack.preprocessing.filters import (
+    Filter,
+    MinItemsPerUser,
+    MinUsersPerItem,
+    MinRating,
+)
 from recpack.data.matrix import InteractionMatrix, to_binary
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
 from recpack.util import to_tuple
@@ -199,17 +204,19 @@ class MovieLens25M(Dataset):
     Uses the `ratings.csv` file to generate an interaction matrix.
 
     Default processing makes sure that:
+    - Each rating above or equal to 1 is used as interaction
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
-    To only use ratings above a certain value as interactions, you have to add this filter.
-    You want this filter to be applied before the default ones, so you can use:
+    To use another rating above a certain value as interactions, you have to manually set the preprocessig filters.
 
     ```
-    from recpack.preprocessing.filters import MinRating
+    from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
     from recpack.data.datasets import MovieLens25M
-    d = MovieLens25M('path/to/file')
-    d.add_filter(MinRating("rating", 3), index=0)
+    d = MovieLens25M('path/to/file', preprocess_default=False)
+    d.add_filter(MinRating("rating", 3, d.ITEM_IX, d.USER_IX))
+    d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
+    d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
     ```
 
     :param filename: Where to look for the file with data.
@@ -228,12 +235,16 @@ class MovieLens25M(Dataset):
     def _default_filters(self) -> List[Filter]:
         """The default filters for the Movielens 25M dataset
 
+        By default each rating is considered as an interaction.
         Filters users and items with not enough interactions.
 
         :return: List of filters to use as default preprocessing.
         :rtype: List[Filter]
         """
         return [
+            MinRating(
+                "rating", min_rating=1, item_id=self.ITEM_IX, user_id=self.USER_IX
+            ),
             MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
             MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
         ]

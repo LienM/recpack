@@ -131,7 +131,7 @@ def test_movielens25m():
 
     data = d.load_interaction_matrix()
 
-    assert data.shape == (75, 573)
+    assert data.shape == (75, 565)
 
 
 def test_recsys_challenge_2015():
