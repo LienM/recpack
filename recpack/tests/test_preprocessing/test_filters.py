@@ -150,8 +150,8 @@ def test_min_rating(rating_dataframe):
     assert "rating" not in filtered_df.columns
 
 
-def test_deduplicate(dataframe):
-    df = dataframe
+def test_deduplicate(dataframe_with_fixed_timestamps_inverted):
+    df = dataframe_with_fixed_timestamps_inverted
 
     myfilter = filters.Deduplicate(
         InteractionMatrix.ITEM_IX,
@@ -162,7 +162,14 @@ def test_deduplicate(dataframe):
     filtered_df = myfilter.apply(df)
 
     # 4 duplicates
-    assert filtered_df.shape[0] == dataframe.shape[0] - 4
+    assert filtered_df.shape[0] == dataframe_with_fixed_timestamps_inverted.shape[0] - 4
+    # removes the last events
+    assert (
+        filtered_df[filtered_df[InteractionMatrix.USER_IX] == 4][
+            InteractionMatrix.TIMESTAMP_IX
+        ].max()
+        == 1
+    )
 
 
 def test_apply_all(dataframe):

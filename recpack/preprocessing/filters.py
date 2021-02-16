@@ -227,4 +227,6 @@ class Deduplicate(Filter):
         super().__init__(item_id, user_id, timestamp_id)
 
     def apply(self, df):
+        if self.timestamp_id is not None:
+            df = df.sort_values(self.timestamp_id)
         return df.drop_duplicates([self.user_id, self.item_id], keep="first")
