@@ -208,8 +208,8 @@ class MinRating(Filter):
 class Deduplicate(Filter):
     """Deduplicate entries with the same user and item.
 
-    Removes all but the first occurence of a user, item pair in the dataframe.
-
+    Removes all but one of each user-item pair in the dataframe.
+    If timestamps are available, the first interaction is kept.
     :param item_id: Name of the column in which item identifiers are listed.
     :type item_id: str
     :param user_id: Name of the column in which user identifiers are listed.
