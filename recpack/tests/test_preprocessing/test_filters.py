@@ -100,12 +100,15 @@ def test_nmost_popular(dataframe):
 
     assert 0 in filtered_iids
     assert 1 in filtered_iids
-    assert 2 in filtered_iids
+    # assert 2 in filtered_iids
     assert 3 not in filtered_iids
     assert 4 not in filtered_iids
-    # 2 and 5 have both 3 interactions, because 2 occurs a first time
-    # before 5 in the dataframe, it gets selected.
-    assert 5 not in filtered_iids
+
+    # 2 and 5 have both 3 interactions, so one of the two should get selected.
+    five_in = 5 in filtered_iids
+    two_in = 2 in filtered_iids
+
+    assert (five_in or two_in) and not (five_in and two_in)
 
 
 def test_nmost_recent(dataframe_with_fixed_timestamps):
@@ -163,16 +166,22 @@ def test_apply_all(dataframe):
 
     assert 0 in filtered_iids
     assert 1 in filtered_iids
-    assert 2 in filtered_iids
     assert 3 not in filtered_iids
     assert 4 not in filtered_iids
-    assert 5 not in filtered_iids
+    # 2 and 5 have both 3 interactions, so one of the two should get selected.
+    five_in = 5 in filtered_iids
+    two_in = 2 in filtered_iids
+
+    assert (five_in or two_in) and not (five_in and two_in)
 
     filtered_iids = filtered_df2[InteractionMatrix.ITEM_IX].unique()
 
     assert 0 in filtered_iids
     assert 1 in filtered_iids
-    assert 2 in filtered_iids
     assert 3 not in filtered_iids
     assert 4 not in filtered_iids
-    assert 5 not in filtered_iids
+    # 2 and 5 have both 3 interactions, so one of the two should get selected.
+    five_in = 5 in filtered_iids
+    two_in = 2 in filtered_iids
+
+    assert (five_in or two_in) and not (five_in and two_in)

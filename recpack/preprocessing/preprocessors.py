@@ -21,9 +21,7 @@ class DataFramePreprocessor:
     ITEM_IX = "iid"
     USER_IX = "uid"
 
-    def __init__(
-        self, item_id, user_id, timestamp_id=None, dedupe=False
-    ):
+    def __init__(self, item_id, user_id, timestamp_id=None, dedupe=False):
         # CHECK: I removed value_id here, but I could also have done some magic to process the cases where we can anyway.
         # I think this is better though, what do you think?
         """
@@ -47,15 +45,24 @@ class DataFramePreprocessor:
         self.dedupe = dedupe
         self.filters = []
 
-    def add_filter(self, _filter: Filter):
+    def add_filter(self, _filter: Filter, index=None):
         """
         Add a preprocessing filter to be applied before transforming to a InteractionMatrix object.
         Filters are applied in order, different orderings can lead to different results!
 
+        If the index is specified, the filter is inserted at the specified index.
+        Otherwise it is appended.
+
         :param _filter: The filter to be applied
         :type _filter: Filter
+        :param index: The index to insert the filter at,
+            None will append the filter. Defaults to None
+        :type index: int
         """
-        self.filters.append(_filter)
+        if index is None:
+            self.filters.append(_filter)
+        else:
+            self.filters.insert(index, _filter)
 
     def map_users(self, df):
         logger.debug("Map users")

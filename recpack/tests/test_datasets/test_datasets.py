@@ -81,6 +81,19 @@ def test_add_filter():
     assert data.shape[1] == 3
 
 
+def test_add_filter_w_index():
+    path_to_file = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), "datasets/citeulike_sample.dat"
+    )
+
+    d = datasets.CiteULike(path_to_file)
+
+    d.add_filter(NMostPopular(3, d.ITEM_IX, d.USER_IX), index=0)
+
+    assert type(d.preprocessor.filters[0]) == NMostPopular
+    assert len(d.preprocessor.filters) == 3
+
+
 def test_citeulike():
     # To get sample we used head -1000 users.dat
     path_to_file = os.path.join(

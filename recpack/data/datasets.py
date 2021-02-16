@@ -66,14 +66,21 @@ class Dataset:
         """
         return []
 
-    def add_filter(self, _filter: Filter):
-        """Add a filter to be used when calling load_interaction_matrix()
+    def add_filter(self, _filter: Filter, index=None):
+        """Add a filter to be used when calling load_interaction_matrix().
+
+        If the index is specified, the filter is inserted at the specified index.
+        Otherwise it is appended.
 
         :param _filter: Filter to be applied to the laoded dataframe
                     processing to interaction matrix.
         :type _filter: Filter
+        :param index: The index to insert the filter at,
+            None will append the filter. Defaults to None
+        :type index: int
+
         """
-        self.preprocessor.add_filter(_filter)
+        self.preprocessor.add_filter(_filter, index=index)
 
     def fetch_dataset(self, force=False):
         """Check if dataset is present, if not download
