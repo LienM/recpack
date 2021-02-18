@@ -7,25 +7,33 @@ from recpack.data.matrix import InteractionMatrix
 
 def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
-    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX,
-                                      timestamp_id=InteractionMatrix.TIMESTAMP_IX, dedupe=False)
+    processor = DataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
+        dedupe=False,
+    )
 
     data_m = processor.process(dataframe)
 
     assert len(processor.item_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique())
+        dataframe[InteractionMatrix.ITEM_IX].unique()
+    )
     assert len(processor.user_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.USER_IX].unique())
+        dataframe[InteractionMatrix.USER_IX].unique()
+    )
 
-    assert data_m.shape[0] == len(
-        dataframe[InteractionMatrix.USER_IX].unique())
-    assert data_m.shape[1] == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert data_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert data_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
 
 
 def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
-    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX,
-                                      timestamp_id=InteractionMatrix.TIMESTAMP_IX, dedupe=True)
+    processor = DataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
+        dedupe=True,
+    )
 
     org_row = dataframe.loc[3, :].values
     row = org_row.copy()
@@ -37,22 +45,26 @@ def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
     data_m = processor.process(dataframe)
 
     assert len(processor.item_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique())
+        dataframe[InteractionMatrix.ITEM_IX].unique()
+    )
     assert len(processor.user_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.USER_IX].unique())
+        dataframe[InteractionMatrix.USER_IX].unique()
+    )
 
-    assert data_m.shape[0] == len(
-        dataframe[InteractionMatrix.USER_IX].unique())
-    assert data_m.shape[1] == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert data_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert data_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
 
     assert org_row[2] == data_m.timestamps[row[0], row[1]]
     assert not row[2] == data_m.timestamps[row[0], row[1]]
 
 
 def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
-    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX,
-                                      timestamp_id=InteractionMatrix.TIMESTAMP_IX, dedupe=False)
+    processor = DataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
+        dedupe=False,
+    )
 
     org_row = dataframe.loc[3, :].values
     row = org_row.copy()
@@ -64,14 +76,14 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
     data_m = processor.process(dataframe)
 
     assert len(processor.item_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique())
+        dataframe[InteractionMatrix.ITEM_IX].unique()
+    )
     assert len(processor.user_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.USER_IX].unique())
+        dataframe[InteractionMatrix.USER_IX].unique()
+    )
 
-    assert data_m.shape[0] == len(
-        dataframe[InteractionMatrix.USER_IX].unique())
-    assert data_m.shape[1] == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert data_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert data_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
 
     two_values = data_m.timestamps[row[0], row[1]]
 
@@ -82,7 +94,11 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
 
 def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
     processor = DataFramePreprocessor(
-        InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX, dedupe=False)
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+        dedupe=False,
+    )
 
     dataframe_2 = dataframe.copy()
 
@@ -102,17 +118,21 @@ def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
     data_ms = processor.process_many(dataframe, dataframe_2)
 
     unique_users = set(dataframe[InteractionMatrix.USER_IX].unique()).union(
-        dataframe_2[InteractionMatrix.USER_IX].unique())
+        dataframe_2[InteractionMatrix.USER_IX].unique()
+    )
     unique_items = set(dataframe[InteractionMatrix.ITEM_IX].unique()).union(
-        dataframe_2[InteractionMatrix.ITEM_IX].unique())
+        dataframe_2[InteractionMatrix.ITEM_IX].unique()
+    )
 
     assert len(processor.item_id_mapping.keys()) == len(unique_items)
     assert len(processor.user_id_mapping.keys()) == len(unique_users)
 
     assert len(processor.item_id_mapping.keys()) != len(
-        dataframe_2[InteractionMatrix.ITEM_IX].unique())
+        dataframe_2[InteractionMatrix.ITEM_IX].unique()
+    )
     assert len(processor.user_id_mapping.keys()) != len(
-        dataframe_2[InteractionMatrix.USER_IX].unique())
+        dataframe_2[InteractionMatrix.USER_IX].unique()
+    )
 
     assert data_ms[0].shape[0] == len(unique_users)
     assert data_ms[0].shape[1] == len(unique_items)
@@ -123,7 +143,11 @@ def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
 
 def test_raises(dataframe):
     processor = DataFramePreprocessor(
-        InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX, dedupe=False)
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+        dedupe=False,
+    )
 
     with pytest.raises(RuntimeError):
         processor.map_users(dataframe)
@@ -134,11 +158,19 @@ def test_raises(dataframe):
 
 def test_dataframe_preprocessor_w_filter_no_duplicates(dataframe):
 
-    processor = DataFramePreprocessor(InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX,
-                                      timestamp_id=InteractionMatrix.TIMESTAMP_IX, dedupe=False)
+    processor = DataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
+        dedupe=False,
+    )
 
     myfilter = filters.NMostPopular(
-        3, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX)
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
 
     processor.add_filter(myfilter)
 
@@ -147,11 +179,51 @@ def test_dataframe_preprocessor_w_filter_no_duplicates(dataframe):
     filtered_df = myfilter.apply(dataframe)
 
     assert len(processor.item_id_mapping.keys()) == len(
-        filtered_df[InteractionMatrix.ITEM_IX].unique())
+        filtered_df[InteractionMatrix.ITEM_IX].unique()
+    )
     assert len(processor.user_id_mapping.keys()) == len(
-        filtered_df[InteractionMatrix.USER_IX].unique())
+        filtered_df[InteractionMatrix.USER_IX].unique()
+    )
 
-    assert data_m.shape[0] == len(
-        filtered_df[InteractionMatrix.USER_IX].unique())
-    assert data_m.shape[1] == len(
-        filtered_df[InteractionMatrix.ITEM_IX].unique())
+    assert data_m.shape[0] == len(filtered_df[InteractionMatrix.USER_IX].unique())
+    assert data_m.shape[1] == len(filtered_df[InteractionMatrix.ITEM_IX].unique())
+
+
+def test_add_filter(dataframe):
+    processor = DataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
+        dedupe=False,
+    )
+
+    processor.add_filter(
+        filters.MinUsersPerItem(
+            3,
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.USER_IX,
+            InteractionMatrix.TIMESTAMP_IX,
+        )
+    )
+    processor.add_filter(
+        filters.NMostPopular(
+            3,
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.USER_IX,
+            InteractionMatrix.TIMESTAMP_IX,
+        )
+    )
+
+    processor.add_filter(
+        filters.MinItemsPerUser(
+            3,
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.USER_IX,
+            InteractionMatrix.TIMESTAMP_IX,
+        ),
+        index=1,
+    )
+
+    assert type(processor.filters[0]) == filters.MinUsersPerItem
+    assert type(processor.filters[1]) == filters.MinItemsPerUser
+    assert type(processor.filters[2]) == filters.NMostPopular

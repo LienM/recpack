@@ -11,11 +11,12 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class EASE(SimilarityMatrixAlgorithm):
-    def __init__(self, l2=1e3, alpha=0):
+    def __init__(self, l2=1e3, alpha=0, density=None):
         """ l2 norm for regularization and alpha exponent to filter popularity bias. """
         super().__init__()
         self.l2 = l2
         self.alpha = alpha  # alpha exponent for filtering popularity bias
+        self.density = density
 
     def fit(self, X: Matrix):
         """Compute the closed form solution, optionally rescalled to counter popularity bias (see param alpha). """
@@ -45,8 +46,24 @@ class EASE(SimilarityMatrixAlgorithm):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
+        if self.density:
+            self.prune()
+
         self._check_fit_complete()
         return self
+
+    def prune(self):
+        # Prune B (similarity matrix)
+        # Steck et al. state that we can increase the sparsity in matrix B without significant impact on quality.
+
+        K = min(
+            int(self.density * np.product(self.similarity_matrix_.shape)),
+            self.similarity_matrix_.nnz,
+        )
+        self.similarity_matrix_.data[
+            np.argpartition(abs(self.similarity_matrix_.data), -K)[0:-K]
+        ] = 0
+        self.similarity_matrix_.eliminate_zeros()
 
     def load(self, filename):
         self.similarity_matrix_ = np.load(filename)
@@ -93,6 +110,9 @@ class EASE_Intercept(EASE):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
+        if self.density:
+            self.prune()
+
         self._check_fit_complete()
 
         return self
@@ -128,6 +148,9 @@ class EASE_XY(EASE):
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
+        if self.density:
+            self.prune()
+
         self._check_fit_complete()
 
         return self
@@ -160,6 +183,9 @@ class EASE_AVG(EASE):
         B = B_rr - P @ D
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
 
+        if self.density:
+            self.prune()
+
         self._check_fit_complete()
 
         return self
@@ -191,6 +217,9 @@ class EASE_AVG_Int(EASE_AVG):
         B[:-1, :] -= P[:-1, :-1] @ D
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
+        if self.density:
+            self.prune()
+
         self._check_fit_complete()
         return self
 

@@ -8,7 +8,11 @@ def test_min_users_per_item_filter(dataframe):
 
     # Not counting duplicates
     myfilter = filters.MinUsersPerItem(
-        3, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX)
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
     filtered_df = myfilter.apply(df)
 
     filtered_iids = filtered_df[InteractionMatrix.ITEM_IX].unique()
@@ -22,7 +26,12 @@ def test_min_users_per_item_filter(dataframe):
 
     # Counting duplicates
     myfilter = filters.MinUsersPerItem(
-        3, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX, count_duplicates=True)
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+        count_duplicates=True,
+    )
     filtered_df = myfilter.apply(df)
 
     filtered_iids = filtered_df[InteractionMatrix.ITEM_IX].unique()
@@ -41,7 +50,11 @@ def test_min_items_per_user_filter(dataframe):
 
     # Not counting duplicates
     myfilter = filters.MinItemsPerUser(
-        3, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX)
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
     filtered_df = myfilter.apply(df)
 
     filtered_uids = filtered_df[InteractionMatrix.USER_IX].unique()
@@ -54,7 +67,11 @@ def test_min_items_per_user_filter(dataframe):
 
     # Counting duplicates
     myfilter = filters.MinItemsPerUser(
-        3, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX, count_duplicates=True
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+        count_duplicates=True,
     )
     filtered_df = myfilter.apply(df)
 
@@ -72,7 +89,37 @@ def test_nmost_popular(dataframe):
     df = dataframe
 
     myfilter = filters.NMostPopular(
-        3, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX)
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
+    filtered_df = myfilter.apply(df)
+
+    filtered_iids = filtered_df[InteractionMatrix.ITEM_IX].unique()
+
+    assert 0 in filtered_iids
+    assert 1 in filtered_iids
+    # assert 2 in filtered_iids
+    assert 3 not in filtered_iids
+    assert 4 not in filtered_iids
+
+    # 2 and 5 have both 3 interactions, so one of the two should get selected.
+    five_in = 5 in filtered_iids
+    two_in = 2 in filtered_iids
+
+    assert (five_in or two_in) and not (five_in and two_in)
+
+
+def test_nmost_recent(dataframe_with_fixed_timestamps):
+    df = dataframe_with_fixed_timestamps
+
+    myfilter = filters.NMostRecent(
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
     filtered_df = myfilter.apply(df)
 
     filtered_iids = filtered_df[InteractionMatrix.ITEM_IX].unique()
@@ -85,28 +132,78 @@ def test_nmost_popular(dataframe):
     assert 5 in filtered_iids
 
 
+def test_min_rating(rating_dataframe):
+
+    df = rating_dataframe
+
+    myfilter = filters.MinRating(
+        "rating",
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+        min_rating=4,
+    )
+    filtered_df = myfilter.apply(df)
+
+    assert filtered_df.shape == (4, 3)
+
+    assert "rating" not in filtered_df.columns
+
+
+def test_deduplicate(dataframe_with_fixed_timestamps_inverted):
+    df = dataframe_with_fixed_timestamps_inverted
+
+    myfilter = filters.Deduplicate(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    filtered_df = myfilter.apply(df)
+
+    # 4 duplicates
+    assert filtered_df.shape[0] == dataframe_with_fixed_timestamps_inverted.shape[0] - 4
+    # removes the last events
+    assert (
+        filtered_df[filtered_df[InteractionMatrix.USER_IX] == 4][
+            InteractionMatrix.TIMESTAMP_IX
+        ].max()
+        == 1
+    )
+
+
 def test_apply_all(dataframe):
 
     df = dataframe
 
     myfilter = filters.NMostPopular(
-        3, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, InteractionMatrix.TIMESTAMP_IX)
+        3,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    )
     filtered_df1, filtered_df2 = myfilter.apply_all(df, df.copy())
 
     filtered_iids = filtered_df1[InteractionMatrix.ITEM_IX].unique()
 
     assert 0 in filtered_iids
     assert 1 in filtered_iids
-    assert 2 not in filtered_iids
     assert 3 not in filtered_iids
     assert 4 not in filtered_iids
-    assert 5 in filtered_iids
+    # 2 and 5 have both 3 interactions, so one of the two should get selected.
+    five_in = 5 in filtered_iids
+    two_in = 2 in filtered_iids
+
+    assert (five_in or two_in) and not (five_in and two_in)
 
     filtered_iids = filtered_df2[InteractionMatrix.ITEM_IX].unique()
 
     assert 0 in filtered_iids
     assert 1 in filtered_iids
-    assert 2 not in filtered_iids
     assert 3 not in filtered_iids
     assert 4 not in filtered_iids
-    assert 5 in filtered_iids
+    # 2 and 5 have both 3 interactions, so one of the two should get selected.
+    five_in = 5 in filtered_iids
+    two_in = 2 in filtered_iids
+
+    assert (five_in or two_in) and not (five_in and two_in)
