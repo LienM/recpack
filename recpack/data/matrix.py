@@ -1,7 +1,7 @@
 import logging
 import operator
 from typing import List, Set, Tuple, Union, Callable, Any
-from warnings import warn
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -75,10 +75,12 @@ class InteractionMatrix(DataMatrix):
         self._df = df.rename(columns=col_mapper)
 
         num_users = (
-            self._df[InteractionMatrix.USER_IX].max() + 1 if shape is None else shape[0]
+            self._df[InteractionMatrix.USER_IX].max(
+            ) + 1 if shape is None else shape[0]
         )
         num_items = (
-            self._df[InteractionMatrix.ITEM_IX].max() + 1 if shape is None else shape[1]
+            self._df[InteractionMatrix.ITEM_IX].max(
+            ) + 1 if shape is None else shape[1]
         )
 
         self.shape = (num_users, num_items)
@@ -115,7 +117,8 @@ class InteractionMatrix(DataMatrix):
         ].values
         indices = indices[:, 0], indices[:, 1]
 
-        matrix = csr_matrix((values, indices), shape=self.shape, dtype=np.int32)
+        matrix = csr_matrix((values, indices),
+                            shape=self.shape, dtype=np.int32)
         return matrix
 
     def get_timestamp(self, interactionid: int) -> int:
@@ -132,12 +135,15 @@ class InteractionMatrix(DataMatrix):
             raise AttributeError(
                 "No timestamp column, so timestamps could not be retrieved"
             )
-        return self._df.loc[
-            self._df[InteractionMatrix.INTERACTION_IX] == interactionid,
-            InteractionMatrix.TIMESTAMP_IX,
-        ].values[0]
+        try:
+            return self._df.loc[
+                self._df[InteractionMatrix.INTERACTION_IX] == interactionid,
+                InteractionMatrix.TIMESTAMP_IX,
+            ].values[0]
+        except IndexError as e:
+            raise KeyError(
+                f"Interaction ID {interactionid} not present in data")
 
-    # TODO This doesn't work with duplicates. FIX!
     @property
     def timestamps(self) -> pd.Series:
         """Timestamps of interactions as a pandas Series, indexed by user and item id.
@@ -301,6 +307,15 @@ class InteractionMatrix(DataMatrix):
 
         mask = self._df[InteractionMatrix.INTERACTION_IX].isin(interaction_ids)
 
+        unknown_interaction_ids = set(interaction_ids).difference(
+            self._df[InteractionMatrix.INTERACTION_IX].unique())
+
+        if unknown_interaction_ids:
+            warnings.warn(f"IDs {unknown_interaction_ids} not present in data")
+        if not interaction_ids:
+            warnings.warn(
+                "No interaction IDs given, returning empty InteractionMatrix.")
+
         return self._apply_mask(mask, inplace=inplace)
 
     def indices_in(self, u_i_lists: Tuple[List[int], List[int]], inplace=False):
@@ -326,7 +341,8 @@ class InteractionMatrix(DataMatrix):
         # This index can be dropped safely,
         #   as the data is still there in the original columns.
         index = pd.MultiIndex.from_frame(
-            interaction_m._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]]
+            interaction_m._df[[InteractionMatrix.USER_IX,
+                               InteractionMatrix.ITEM_IX]]
         )
         tuples = list(zip(*u_i_lists))
         c_df = interaction_m._df.set_index(index)
@@ -338,7 +354,7 @@ class InteractionMatrix(DataMatrix):
         return None if inplace else interaction_m
 
     @property
-    def binary_user_history(self):
+    def binary_item_history(self):
         """The unique interactions per user
 
         :yield: tuples of user, list of distinct items the user interacted with.
@@ -398,6 +414,12 @@ class InteractionMatrix(DataMatrix):
     def num_interactions(self) -> int:
         """The total number of interactions."""
         return len(self._df)
+
+    @property
+    def density(self) -> float:
+        num_users, num_items = self.shape
+        density = self.values.nnz / (num_users * num_items)
+        return density
 
     @property
     def binary_values(self) -> csr_matrix:
@@ -503,6 +525,7 @@ class UnsupportedTypeError(Exception):
         assert not _is_supported(X)
         super().__init__(
             "Recpack only supports matrix types {}. Received {}.".format(
-                ", ".join(t.__name__ for t in _supported_types), type(X).__name__
+                ", ".join(t.__name__ for t in _supported_types), type(
+                    X).__name__
             )
         )
