@@ -26,7 +26,6 @@ def _fetch_remote(url: str, filename: str) -> str:
     :return: The filename where data was saved
     :rtype: str
     """
-    # TODO: checksum?
     urlretrieve(url, filename)
     return filename
 
@@ -41,7 +40,7 @@ class Dataset:
 
     A Dataset is transformed into an InteractionMatrix
 
-    :param filename: Where to look for the file with data.
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
@@ -110,9 +109,12 @@ class Dataset:
         raise NotImplementedError("Needs to be implemented")
 
     def load_interaction_matrix(self) -> InteractionMatrix:
-        """Parse the loaded dataframe into an InteractionMatrix.
+        """Loads data into an InteractionMatrix object.
 
-        During parsing the added filters are applied in order.
+        Data is loaded into a dataframe using the `load_dataframe` function.
+        Resulting dataframe is parsed into an `InteractionMatrix` object.
+        During parsing the filters are applied in order.
+
         :return: The resulting InteractionMatrix
         :rtype: InteractionMatrix
         """
@@ -128,10 +130,11 @@ class CiteULike(Dataset):
     Uses the `users.dat` file from the dataset to construct an implicit feedback interaction matrix.
 
     Default processing makes sure that:
+
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
-    :param filename: Where to look for the file with data.
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
@@ -204,22 +207,23 @@ class MovieLens25M(Dataset):
     Uses the `ratings.csv` file to generate an interaction matrix.
 
     Default processing makes sure that:
+
     - Each rating above or equal to 1 is used as interaction
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
-    To use another rating above a certain value as interactions, you have to manually set the preprocessig filters.
+    To use another value as minimal rating to mark interaction as positive,
+    you have to manually set the preprocessig filters.::
 
-    ```
-    from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
-    from recpack.data.datasets import MovieLens25M
-    d = MovieLens25M('path/to/file', preprocess_default=False)
-    d.add_filter(MinRating("rating", 3, d.ITEM_IX, d.USER_IX))
-    d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
-    d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
-    ```
+        from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
+        from recpack.data.datasets import MovieLens25M
+        d = MovieLens25M('path/to/file', preprocess_default=False)
+        d.add_filter(MinRating("rating", 3, d.ITEM_IX, d.USER_IX))
+        d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
+        d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
-    :param filename: Where to look for the file with data.
+
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
@@ -301,9 +305,10 @@ class RecsysChallenge2015(Dataset):
     you should download the data manually and provide the path to the `yoochoose-clicks.dat` file.
 
     Default processing makes sure that:
+
     - Each remaining  item has been interacted with by at least 5 users.
 
-    :param filename: Where to look for the file with data.
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
