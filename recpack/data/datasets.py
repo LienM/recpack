@@ -109,8 +109,11 @@ class Dataset:
     """
 
     USER_IX = "user_id"
+    """name of the column in the loaded dataframe with user identifiers"""
     ITEM_IX = "item_id"
+    """name of the column in the loaded dataframe with item identifiers"""
     TIMESTAMP_IX = "seconds_since_epoch"
+    """name of the column in the loaded dataframe with timestamp, in seconds since epoch"""
 
     def __init__(self, filename: str, preprocess_default=True):
         self.filename = filename
@@ -203,6 +206,7 @@ class CiteULike(Dataset):
     """
 
     TIMESTAMP_IX = None
+    """The dataset has no notion of Timestamps, so no column present in dataframe"""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -292,9 +296,13 @@ class MovieLens25M(Dataset):
     """
 
     USER_IX = "userId"
+    """column name in the loaded dataframe with user identifiers"""
     ITEM_IX = "movieId"
+    """name of the column in the loaded dataframe with user identifiers"""
     TIMESTAMP_IX = "timestamp"
+    """name of the column in the loaded dataframe with timestamp, in seconds since epoch"""
     RATING_IX = "rating"
+    """name of the column in the loaded dataframe with rating values"""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -377,6 +385,7 @@ class RecsysChallenge2015(Dataset):
     """
 
     USER_IX = "session"
+    """column name in the loaded dataframe with user identifiers"""
 
     def _download_dataset(self):
         """Downloading this dataset is not supported."""

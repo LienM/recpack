@@ -113,7 +113,7 @@ class InteractionMatrix(DataMatrix):
 
         self.shape = (num_users, num_items)
 
-    def copy(self):
+    def copy(self) -> "InteractionMatrix":
         """Create a copy of this dataM object.
 
         :return: Copy of this object
@@ -461,6 +461,13 @@ class InteractionMatrix(DataMatrix):
 
     @property
     def density(self) -> float:
+        """The density of the interaction matrix.
+
+        The density is computed as the fraction of user item pairs that have an interaction
+
+        :return: The density.
+        :rtype: float
+        """
         num_users, num_items = self.shape
         density = self.values.nnz / (num_users * num_items)
         return density
@@ -506,16 +513,15 @@ class InteractionMatrix(DataMatrix):
         return InteractionMatrix(df, cls.ITEM_IX, cls.USER_IX, shape=X.shape)
 
 
-"""
-Conversion and validation of the various matrix data types supported by recpack.
+# Conversion and validation of the various matrix data types supported by recpack.
 
-In this module the Matrix type is defined, as the union of the InteractionMatrix object,
-and csr_matrix, the typically used sparse represenation.
+# In this module the Matrix type is defined, as the union of the InteractionMatrix object,
+# and csr_matrix, the typically used sparse represenation.
 
-This allows you to use the classes that support Matrix as parameter type
-to be used without the use of the InteractionMatrix object.
-"""
+# This allows you to use the classes that support Matrix as parameter type
+# to be used without the use of the InteractionMatrix object.
 Matrix = Union[InteractionMatrix, csr_matrix]
+
 _supported_types = Matrix.__args__  # type: ignore
 
 
