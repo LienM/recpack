@@ -1,10 +1,6 @@
 recpack.data
 ====================
 
-The data module contains functionality for representing data, and loading datasets.
+.. automodule:: recpack.data
+    :members:
 
-.. toctree::
-   :maxdepth: 1
-
-   recpack.data.datasets
-   recpack.data.matrix

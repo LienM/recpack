@@ -5,6 +5,12 @@ We use [`black`](https://github.com/ambv/black) for code
 formatting and [`flake8`](http://flake8.pycqa.org/en/latest/) for linting its
 Python modules.
 
+### Documentation
+Documentation is auto generated from docstrings in the code. 
+These docstrings should be written in [reStructureText](https://docutils.sourceforge.io/rst.html) format.
+
+For more information on documentation see the [doc/README.md](doc/README.md)
+
 ### Code formatting
 
 [`black`](https://github.com/ambv/black) is an opinionated Python code
