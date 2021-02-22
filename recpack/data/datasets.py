@@ -1,3 +1,65 @@
+"""Module responsible for handling datasets.
+
+Summary
+---------
+
+.. currentmodule:: recpack.data.datasets
+
+.. autosummary::
+
+    Dataset
+    CiteULike
+    MovieLens25M
+    RecsysChallenge2015
+
+
+Example
+---------
+
+Loading a dataset only takes a couple of lines.
+If the file specified does not exist, the dataset is downloaded and written into this file.
+Subsequent loading of the dataset then happens from this file. ::
+
+    from recpack.data.datasets import MovieLens25M
+
+    # Folder needs to exist, file will be downloaded if not present
+    # This can take a while
+    ml_loader = MovieLens25M('datasets/ml-25m.csv')
+    data = ml_loader.load_interaction_matrix()
+
+Each dataset has its own default preprocessing steps, documented in the classes respectively.
+To use custom preprocessing a couple more lines should be added to the example. ::
+
+    from recpack.data.datasets import MovieLens25M
+    from recpack.preprocessing.filters import MinRating, MinUsersPerItem, MinItemsPerUser
+
+    ml_loader = MovieLens25M('datasets/ml-25m.csv', preprocess_default=False)
+    # Only consider ratings 4 or higher as interactions
+    ml_loader.add_filter(MinRating(
+        ml_loader.RATING_IX,
+        ml_loader.ITEM_IX,
+        ml_loader.USER_IX,
+        min_rating=4
+    ))
+    # Keep users with at least 5 interactions
+    ml_loader.add_filter(MinItemsPerUser(
+        5,
+        ml_loader.ITEM_IX,
+        ml_loader.USER_IX,
+    ))
+    # Keep items with at least 30 interactions
+    ml_loader.add_filter(MinUsersPerItem(
+        30,
+        ml_loader.ITEM_IX,
+        ml_loader.USER_IX,
+    ))
+
+    data = ml_loader.load_interaction_matrix()
+
+Classes
+---------
+"""
+
 import numpy as np
 import os
 import pandas as pd
@@ -218,10 +280,9 @@ class MovieLens25M(Dataset):
         from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
         from recpack.data.datasets import MovieLens25M
         d = MovieLens25M('path/to/file', preprocess_default=False)
-        d.add_filter(MinRating("rating", 3, d.ITEM_IX, d.USER_IX))
+        d.add_filter(MinRating(d.RATING_IX, 3, d.ITEM_IX, d.USER_IX))
         d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
         d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
-
 
     :param filename: Path to datafile.
     :type filename: str
@@ -260,7 +321,7 @@ class MovieLens25M(Dataset):
         """
         DATASETURL = "http://files.grouplens.org/datasets/movielens/ml-25m.zip"
 
-        # Get the director part of the file specified
+        # Get the directory part of the file specified
         dir_f = os.path.dirname(self.filename)
 
         # Download the zip into the directory

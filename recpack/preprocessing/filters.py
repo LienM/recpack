@@ -44,7 +44,7 @@ class MinUsersPerItem(Filter):
         min_users_per_item: int,
         item_id: str,
         user_id: str,
-        timestamp_id: str = None,
+        # timestamp_id: str = None,
         count_duplicates: bool = False,
     ):
         """
