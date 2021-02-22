@@ -12,7 +12,9 @@ Summary
 
 Example
 ---------
-Constructing an InteractionMatrix ::
+An InteractionMatrix object can be constructed from a dataframe with a row for each interaction. 
+The ``item`` and ``user`` values will be indices in the resulting matrix.
+The following example constructs a 4x4 matrix, with 4 nonzero values::
 
    from recpack.data.matrix import InteractionMatrix
    data = {
