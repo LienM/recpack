@@ -41,7 +41,8 @@ class CML(Algorithm):
         save_best_to_file=True,
         approximate_user_vectors=False,
         disentangle=False,
-        train_before_predict=True
+        train_before_predict=True,
+        keep_last=False
     ):
         #TODO Add documentation
         """
@@ -96,6 +97,7 @@ class CML(Algorithm):
         self.approximate_user_vectors = approximate_user_vectors
         self.disentangle = disentangle
         self.train_before_predict = train_before_predict
+        self.keep_last = keep_last
 
     def _init_model(self, X):
         """
@@ -172,7 +174,8 @@ class CML(Algorithm):
             pass
 
         # Load the best of the models during training.
-        self._load_best()
+        if not self.keep_last:
+            self._load_best()
 
         # If saving turned on: save to file.
         if self.save_best_to_file:
@@ -270,6 +273,9 @@ class CML(Algorithm):
 
     def _train_users_only(self, train_data: csr_matrix) -> nn.Module:
         model = deepcopy(self.model_)
+
+        # TODO Log how much they are changed. 
+
         optimizer = optim.Adagrad(model.W.parameters(), lr=0.5)
 
         self._train_epoch(train_data, model, optimizer)
