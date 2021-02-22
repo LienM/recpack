@@ -1,6 +1,6 @@
 recpack.data.matrix
 ==========================
-.. currentmodule:: recpack.data.datasets
+.. currentmodule:: recpack.data.matrix
 
 Module with classes for representing data.
 

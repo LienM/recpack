@@ -8,5 +8,3 @@ The data module contains functionality for representing data, and loading datase
 
    recpack.data.datasets
    recpack.data.matrix
-
-
