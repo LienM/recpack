@@ -5,6 +5,7 @@ Welcome to Recpack's documentation!
    :maxdepth: 2
 
    recpack.data
+   recpack.preprocessing
 
 
 Indices and tables

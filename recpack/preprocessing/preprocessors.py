@@ -1,3 +1,60 @@
+"""Preprocessors turn data into Recpack internal representations.
+
+The preprocessor  provides all functionality to bundle preprocessing in  one step.
+This makes it less prone to error, when applying the same  processing to different input data.
+And makes the initialisation more declarative, rather than having to chain outputs yourself.
+
+.. autosummary::
+
+    DataFramePreprocessor
+
+Preprocessing has three steps
+
+- Apply filters to the input data
+- Map user and item identifiers to a consecutive id space. Making them usable as indices in a matrix.
+- Construct an InteractionMatrix object
+
+In order to apply filters they should be added using the ``add_filter`` function.
+The filters and the two other steps will all get applied during the ``process`` function.
+
+Example
+--------
+
+In this example we will process a pandas DataFrame.
+We'll use filters to 
+
+- Remove duplicates
+- Make sure all users have at least 3 interactions
+
+::
+
+    import random
+    import pandas as pd
+    from recpack.preprocessing.filters import Deduplicate, MinItemsPerUser
+    from recpack.preprocessing.preprocessors import DataFramePreprocessor
+
+    data = {
+        "user": [random.randint(1, 250) for i in range(1000)],
+        "item": [random.randint(1, 250) for i in range(1000)],
+        "timestamp": [1613736000 + random.randint(1, 3600) for i in range(1000)]
+    }
+    df = pd.DataFrame.from_dict(data)
+
+    df_pp = DataFramePreprocessor("item", "user", "timestamp")
+    df_pp.add_filter(
+        Deduplicate("item", "user", "timestamp")
+    )
+    df_pp.add_filter(
+        MinItemsPerUser(3, "item", "user")
+    )
+
+    im = df_pp.process(df)
+
+
+Classes
+---------
+"""
+
 import logging
 from typing import List
 
@@ -15,28 +72,24 @@ tqdm.pandas()
 
 logger = logging.getLogger("recpack")
 
-# TODO: when cleaning up, remove dedupe argument!
-
 
 class DataFramePreprocessor:
+    """Class to preprocess a Pandas Dataframe and turn it into a InteractionMatrix object.
+
+    All ID mappings are stored, so that processing of multiple DataFrames will lead to consistent mapped identifiers.
+
+    :param item_ix: Column name of the Item ID column
+    :type item_ix: str
+    :param user_ix: Column name of the User ID column
+    :type user_ix: str
+    :param timestamp_ix: Column name of the timestamp column. If None, no timestamps will be loaded, defaults to None
+    :type timestamp_ix: str, optional
+    """
 
     ITEM_IX = "iid"
     USER_IX = "uid"
 
     def __init__(self, item_ix, user_ix, timestamp_ix=None):
-        # CHECK: I removed value_id here, but I could also have done some magic to process the cases where we can anyway.
-        # I think this is better though, what do you think?
-        """
-        Class to preprocess a Pandas Dataframe and turn it into a InteractionMatrix object.
-        All ID mappings are stored, so that processing of multiple DataFrames will lead to consistent mapped identifiers.
-
-        :param item_ix: Column name of the Item ID column
-        :type item_ix: str
-        :param user_ix: Column name of the User ID column
-        :type user_ix: str
-        :param timestamp_ix: Column name of the timestamp column. If None, no timestamps will be loaded, defaults to None
-        :type timestamp_ix: str, optional
-        """
         self.item_id_mapping = dict()
         self.user_id_mapping = dict()
 
@@ -109,9 +162,12 @@ class DataFramePreprocessor:
         pass all of them to a single call of process to guarantee
         that their dimensions will match.
 
+        :param dfs: Dataframes to process
+        :type dfs: pd.DataFrame
         :return: A list of InteractionMatrix objects in the order the pandas DataFrames were passed in.
         :rtype: List[InteractionMatrix]
         """
+
         for index, df in enumerate(dfs):
             logger.debug(f"Processing df {index}")
             logger.debug(f"\tinteractions before preprocess: {len(df.index)}")
@@ -128,7 +184,7 @@ class DataFramePreprocessor:
                 logger.debug(f"\tusers after filter: {df[self.user_ix].nunique()}")
 
         for index, df in enumerate(dfs):
-            self.update_id_mappings(df)
+            self._update_id_mappings(df)
 
         data_ms = []
 
@@ -149,7 +205,7 @@ class DataFramePreprocessor:
 
         return data_ms
 
-    def update_id_mappings(self, df: pd.DataFrame):
+    def _update_id_mappings(self, df: pd.DataFrame):
         """
         Update the id mapping so we can combine multiple files
         """
