@@ -10,7 +10,7 @@ Summary
 
 Example
 ---------
-An InteractionMatrix object can be constructed from a pandas dataframe with a row for each interaction. 
+An InteractionMatrix object can be constructed from a pandas DataFrame with a row for each interaction. 
 The ``item`` and ``user`` values will be indices in the resulting matrix.
 The following example constructs a 4x4 matrix, with 4 nonzero values::
 
@@ -23,7 +23,7 @@ The following example constructs a 4x4 matrix, with 4 nonzero values::
         "timestamp": [1613736000, 1613736300, 1613736600, 1613736900]
     }
     df = pd.DataFrame.from_dict(data)
-    demo_data = InteractionMatrix(df, "item", "user", "timestamp")
+    demo_data = InteractionMatrix(df, "item", "user", timestamp_ix="timestamp")
 
 Classes
 ---------

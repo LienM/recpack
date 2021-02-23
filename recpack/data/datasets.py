@@ -206,7 +206,7 @@ class CiteULike(Dataset):
     """
 
     TIMESTAMP_IX = None
-    """The dataset has no notion of Timestamps, so no column present in dataframe"""
+    """The dataset has no notion of time, so there is no timestamp column present in the DataFrame."""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -279,7 +279,7 @@ class MovieLens25M(Dataset):
     - Each remaining  item has been interacted with by at least 5 users
 
     To use another value as minimal rating to mark interaction as positive,
-    you have to manually set the preprocessig filters.::
+    you have to manually set the preprocessing filters.::
 
         from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
         from recpack.data.datasets import MovieLens25M
@@ -296,13 +296,13 @@ class MovieLens25M(Dataset):
     """
 
     USER_IX = "userId"
-    """column name in the loaded dataframe with user identifiers"""
+    """Name of the column in the DataFrame that contains user identifiers."""
     ITEM_IX = "movieId"
-    """name of the column in the loaded dataframe with user identifiers"""
+    """Name of the column in the DataFrame that contains item identifiers."""
     TIMESTAMP_IX = "timestamp"
-    """name of the column in the loaded dataframe with timestamp, in seconds since epoch"""
+    """Name of the column in the DataFrame that contains time of interaction in seconds since epoch."""
     RATING_IX = "rating"
-    """name of the column in the loaded dataframe with rating values"""
+    """Name of the column in the DataFrame that contains the rating a user gave to the item."""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -385,7 +385,7 @@ class RecsysChallenge2015(Dataset):
     """
 
     USER_IX = "session"
-    """column name in the loaded dataframe with user identifiers"""
+    """Name of the column in the DataFrame that contains user identifiers."""
 
     def _download_dataset(self):
         """Downloading this dataset is not supported."""
