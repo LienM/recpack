@@ -2,7 +2,7 @@
 
 The preprocessor  provides all functionality to bundle preprocessing in  one step.
 This makes it less prone to error, when applying the same  processing to different input data.
-And makes the initialisation more declarative, rather than having to chain outputs yourself.
+It also makes initialisation more declarative, rather than having to chain outputs yourself.
 
 .. autosummary::
 
