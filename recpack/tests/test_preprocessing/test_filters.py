@@ -11,7 +11,6 @@ def test_min_users_per_item_filter(dataframe):
         3,
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
     )
     filtered_df = myfilter.apply(df)
 
@@ -29,7 +28,6 @@ def test_min_users_per_item_filter(dataframe):
         3,
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
         count_duplicates=True,
     )
     filtered_df = myfilter.apply(df)
@@ -53,7 +51,6 @@ def test_min_items_per_user_filter(dataframe):
         3,
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
     )
     filtered_df = myfilter.apply(df)
 
@@ -70,7 +67,6 @@ def test_min_items_per_user_filter(dataframe):
         3,
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
         count_duplicates=True,
     )
     filtered_df = myfilter.apply(df)
@@ -91,8 +87,6 @@ def test_nmost_popular(dataframe):
     myfilter = filters.NMostPopular(
         3,
         InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
     )
     filtered_df = myfilter.apply(df)
 
@@ -117,7 +111,6 @@ def test_nmost_recent(dataframe_with_fixed_timestamps):
     myfilter = filters.NMostRecent(
         3,
         InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
         InteractionMatrix.TIMESTAMP_IX,
     )
     filtered_df = myfilter.apply(df)
@@ -137,11 +130,8 @@ def test_min_rating(rating_dataframe):
     df = rating_dataframe
 
     myfilter = filters.MinRating(
+        4,
         "rating",
-        InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
-        min_rating=4,
     )
     filtered_df = myfilter.apply(df)
 
@@ -179,8 +169,6 @@ def test_apply_all(dataframe):
     myfilter = filters.NMostPopular(
         3,
         InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
     )
     filtered_df1, filtered_df2 = myfilter.apply_all(df, df.copy())
 

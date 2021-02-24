@@ -66,6 +66,9 @@ class NotItemKNN(TopKSimilarityMatrixAlgorithm):
     """
     TODO: Figure out what this code is actually implementing. It is not cosine similarity
     It does seem to work fine though.
+
+    I think I figured it out :p -> These seem to be conditional probabilities
+    sup(i,j) / sup(i)
     """
 
     """Construct an ItemKNN model. Before use make sure to fit the model.

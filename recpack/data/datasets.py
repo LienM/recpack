@@ -36,10 +36,8 @@ To use custom preprocessing a couple more lines should be added to the example. 
     ml_loader = MovieLens25M('datasets/ml-25m.csv', preprocess_default=False)
     # Only consider ratings 4 or higher as interactions
     ml_loader.add_filter(MinRating(
+        4,
         ml_loader.RATING_IX,
-        ml_loader.ITEM_IX,
-        ml_loader.USER_IX,
-        min_rating=4
     ))
     # Keep users with at least 5 interactions
     ml_loader.add_filter(MinItemsPerUser(
@@ -235,7 +233,7 @@ class CiteULike(Dataset):
         """Load the data from file, and return as a Pandas DataFrame.
 
         Downloads the data file if it is not yet present.
-        The output will contain a DataFrame with a user_id and item_id column.
+        The output will contain a DataFrame with a ``user_id`` and ``item_id`` column.
         Each interaction is stored in a separate row.
 
         :return: The interactions as a DataFrame, with a row for each interaction.
@@ -284,7 +282,7 @@ class MovieLens25M(Dataset):
         from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
         from recpack.data.datasets import MovieLens25M
         d = MovieLens25M('path/to/file', preprocess_default=False)
-        d.add_filter(MinRating(d.RATING_IX, 3, d.ITEM_IX, d.USER_IX))
+        d.add_filter(MinRating(3, d.RATING_IX, 3))
         d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
         d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
@@ -315,9 +313,7 @@ class MovieLens25M(Dataset):
         :rtype: List[Filter]
         """
         return [
-            MinRating(
-                "rating", min_rating=1, item_id=self.ITEM_IX, user_id=self.USER_IX
-            ),
+            MinRating(1, self.RATING_IX),
             MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
             MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
         ]
@@ -409,7 +405,7 @@ class RecsysChallenge2015(Dataset):
     def load_dataframe(self) -> pd.DataFrame:
         """Load the data from file, and return a DataFrame.
 
-        The output will contain a DataFrame with a user_id, item_id and seconds_since_epoch column.
+        The output will contain a DataFrame with a ``session``, ``item_id`` and ``seconds_since_epoch`` column.
         Each interaction is stored in a separate row.
 
         :return: The interactions as a DataFrame, with a row for each interaction.
@@ -428,7 +424,6 @@ class RecsysChallenge2015(Dataset):
             },
             parse_dates=[self.TIMESTAMP_IX],
             usecols=[0, 1, 2],
-            # nrows=nrows,
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch

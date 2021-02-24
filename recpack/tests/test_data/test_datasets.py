@@ -74,7 +74,7 @@ def test_add_filter():
 
     d = datasets.CiteULike(path_to_file)
 
-    d.add_filter(NMostPopular(3, d.ITEM_IX, d.USER_IX))
+    d.add_filter(NMostPopular(3, d.ITEM_IX))
 
     data = d.load_interaction_matrix()
 
@@ -88,7 +88,7 @@ def test_add_filter_w_index():
 
     d = datasets.CiteULike(path_to_file)
 
-    d.add_filter(NMostPopular(3, d.ITEM_IX, d.USER_IX), index=0)
+    d.add_filter(NMostPopular(3, d.ITEM_IX), index=0)
 
     assert type(d.preprocessor.filters[0]) == NMostPopular
     assert len(d.preprocessor.filters) == 3

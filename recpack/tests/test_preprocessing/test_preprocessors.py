@@ -10,8 +10,7 @@ def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
     processor = DataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
-        dedupe=False,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
 
     data_m = processor.process(dataframe)
@@ -31,8 +30,14 @@ def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
     processor = DataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
-        dedupe=True,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    processor.add_filter(
+        filters.Deduplicate(
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.USER_IX,
+        )
     )
 
     org_row = dataframe.loc[3, :].values
@@ -62,8 +67,7 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
     processor = DataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
-        dedupe=False,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
 
     org_row = dataframe.loc[3, :].values
@@ -97,7 +101,6 @@ def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
         InteractionMatrix.TIMESTAMP_IX,
-        dedupe=False,
     )
 
     dataframe_2 = dataframe.copy()
@@ -146,7 +149,6 @@ def test_raises(dataframe):
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
         InteractionMatrix.TIMESTAMP_IX,
-        dedupe=False,
     )
 
     with pytest.raises(RuntimeError):
@@ -161,15 +163,12 @@ def test_dataframe_preprocessor_w_filter_no_duplicates(dataframe):
     processor = DataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
-        dedupe=False,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
 
     myfilter = filters.NMostPopular(
         3,
         InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
-        InteractionMatrix.TIMESTAMP_IX,
     )
 
     processor.add_filter(myfilter)
@@ -193,8 +192,7 @@ def test_add_filter(dataframe):
     processor = DataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        timestamp_id=InteractionMatrix.TIMESTAMP_IX,
-        dedupe=False,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
 
     processor.add_filter(
@@ -202,15 +200,12 @@ def test_add_filter(dataframe):
             3,
             InteractionMatrix.ITEM_IX,
             InteractionMatrix.USER_IX,
-            InteractionMatrix.TIMESTAMP_IX,
         )
     )
     processor.add_filter(
         filters.NMostPopular(
             3,
             InteractionMatrix.ITEM_IX,
-            InteractionMatrix.USER_IX,
-            InteractionMatrix.TIMESTAMP_IX,
         )
     )
 
@@ -219,7 +214,6 @@ def test_add_filter(dataframe):
             3,
             InteractionMatrix.ITEM_IX,
             InteractionMatrix.USER_IX,
-            InteractionMatrix.TIMESTAMP_IX,
         ),
         index=1,
     )
