@@ -108,6 +108,7 @@ class StoppingCriterion:
         },
         "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
         "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
+        "warp": {"loss_function": warp_loss_metric, "minimize": True}
     }
 
     @classmethod
