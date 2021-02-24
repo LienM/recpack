@@ -20,8 +20,7 @@ TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 @pytest.fixture(scope="function")
 def df():
-    data = {TIMESTAMP_IX: [3, 2, 1, 1], ITEM_IX: [
-        1, 1, 2, 3], USER_IX: [0, 1, 1, 2]}
+    data = {TIMESTAMP_IX: [3, 2, 1, 1], ITEM_IX: [1, 1, 2, 3], USER_IX: [0, 1, 1, 2]}
     df = pd.DataFrame.from_dict(data)
 
     return df
@@ -48,8 +47,7 @@ def interaction_m(df):
 
 @pytest.fixture(scope="function")
 def interaction_m_w_duplicate(df_w_duplicate):
-    d = InteractionMatrix(df_w_duplicate, ITEM_IX,
-                          USER_IX, timestamp_ix=TIMESTAMP_IX)
+    d = InteractionMatrix(df_w_duplicate, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
     return d
 
@@ -101,8 +99,9 @@ def test_timestamps_no_dups(interaction_m):
 
 def test_timestamps_w_dups(interaction_m_w_duplicate):
 
-    assert (interaction_m_w_duplicate.timestamps.values ==
-            np.array([3, 2, 4, 1, 1])).all()
+    assert (
+        interaction_m_w_duplicate.timestamps.values == np.array([3, 2, 4, 1, 1])
+    ).all()
 
 
 def test_timestamps_gt_w_dups(interaction_m_w_duplicate):
@@ -134,8 +133,7 @@ def test_timestamps_gte_w_dups(interaction_m_w_duplicate):
 
     filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_gte(2)
 
-    assert (filtered_d_w_duplicate.timestamps.values ==
-            np.array([3, 2, 4])).all()
+    assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 2, 4])).all()
 
     assert (
         filtered_d_w_duplicate.values.toarray()
@@ -149,8 +147,7 @@ def test_timestamps_lte_w_dups(interaction_m_w_duplicate):
 
     # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
 
-    assert (filtered_d_w_duplicate.timestamps.values ==
-            np.array([2, 1, 1])).all()
+    assert (filtered_d_w_duplicate.timestamps.values == np.array([2, 1, 1])).all()
     assert (
         filtered_d_w_duplicate.values.toarray()
         == np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
@@ -196,7 +193,7 @@ def test_users_in(df):
     assert d2.shape == (3, 4)
     assert len(list(d2.binary_item_history)) == 2
 
-    # user_id 2 is not known to the dataframe
+    # user_id 2 is not known to the DataFrame
     d.users_in([2, 3], inplace=True)
     assert len(list(d.binary_item_history)) == 1
 
@@ -215,7 +212,9 @@ def test_interactions_in_empty_set(df):
         warnings.simplefilter("always")
         assert len(w) == 1
 
-        assert "No interaction IDs given, returning empty InteractionMatrix." in str(w[-1].message)
+        assert "No interaction IDs given, returning empty InteractionMatrix." in str(
+            w[-1].message
+        )
 
 
 def test_interactions_in(df):
@@ -231,7 +230,7 @@ def test_interactions_in(df):
     with warnings.catch_warnings(record=True) as w:
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
-        # interaction_id 10 is not known to the dataframe
+        # interaction_id 10 is not known to the DataFrame
         d.interactions_in([0, 1, 10], inplace=True)
         assert (
             d.values.toarray()
@@ -325,7 +324,7 @@ def test_active_users(interaction_m):
 
 
 def test_density(interaction_m):
-    np.testing.assert_almost_equal(interaction_m.density, 1/3)
+    np.testing.assert_almost_equal(interaction_m.density, 1 / 3)
 
 
 def test_num_active_users(interaction_m):
@@ -347,22 +346,19 @@ def test_from_csr_matrix(data):
 
     assert (data_m.values.toarray() == data.toarray()).all()
 
+
 # ----- TEST CONVERSIONS
 
 
 @pytest.fixture
 def m_csr():
-    m = [[1, 1, 0, 0],
-         [0, 1, 2, 0],
-         [0, 0, 0, 0]]
+    m = [[1, 1, 0, 0], [0, 1, 2, 0], [0, 0, 0, 0]]
     return csr_matrix(m, dtype=np.int32)
 
 
 @pytest.fixture
 def m_csr_binary():
-    m = [[1, 1, 0, 0],
-         [0, 1, 1, 0],
-         [0, 0, 0, 0]]
+    m = [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 0]]
     return csr_matrix(m, dtype=np.int32)
 
 
@@ -375,7 +371,9 @@ def m_datam():
             TIMESTAMP_IX: [3, 2, 4, 1, 2],
         }
     )
-    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, shape=(3, 4))
+    return InteractionMatrix(
+        df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, shape=(3, 4)
+    )
 
 
 def matrix_equal(a, b):

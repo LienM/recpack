@@ -38,7 +38,7 @@ def test_fetch_dataset(demo_data):
         # Now file should exist
         assert os.path.exists(f.name)
 
-        # This should load the full dataframe.
+        # This should load the full DataFrame.
         df = d.load_dataframe()
         assert df.shape == (6, 2)
 
@@ -54,7 +54,7 @@ def test_fetch_dataset(demo_data):
         # Fetching with the file already existing does not overwrite the file
         d.fetch_dataset()
 
-        # No changes in dataframe, since file was not changed
+        # No changes in DataFrame, since file was not changed
         df2_bis = d.load_dataframe()
         assert df2_bis.shape == df2.shape
 

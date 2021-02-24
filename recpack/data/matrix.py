@@ -51,7 +51,7 @@ class InteractionMatrix(DataMatrix):
     """
     Stores information about interactions between users and items.
 
-    The data is stored in as a dataframe, properties as well as functions
+    The data is stored in as a DataFrame, properties as well as functions
     are provided to access this data in intuitive ways.
 
     If a user interacted with an example more than once,
@@ -133,7 +133,7 @@ class InteractionMatrix(DataMatrix):
         """All user-item interactions as a sparse matrix of size ``(|users|, |items|)``.
 
         Each entry is the sum of interaction values for that user and item.
-        If the value_ix is not present in the dataframe,
+        If the value_ix is not present in the DataFrame,
         the entry is the total number of interactions between that user and item.
 
         If there are no interactions between a user and item, the entry is 0.
@@ -150,7 +150,7 @@ class InteractionMatrix(DataMatrix):
     def get_timestamp(self, interactionid: int) -> int:
         """Return the timestamp of a specific interaction
 
-        :param interactionid: the interaction id in the dataframe
+        :param interactionid: the interaction id in the DataFrame
             to fetch the timestamp from.
         :type interactionid: int
         :raises AttributeError: Raised if the object does not have timestamps
@@ -479,7 +479,7 @@ class InteractionMatrix(DataMatrix):
         An entry is 1 if there is at least one interaction between that user and item
         and either:
 
-        - The value_ix is not present in the dataframe,
+        - The value_ix is not present in the DataFrame,
         - The sum of interaction values for that user and item is strictly positive
 
         In all other cases the entry is 0.
