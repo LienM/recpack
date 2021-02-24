@@ -42,7 +42,7 @@ def dataframe_with_fixed_timestamps():
 
 @pytest.fixture(scope="function")
 def dataframe_with_fixed_timestamps_inverted():
-    """A dataframe with timestamps in descending order, allows testing reordering parts."""
+    """A DataFrame with timestamps in descending order, allows testing reordering parts."""
     users = [0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 3, 3, 1, 1, 1, 4, 4, 4]
     items = [0, 1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 0, 1, 5, 5, 5, 1, 1, 1]
 

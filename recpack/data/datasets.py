@@ -107,11 +107,11 @@ class Dataset:
     """
 
     USER_IX = "user_id"
-    """name of the column in the loaded dataframe with user identifiers"""
+    """name of the column in the loaded DataFrame with user identifiers"""
     ITEM_IX = "item_id"
-    """name of the column in the loaded dataframe with item identifiers"""
+    """name of the column in the loaded DataFrame with item identifiers"""
     TIMESTAMP_IX = "seconds_since_epoch"
-    """name of the column in the loaded dataframe with timestamp, in seconds since epoch"""
+    """name of the column in the loaded DataFrame with timestamp, in seconds since epoch"""
 
     def __init__(self, filename: str, preprocess_default=True):
         self.filename = filename
@@ -139,7 +139,7 @@ class Dataset:
         If the index is specified, the filter is inserted at the specified index.
         Otherwise it is appended.
 
-        :param _filter: Filter to be applied to the loaded dataframe
+        :param _filter: Filter to be applied to the loaded DataFrame
                     processing to interaction matrix.
         :type _filter: Filter
         :param index: The index to insert the filter at,
@@ -164,9 +164,9 @@ class Dataset:
         raise NotImplementedError("Should still be implemented")
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the dataframe from file, and return it as a pandas DataFrame.
+        """Load the DataFrame from file, and return it as a pandas DataFrame.
 
-        :return: The interaction data as a dataframe with a row per interaction.
+        :return: The interaction data as a DataFrame with a row per interaction.
         :rtype: pd.DataFrame
         """
         raise NotImplementedError("Needs to be implemented")
@@ -174,8 +174,8 @@ class Dataset:
     def load_interaction_matrix(self) -> InteractionMatrix:
         """Loads data into an InteractionMatrix object.
 
-        Data is loaded into a dataframe using the `load_dataframe` function.
-        Resulting dataframe is parsed into an `InteractionMatrix` object.
+        Data is loaded into a DataFrame using the `load_dataframe` function.
+        Resulting DataFrame is parsed into an `InteractionMatrix` object.
         During parsing the filters are applied in order.
 
         :return: The resulting InteractionMatrix
@@ -204,7 +204,7 @@ class CiteULike(Dataset):
     """
 
     TIMESTAMP_IX = None
-    """The dataset has no notion of Timestamps, so no column present in dataframe"""
+    """The dataset has no notion of time, so there is no timestamp column present in the DataFrame."""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -233,10 +233,10 @@ class CiteULike(Dataset):
         """Load the data from file, and return as a Pandas DataFrame.
 
         Downloads the data file if it is not yet present.
-        The output will contain a dataframe with a ``user_id`` and ``item_id`` column.
+        The output will contain a DataFrame with a ``user_id`` and ``item_id`` column.
         Each interaction is stored in a separate row.
 
-        :return: The interactions as a dataframe, with a row for each interaction.
+        :return: The interactions as a DataFrame, with a row for each interaction.
         :rtype: pandas.DataFrame
         """
 
@@ -277,7 +277,7 @@ class MovieLens25M(Dataset):
     - Each remaining  item has been interacted with by at least 5 users
 
     To use another value as minimal rating to mark interaction as positive,
-    you have to manually set the preprocessig filters.::
+    you have to manually set the preprocessing filters.::
 
         from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
         from recpack.data.datasets import MovieLens25M
@@ -294,13 +294,13 @@ class MovieLens25M(Dataset):
     """
 
     USER_IX = "userId"
-    """column name in the loaded dataframe with user identifiers"""
+    """Name of the column in the DataFrame that contains user identifiers."""
     ITEM_IX = "movieId"
-    """name of the column in the loaded dataframe with user identifiers"""
+    """Name of the column in the DataFrame that contains item identifiers."""
     TIMESTAMP_IX = "timestamp"
-    """name of the column in the loaded dataframe with timestamp, in seconds since epoch"""
+    """Name of the column in the DataFrame that contains time of interaction in seconds since epoch."""
     RATING_IX = "rating"
-    """name of the column in the loaded dataframe with rating values"""
+    """Name of the column in the DataFrame that contains the rating a user gave to the item."""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -381,7 +381,7 @@ class RecsysChallenge2015(Dataset):
     """
 
     USER_IX = "session"
-    """column name in the loaded dataframe with user identifiers"""
+    """Name of the column in the DataFrame that contains user identifiers."""
 
     def _download_dataset(self):
         """Downloading this dataset is not supported."""
@@ -403,12 +403,12 @@ class RecsysChallenge2015(Dataset):
         ]
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return a dataframe.
+        """Load the data from file, and return a DataFrame.
 
-        The output will contain a dataframe with a ``session``, ``item_id`` and ``seconds_since_epoch`` column.
+        The output will contain a DataFrame with a ``session``, ``item_id`` and ``seconds_since_epoch`` column.
         Each interaction is stored in a separate row.
 
-        :return: The interactions as a dataframe, with a row for each interaction.
+        :return: The interactions as a DataFrame, with a row for each interaction.
         :rtype: pd.DataFrame
         """
 

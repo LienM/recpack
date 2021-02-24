@@ -18,7 +18,7 @@ Summary
     Deduplicate
     MinRating
 
-Filters can be applied manually, simply pass the dataframe to be processed to the apply function.::
+Filters can be applied manually, simply pass the DataFrame to be processed to the apply function.::
 
     import pandas as pd
     from recpack.preprocessing.filters import NMostPopular
@@ -78,7 +78,7 @@ class Filter(ABC):
     def apply_all(self, *dfs: pd.DataFrame) -> List[pd.DataFrame]:
         """Apply the filter to a list of pandas DataFrames.
 
-        The filter is applied independently to each of the dataframes.
+        The filter is applied independently to each of the DataFrames.
 
         :return: The list of processed DataFrames
         :rtype: List[pd.DataFrame]
@@ -171,7 +171,7 @@ class NMostPopular(Filter):
 class NMostRecent(Filter):
     """Select only events on the N most recently visited items.
 
-    If there is a tie, the first occuring item in the dataframe is retained.
+    If there is a tie, the first occuring item in the DataFrame is retained.
 
     :param N: Number of items to retain.
     :type N: int
@@ -236,14 +236,14 @@ class MinItemsPerUser(Filter):
 
 
 class MinRating(Filter):
-    """Keep the dataframe of only ratings above min_rating.
+    """Keep the DataFrame of only ratings above min_rating.
     This filter is used to turn a rating dataset into an interaction dataset.
 
-    After filtering, the rating_ix column will also be removed from the dataframe.
+    After filtering, the rating_ix column will also be removed from the DataFrame.
 
     :param min_rating: The minimum rating for a rating to be considered an interaction.
     :type min_rating: int
-    :param rating_ix: the column that will contain ratings in the dataframe
+    :param rating_ix: the column that will contain ratings in the DataFrame
     :type str:
     """
 
@@ -262,7 +262,7 @@ class MinRating(Filter):
 class Deduplicate(Filter):
     """Deduplicate entries with the same user and item.
 
-    Removes all but one of each user-item pair in the dataframe.
+    Removes all but one of each user-item pair in the DataFrame.
     If timestamps are available, the first interaction is kept.
 
     :param item_ix: Name of the column in which item identifiers are listed.
