@@ -142,3 +142,5 @@ results.json
 
 # trch model files
 *.trch
+
+.vscode/

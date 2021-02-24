@@ -1,3 +1,63 @@
+"""Module responsible for handling datasets.
+
+Summary
+---------
+
+.. currentmodule:: recpack.data.datasets
+
+.. autosummary::
+
+    Dataset
+    CiteULike
+    MovieLens25M
+    RecsysChallenge2015
+
+
+Example
+---------
+
+Loading a dataset only takes a couple of lines.
+If the file specified does not exist, the dataset is downloaded and written into this file.
+Subsequent loading of the dataset then happens from this file. ::
+
+    from recpack.data.datasets import MovieLens25M
+
+    # Folder needs to exist, file will be downloaded if not present
+    # This can take a while
+    ml_loader = MovieLens25M('datasets/ml-25m.csv')
+    data = ml_loader.load_interaction_matrix()
+
+Each dataset has its own default preprocessing steps, documented in the classes respectively.
+To use custom preprocessing a couple more lines should be added to the example. ::
+
+    from recpack.data.datasets import MovieLens25M
+    from recpack.preprocessing.filters import MinRating, MinUsersPerItem, MinItemsPerUser
+
+    ml_loader = MovieLens25M('datasets/ml-25m.csv', preprocess_default=False)
+    # Only consider ratings 4 or higher as interactions
+    ml_loader.add_filter(MinRating(
+        4,
+        ml_loader.RATING_IX,
+    ))
+    # Keep users with at least 5 interactions
+    ml_loader.add_filter(MinItemsPerUser(
+        5,
+        ml_loader.ITEM_IX,
+        ml_loader.USER_IX,
+    ))
+    # Keep items with at least 30 interactions
+    ml_loader.add_filter(MinUsersPerItem(
+        30,
+        ml_loader.ITEM_IX,
+        ml_loader.USER_IX,
+    ))
+
+    data = ml_loader.load_interaction_matrix()
+
+Classes
+---------
+"""
+
 import numpy as np
 import os
 import pandas as pd
@@ -26,7 +86,6 @@ def _fetch_remote(url: str, filename: str) -> str:
     :return: The filename where data was saved
     :rtype: str
     """
-    # TODO: checksum?
     urlretrieve(url, filename)
     return filename
 
@@ -41,15 +100,18 @@ class Dataset:
 
     A Dataset is transformed into an InteractionMatrix
 
-    :param filename: Where to look for the file with data.
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
     """
 
     USER_IX = "user_id"
+    """name of the column in the loaded DataFrame with user identifiers"""
     ITEM_IX = "item_id"
+    """name of the column in the loaded DataFrame with item identifiers"""
     TIMESTAMP_IX = "seconds_since_epoch"
+    """name of the column in the loaded DataFrame with timestamp, in seconds since epoch"""
 
     def __init__(self, filename: str, preprocess_default=True):
         self.filename = filename
@@ -77,7 +139,7 @@ class Dataset:
         If the index is specified, the filter is inserted at the specified index.
         Otherwise it is appended.
 
-        :param _filter: Filter to be applied to the loaded dataframe
+        :param _filter: Filter to be applied to the loaded DataFrame
                     processing to interaction matrix.
         :type _filter: Filter
         :param index: The index to insert the filter at,
@@ -102,17 +164,20 @@ class Dataset:
         raise NotImplementedError("Should still be implemented")
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the dataframe from file, and return it as a pandas DataFrame.
+        """Load the DataFrame from file, and return it as a pandas DataFrame.
 
-        :return: The interaction data as a dataframe with a row per interaction.
+        :return: The interaction data as a DataFrame with a row per interaction.
         :rtype: pd.DataFrame
         """
         raise NotImplementedError("Needs to be implemented")
 
     def load_interaction_matrix(self) -> InteractionMatrix:
-        """Parse the loaded dataframe into an InteractionMatrix.
+        """Loads data into an InteractionMatrix object.
 
-        During parsing the added filters are applied in order.
+        Data is loaded into a DataFrame using the `load_dataframe` function.
+        Resulting DataFrame is parsed into an `InteractionMatrix` object.
+        During parsing the filters are applied in order.
+
         :return: The resulting InteractionMatrix
         :rtype: InteractionMatrix
         """
@@ -128,16 +193,18 @@ class CiteULike(Dataset):
     Uses the `users.dat` file from the dataset to construct an implicit feedback interaction matrix.
 
     Default processing makes sure that:
+
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
-    :param filename: Where to look for the file with data.
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
     """
 
     TIMESTAMP_IX = None
+    """The dataset has no notion of time, so there is no timestamp column present in the DataFrame."""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -166,10 +233,10 @@ class CiteULike(Dataset):
         """Load the data from file, and return as a Pandas DataFrame.
 
         Downloads the data file if it is not yet present.
-        The output will contain a dataframe with a user_id and item_id column.
+        The output will contain a DataFrame with a ``user_id`` and ``item_id`` column.
         Each interaction is stored in a separate row.
 
-        :return: The interactions as a dataframe, with a row for each interaction.
+        :return: The interactions as a DataFrame, with a row for each interaction.
         :rtype: pandas.DataFrame
         """
 
@@ -204,22 +271,22 @@ class MovieLens25M(Dataset):
     Uses the `ratings.csv` file to generate an interaction matrix.
 
     Default processing makes sure that:
+
     - Each rating above or equal to 1 is used as interaction
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
-    To use another rating above a certain value as interactions, you have to manually set the preprocessig filters.
+    To use another value as minimal rating to mark interaction as positive,
+    you have to manually set the preprocessing filters.::
 
-    ```
-    from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
-    from recpack.data.datasets import MovieLens25M
-    d = MovieLens25M('path/to/file', preprocess_default=False)
-    d.add_filter(MinRating("rating", 3, d.ITEM_IX, d.USER_IX))
-    d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
-    d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
-    ```
+        from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
+        from recpack.data.datasets import MovieLens25M
+        d = MovieLens25M('path/to/file', preprocess_default=False)
+        d.add_filter(MinRating(3, d.RATING_IX, 3))
+        d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
+        d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
-    :param filename: Where to look for the file with data.
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
@@ -227,9 +294,13 @@ class MovieLens25M(Dataset):
     """
 
     USER_IX = "userId"
+    """Name of the column in the DataFrame that contains user identifiers."""
     ITEM_IX = "movieId"
+    """Name of the column in the DataFrame that contains item identifiers."""
     TIMESTAMP_IX = "timestamp"
+    """Name of the column in the DataFrame that contains time of interaction in seconds since epoch."""
     RATING_IX = "rating"
+    """Name of the column in the DataFrame that contains the rating a user gave to the item."""
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -242,9 +313,7 @@ class MovieLens25M(Dataset):
         :rtype: List[Filter]
         """
         return [
-            MinRating(
-                "rating", min_rating=1, item_id=self.ITEM_IX, user_id=self.USER_IX
-            ),
+            MinRating(1, self.RATING_IX),
             MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
             MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
         ]
@@ -256,7 +325,7 @@ class MovieLens25M(Dataset):
         """
         DATASETURL = "http://files.grouplens.org/datasets/movielens/ml-25m.zip"
 
-        # Get the director part of the file specified
+        # Get the directory part of the file specified
         dir_f = os.path.dirname(self.filename)
 
         # Download the zip into the directory
@@ -301,9 +370,10 @@ class RecsysChallenge2015(Dataset):
     you should download the data manually and provide the path to the `yoochoose-clicks.dat` file.
 
     Default processing makes sure that:
+
     - Each remaining  item has been interacted with by at least 5 users.
 
-    :param filename: Where to look for the file with data.
+    :param filename: Path to datafile.
     :type filename: str
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
@@ -311,6 +381,7 @@ class RecsysChallenge2015(Dataset):
     """
 
     USER_IX = "session"
+    """Name of the column in the DataFrame that contains user identifiers."""
 
     def _download_dataset(self):
         """Downloading this dataset is not supported."""
@@ -332,12 +403,12 @@ class RecsysChallenge2015(Dataset):
         ]
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return a dataframe.
+        """Load the data from file, and return a DataFrame.
 
-        The output will contain a dataframe with a user_id, item_id and seconds_since_epoch column.
+        The output will contain a DataFrame with a ``session``, ``item_id`` and ``seconds_since_epoch`` column.
         Each interaction is stored in a separate row.
 
-        :return: The interactions as a dataframe, with a row for each interaction.
+        :return: The interactions as a DataFrame, with a row for each interaction.
         :rtype: pd.DataFrame
         """
 
@@ -353,7 +424,6 @@ class RecsysChallenge2015(Dataset):
             },
             parse_dates=[self.TIMESTAMP_IX],
             usecols=[0, 1, 2],
-            # nrows=nrows,
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch

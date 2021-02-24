@@ -140,10 +140,10 @@ class ElementwiseMetricK(MetricTopK):
         """Get the results for this metric.
 
         If there is a user with 0 recommendations,
-        the output dataframe will contain K rows for
+        the output DataFrame will contain K rows for
         that user, with item NaN and score 0
 
-        :return: The results dataframe. With columns user, item, score
+        :return: The results DataFrame. With columns user, item, score
         :rtype: pd.DataFrame
         """
         scores = self.scores_.toarray()

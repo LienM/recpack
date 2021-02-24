@@ -38,7 +38,7 @@ def test_fetch_dataset(demo_data):
         # Now file should exist
         assert os.path.exists(f.name)
 
-        # This should load the full dataframe.
+        # This should load the full DataFrame.
         df = d.load_dataframe()
         assert df.shape == (6, 2)
 
@@ -54,7 +54,7 @@ def test_fetch_dataset(demo_data):
         # Fetching with the file already existing does not overwrite the file
         d.fetch_dataset()
 
-        # No changes in dataframe, since file was not changed
+        # No changes in DataFrame, since file was not changed
         df2_bis = d.load_dataframe()
         assert df2_bis.shape == df2.shape
 
@@ -74,7 +74,7 @@ def test_add_filter():
 
     d = datasets.CiteULike(path_to_file)
 
-    d.add_filter(NMostPopular(3, d.ITEM_IX, d.USER_IX))
+    d.add_filter(NMostPopular(3, d.ITEM_IX))
 
     data = d.load_interaction_matrix()
 
@@ -88,7 +88,7 @@ def test_add_filter_w_index():
 
     d = datasets.CiteULike(path_to_file)
 
-    d.add_filter(NMostPopular(3, d.ITEM_IX, d.USER_IX), index=0)
+    d.add_filter(NMostPopular(3, d.ITEM_IX), index=0)
 
     assert type(d.preprocessor.filters[0]) == NMostPopular
     assert len(d.preprocessor.filters) == 3
