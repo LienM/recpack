@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 from recpack.algorithms import BPRMF
 from recpack.algorithms.samplers import bootstrap_sample_pairs
 from recpack.algorithms.similarity.BPRMF import MFModule
-from recpack.algorithms.util import StoppingCriterion
+from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.metrics.recall import recall_k
 
 
