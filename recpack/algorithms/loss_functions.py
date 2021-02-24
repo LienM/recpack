@@ -1,7 +1,99 @@
 from scipy.sparse import csr_matrix
 import torch
+import torch.nn as nn
 
 from recpack.algorithms.samplers import bootstrap_sample_pairs
+
+# TODO Refactor so that it's no longer specific to CML
+def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
+    """
+    Implementation of covariance loss as described in
+    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+
+    The loss term is used to penalize covariance between embedding dimensions and
+    thus disentangle these embedding dimensions.
+
+    It is assumed H and W are embeddings in the same space.
+
+    :param H: Item embedding
+    :type H: nn.Embedding
+    :param W: User Embedding
+    :type W: nn.Embedding
+    :return: Covariance loss term
+    :rtype: torch.Tensor
+    """
+    W_as_tensor = next(W.parameters())
+    H_as_tensor = next(H.parameters())
+
+    # Concatenate them together. They live in the same metric space, so share the same dimensions.
+    #  X is a matrix of shape (|users| + |items|, num_dimensions)
+    X = torch.cat([W_as_tensor, H_as_tensor], dim=0)
+
+    # Zero mean
+    X = X - X.mean(dim=0)
+
+    cov = X.matmul(X.T)
+
+    # Per element covariance, excluding the variance of individual random variables.
+    return cov.fill_diagonal_(0).sum() / (X.shape[0] * X.shape[1])
+
+
+def warp_loss_metric():
+    pass
+
+
+def warp_loss(
+    dist_pos_interaction: torch.Tensor,
+    dist_neg_interaction: torch.Tensor,
+    margin: float,
+    J: int,
+    U: int,
+) -> torch.Tensor:
+    """
+    Implementation of
+    WARP loss as described in
+    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+    based on
+    J. Weston, S. Bengio, and N. Usunier. Large scale image annotation:
+    learning to rank with joint word-image embeddings. Machine learning, 81(1):21–35, 2010.
+
+    Adds a loss penalty for every negative sample that is not at least
+    an amount of margin further away from the reference sample than a positive
+    sample. This per sample loss penalty has a weight proportional to the
+    amount of samples in the negative sample batch were "misclassified",
+    i.e. closer than the positive sample.
+
+    :param dist_pos_interaction: Tensor of distances between positive sample and reference sample.
+    :type dist_pos_interaction: torch.Tensor
+    :param dist_neg_interaction: Tensor of distances between negatives samples and reference sample.
+    :type dist_neg_interaction: torch.Tensor
+    :param margin: Required margin between positive and negative sample.
+    :type margin: float
+    :param J: Total number of items in the dataset.
+    :type J: int
+    :param U: Number of negative samples used for every positive sample.
+    :type U: int
+    :return: 0-D Tensor containing WARP loss.
+    :rtype: torch.Tensor
+    """
+    dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
+
+    # Largest number is "most wrongly classified", f.e.
+    # pos = 0.1, margin = 0.1, neg = 0.15 => 0.1 + 0.1 - 0.15 = 0.05 > 0
+    # pos = 0.1, margin = 0.1, neg = 0.08 => 0.1 + 0.1 - 0.08 = 0.12 > 0
+    most_wrong_neg_interaction, _ = dist_diff_pos_neg_margin.max(dim=-1)
+
+    most_wrong_neg_interaction[most_wrong_neg_interaction < 0] = 0
+
+    M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
+    # M * J / U =~ rank(pos_i)
+    w = torch.log((M * J / U) + 1)
+
+    loss = (most_wrong_neg_interaction * w).sum()
+
+    return loss
 
 
 def bpr_loss(positive_sim, negative_sim):

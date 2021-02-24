@@ -16,7 +16,7 @@ from typing import Tuple
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.loss_functions import bpr_loss
 from recpack.algorithms.samplers import bootstrap_sample_pairs
-from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
+from recpack.algorithms.stopping_criterion import StoppingCriterion, EarlyStoppingException
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")

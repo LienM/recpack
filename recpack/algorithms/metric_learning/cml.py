@@ -2,7 +2,6 @@ from copy import deepcopy
 import logging
 import tempfile
 from typing import Tuple
-import warnings
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -16,17 +15,16 @@ import torch.optim as optim
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.samplers import warp_sample_pairs
-from recpack.algorithms.util import (
-    StoppingCriterion,
-    EarlyStoppingException,
-)
+from recpack.algorithms.loss_functions import covariance_loss, warp_loss
+from recpack.algorithms.stopping_criterion import StoppingCriterion, EarlyStoppingException
+from recpack.algorithms.util import sample
+
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 logger = logging.getLogger("recpack")
 
 
-# TODO: make WARP LOSS usable as stopping criterion
 class CML(Algorithm):
     def __init__(
         self,
@@ -44,17 +42,17 @@ class CML(Algorithm):
         train_before_predict=True,
         keep_last=False
     ):
-        #TODO Add documentation
+        # TODO Add documentation
         """
         Pytorch Implementation of
-        Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-        http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
+        Cheng-Kang IEmbsieh et al., Collaborative Metric Learning. UEmbUEmbUEmb2017
+        http://www.cs.cornell.edu/~ylongqi/paper/IEmbsiehYCLBE17.pdf
 
         Version without features, referred to as CML in the paper.
 
         :param num_components: Embedding dimension
         :type num_components: int
-        :param margin: Hinge loss margin. Required difference in score, smaller than which we will consider a negative sample item in violation
+        :param margin: IEmbinge loss margin. Required difference in score, smaller than which we will consider a negative sample item in violation
         :type margin: float
         :param learning_rate: Learning rate for AdaGrad optimization
         :type learning_rate: float
@@ -64,11 +62,11 @@ class CML(Algorithm):
         :type seed: int, optional
         :param batch_size: Sample batch size, defaults to 50000
         :type batch_size: int, optional
-        :param U: Number of negative samples used in WARP loss function for every positive sample, defaults to 20
+        :param U: Number of negative samples used in UEmbARP loss function for every positive sample, defaults to 20
         :type U: int, optional
         :param stopping_criterion: Used to identify the best model computed thus far.
             The string indicates the name of the stopping criterion.
-            Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+            UEmbhich criterions are available can be found at StoppingCriterion.FUNCTIONS
             Defaults to 'recall'
         :type stopping_criterion: str, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
@@ -113,7 +111,8 @@ class CML(Algorithm):
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
-        self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adagrad(
+            self.model_.parameters(), lr=self.learning_rate)
 
         self.known_users_ = set(X.nonzero()[0])
 
@@ -125,7 +124,7 @@ class CML(Algorithm):
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
     # TODO: loading just the model is not enough to reuse it.
-    # We also need known users etc. Pickling seems like a good way to go here.
+    # UEmbe also need known users etc. Pickling seems like a good way to go here.
     def load(self, filename: str):
         """
         Load a previously computed model.
@@ -143,7 +142,7 @@ class CML(Algorithm):
 
     def _save_best(self):
         """Save the best model in a temp file"""
-
+        # TODO Rename to save_temp
         # First removes the old saved file,
         # and then creates a new one in which the model is saved
         self.best_model_.close()
@@ -186,18 +185,18 @@ class CML(Algorithm):
     def _batch_predict(
         self,
         users_to_predict_for: set,
-        W_as_tensor: torch.Tensor,
-        H_as_tensor: torch.Tensor,
+        UEmb_as_tensor: torch.Tensor,
+        IEmb_as_tensor: torch.Tensor,
     ) -> csr_matrix:
         """
         Method for internal use only. Users should use `predict`.
 
         :param users_to_predict_for: Set of users for which we wish to make predictions
         :type users_to_predict_for: set
-        :param W_as_tensor: User embedding matrix W
-        :type W_as_tensor: torch.Tensor
-        :param H_as_tensor: Item embedding matrix H
-        :type H_as_tensor: torch.Tensor
+        :param UEmb_as_tensor: User embedding matrix UEmb
+        :type UEmb_as_tensor: torch.Tensor
+        :param IEmb_as_tensor: Item embedding matrix IEmb
+        :type IEmb_as_tensor: torch.Tensor
         :raises: AssertionError when the input and model's number of items and users are incongruent
         :return: Predictions for all users in users_to_predict_for. Matrix has shape (model.num_users, model.num_items)
         :rtype: csr_matrix
@@ -205,26 +204,28 @@ class CML(Algorithm):
         U = torch.LongTensor(list(users_to_predict_for)).repeat_interleave(
             self.model_.num_items
         )
-        I = torch.arange(self.model_.num_items).repeat(len(users_to_predict_for))
+        I = torch.arange(self.model_.num_items).repeat(
+            len(users_to_predict_for))
 
         num_interactions = U.shape[0]
 
         V = np.array([])
 
         for batch_ix in range(0, num_interactions, 10000):
-            batch_U = U[batch_ix : min(num_interactions, batch_ix + 10000)].to(
+            batch_U = U[batch_ix: min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
-            batch_I = I[batch_ix : min(num_interactions, batch_ix + 10000)].to(
+            batch_I = I[batch_ix: min(num_interactions, batch_ix + 10000)].to(
                 self.device
             )
 
-            batch_w_U = W_as_tensor[batch_U]
-            batch_h_I = H_as_tensor[batch_I]
+            batch_w_U = UEmb_as_tensor[batch_U]
+            batch_h_I = IEmb_as_tensor[batch_I]
 
             # Score = -distance
             batch_V = (
-                -nn.PairwiseDistance(p=2)(batch_w_U, batch_h_I).detach().cpu().numpy()
+                -nn.PairwiseDistance(p=2)(batch_w_U,
+                                          batch_h_I).detach().cpu().numpy()
             )
 
             V = np.append(V, batch_V)
@@ -236,7 +237,7 @@ class CML(Algorithm):
 
         return X_pred
 
-    # Predict using approximate nearest neighbours in Annoy? 
+    # Predict using approximate nearest neighbours in Annoy?
 
     def predict(self, X: Matrix) -> csr_matrix:
         """
@@ -260,12 +261,12 @@ class CML(Algorithm):
             model = self.model_
 
         # Extract embedding matrices
-        W_as_tensor = model.W.state_dict()["weight"]
-        H_as_tensor = model.H.state_dict()["weight"]
+        UEmb_as_tensor = model.UEmb.state_dict()["weight"]
+        IEmb_as_tensor = model.IEmb.state_dict()["weight"]
 
         users = set(X.nonzero()[0])
 
-        X_pred = self._batch_predict(users, W_as_tensor, H_as_tensor)
+        X_pred = self._batch_predict(users, UEmb_as_tensor, IEmb_as_tensor)
 
         self._check_prediction(X_pred, X)
 
@@ -274,9 +275,9 @@ class CML(Algorithm):
     def _train_users_only(self, train_data: csr_matrix) -> nn.Module:
         model = deepcopy(self.model_)
 
-        # TODO Log how much they are changed. 
+        # TODO Log how much they are changed.
 
-        optimizer = optim.Adagrad(model.W.parameters(), lr=0.5)
+        optimizer = optim.Adagrad(model.UEmb.parameters(), lr=0.5)
 
         self._train_epoch(train_data, model, optimizer)
 
@@ -308,7 +309,8 @@ class CML(Algorithm):
             dist_pos_interaction = model.forward(users, positives_batch)
             dist_neg_interaction_flat = model.forward(
                 users.repeat_interleave(self.U),
-                negatives_batch.reshape(current_batch_size * self.U, 1).squeeze(-1),
+                negatives_batch.reshape(
+                    current_batch_size * self.U, 1).squeeze(-1),
             )
             dist_neg_interaction = dist_neg_interaction_flat.reshape(
                 current_batch_size, -1
@@ -337,29 +339,20 @@ class CML(Algorithm):
         with torch.no_grad():
             # Need to make a selection, otherwise this step is way too slow.
             val_data_in, val_data_out = validation_data
-            nonzero_users = list(set(val_data_in.nonzero()[0]))
-            validation_users = np.random.choice(
-                nonzero_users, size=min(1000, len(nonzero_users)), replace=False
-            )
-
-            val_data_in_selection = csr_matrix(val_data_in.shape)
-            val_data_in_selection[validation_users, :] = val_data_in[
-                validation_users, :
-            ]
-
-            val_data_out_selection = csr_matrix(val_data_in.shape)
-            val_data_out_selection[validation_users, :] = val_data_out[
-                validation_users, :
-            ]
+            val_data_in_selection, val_data_out_selection = sample(
+                val_data_in, val_data_out, sample_size=1000)
 
             # Extract embedding matrices
-            W_as_tensor = self.model_.W.state_dict()["weight"]
-            H_as_tensor = self.model_.H.state_dict()["weight"]
+            UEmb_as_tensor = self.model_.UEmb.state_dict()["weight"]
+            IEmb_as_tensor = self.model_.IEmb.state_dict()["weight"]
 
+            validation_users = set(val_data_in_selection.nonzero()[0])
 
-            X_val_pred = self._batch_predict(validation_users, W_as_tensor, H_as_tensor)
+            X_val_pred = self._batch_predict(
+                validation_users, UEmb_as_tensor, IEmb_as_tensor)
             X_val_pred[val_data_in_selection.nonzero()] = 0
-            better = self.stopping_criterion.update(val_data_out_selection, X_val_pred)
+            better = self.stopping_criterion.update(
+                val_data_out_selection, X_val_pred)
 
             if better:
                 self._save_best()
@@ -388,125 +381,9 @@ class CML(Algorithm):
         )
 
         if self.disentangle:
-            loss += covariance_loss(self.model_.H, self.model_.W)
+            loss += covariance_loss(self.model_.IEmb, self.model_.UEmb)
 
         return loss
-
-    def approximate_W(
-        self, X: csr_matrix, W_as_tensor: torch.Tensor, H_as_tensor: torch.Tensor
-    ) -> torch.Tensor:
-        """
-        Approximate user embeddings of unknown users by setting them to the average of item embeddings the user visited.
-
-        :param X: Interaction matrix of shape (num_users, num_items)
-        :type X: csr_matrix
-        :param W_as_tensor: Embedding matrix W (user embeddings)
-        :type W_as_tensor: torch.Tensor
-        :param H_as_tensor: Embedding matrix H (item embeddings)
-        :type H_as_tensor: torch.Tensor
-        :return: Embedding matrix W (user embeddings) with unknown users approximated
-        :rtype: torch.Tensor
-        """
-        U = set(X.nonzero()[0])
-        users_to_approximate = U.difference(self.known_users_)
-
-        W_as_tensor_approximated = W_as_tensor.clone()
-
-        for user in users_to_approximate:
-            item_indices = X[user].nonzero()[1]
-
-            W_as_tensor_approximated[user] = H_as_tensor[
-                torch.LongTensor(item_indices).to(self.device)
-            ].mean(axis=0)
-
-        return W_as_tensor_approximated
-
-
-def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
-    """
-    Implementation of covariance loss as described in
-    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
-
-    The loss term is used to penalize covariance between embedding dimensions and
-    thus disentangle these embedding dimensions.
-
-    It is assumed H and W are embeddings in the same space.
-
-    :param H: Item embedding
-    :type H: nn.Embedding
-    :param W: User Embedding
-    :type W: nn.Embedding
-    :return: Covariance loss term
-    :rtype: torch.Tensor
-    """
-    W_as_tensor = next(W.parameters())
-    H_as_tensor = next(H.parameters())
-
-    # Concatenate them together. They live in the same metric space, so share the same dimensions.
-    #  X is a matrix of shape (|users| + |items|, num_dimensions)
-    X = torch.cat([W_as_tensor, H_as_tensor], dim=0)
-
-    # Zero mean
-    X = X - X.mean(dim=0)
-
-    cov = X.matmul(X.T)
-
-    # Per element covariance, excluding the variance of individual random variables.
-    return cov.fill_diagonal_(0).sum() / (X.shape[0] * X.shape[1])
-
-
-def warp_loss(
-    dist_pos_interaction: torch.Tensor,
-    dist_neg_interaction: torch.Tensor,
-    margin: float,
-    J: int,
-    U: int,
-) -> torch.Tensor:
-    """
-    Implementation of
-    WARP loss as described in
-    Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
-    http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
-    based on
-    J. Weston, S. Bengio, and N. Usunier. Large scale image annotation:
-    learning to rank with joint word-image embeddings. Machine learning, 81(1):21–35, 2010.
-
-    Adds a loss penalty for every negative sample that is not at least
-    an amount of margin further away from the reference sample than a positive
-    sample. This per sample loss penalty has a weight proportional to the
-    amount of samples in the negative sample batch were "misclassified",
-    i.e. closer than the positive sample.
-
-    :param dist_pos_interaction: Tensor of distances between positive sample and reference sample.
-    :type dist_pos_interaction: torch.Tensor
-    :param dist_neg_interaction: Tensor of distances between negatives samples and reference sample.
-    :type dist_neg_interaction: torch.Tensor
-    :param margin: Required margin between positive and negative sample.
-    :type margin: float
-    :param J: Total number of items in the dataset.
-    :type J: int
-    :param U: Number of negative samples used for every positive sample.
-    :type U: int
-    :return: 0-D Tensor containing WARP loss.
-    :rtype: torch.Tensor
-    """
-    dist_diff_pos_neg_margin = margin + dist_pos_interaction - dist_neg_interaction
-
-    # Largest number is "most wrongly classified", f.e.
-    # pos = 0.1, margin = 0.1, neg = 0.15 => 0.1 + 0.1 - 0.15 = 0.05 > 0
-    # pos = 0.1, margin = 0.1, neg = 0.08 => 0.1 + 0.1 - 0.08 = 0.12 > 0
-    most_wrong_neg_interaction, _ = dist_diff_pos_neg_margin.max(dim=-1)
-
-    most_wrong_neg_interaction[most_wrong_neg_interaction < 0] = 0
-
-    M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
-    # M * J / U =~ rank(pos_i)
-    w = torch.log((M * J / U) + 1)
-
-    loss = (most_wrong_neg_interaction * w).sum()
-
-    return loss
 
 
 class CMLTorch(nn.Module):
@@ -528,13 +405,13 @@ class CMLTorch(nn.Module):
         self.num_users = num_users
         self.num_items = num_items
 
-        self.W = nn.Embedding(num_users, num_components)  # User embedding
-        self.H = nn.Embedding(num_items, num_components)  # Item embedding
+        self.UEmb = nn.Embedding(num_users, num_components)  # User embedding
+        self.IEmb = nn.Embedding(num_items, num_components)  # Item embedding
 
         self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
-        nn.init.normal_(self.W.weight, std=self.std)
-        nn.init.normal_(self.H.weight, std=self.std)
+        nn.init.normal_(self.UEmb.weight, std=self.std)
+        nn.init.normal_(self.IEmb.weight, std=self.std)
 
         self.pdist = nn.PairwiseDistance(p=2)
 
@@ -550,8 +427,8 @@ class CMLTorch(nn.Module):
         :return: Euclidian distances between user-item pairs.
         :rtype: torch.Tensor
         """
-        w_U = self.W(U)
-        h_I = self.H(I)
+        w_U = self.UEmb(U)
+        h_I = self.IEmb(I)
 
         # U and I are unrolled -> [u=0, i=1, i=2, i=3] -> [0, 1], [0, 2], [0,3]
 

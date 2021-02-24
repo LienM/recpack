@@ -19,8 +19,8 @@ from recpack.algorithms.util import (
     swish,
     log_norm_pdf,
     naive_sparse2tensor,
-    StoppingCriterion,
 )
+from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.metrics.dcg import ndcg_k
 
 logger = logging.getLogger("recpack")
