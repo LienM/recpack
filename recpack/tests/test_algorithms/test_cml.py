@@ -12,7 +12,6 @@ from recpack.splitters.scenarios import StrongGeneralization
 from recpack.algorithms.metric_learning.cml import (
     CML,
     CMLTorch,
-    # warp_loss,
     covariance_loss,
 )
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
