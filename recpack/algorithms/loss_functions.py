@@ -6,10 +6,9 @@ from tqdm import tqdm
 
 from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
 
-# TODO Refactor so that it's no longer specific to CML
-
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
+    # TODO Refactor so that it's no longer specific to CML
     """
     Implementation of covariance loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
@@ -138,15 +137,24 @@ def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
 
 def warp_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size: int = 1000, U: int = 20, margin: float = 1.9):
     loss = 0.0
+    J = X_true.shape[1]
+
     for users, positives_batch, negatives_batch in tqdm(
         warp_sample_pairs(X_true, U=U, batch_size=batch_size)
     ):
-        current_batch_size, J = users.shape
+        current_batch_size = users.shape[0]
+
+        dist_pos_interaction = X_pred[users.numpy(
+        ).tolist(), positives_batch.numpy().tolist()]
+
+        dist_neg_interaction = X_pred[users.repeat_interleave(U).numpy().tolist(),
+                                      negatives_batch.reshape(
+            current_batch_size * U, 1).squeeze(-1).numpy().tolist()]
 
         dist_pos_interaction = torch.tensor(
-            X_pred[users.numpy().tolist(), positives_batch.numpy().tolist()])
+            dist_pos_interaction.A[0]).unsqueeze(-1)
         dist_neg_interaction_flat = torch.tensor(
-            X_pred[users.numpy().tolist(), negatives_batch.numpy().tolist()])
+            dist_neg_interaction.A[0])
         dist_neg_interaction = dist_neg_interaction_flat.reshape(
             current_batch_size, -1
         )
