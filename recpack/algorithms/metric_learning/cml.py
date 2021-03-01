@@ -27,14 +27,14 @@ logger = logging.getLogger("recpack")
 
 """
 - Train before predict => Implement and write test
-- Keep last => Implement and write test
+- Keep last => Implement and write test (How should I test this?)
 - Stopping Criterion WARP => Fill in kwargs?
+- Stopping Criterion: Just realised you can't actually pass stop_early etc. anymore the way we've set it up now...
 - Add documentation
-- Always compute MEAN of loss, not SUM. 
 
 - Refactor predict in a cleaner way. E.g. the PyTorch model has an "export to annoy" function
 that can be used to export a model that can be used for prediction, that has no entries for
-users it doesn't know. 
+users it doesn't know.
 """
 
 
@@ -116,28 +116,29 @@ class CML(Algorithm):
         :param num_items: Number of items.
         :type num_items: int
         """
-        num_users, num_items = X.shape
-        self.model_ = CMLTorch(
-            num_users, num_items, num_components=self.num_components
-        ).to(self.device)
+        # Run only once. If a model already exists, skip
+        if not self.model_:
+            num_users, num_items = X.shape
+            self.model_ = CMLTorch(
+                num_users, num_items, num_components=self.num_components
+            ).to(self.device)
 
-        self.optimizer = optim.Adagrad(
-            self.model_.parameters(), lr=self.learning_rate)
+            self.optimizer = optim.Adagrad(
+                self.model_.parameters(), lr=self.learning_rate)
 
-        self.known_users_ = set(X.nonzero()[0])
+            self.known_users_ = set(X.nonzero()[0])
 
-        self.best_model_ = tempfile.NamedTemporaryFile()
-        torch.save(self.model_, self.best_model_)
+            self.best_model_ = tempfile.NamedTemporaryFile()
+            torch.save(self.model_, self.best_model_)
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
     # TODO: loading just the model is not enough to reuse it.
     # We also need known users etc. Pickling seems like a good way to go here.
-    def load(self, filename: str):
-        """
-        Load a previously computed model.
+    def load(self, filename: str) -> None:
+        """Load a previously computed model.
 
         :param filename: path to file to load
         :type filename: str
@@ -145,12 +146,12 @@ class CML(Algorithm):
         with open(filename, "rb") as f:
             self.model_ = torch.load(f)
 
-    def save(self):
+    def save(self) -> None:
         """Save the current model to disk"""
         with open(self.filename, "wb") as f:
             torch.save(self.model_, f)
 
-    def _save_best(self):
+    def _save_best(self) -> None:
         """Save the best model in a temp file"""
         # TODO Rename to save_temp
         # First removes the old saved file,
@@ -159,13 +160,12 @@ class CML(Algorithm):
         self.best_model_ = tempfile.NamedTemporaryFile()
         torch.save(self.model_, self.best_model_)
 
-    def _load_best(self):
+    def _load_best(self) -> None:
         self.best_model_.seek(0)
         self.model_ = torch.load(self.best_model_)
 
     def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
-        """
-        Fit the model on the X dataset, and evaluate model quality on validation_data.
+        """Fit the model on the X dataset, and evaluate model quality on validation_data
 
         :param X: The training data matrix
         :type X: Matrix
@@ -250,8 +250,7 @@ class CML(Algorithm):
 
     # TODO Predict using approximate nearest neighbours in Annoy?
     def predict(self, X: Matrix) -> csr_matrix:
-        """
-        Predict recommendations for each user with at least a single event in their history.
+        """Predict recommendations for each user with at least a single event in their history.
 
         :param X: interaction matrix, should have same size as model.
         :type X: Matrix
@@ -266,14 +265,25 @@ class CML(Algorithm):
         assert X.shape == (self.model_.num_users, self.model_.num_items)
 
         if self.train_before_predict:
-            model = self._train_users_only(X)
+            # Please forgive me for this terrible piece of code.
+            stopping_criterion = StoppingCriterion.create("warp", stop_early=True)
+
+            predict_model = deepcopy(self)
+            optimizer = optim.Adagrad(
+                predict_model.model_.UEmb.parameters(), lr=self.learning_rate)
+            predict_model.optimizer = optimizer
+            predict_model.stopping_criterion = stopping_criterion
+
+            predict_model.fit(X)
+
+            # Extract embedding matrices
+            UEmb_as_tensor = predict_model.model_.UEmb.state_dict()["weight"]
+            IEmb_as_tensor = predict_model.model_.IEmb.state_dict()["weight"]
         else:
-            model = self.model_
 
-
-        # Extract embedding matrices
-        UEmb_as_tensor = model.UEmb.state_dict()["weight"]
-        IEmb_as_tensor = model.IEmb.state_dict()["weight"]
+            # Extract embedding matrices
+            UEmb_as_tensor = self.model_.UEmb.state_dict()["weight"]
+            IEmb_as_tensor = self.model_.IEmb.state_dict()["weight"]
 
         users = set(X.nonzero()[0])
 
@@ -283,25 +293,7 @@ class CML(Algorithm):
 
         return X_pred
 
-    def _train_users_only(self, train_data: csr_matrix) -> nn.Module:
-        model = deepcopy(self.model_)
-
-        # TODO Log how much they are changed.
-
-        optimizer = optim.Adagrad(model.UEmb.parameters(), lr=self.learning_rate)
-
-        try:
-            for epoch in range(self.num_epochs):
-                self._train_epoch(X, self.model_, self.optimizer)
-                self._evaluate(validation_data)
-        except EarlyStoppingException:
-            pass
-
-        self._train_epoch(train_data, model, optimizer)
-
-        return model
-
-    def _train_epoch(self, train_data: csr_matrix, model: nn.Module, optimizer: optim.Optimizer):
+    def _train_epoch(self, train_data: csr_matrix):
         """
         Train model for a single epoch. Uses sampler to generate samples,
         and loop through them in batches of self.batch_size.
@@ -311,7 +303,7 @@ class CML(Algorithm):
         :type train_data: csr_matrix
         """
         losses = []
-        model.train()
+        self.model_.train()
 
         for users, positives_batch, negatives_batch in tqdm(
             warp_sample_pairs(train_data, U=self.U, batch_size=self.batch_size)
@@ -324,8 +316,8 @@ class CML(Algorithm):
 
             current_batch_size = users.shape[0]
 
-            dist_pos_interaction = model.forward(users, positives_batch)
-            dist_neg_interaction_flat = model.forward(
+            dist_pos_interaction = self.model_.forward(users, positives_batch)
+            dist_neg_interaction_flat = self.model_.forward(
                 users.repeat_interleave(self.U),
                 negatives_batch.reshape(
                     current_batch_size * self.U, 1).squeeze(-1),
@@ -339,7 +331,7 @@ class CML(Algorithm):
             )
             loss.backward()
             losses.append(loss.item())
-            optimizer.step()
+            self.optimizer.step()
 
         logger.info(f"training loss = {np.mean(losses)}")
 
