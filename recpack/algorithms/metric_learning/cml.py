@@ -25,6 +25,19 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 logger = logging.getLogger("recpack")
 
 
+"""
+- Train before predict => Implement and write test
+- Keep last => Implement and write test
+- Stopping Criterion WARP => Fill in kwargs?
+- Add documentation
+- Always compute MEAN of loss, not SUM. 
+
+- Refactor predict in a cleaner way. E.g. the PyTorch model has an "export to annoy" function
+that can be used to export a model that can be used for prediction, that has no entries for
+users it doesn't know. 
+"""
+
+
 class CML(Algorithm):
     def __init__(
         self,
@@ -37,22 +50,19 @@ class CML(Algorithm):
         U: int = 20,
         stopping_criterion: str = "recall",
         save_best_to_file=True,
-        approximate_user_vectors=False,
         disentangle=False,
-        train_before_predict=True,
+        train_before_predict=False,
         keep_last=False
     ):
-        # TODO Add documentation
-        """
-        Pytorch Implementation of
-        Cheng-Kang IEmbsieh et al., Collaborative Metric Learning. UEmbUEmbUEmb2017
-        http://www.cs.cornell.edu/~ylongqi/paper/IEmbsiehYCLBE17.pdf
+        """Collaborative Metric Learning.
 
-        Version without features, referred to as CML in the paper.
+        Pytorch Implementation of
+        Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
+        http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf without features, referred to as CML in the paper.
 
         :param num_components: Embedding dimension
         :type num_components: int
-        :param margin: IEmbinge loss margin. Required difference in score, smaller than which we will consider a negative sample item in violation
+        :param margin: Hinge loss margin. Required difference in score, smaller than which we will consider a negative sample item in violation
         :type margin: float
         :param learning_rate: Learning rate for AdaGrad optimization
         :type learning_rate: float
@@ -62,19 +72,21 @@ class CML(Algorithm):
         :type seed: int, optional
         :param batch_size: Sample batch size, defaults to 50000
         :type batch_size: int, optional
-        :param U: Number of negative samples used in UEmbARP loss function for every positive sample, defaults to 20
+        :param U: Number of negative samples used in WARP loss function for every positive sample, defaults to 20
         :type U: int, optional
         :param stopping_criterion: Used to identify the best model computed thus far.
             The string indicates the name of the stopping criterion.
-            UEmbhich criterions are available can be found at StoppingCriterion.FUNCTIONS
+            Which criterions are available can be found at StoppingCriterion.FUNCTIONS
             Defaults to 'recall'
         :type stopping_criterion: str, optional
-        :param save_best_to_file: If True, the best model is saved to disk after fit.
-        :type save_best_to_file: bool
-        :param approximate_user_vectors: If True, make an approximation of user vectors for unknown users.
-        :type approximate_user_vectors: bool
-        :param disentangle: Disentangle embedding dimensions by adding a covariance loss term to regularize.
-        :type disentangle: bool
+        :param save_best_to_file: If True, the best model is saved to disk after fit, defaults to True.
+        :type save_best_to_file: bool, optional
+        :param disentangle: Disentangle embedding dimensions by adding a covariance loss term to regularize, defaults to False
+        :type disentangle: bool, optional
+        :param train_before_predict: Compute user embeddings for unknown users in `predict`, defaults to False
+        :type train_before_predict: bool, optional
+        :param keep_last: Retain last model, rather than best (according to stopping criterion value on validation data), defaults to False
+        :type keep_last: bool, optional
         """
         self.num_components = num_components
         self.margin = margin
@@ -92,14 +104,12 @@ class CML(Algorithm):
 
         self.save_best_to_file = save_best_to_file
         self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
-        self.approximate_user_vectors = approximate_user_vectors
         self.disentangle = disentangle
         self.train_before_predict = train_before_predict
         self.keep_last = keep_last
 
     def _init_model(self, X):
-        """
-        Initialize model.
+        """Initialize model.
 
         :param num_users: Number of users.
         :type num_users: int
@@ -124,7 +134,7 @@ class CML(Algorithm):
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
     # TODO: loading just the model is not enough to reuse it.
-    # UEmbe also need known users etc. Pickling seems like a good way to go here.
+    # We also need known users etc. Pickling seems like a good way to go here.
     def load(self, filename: str):
         """
         Load a previously computed model.
@@ -189,6 +199,7 @@ class CML(Algorithm):
         IEmb_as_tensor: torch.Tensor,
     ) -> csr_matrix:
         """
+        # TODO If approximate users doesn't work, this method need not be so complex
         Method for internal use only. Users should use `predict`.
 
         :param users_to_predict_for: Set of users for which we wish to make predictions
@@ -237,8 +248,7 @@ class CML(Algorithm):
 
         return X_pred
 
-    # Predict using approximate nearest neighbours in Annoy?
-
+    # TODO Predict using approximate nearest neighbours in Annoy?
     def predict(self, X: Matrix) -> csr_matrix:
         """
         Predict recommendations for each user with at least a single event in their history.
@@ -260,6 +270,7 @@ class CML(Algorithm):
         else:
             model = self.model_
 
+
         # Extract embedding matrices
         UEmb_as_tensor = model.UEmb.state_dict()["weight"]
         IEmb_as_tensor = model.IEmb.state_dict()["weight"]
@@ -277,7 +288,14 @@ class CML(Algorithm):
 
         # TODO Log how much they are changed.
 
-        optimizer = optim.Adagrad(model.UEmb.parameters(), lr=0.5)
+        optimizer = optim.Adagrad(model.UEmb.parameters(), lr=self.learning_rate)
+
+        try:
+            for epoch in range(self.num_epochs):
+                self._train_epoch(X, self.model_, self.optimizer)
+                self._evaluate(validation_data)
+        except EarlyStoppingException:
+            pass
 
         self._train_epoch(train_data, model, optimizer)
 
@@ -292,7 +310,7 @@ class CML(Algorithm):
         :param train_data: interaction matrix
         :type train_data: csr_matrix
         """
-        train_loss = 0.0
+        losses = []
         model.train()
 
         for users, positives_batch, negatives_batch in tqdm(
@@ -320,10 +338,10 @@ class CML(Algorithm):
                 dist_pos_interaction.unsqueeze(-1), dist_neg_interaction
             )
             loss.backward()
-            train_loss += loss.item()
+            losses.append(loss.item())
             optimizer.step()
 
-        logger.info(f"training loss = {train_loss}")
+        logger.info(f"training loss = {np.mean(losses)}")
 
     def _evaluate(self, validation_data: Tuple[csr_matrix, csr_matrix]):
         """
