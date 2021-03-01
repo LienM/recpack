@@ -117,7 +117,7 @@ class CML(Algorithm):
         :type num_items: int
         """
         # Run only once. If a model already exists, skip
-        if not self.model_:
+        if not hasattr(self, "model_"):
             num_users, num_items = X.shape
             self.model_ = CMLTorch(
                 num_users, num_items, num_components=self.num_components
@@ -177,7 +177,7 @@ class CML(Algorithm):
         self._init_model(X)
         try:
             for epoch in range(self.num_epochs):
-                self._train_epoch(X, self.model_, self.optimizer)
+                self._train_epoch(X)
                 self._evaluate(validation_data)
         except EarlyStoppingException:
             pass
@@ -345,6 +345,7 @@ class CML(Algorithm):
         :param validation_data: validation data interaction matrix
         :type validation_data: Tuple[csr_matrix, csr_matrix]
         """
+        # TODO Apply train before predict to evaluation as well
         self.model_.eval()
         with torch.no_grad():
             # Need to make a selection, otherwise this step is way too slow.
