@@ -161,16 +161,11 @@ def test_cml_predict_w_extra_train_users_only(cml, larger_matrix):
 #     W_as_tensor = cml.model_.IEmb.state_dict()["weight"]
 #     H_as_tensor = cml.model_.UEmb.state_dict()["weight"]
 
-    W_as_tensor_approximated = cml.approximate_W(
-        s._validation_data_in.binary_values, W_as_tensor, H_as_tensor
-    )
+#     W_as_tensor_approximated = cml.approximate_W(s._validation_data_in.binary_values, W_as_tensor, H_as_tensor)
 
-    # W_as_tensor_approximated should have changed in comparison to before
-    with np.testing.assert_raises(AssertionError):
-        np.testing.assert_array_equal(
-            W_as_tensor.detach().cpu().numpy(),
-            W_as_tensor_approximated.detach().cpu().numpy(),
-        )
+#     # W_as_tensor_approximated should have changed in comparison to before
+#     with np.testing.assert_raises(AssertionError):
+#         np.testing.assert_array_equal(W_as_tensor.detach().cpu().numpy(), W_as_tensor_approximated.detach().cpu().numpy())
 
 
 def test_covariance_loss():
