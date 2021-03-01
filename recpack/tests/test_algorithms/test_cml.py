@@ -122,7 +122,7 @@ def test_cml_predict_w_extra_train_users_only(cml, larger_matrix):
     assert cml.known_users_ == set(s.training_data.binary_values.nonzero()[0])
 
     # TODO See if nothing was changed about the model. No parameter updates
-
+    # TODO See if the same model ID was returned as before.
 
     X_pred = cml.predict(s.test_data_in)
 
