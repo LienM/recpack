@@ -90,7 +90,7 @@ def warp_loss(
     # M * J / U =~ rank(pos_i)
     w = torch.log((M * J / U) + 1)
 
-    loss = (most_wrong_neg_interaction * w).sum()
+    loss = (most_wrong_neg_interaction * w).mean()
 
     return loss
 
@@ -99,7 +99,7 @@ def bpr_loss(positive_sim, negative_sim):
     distance = positive_sim - negative_sim
     # Probability of ranking given parameters
     elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
-    bpr_loss = -elementwise_bpr_loss.sum()
+    bpr_loss = -elementwise_bpr_loss.mean()
 
     return bpr_loss
 
