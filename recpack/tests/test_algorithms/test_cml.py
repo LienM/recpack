@@ -60,7 +60,7 @@ def test_cml_training_epoch(cml, larger_matrix):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    cml._train_epoch(larger_matrix, cml.model_, cml.optimizer)
+    cml._train_epoch(larger_matrix)
 
     device = cml.device
 
@@ -77,7 +77,7 @@ def test_cml_training_epoch_w_disentanglement(cml, larger_matrix):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    cml._train_epoch(larger_matrix, cml.model_, cml.optimizer)
+    cml._train_epoch(larger_matrix)
 
     device = cml.device
 

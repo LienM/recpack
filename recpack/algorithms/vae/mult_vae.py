@@ -159,7 +159,7 @@ class MultVAE(VAE):
 
         logger.info(
             f"Processed one batch in {end_time-start_time} s."
-            f" Training Loss = {np.mean(train_loss)}"
+            f" Training Loss = {np.mean(losses)}"
         )
 
     def _compute_loss(
