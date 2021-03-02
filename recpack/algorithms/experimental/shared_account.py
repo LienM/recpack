@@ -4,7 +4,7 @@ import numpy as np
 
 import numba
 
-from recpack.algorithms.similarity.base import SimilarityMatrixAlgorithm
+from recpack.algorithms.base import SimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 

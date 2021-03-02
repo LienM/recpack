@@ -2,7 +2,7 @@ import scipy.sparse
 import sklearn.decomposition
 from sklearn.utils.validation import check_is_fitted
 
-from recpack.algorithms.similarity.base import Algorithm, SimilarityMatrixAlgorithm
+from recpack.algorithms.base import Algorithm, SimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 

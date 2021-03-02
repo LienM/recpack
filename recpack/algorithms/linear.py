@@ -6,7 +6,7 @@ import scipy.sparse
 from sklearn.linear_model import SGDRegressor
 from sklearn.utils.validation import check_is_fitted
 
-from recpack.algorithms.similarity.base import SimilarityMatrixAlgorithm
+from recpack.algorithms.base import SimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 

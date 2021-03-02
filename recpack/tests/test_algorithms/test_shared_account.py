@@ -1,5 +1,5 @@
-from recpack.algorithms.similarity.shared_account import DAMIBCover
-from recpack.algorithms.similarity.nearest_neighbour import ItemKNN
+from recpack.algorithms.experimental.shared_account import DAMIBCover
+from recpack.algorithms.nearest_neighbour import ItemKNN
 import scipy.sparse
 import math
 import numpy

@@ -5,9 +5,7 @@ import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
 
 from recpack.data.matrix import Matrix, to_csr_matrix
-from recpack.algorithms.similarity.base import (
-    TopKSimilarityMatrixAlgorithm,
-)
+from recpack.algorithms.base import TopKSimilarityMatrixAlgorithm
 
 
 class ItemKNN(TopKSimilarityMatrixAlgorithm):

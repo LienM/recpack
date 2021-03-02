@@ -2,7 +2,7 @@ import pytest
 import scipy.sparse
 import numpy
 
-from recpack.algorithms.similarity.linear import EASE
+from recpack.algorithms import EASE
 
 
 @pytest.fixture()

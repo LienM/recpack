@@ -21,6 +21,19 @@ def pageviews():
 
 
 @pytest.fixture(scope="function")
+def pageviews_for_pairwise():
+    pv_users, pv_items, pv_values = (
+        [0, 0, 0, 1, 1, 1, 3, 3, 4, 4],
+        [0, 1, 2, 0, 1, 2, 3, 4, 3, 4],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    )
+
+    pv = sp.csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
+
+    return pv
+
+
+@pytest.fixture(scope="function")
 def pageviews_data_m(pageviews):
     return InteractionMatrix.from_csr_matrix(pageviews)
 
@@ -105,8 +118,6 @@ def data():
         [0.3, 0.2, 0.1, 0.23, 0.3, 0.5],
     )
 
-    pred = sp.csr_matrix(
-        (pred_values, (pred_users, pred_items)), shape=(10, 5)
-    )
+    pred = sp.csr_matrix((pred_values, (pred_users, pred_items)), shape=(10, 5))
 
     return pred
