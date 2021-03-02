@@ -36,6 +36,6 @@ def test_warp_loss_metric():
         + math.log((2 * 3 / U) + 1) * (1 - 0.8 + margin)
         # Wrong classification was within margin, but 
         + math.log((2 * 3 / U) + 1) * (1 - 0.95 + margin)
-    )
+    ) / 3 # Mean
 
     np.testing.assert_almost_equal(loss, expected_loss)

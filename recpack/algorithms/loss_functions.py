@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 import torch.nn as nn
@@ -117,7 +118,7 @@ def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
     :yield: [description]
     :rtype: [type]
     """
-    total_loss = 0
+    losses = []
 
     for d in bootstrap_sample_pairs(
         X_true, batch_size=batch_size, sample_size=X_true.nnz
@@ -130,13 +131,13 @@ def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
         positive_sim = torch.tensor(X_pred[users, target_items])
         negative_sim = torch.tensor(X_pred[users, negative_items])
 
-        total_loss += bpr_loss(positive_sim, negative_sim).item()
+        losses.append(bpr_loss(positive_sim, negative_sim).item())
 
-    return total_loss
+    return np.mean(losses)
 
 
 def warp_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size: int = 1000, U: int = 20, margin: float = 1.9):
-    loss = 0.0
+    losses = []
     J = X_true.shape[1]
 
     for users, positives_batch, negatives_batch in tqdm(
@@ -159,7 +160,7 @@ def warp_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size: int = 1
             current_batch_size, -1
         )
 
-        loss += warp_loss(dist_pos_interaction,
-                          dist_neg_interaction, margin, J, U)
+        losses.append(warp_loss(dist_pos_interaction,
+                          dist_neg_interaction, margin, J, U))
 
-    return loss
+    return np.mean(losses)
