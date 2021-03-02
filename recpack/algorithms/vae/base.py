@@ -7,12 +7,14 @@ from sklearn.utils.validation import check_is_fitted
 import torch
 
 from recpack.algorithms.base import Algorithm
+from recpack.algorithms.stopping_criterion import (
+    StoppingCriterion,
+    EarlyStoppingException,
+)
 from recpack.algorithms.util import (
     naive_sparse2tensor,
     get_batches,
     get_users,
-    StoppingCriterion,
-    EarlyStoppingException,
 )
 from recpack.data.matrix import Matrix, to_csr_matrix
 

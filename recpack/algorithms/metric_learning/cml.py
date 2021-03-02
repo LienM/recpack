@@ -15,7 +15,7 @@ import torch.optim as optim
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.samplers import warp_sample_pairs
-from recpack.algorithms.util import (
+from recpack.algorithms.stopping_criterion import (
     StoppingCriterion,
     EarlyStoppingException,
 )

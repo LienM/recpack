@@ -15,11 +15,13 @@ from copy import deepcopy
 
 from recpack.splitters.splitter_base import batch
 from recpack.algorithms.vae.base import VAE
+from recpack.algorithms.stopping_criterion import (
+    StoppingCriterion,
+)
 from recpack.algorithms.util import (
     swish,
     log_norm_pdf,
     naive_sparse2tensor,
-    StoppingCriterion,
 )
 from recpack.metrics.dcg import ndcg_k
 
