@@ -1,13 +1,11 @@
 import os.path
-
-# from unittest.mock import MagicMock
+from recpack.data.matrix import InteractionMatrix
 
 import numpy as np
 import scipy.sparse
 import pytest
 import torch.nn as nn
 
-from recpack.data.matrix import to_datam
 from recpack.splitters.scenarios import StrongGeneralization
 from recpack.algorithms.metric_learning.cml import (
     CML,
@@ -114,7 +112,7 @@ def test_cml_predict(cml, larger_matrix):
 def test_cml_predict_w_approximate(cml, larger_matrix):
     cml.approximate_user_vectors = True
 
-    dm = to_datam(larger_matrix)
+    dm = InteractionMatrix.from_csr_matrix(larger_matrix)
     s = StrongGeneralization(0.7, 1.0, validation=True)
 
     s.split(dm)
@@ -131,11 +129,16 @@ def test_cml_predict_w_approximate(cml, larger_matrix):
     W_as_tensor = cml.model_.W.state_dict()["weight"]
     H_as_tensor = cml.model_.H.state_dict()["weight"]
 
-    W_as_tensor_approximated = cml.approximate_W(s._validation_data_in.binary_values, W_as_tensor, H_as_tensor)
+    W_as_tensor_approximated = cml.approximate_W(
+        s._validation_data_in.binary_values, W_as_tensor, H_as_tensor
+    )
 
     # W_as_tensor_approximated should have changed in comparison to before
     with np.testing.assert_raises(AssertionError):
-        np.testing.assert_array_equal(W_as_tensor.detach().cpu().numpy(), W_as_tensor_approximated.detach().cpu().numpy())
+        np.testing.assert_array_equal(
+            W_as_tensor.detach().cpu().numpy(),
+            W_as_tensor_approximated.detach().cpu().numpy(),
+        )
 
 
 def test_covariance_loss():

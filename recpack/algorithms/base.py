@@ -1,12 +1,10 @@
 import scipy.sparse
-import numpy as np
 from sklearn.base import BaseEstimator
 import warnings
 from recpack.data.matrix import Matrix
 
 
 class Algorithm(BaseEstimator):
-
     def __init__(self):
         super().__init__()
 
@@ -16,8 +14,7 @@ class Algorithm(BaseEstimator):
 
     @property
     def identifier(self):
-        paramstring = ",".join(
-            (f"{k}={v}" for k, v in self.get_params().items()))
+        paramstring = ",".join((f"{k}={v}" for k, v in self.get_params().items()))
         return self.name + "(" + paramstring + ")"
 
     def __str__(self):
@@ -35,8 +32,9 @@ class Algorithm(BaseEstimator):
     def load(self, filename):
         pass
 
-    def _check_prediction(self, X_pred: scipy.sparse.csr_matrix,
-                          X: scipy.sparse.csr_matrix) -> None:
+    def _check_prediction(
+        self, X_pred: scipy.sparse.csr_matrix, X: scipy.sparse.csr_matrix
+    ) -> None:
         """Checks that the prediction matches expectations.
 
         Checks implemented
@@ -54,4 +52,5 @@ class Algorithm(BaseEstimator):
         if len(missing) > 0:
             warnings.warn(
                 f"{self.name} failed to recommend any items "
-                f"for {len(missing)} users")
+                f"for {len(missing)} users"
+            )

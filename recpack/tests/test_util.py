@@ -1,5 +1,5 @@
 import numpy as np
-import scipy
+import scipy.sparse
 
 from recpack.util import get_top_K_ranks, get_top_K_values
 

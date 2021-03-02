@@ -74,5 +74,5 @@ def test_strong_generalization_timed_split_w_validation_has_validation_users(dat
 
     val_data_in, val_data_out = scenario.validation_data
 
-    assert val_data_out.active_user_count > 0
-    assert val_data_in.active_user_count > 0
+    assert val_data_out.num_active_users > 0
+    assert val_data_in.num_active_users > 0

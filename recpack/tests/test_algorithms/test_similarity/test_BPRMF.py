@@ -4,7 +4,6 @@ import os
 import numpy as np
 import pytest
 import torch
-from unittest.mock import MagicMock
 
 from recpack.algorithms import BPRMF
 from recpack.algorithms.samplers import bootstrap_sample_pairs

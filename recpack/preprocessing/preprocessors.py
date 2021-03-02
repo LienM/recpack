@@ -1,3 +1,60 @@
+"""Preprocessors turn data into Recpack internal representations.
+
+The preprocessor  provides all functionality to bundle preprocessing in  one step.
+This makes it less prone to error, when applying the same  processing to different input data.
+It also makes initialisation more declarative, rather than having to chain outputs yourself.
+
+.. autosummary::
+
+    DataFramePreprocessor
+
+Preprocessing has three steps
+
+- Apply filters to the input data
+- Map user and item identifiers to a consecutive id space. Making them usable as indices in a matrix.
+- Construct an InteractionMatrix object
+
+In order to apply filters they should be added using the ``add_filter`` function.
+The filters and the two other steps will all get applied during the ``process`` function.
+
+Example
+--------
+
+In this example we will process a pandas DataFrame.
+We'll use filters to 
+
+- Remove duplicates
+- Make sure all users have at least 3 interactions
+
+::
+
+    import random
+    import pandas as pd
+    from recpack.preprocessing.filters import Deduplicate, MinItemsPerUser
+    from recpack.preprocessing.preprocessors import DataFramePreprocessor
+
+    data = {
+        "user": [random.randint(1, 250) for i in range(1000)],
+        "item": [random.randint(1, 250) for i in range(1000)],
+        "timestamp": [1613736000 + random.randint(1, 3600) for i in range(1000)]
+    }
+    df = pd.DataFrame.from_dict(data)
+
+    df_pp = DataFramePreprocessor("item", "user", "timestamp")
+    df_pp.add_filter(
+        Deduplicate("item", "user", "timestamp")
+    )
+    df_pp.add_filter(
+        MinItemsPerUser(3, "item", "user")
+    )
+
+    im = df_pp.process(df)
+
+
+Classes
+---------
+"""
+
 import logging
 from typing import List
 
@@ -5,7 +62,7 @@ import pandas as pd
 import numpy as np
 
 import recpack.preprocessing.util as util
-from recpack.data.data_matrix import DataM
+from recpack.data.matrix import InteractionMatrix
 from recpack.preprocessing.filters import Filter
 
 from tqdm.auto import tqdm
@@ -17,42 +74,49 @@ logger = logging.getLogger("recpack")
 
 
 class DataFramePreprocessor:
-    def __init__(
-        self, item_id, user_id, value_id=None, timestamp_id=None, dedupe=False
-    ):
-        """
-        Class to preprocess a Pandas Dataframe and turn it into a DataM object.
-        All ID mappings are stored, so that processing of multiple DataFrames will lead to consistent mapped identifiers.
+    """Class to preprocess a Pandas Dataframe and turn it into a InteractionMatrix object.
 
-        :param item_id: Column name of the Item ID column
-        :type item_id: str
-        :param user_id: Column name of the User ID column
-        :type user_id: str
-        :param value_id: Column name of the value column, defaults to None
-        :type value_id: str, optional
-        :param timestamp_id: Column name of the timestamp column, defaults to None
-        :type timestamp_id: str, optional
-        :param dedupe: Deduplicate events, such that (user_id, item_id) pairs are unique, defaults to False
-        :type dedupe: bool, optional
-        """
+    All ID mappings are stored, so that processing of multiple DataFrames will lead to consistent mapped identifiers.
+
+    :param item_ix: Column name of the Item ID column
+    :type item_ix: str
+    :param user_ix: Column name of the User ID column
+    :type user_ix: str
+    :param timestamp_ix: Column name of the timestamp column. If None, no timestamps will be loaded, defaults to None
+    :type timestamp_ix: str, optional
+    """
+
+    ITEM_IX = "iid"
+    USER_IX = "uid"
+
+    def __init__(self, item_ix, user_ix, timestamp_ix=None):
         self.item_id_mapping = dict()
         self.user_id_mapping = dict()
-        self.item_id = item_id
-        self.user_id = user_id
-        self.value_id = value_id
-        self.timestamp_id = timestamp_id
-        self.dedupe = dedupe
+
+        self.item_ix = item_ix
+        self.user_ix = user_ix
+        self.timestamp_ix = timestamp_ix
+
         self.filters = []
 
-    def add_filter(self, _filter: Filter):
+    def add_filter(self, _filter: Filter, index: int = None):
         """
-        Add a preprocessing filter to be applied before transforming to a DataM object.
+        Add a preprocessing filter to be applied before transforming to a InteractionMatrix object.
         Filters are applied in order, different orderings can lead to different results!
+
+        If the index is specified, the filter is inserted at the specified index.
+        Otherwise it is appended.
 
         :param _filter: The filter to be applied
         :type _filter: Filter
+        :param index: The index to insert the filter at,
+            None will append the filter. Defaults to None
+        :type index: int
         """
-        self.filters.append(_filter)
+        if index is None:
+            self.filters.append(_filter)
+        else:
+            self.filters.insert(index, _filter)
 
     def map_users(self, df):
         logger.debug("Map users")
@@ -60,7 +124,7 @@ class DataFramePreprocessor:
             raise RuntimeError(
                 "User ID Mapping should be fit before attempting to map users"
             )
-        return df[self.user_id].progress_map(lambda x: self.user_id_mapping.get(x))
+        return df[self.user_ix].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def map_items(self, df):
         logger.debug("Map items")
@@ -68,7 +132,7 @@ class DataFramePreprocessor:
             raise RuntimeError(
                 "Item ID Mapping should be fit before attempting to map items"
             )
-        return df[self.item_id].progress_map(lambda x: self.item_id_mapping.get(x))
+        return df[self.item_ix].progress_map(lambda x: self.item_id_mapping.get(x))
 
     @property
     def shape(self):
@@ -77,42 +141,38 @@ class DataFramePreprocessor:
             max(self.item_id_mapping.values()) + 1,
         )
 
-    def process(self, df: pd.DataFrame) -> DataM:
+    def process(self, df: pd.DataFrame) -> InteractionMatrix:
         """
-        Process a single DataFrame to a DataM object.
+        Process a single DataFrame to a InteractionMatrix object.
 
         IMPORTANT: If you have multiple DataFrames, use process_many.
-        This ensures consistent DataM shapes and user/item ID mappings.
+        This ensures consistent InteractionMatrix shapes and user/item ID mappings.
 
         :param df: DataFrame containing user-item interaction pairs.
         :type df: pd.DataFrame
-        :return: DataM-object containing the DataFrame data.
-        :rtype: DataM
+        :return: InteractionMatrix-object containing the DataFrame data.
+        :rtype: InteractionMatrix
         """
         return self.process_many(df)[0]
 
-    def process_many(self, *dfs: pd.DataFrame) -> List[DataM]:
+    def process_many(self, *dfs: pd.DataFrame) -> List[InteractionMatrix]:
         """
         Process all DataFrames passed as arguments.
         If your pipeline requires more than one DataFrame,
         pass all of them to a single call of process to guarantee
         that their dimensions will match.
 
-        :return: A list of DataM objects in the order the pandas DataFrames were passed in.
-        :rtype: List[DataM]
+        :param dfs: Dataframes to process
+        :type dfs: pd.DataFrame
+        :return: A list of InteractionMatrix objects in the order the pandas DataFrames were passed in.
+        :rtype: List[InteractionMatrix]
         """
+
         for index, df in enumerate(dfs):
             logger.debug(f"Processing df {index}")
             logger.debug(f"\tinteractions before preprocess: {len(df.index)}")
-            logger.debug(f"\titems before preprocess: {df[self.item_id].nunique()}")
-            logger.debug(f"\tusers before preprocess: {df[self.user_id].nunique()}")
-            if self.dedupe:
-                df.drop_duplicates(
-                    [self.user_id, self.item_id], keep="first", inplace=True
-                )
-                logger.debug(f"\tinteractions after dedupe: {len(df.index)}")
-                logger.debug(f"\titems after dedupe: {df[self.item_id].nunique()}")
-                logger.debug(f"\tusers after dedupe: {df[self.user_id].nunique()}")
+            logger.debug(f"\titems before preprocess: {df[self.item_ix].nunique()}")
+            logger.debug(f"\tusers before preprocess: {df[self.user_ix].nunique()}")
 
         for filter in self.filters:
             logger.debug(f"applying filter: {filter}")
@@ -120,28 +180,24 @@ class DataFramePreprocessor:
             for index, df in enumerate(dfs):
                 logger.debug(f"df {index}")
                 logger.debug(f"\tinteractions after filter: {len(df.index)}")
-                logger.debug(f"\titems after filter: {df[self.item_id].nunique()}")
-                logger.debug(f"\tusers after filter: {df[self.user_id].nunique()}")
+                logger.debug(f"\titems after filter: {df[self.item_ix].nunique()}")
+                logger.debug(f"\tusers after filter: {df[self.user_ix].nunique()}")
 
         for index, df in enumerate(dfs):
-            self.update_id_mappings(df)
-
-        cleaned_item_id = "iid"
-        cleaned_user_id = "uid"
+            self._update_id_mappings(df)
 
         data_ms = []
 
         for df in dfs:
-            df.loc[:, cleaned_item_id] = self.map_items(df)
-            df.loc[:, cleaned_user_id] = self.map_users(df)
+            df.loc[:, DataFramePreprocessor.ITEM_IX] = self.map_items(df)
+            df.loc[:, DataFramePreprocessor.USER_IX] = self.map_users(df)
 
             # Convert input data into internal data objects
-            data_m = DataM.create_from_dataframe(
+            data_m = InteractionMatrix(
                 df,
-                cleaned_item_id,
-                cleaned_user_id,
-                self.value_id,
-                self.timestamp_id,
+                DataFramePreprocessor.ITEM_IX,
+                DataFramePreprocessor.USER_IX,
+                timestamp_ix=self.timestamp_ix,
                 shape=self.shape,
             )
 
@@ -149,15 +205,15 @@ class DataFramePreprocessor:
 
         return data_ms
 
-    def update_id_mappings(self, df: pd.DataFrame):
+    def _update_id_mappings(self, df: pd.DataFrame):
         """
         Update the id mapping so we can combine multiple files
         """
 
         # Convert user and item ids into a continuous sequence to make
         # training faster and use much less memory.
-        item_ids = list(df[self.item_id].unique())
-        user_ids = list(df[self.user_id].unique())
+        item_ids = list(df[self.item_ix].unique())
+        user_ids = list(df[self.user_ix].unique())
 
         self.user_id_mapping = util.rescale_id_space(
             user_ids, id_mapping=self.user_id_mapping
@@ -165,7 +221,3 @@ class DataFramePreprocessor:
         self.item_id_mapping = util.rescale_id_space(
             item_ids, id_mapping=self.item_id_mapping
         )
-
-    def apply_item_id_mapping(self, df: pd.DataFrame):
-        cleaned_item_id = "iid"
-        df.loc[:, cleaned_item_id] = self.map_items(df)

@@ -4,9 +4,12 @@ import pandas as pd
 import warnings
 
 import recpack.splitters.scenarios as scenarios
-from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX, VALUE_IX
+from recpack.data.matrix import InteractionMatrix
 from scipy.sparse import csr_matrix
 
+USER_IX = InteractionMatrix.USER_IX
+ITEM_IX = InteractionMatrix.ITEM_IX
+TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 @pytest.mark.parametrize("t, n", [(4, 1), (4, -2), (5, 1), (5, -2)])
 def test_strong_generalization_timed_most_recent(data_m_sessions, t, n):
@@ -16,15 +19,15 @@ def test_strong_generalization_timed_most_recent(data_m_sessions, t, n):
     te_data_in, te_data_out = scenario.test_data
 
     # User earliest/latest interaction times, indexed by user
-    last_action_te_in = te_data_in.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
-    first_action_te_out = te_data_out.dataframe.groupby(USER_IX)[TIMESTAMP_IX].min()
-    last_action_te_out = te_data_out.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
+    last_action_te_in = te_data_in._df.groupby(USER_IX)[TIMESTAMP_IX].max()
+    first_action_te_out = te_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].min()
+    last_action_te_out = te_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].max()
 
     # Nr. of user actions, indexed by user
-    actions_per_user_total = data_m_sessions.dataframe[USER_IX].value_counts()
-    actions_per_user_tr = tr.dataframe[USER_IX].value_counts()
-    actions_per_user_te_in = te_data_in.dataframe[USER_IX].value_counts()
-    actions_per_user_te_out = te_data_out.dataframe[USER_IX].value_counts()
+    actions_per_user_total = data_m_sessions._df[USER_IX].value_counts()
+    actions_per_user_tr = tr._df[USER_IX].value_counts()
+    actions_per_user_te_in = te_data_in._df[USER_IX].value_counts()
+    actions_per_user_te_out = te_data_out._df[USER_IX].value_counts()
     actions_per_user_test = actions_per_user_total[actions_per_user_te_in.index]
 
     # User actions should never be split between train and test sets
@@ -68,21 +71,21 @@ def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val
     te_data_in, te_data_out = scenario.test_data
 
     # User earliest/latest interaction times, indexed by user
-    last_action_val_in = val_data_in.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
-    first_action_val_out = val_data_out.dataframe.groupby(USER_IX)[TIMESTAMP_IX].min()
-    last_action_val_out = val_data_out.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
-    last_action_te_in = te_data_in.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
-    first_action_te_out = te_data_out.dataframe.groupby(USER_IX)[TIMESTAMP_IX].min()
-    last_action_te_out = te_data_out.dataframe.groupby(USER_IX)[TIMESTAMP_IX].max()
+    last_action_val_in = val_data_in._df.groupby(USER_IX)[TIMESTAMP_IX].max()
+    first_action_val_out = val_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].min()
+    last_action_val_out = val_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].max()
+    last_action_te_in = te_data_in._df.groupby(USER_IX)[TIMESTAMP_IX].max()
+    first_action_te_out = te_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].min()
+    last_action_te_out = te_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].max()
 
     # Nr. of user actions, indexed by user
-    actions_per_user_total = data_m_sessions.dataframe[USER_IX].value_counts()
-    actions_per_user_tr = tr.dataframe[USER_IX].value_counts()
-    actions_per_user_val_in = val_data_in.dataframe[USER_IX].value_counts()
-    actions_per_user_val_out = val_data_out.dataframe[USER_IX].value_counts()
+    actions_per_user_total = data_m_sessions._df[USER_IX].value_counts()
+    actions_per_user_tr = tr._df[USER_IX].value_counts()
+    actions_per_user_val_in = val_data_in._df[USER_IX].value_counts()
+    actions_per_user_val_out = val_data_out._df[USER_IX].value_counts()
     actions_per_user_val = actions_per_user_total[actions_per_user_val_in.index]
-    actions_per_user_te_in = te_data_in.dataframe[USER_IX].value_counts()
-    actions_per_user_te_out = te_data_out.dataframe[USER_IX].value_counts()
+    actions_per_user_te_in = te_data_in._df[USER_IX].value_counts()
+    actions_per_user_te_out = te_data_out._df[USER_IX].value_counts()
     actions_per_user_test = actions_per_user_total[actions_per_user_te_in.index]
 
     # User actions should never be split between train and validation or test sets
@@ -143,8 +146,8 @@ def test_strong_generalization_timed_most_recent_too_few_actions(data_m_sessions
     te_data_in, te_data_out = scenario.test_data_in, scenario.test_data_out
 
     # Nr. of user actions, indexed by user
-    actions_per_user_te_in = te_data_in.dataframe[USER_IX].value_counts()
-    actions_per_user_te_out = te_data_out.dataframe[USER_IX].value_counts()
+    actions_per_user_te_in = te_data_in._df[USER_IX].value_counts()
+    actions_per_user_te_out = te_data_out._df[USER_IX].value_counts()
 
     # If n is positive and a user has <n actions, all are put in test_out
     if n >= 0:
