@@ -57,7 +57,7 @@ def sample(*args: csr_matrix, sample_size: int = 1000):
     """
     nonzero_users = list(set(args[0].nonzero()[0]))
     users = np.random.choice(
-        nonzero_users, size=min(1000, len(nonzero_users)), replace=False
+        nonzero_users, size=min(sample_size, len(nonzero_users)), replace=False
     )
 
     sampled_matrices = []
