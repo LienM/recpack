@@ -5,6 +5,10 @@ from scipy.sparse import csr_matrix
 import torch
 
 
+def normalize(X):
+    return scipy.sparse.csr_matrix(scipy.sparse.diags(1 / np.sum(X, axis=1).A1) @ X)
+
+
 def swish(x):
     return x.mul(torch.sigmoid(x))
 

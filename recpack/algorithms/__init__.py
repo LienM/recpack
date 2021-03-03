@@ -6,10 +6,8 @@ from recpack.algorithms.factorization import (
     NMFItemToItem,
     SVDItemToItem,
 )
-from recpack.algorithms.linear import (
-    EASE,
-    SLIM,
-)
+from recpack.algorithms.ease import EASE, EASE_XY
+from recpack.algorithms.slim import SLIM
 
 from recpack.algorithms.nearest_neighbour import ItemKNN
 from recpack.algorithms.BPRMF import BPRMF
