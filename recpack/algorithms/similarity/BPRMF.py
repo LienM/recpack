@@ -16,7 +16,7 @@ from typing import Tuple
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.loss_functions import bpr_loss
 from recpack.algorithms.samplers import bootstrap_sample_pairs
-from recpack.algorithms.util import StoppingCriterion, EarlyStoppingException
+from recpack.algorithms.stopping_criterion import StoppingCriterion, EarlyStoppingException
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
@@ -195,7 +195,7 @@ class BPRMF(Algorithm):
         :param train_data: interaction matrix.
         :type train_data: csr_matrix
         """
-        train_loss = 0.0
+        losses = []
         self.model_.train()
 
         for d in tqdm(
@@ -218,10 +218,12 @@ class BPRMF(Algorithm):
 
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
-            train_loss += loss.item()
+            losses.append(loss.item())
             self.optimizer.step()
 
             self.steps += 1
+
+        
 
     def _evaluate(self, validation_data: Tuple[csr_matrix, csr_matrix]):
         """Perform evaluation step, samples get drawn

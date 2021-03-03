@@ -19,8 +19,8 @@ from recpack.algorithms.util import (
     swish,
     log_norm_pdf,
     naive_sparse2tensor,
-    StoppingCriterion,
 )
+from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.metrics.dcg import ndcg_k
 
 logger = logging.getLogger("recpack")
@@ -191,7 +191,7 @@ class RecVAE(VAE):
         """
 
         start_time = time.time()
-        train_loss = 0.0
+        losses = []
         np.random.shuffle(users)
 
         for batch_idx, user_batch in enumerate(batch(users, self.batch_size)):
@@ -205,7 +205,7 @@ class RecVAE(VAE):
             loss = self._compute_loss(X, X_pred, mu, logvar)
             loss.backward()
 
-            train_loss += loss.item()
+            losses.append(loss.item())
             optimizer.step()
 
             self.steps += 1
@@ -214,7 +214,7 @@ class RecVAE(VAE):
 
         logger.info(
             f"Processed one batch in {end_time-start_time} s."
-            f" Training Loss = {train_loss}"
+            f" Training Loss = {np.mean(losses)}"
         )
 
     def _train_epoch(self, train_data: csr_matrix):

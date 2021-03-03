@@ -1,6 +1,6 @@
 import pytest
 
-from recpack.algorithms.metric_learning.cml import warp_sample_pairs
+from recpack.algorithms.samplers import warp_sample_pairs
 
 
 def test_warp_sampling(pageviews):
