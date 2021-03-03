@@ -50,6 +50,11 @@ def get_batches(users, batch_size=1000):
 
 
 def sample(*args: csr_matrix, sample_size: int = 1000):
+    """Samples rows from the matrices
+
+    rows are sampled from the nonzero rows in the first csr_matrix argument.
+    The return value will contain a matrix for each of the matrix arguments, with only the sampled rows nonzero.
+    """
     nonzero_users = list(set(args[0].nonzero()[0]))
     users = np.random.choice(
         nonzero_users, size=min(1000, len(nonzero_users)), replace=False
