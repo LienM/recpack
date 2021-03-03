@@ -41,7 +41,7 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
         num_epochs=10,
         batch_size=2,
         seed=seed,
-        learning_rate=0.20,
+        learning_rate=0.5,
     )
     a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
     pred = a.predict(pageviews_for_pairwise)

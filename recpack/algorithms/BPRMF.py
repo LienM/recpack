@@ -198,7 +198,7 @@ class BPRMF(Algorithm):
         :param train_data: interaction matrix.
         :type train_data: csr_matrix
         """
-        train_loss = 0.0
+        losses = []
         self.model_.train()
 
         for d in tqdm(
@@ -221,7 +221,7 @@ class BPRMF(Algorithm):
 
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
-            train_loss += loss.item()
+            losses.append(loss.item())
             self.optimizer.step()
 
             self.steps += 1

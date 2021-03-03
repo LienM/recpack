@@ -134,7 +134,7 @@ class MultVAE(VAE):
         :type train_data: [type]
         """
         start_time = time.time()
-        train_loss = 0.0
+        losses = []
         # Set to training
         self.model_.train()
 
@@ -150,7 +150,7 @@ class MultVAE(VAE):
             X_pred, mu, logvar = self.model_(X)
             loss = self._compute_loss(X, X_pred, mu, logvar)
             loss.backward()
-            train_loss += loss.item()
+            losses.append(loss.item())
             self.optimizer.step()
 
             self.steps += 1
@@ -159,7 +159,7 @@ class MultVAE(VAE):
 
         logger.info(
             f"Processed one batch in {end_time-start_time} s."
-            f" Training Loss = {train_loss}"
+            f" Training Loss = {np.mean(losses)}"
         )
 
     def _compute_loss(

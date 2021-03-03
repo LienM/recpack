@@ -16,6 +16,10 @@ from recpack.algorithms.util import (
     get_batches,
     get_users,
 )
+from recpack.algorithms.stopping_criterion import (
+    StoppingCriterion,
+    EarlyStoppingException,
+)
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")

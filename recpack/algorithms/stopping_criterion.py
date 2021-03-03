@@ -1,9 +1,10 @@
 import logging
-import numpy as np
-from scipy.sparse import csr_matrix
 from typing import Callable
 
-from recpack.algorithms.loss_functions import bpr_loss_metric
+import numpy as np
+from scipy.sparse import csr_matrix
+
+from recpack.algorithms.loss_functions import bpr_loss_metric, warp_loss_metric
 from recpack.metrics.dcg import ndcg_k
 from recpack.metrics.recall import recall_k
 
@@ -46,7 +47,8 @@ class StoppingCriterion:
         self.loss_function = loss_function
         self.minimize = minimize
         self.stop_early = stop_early
-        self.max_iter_no_change = max_iter_no_change  # In scikit-learn this is n_iter_no_change but I find that misleading
+        # In scikit-learn this is n_iter_no_change but I find that misleading
+        self.max_iter_no_change = max_iter_no_change
         self.n_iter_no_change = 0
         self.min_improvement = min_improvement
 
@@ -105,6 +107,7 @@ class StoppingCriterion:
         },
         "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
         "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
+        "warp": {"loss_function": warp_loss_metric, "minimize": True},
     }
 
     @classmethod
