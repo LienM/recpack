@@ -45,7 +45,7 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
 
         return item_cosine_similarities
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         """Fit a cosine similarity matrix from item to item"""
         X = to_csr_matrix(X, binary=True)
 
@@ -78,5 +78,3 @@ class ItemKNN(TopKSimilarityMatrixAlgorithm):
             item_cosine_similarities = scipy.sparse.csr_matrix(item_cosine_similarities)
 
         self.similarity_matrix_ = item_cosine_similarities
-        self._check_fit_complete()
-        return self

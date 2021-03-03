@@ -64,7 +64,7 @@ class SLIM(SimilarityMatrixAlgorithm):
             w[w < 0] = 0
         return w
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         """Fit a similarity matrix based on data X.
 
         X is an m x n binary matrix of user item interactions.
@@ -93,7 +93,3 @@ class SLIM(SimilarityMatrixAlgorithm):
         self.similarity_matrix_ = scipy.sparse.csr_matrix(
             (data, (row, col)), shape=(X.shape[1], X.shape[1])
         )
-
-        self._check_fit_complete()
-
-        return self

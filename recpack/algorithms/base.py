@@ -22,11 +22,17 @@ class Algorithm(BaseEstimator):
     def __str__(self):
         return self.name
 
-    def fit(self, X: Matrix):
-        pass
+    def _fit(self, X: csr_matrix):
+        raise NotImplementedError("Please implement _fit")
 
-    def predict(self, X: Matrix):
-        pass
+    def _predict(self, X: csr_matrix) -> csr_matrix:
+        raise NotImplementedError("Please implement _predict")
+
+    def _check_fit_complete(self):
+        """Helper function to check that fit stored information."""
+        # Use the sklear check_is_fitted function,
+        # https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
+        check_is_fitted(self)
 
     def _check_prediction(self, X_pred: csr_matrix, X: csr_matrix) -> None:
         """Checks that the prediction matches expectations.
@@ -49,13 +55,27 @@ class Algorithm(BaseEstimator):
                 f"for {len(missing)} users"
             )
 
+    def fit(self, X: Matrix) -> "Algorithm":
+        # TODO: There might be a way to use this
+        # to the advantage of handling csr_matrix or not
+        # Eg. 1 base class uses to_csr, the other an InteractionMatrix?
+        self._fit(X)
+
+        self._check_fit_complete()
+        return self
+
+    def predict(self, X: Matrix) -> csr_matrix:
+        check_is_fitted(self)
+
+        X_pred = self._predict(X)
+
+        self._check_prediction(X_pred, X)
+
+        return X_pred
+
 
 class SimilarityMatrixAlgorithm(Algorithm):
-    def fit(self, X: Matrix):
-        pass
-
-    def predict(self, X: Matrix):
-        check_is_fitted(self)
+    def _predict(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
 
         scores = X @ self.similarity_matrix_
@@ -63,14 +83,17 @@ class SimilarityMatrixAlgorithm(Algorithm):
         if not isinstance(scores, csr_matrix):
             scores = csr_matrix(scores)
 
-        self._check_prediction(scores, X)
-
         return scores
 
     def _check_fit_complete(self):
         """Checks if the fitted matrix, contains a similarity for each item.
         Uses warnings to push this info to the customer.
         """
+        # Use super to check is fitted
+        super()._check_fit_complete()
+
+        # Additional checks on the fitted matrix.
+
         # Check row wise, since that will determine the recommendation options.
         items_with_score = set(self.similarity_matrix_.nonzero()[0])
 

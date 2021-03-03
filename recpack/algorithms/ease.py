@@ -13,7 +13,7 @@ class EASE(SimilarityMatrixAlgorithm):
         self.alpha = alpha  # alpha exponent for filtering popularity bias
         self.density = density
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         """Compute the closed form solution, optionally rescalled to counter popularity bias (see param alpha). """
         # Dense linear model algorithm with closed-form solution
         # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
@@ -44,9 +44,6 @@ class EASE(SimilarityMatrixAlgorithm):
         if self.density:
             self._prune()
 
-        self._check_fit_complete()
-        return self
-
     def _prune(self):
         # Prune B (similarity matrix)
         # Steck et al. state that we can increase the sparsity in matrix B without significant impact on quality.
@@ -65,6 +62,7 @@ class EASE_XY(EASE):
     """ Variation of EASE where we encode Y from X (no autoencoder). """
 
     def fit(self, X: Matrix, y: Matrix = None):
+        # TODO: Base class with different interface!!
         if y is None:
             raise RuntimeError(
                 "Train regular EASE (with X=Y) using the EASE algorithm, not EASE_XY."

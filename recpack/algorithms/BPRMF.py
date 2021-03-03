@@ -136,6 +136,8 @@ class BPRMF(Algorithm):
             should have same dimensions as X
         :type validation_data: Matrix
         """
+        # TODO: There needs to be a base class that handles this validation data thingy
+
         # The target for prediction is the validation data.
         assert X.shape == validation_data[0].shape
         assert X.shape == validation_data[1].shape
@@ -161,7 +163,7 @@ class BPRMF(Algorithm):
     def _predict(self, X):
         """Helper function for predict, so we can also use it in validation loss
         without the model being fitted"""
-
+        X = to_csr_matrix(X, binary=True)
         users = list(set(X.nonzero()[0]))
 
         U = torch.LongTensor(users).to(self.device)
@@ -181,8 +183,8 @@ class BPRMF(Algorithm):
         :return: csr matrix of same shape, with recommendations.
         :rtype: [type]
         """
+        # TODO: move this functionality into a base class
         check_is_fitted(self)
-        X = to_csr_matrix(X, binary=True)
         # TODO We can make it so that we can recommend for unknown users by giving them
         # an embedding equal to the sum of all items viewed previously.
         # TODO Or raise an error

@@ -1,6 +1,5 @@
 import scipy.sparse
 import sklearn.decomposition
-from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.base import Algorithm, SimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
@@ -13,17 +12,12 @@ class FactorizationAlgorithm(Algorithm):
     :type Algorithm: [type]
     """
 
-    def predict(self, X: Matrix):
-        check_is_fitted(self)
+    def _predict(self, X: Matrix):
         assert X.shape == (self.user_features_.shape[0], self.item_features_.shape[1])
         users = list(set(X.nonzero()[0]))
         result = scipy.sparse.lil_matrix(X.shape)
         result[users] = self.user_features_[users] @ self.item_features_
         return result.tocsr()
-
-    def fit(self, X: Matrix):
-        """Fit the self.user_features_ and self.item_features_"""
-        raise NotImplementedError("Need to implement fit")
 
 
 class NMF(FactorizationAlgorithm):
@@ -41,7 +35,7 @@ class NMF(FactorizationAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
 
         # Using Sklearn NMF implementation. For info and parameters:
@@ -70,15 +64,13 @@ class NMFItemToItem(SimilarityMatrixAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         self.model_ = NMF(self.num_components, self.random_state)
         self.model_.fit(X)
 
         self.similarity_matrix_ = (
             self.model_.item_features_.T @ self.model_.item_features_
         )
-
-        self._check_fit_complete()
 
 
 class SVD(FactorizationAlgorithm):
@@ -97,7 +89,7 @@ class SVD(FactorizationAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
 
         # TODO use other parameter options?
@@ -126,12 +118,10 @@ class SVDItemToItem(SimilarityMatrixAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         self.model_ = SVD(self.num_components, self.random_state)
         self.model_.fit(X)
 
         self.similarity_matrix_ = (
             self.model_.item_features_.T @ self.model_.item_features_
         )
-
-        self._check_fit_complete()

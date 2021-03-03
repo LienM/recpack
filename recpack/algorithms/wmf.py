@@ -16,9 +16,15 @@ class WeightedMatrixFactorization(Algorithm):
     as described in paper 'Collaborative Filtering for Implicit Feedback Datasets' (ICDM.2008.22)
     """
 
-    def __init__(self, cs: str = "minimal", alpha: int = 40, epsilon: float = 10 ** (-8),
-                 num_components: int = 100, regularization: float = 0.01,
-                 iterations: int = 20):
+    def __init__(
+        self,
+        cs: str = "minimal",
+        alpha: int = 40,
+        epsilon: float = 10 ** (-8),
+        num_components: int = 100,
+        regularization: float = 0.01,
+        iterations: int = 20,
+    ):
         """
         Initialize the weighted matrix factorization algorithm with confidence generator parameters.
         :param cs: Which confidence scheme should be used to calculate the confidence matrix. Options are ["minimal",
@@ -38,7 +44,7 @@ class WeightedMatrixFactorization(Algorithm):
         self.regularization = regularization
         self.iterations = iterations
 
-    def fit(self, X: csr_matrix) -> Algorithm:
+    def _fit(self, X: csr_matrix) -> Algorithm:
         """
         Calculate the user- and item-factors which will be approximate X after applying a dot-product.
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
@@ -48,20 +54,18 @@ class WeightedMatrixFactorization(Algorithm):
         self.known_users = set(X.nonzero()[0])
         self.user_factors_, self.item_factors_ = self._alternating_least_squares(X)
 
-        return self
-
-    def predict(self, X: csr_matrix, user_ids: np.array = None) -> csr_matrix:
+    def _predict(self, X: csr_matrix) -> csr_matrix:
         """
         The prediction can easily be calculated as the dotproduct of the recalculated user-factor and the item-factor.
         :param X: Sparse user-item matrix which will be used to do the predictions; only the set of users will be used.
-        :param user_ids: Unused parameter.
         :return: User-item matrix with the prediction scores as values.
         """
-        check_is_fitted(self)
 
         U = set(X.nonzero()[0])
         U_conf = self._generate_confidence(X)
-        U_user_factors = self._least_squares(U_conf, self.item_factors_, self.num_users, U)
+        U_user_factors = self._least_squares(
+            U_conf, self.item_factors_, self.num_users, U
+        )
 
         score_matrix = csr_matrix(U_user_factors @ self.item_factors_.T)
 
@@ -97,8 +101,14 @@ class WeightedMatrixFactorization(Algorithm):
         :param X: Sparse matrix which the ALS algorithm should be applied on.
         :return: Generated user- and item-factors based on the input matrix X.
         """
-        user_factors = np.random.rand(self.num_users, self.num_components).astype(np.float32) * 0.01
-        item_factors = np.random.rand(self.num_items, self.num_components).astype(np.float32) * 0.01
+        user_factors = (
+            np.random.rand(self.num_users, self.num_components).astype(np.float32)
+            * 0.01
+        )
+        item_factors = (
+            np.random.rand(self.num_items, self.num_components).astype(np.float32)
+            * 0.01
+        )
 
         c = self._generate_confidence(X)
         ct = c.T.tocsr()
@@ -108,19 +118,29 @@ class WeightedMatrixFactorization(Algorithm):
             old_uf = np.array(user_factors, copy=True)
             old_if = np.array(item_factors, copy=True)
 
-            user_factors = self._least_squares(c, item_factors, self.num_users, self.known_users)
-            item_factors = self._least_squares(ct, user_factors, self.num_items, item_set)
+            user_factors = self._least_squares(
+                c, item_factors, self.num_users, self.known_users
+            )
+            item_factors = self._least_squares(
+                ct, user_factors, self.num_items, item_set
+            )
 
-            norm_uf = np.linalg.norm(old_uf - user_factors, 'fro')
-            norm_if = np.linalg.norm(old_if - item_factors, 'fro')
+            norm_uf = np.linalg.norm(old_uf - user_factors, "fro")
+            norm_if = np.linalg.norm(old_if - item_factors, "fro")
             logger.debug(
                 f"{self.name} - Iteration {i} - L2-norm of diff user_factors: {norm_uf} - L2-norm of diff "
-                f"item_factors: {norm_if}")
+                f"item_factors: {norm_if}"
+            )
 
         return user_factors, item_factors
 
-    def _least_squares(self, conf_matrix: csr_matrix, factors: np.ndarray, dimension: int, distinct_set: set) \
-            -> np.ndarray:
+    def _least_squares(
+        self,
+        conf_matrix: csr_matrix,
+        factors: np.ndarray,
+        dimension: int,
+        distinct_set: set,
+    ) -> np.ndarray:
         """
         Calculate the other factor based on the confidence matrix and the factors with the least squares algorithm.
         It is a general function for item- and user-factors. Depending on the parameter factor_type the other factor
@@ -139,7 +159,9 @@ class WeightedMatrixFactorization(Algorithm):
 
         return factors_x
 
-    def _linear_equation(self, Y: np.ndarray, YtY: np.ndarray, C: csr_matrix, x: int) -> np.ndarray:
+    def _linear_equation(
+        self, Y: np.ndarray, YtY: np.ndarray, C: csr_matrix, x: int
+    ) -> np.ndarray:
         """
         Helper function to compute the linear equation used in the Least Squares calculations.
         @param Y: Input factor array
