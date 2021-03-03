@@ -28,12 +28,6 @@ class Algorithm(BaseEstimator):
     def predict(self, X: Matrix):
         pass
 
-    def save(self, filename):
-        pass
-
-    def load(self, filename):
-        pass
-
     def _check_prediction(self, X_pred: csr_matrix, X: csr_matrix) -> None:
         """Checks that the prediction matches expectations.
 
