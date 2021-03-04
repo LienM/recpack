@@ -1,7 +1,6 @@
-from functools import partial
 import logging
 import time
-from typing import List, Tuple
+from typing import Tuple
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,29 +9,29 @@ import torch.optim as optim
 from scipy.sparse import csr_matrix
 import numpy as np
 
-from recpack.algorithms.vae.base import VAE
+from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.algorithms.util import naive_sparse2tensor
 from recpack.splitters.splitter_base import batch
-from recpack.metrics.dcg import ndcg_k
 
 
 logger = logging.getLogger("recpack")
 
 
-class MultVAE(VAE):
+class MultVAE(TorchMLAlgorithm):
     def __init__(
         self,
         batch_size=500,
         max_epochs=200,
-        seed=42,
         learning_rate=1e-4,
+        seed=42,
         dim_bottleneck_layer=200,
         dim_hidden_layer=600,
         max_beta=0.2,
         anneal_steps=200000,
         dropout=0.5,
         stopping_criterion="ndcg",
+        stop_early: bool = False,
         save_best_to_file=False,
     ):
         """
@@ -77,11 +76,13 @@ class MultVAE(VAE):
         super().__init__(
             batch_size,
             max_epochs,
-            seed,
             learning_rate,
-            StoppingCriterion.create(stopping_criterion),
+            StoppingCriterion.create(stopping_criterion, stop_early=stop_early),
+            seed,
             save_best_to_file=save_best_to_file,
         )
+
+        self.stop_early = stop_early
 
         self.dim_hidden_layer = dim_hidden_layer
         self.dim_bottleneck_layer = dim_bottleneck_layer
@@ -108,7 +109,7 @@ class MultVAE(VAE):
             else self.steps / self.anneal_steps
         )
 
-    def _init_model(self, dim_input_layer: int):
+    def _init_model(self, X: csr_matrix):
         """
         Initialize Torch model and optimizer.
 
@@ -116,6 +117,9 @@ class MultVAE(VAE):
                                 (corresponds to number of items)
         :type dim_input_layer: int
         """
+
+        dim_input_layer = X.shape[1]
+
         self.model_ = MultiVAETorch(
             dim_input_layer,
             dim_hidden_layer=self.dim_hidden_layer,
@@ -290,6 +294,7 @@ class MultiVAETorch(nn.Module):
             )  # TODO This should be truncated normal
 
 
+# TODO: Move out of this file / move the KLD loss and BCE loss out of the file
 def vae_loss_function(recon_x, mu, logvar, x, anneal=1.0):
     BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
     KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))

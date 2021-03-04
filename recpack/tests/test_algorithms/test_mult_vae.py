@@ -1,15 +1,61 @@
-from typing import Callable
-
+import pytest
 import scipy.sparse
+import tempfile
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from recpack.algorithms.vae.mult_vae import (
+from typing import Callable
+from unittest.mock import MagicMock
+
+from recpack.algorithms import MultVAE
+from recpack.algorithms.mult_vae import (
     MultiVAETorch,
     vae_loss_function,
 )
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
+
+# Inspiration for these tests came from:
+# https://medium.com/@keeper6928/how-to-unit-test-machine-learning-code-57cf6fd81765
+
+
+INPUT_SIZE = 1000
+
+
+@pytest.fixture(scope="function")
+def input_size():
+    return INPUT_SIZE
+
+
+@pytest.fixture(scope="function")
+def inputs():
+    torch.manual_seed(400)
+    return Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
+
+
+@pytest.fixture(scope="function")
+def targets():
+    torch.manual_seed(400)
+    return Variable(torch.randint(0, 2, (INPUT_SIZE,))).long()
+
+
+@pytest.fixture(scope="function")
+def mult_vae():
+    mult = MultVAE(
+        batch_size=500,
+        max_epochs=2,
+        seed=42,
+        learning_rate=1e-2,
+        dim_bottleneck_layer=200,
+        dim_hidden_layer=600,
+        max_beta=0.2,
+        anneal_steps=20,
+        dropout=0.5,
+    )
+
+    mult.save = MagicMock(return_value=True)
+
+    return mult
 
 
 def _training_step(
@@ -42,7 +88,7 @@ def _training_step(
 
 
 def test_training_epoch(mult_vae, larger_matrix):
-    mult_vae._init_model(larger_matrix.shape[1])
+    mult_vae._init_model(larger_matrix)
 
     params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
 
@@ -58,23 +104,25 @@ def test_training_epoch(mult_vae, larger_matrix):
 
 
 def test_evaluation_epoch(mult_vae, larger_matrix):
-    mult_vae._init_model(larger_matrix.shape[1])
+    mult_vae._init_model(larger_matrix)
 
     params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
 
+    mult_vae.best_model = tempfile.NamedTemporaryFile()
     # run a training step
     mult_vae._evaluate(larger_matrix, larger_matrix)
 
     device = mult_vae.device
 
     assert_same(params_before, params, device)
+    mult_vae.best_model.close()
 
 
 def test_predict(mult_vae, larger_matrix):
-    mult_vae._init_model(larger_matrix.shape[1])
+    mult_vae._init_model(larger_matrix)
 
     X_pred = mult_vae.predict(larger_matrix)
 

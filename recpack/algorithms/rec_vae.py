@@ -14,10 +14,7 @@ from scipy.sparse import csr_matrix
 from copy import deepcopy
 
 from recpack.splitters.splitter_base import batch
-from recpack.algorithms.vae.base import VAE
-from recpack.algorithms.stopping_criterion import (
-    StoppingCriterion,
-)
+from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.util import (
     swish,
     log_norm_pdf,
@@ -29,21 +26,22 @@ from recpack.metrics.dcg import ndcg_k
 logger = logging.getLogger("recpack")
 
 
-class RecVAE(VAE):
+class RecVAE(TorchMLAlgorithm):
     def __init__(
         self,
         batch_size=500,
         max_epochs=200,
+        learning_rate=5e-4,
         n_enc_epochs=3,
         n_dec_epochs=1,
         seed=42,
-        learning_rate=5e-4,
         dim_bottleneck_layer=200,
         dim_hidden_layer=600,
         gamma=0.005,
         beta=None,
         dropout=0.5,
         stopping_criterion: str = "ndcg",
+        stop_early: bool = False,
         save_best_to_file: bool = False,
     ):
         """
@@ -97,17 +95,21 @@ class RecVAE(VAE):
         super().__init__(
             batch_size,
             max_epochs,
-            seed,
             learning_rate,
-            StoppingCriterion.create(stopping_criterion),
+            StoppingCriterion.create(stopping_criterion, stop_early=stop_early),
+            seed,
             save_best_to_file=save_best_to_file,
         )
+
+        self.stop_early = stop_early
 
         self.n_enc_epochs = n_enc_epochs
         self.n_dec_epochs = n_dec_epochs
 
         self.dim_hidden_layer = dim_hidden_layer
         self.dim_bottleneck_layer = dim_bottleneck_layer
+
+        # Either gamma or beta, with gamma having precedence
         self.gamma = gamma
         if not self.gamma:
             self.beta = beta
@@ -120,14 +122,17 @@ class RecVAE(VAE):
         self.enc_optimizer = None
         self.dec_optimizer = None
 
-    def _init_model(self, dim_input_layer: int):
+    def _init_model(self, X: csr_matrix):
         """
         Initialize Torch model and optimizer.
 
-        :param dim_input_layer: Dimension of the input layer
+        :param X: Dimension of the input layer
                                 (corresponds to number of items)
-        :type dim_input_layer: int
+        :type X: int
         """
+
+        dim_input_layer = X.shape[1]
+
         self.model_ = RecVAETorch(
             dim_input_layer=dim_input_layer,
             dim_hidden_layer=self.dim_hidden_layer,

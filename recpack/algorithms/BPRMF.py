@@ -1,31 +1,29 @@
 import logging
-import tempfile
 
-import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
-from sklearn.utils.validation import check_is_fitted
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from typing import Tuple
 
-from recpack.algorithms.base import Algorithm
+from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import bpr_loss
 from recpack.algorithms.samplers import bootstrap_sample_pairs
 from recpack.algorithms.stopping_criterion import (
     StoppingCriterion,
-    EarlyStoppingException,
 )
-from recpack.data.matrix import Matrix, to_csr_matrix
+from recpack.algorithms.util import (
+    get_users,
+    get_batches,
+)
 
 logger = logging.getLogger("recpack")
 
 
-class BPRMF(Algorithm):
+class BPRMF(TorchMLAlgorithm):
     """Implements Matrix Factorization by using the BPR-OPT objective
     and SGD optimization.
 
@@ -61,41 +59,33 @@ class BPRMF(Algorithm):
         num_components=100,
         lambda_h=0.0,
         lambda_w=0.0,
-        num_epochs=20,
-        learning_rate=0.01,
         batch_size=1_000,
-        seed=None,
+        max_epochs=20,
+        learning_rate=0.01,
         stopping_criterion: str = "bpr",
+        stop_early: bool = False,
+        seed=None,
         save_best_to_file: bool = False,
     ):
+
+        super().__init__(
+            batch_size,
+            max_epochs,
+            learning_rate,
+            StoppingCriterion.create(stopping_criterion, stop_early=stop_early),
+            seed,
+            save_best_to_file,
+        )
 
         self.num_components = num_components
         self.lambda_h = lambda_h
         self.lambda_w = lambda_w
-        self.num_epochs = num_epochs
         self.learning_rate = learning_rate
-        self.batch_size = batch_size
-        self.seed = seed
 
-        self.save_best_to_file = save_best_to_file
+        self.stop_early = stop_early
 
-        if self.seed:
-            torch.manual_seed(self.seed)
-            np.random.seed(self.seed)
-
-        cuda = torch.cuda.is_available()
-        self.device = torch.device("cuda" if cuda else "cpu")
-
-        self.best_model = tempfile.NamedTemporaryFile()
-
-        self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
-
-    # TODO: move into some sort of super class
-    def __del__(self):
-        """cleans up temp file"""
-        self.best_model.close()
-
-    def _init_model(self, num_users, num_items):
+    def _init_model(self, X: csr_matrix):
+        num_users, num_items = X.shape
         self.model_ = MFModule(
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
@@ -103,94 +93,21 @@ class BPRMF(Algorithm):
         self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
         self.steps = 0
 
-    @property
-    def filename(self):
-        return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
-
-    def load(self, filename):
-        # TODO Give better names
-        with open(filename, "rb") as f:
-            self.model_ = torch.load(f)
-
-    def save(self):
-        """Save the current model to disk"""
-        with open(self.filename, "wb") as f:
-            torch.save(self.model_, f)
-
-    def _save_best(self):
-        """Save the best model in a temp file"""
-        self.best_model.close()
-        self.best_model = tempfile.NamedTemporaryFile()
-        torch.save(self.model_, self.best_model)
-
-    def _load_best(self):
-        self.best_model.seek(0)
-        self.model_ = torch.load(self.best_model)
-
-    def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
-        """Fit the model on the X dataset, and evaluate model quality on validation_data.
-
-        :param X: The training data matrix.
-        :type X: Matrix
-        :param validation_data: The validation data matrix,
-            should have same dimensions as X
-        :type validation_data: Matrix
-        """
-        # TODO: There needs to be a base class that handles this validation data thingy
-
-        # The target for prediction is the validation data.
-        assert X.shape == validation_data[0].shape
-        assert X.shape == validation_data[1].shape
-
-        self._init_model(X.shape[0], X.shape[1])
-
-        X, validation_data = to_csr_matrix((X, validation_data), binary=True)
-
-        try:
-            for epoch in range(self.num_epochs):
-                self._train_epoch(X)
-                self._evaluate(validation_data)
-        except EarlyStoppingException:
-            pass
-
-        # Load the best of the models during training.
-        self._load_best()
-
-        if self.save_best_to_file:
-            self.save()
-        return
-
-    def _predict(self, X):
+    def _batch_predict(self, X):
         """Helper function for predict, so we can also use it in validation loss
         without the model being fitted"""
-        X = to_csr_matrix(X, binary=True)
-        users = list(set(X.nonzero()[0]))
 
-        U = torch.LongTensor(users).to(self.device)
-        I = torch.arange(X.shape[1]).to(self.device)
+        results = lil_matrix(X.shape)
+        for users in get_batches(get_users(X), batch_size=self.batch_size):
 
-        result = lil_matrix(X.shape)
-        result[users] = self.model_.forward(U, I).detach().cpu().numpy()
+            user_tensor = torch.LongTensor(users).to(self.device)
+            item_tensor = torch.arange(X.shape[1]).to(self.device)
 
-        return result.tocsr()
+            results[users] = (
+                self.model_(user_tensor, item_tensor).detach().cpu().numpy()
+            )
 
-    def predict(self, X: Matrix):
-        """Predict recommendations for each user with at least a single event in their history.
-
-        :param X: interaction matrix, should have same size as model.
-        :type X: Matrix
-        :raises an: [description]
-        :return: csr matrix of same shape, with recommendations.
-        :rtype: [type]
-        """
-        # TODO: move this functionality into a base class
-        check_is_fitted(self)
-        # TODO We can make it so that we can recommend for unknown users by giving them
-        # an embedding equal to the sum of all items viewed previously.
-        # TODO Or raise an error
-        assert X.shape == (self.model_.num_users, self.model_.num_items)
-
-        return self._predict(X)
+        return results.tocsr()
 
     def _train_epoch(self, train_data: csr_matrix):
         """train a single epoch. Uses sampler to generate samples,
@@ -206,56 +123,38 @@ class BPRMF(Algorithm):
         for d in tqdm(
             bootstrap_sample_pairs(
                 train_data, batch_size=self.batch_size, sample_size=train_data.nnz
-            )
+            ),
+            desc="train_epoch BPRMF",
         ):
             users = d[:, 0].to(self.device)
+            # Target items are items the user has interacted with,
+            # and we expect to recommend high
             target_items = d[:, 1].to(self.device)
-            negative_items = d[:, 2].to(self.device)
+            # Items the user has not seen, and assuming MNAR data
+            mnar_items = d[:, 2].to(self.device)
 
             self.optimizer.zero_grad()
             # TODO Maybe rename?
-            positive_sim = self.model_.forward(users, target_items).diag()
-            negative_sim = self.model_.forward(users, negative_items).diag()
+            target_sim = self.model_.forward(users, target_items).diag()
+            mnar_sim = self.model_.forward(users, mnar_items).diag()
 
             # Checks to make sure the shapes are correct.
-            assert negative_sim.shape == positive_sim.shape
-            assert positive_sim.shape[0] == users.shape[0]
+            assert mnar_sim.shape == target_sim.shape
+            assert target_sim.shape[0] == users.shape[0]
 
-            loss = self._compute_loss(positive_sim, negative_sim)
+            loss = self._compute_loss(target_sim, mnar_sim)
             loss.backward()
             losses.append(loss.item())
             self.optimizer.step()
 
             self.steps += 1
 
-    def _evaluate(self, validation_data: Tuple[csr_matrix, csr_matrix]):
-        """Perform evaluation step, samples get drawn
-        from the validation data, and compute loss.
-
-        If loss improved over previous epoch, store the model, and update best value.
-
-        :param validation_data: validation data interaction matrix.
-        :type validation_data: csr_matrix
-        """
-        self.model_.eval()
-
-        prediction = self._predict(validation_data[0])
-
-        # TODO: If the stopping criterion is not loss based,
-        # the prediction should be turned into a csr matrix or a numpy array
-        # If the prediction is recall or ndcg based the target should be
-        # the validation_out
-
-        better = self.stopping_criterion.update(validation_data[0], prediction)
-        if better:
-            self._save_best()
-
     def _compute_loss(self, positive_sim, negative_sim):
 
         loss = bpr_loss(positive_sim, negative_sim)
         loss += (
-            self.lambda_h * self.model_.H.weight.norm()
-            + self.lambda_w * self.model_.W.weight.norm()
+            self.lambda_h * self.model_.item_embedding.weight.norm()
+            + self.lambda_w * self.model_.user_embedding.weight.norm()
         )
 
         return loss
@@ -279,24 +178,27 @@ class MFModule(nn.Module):
         self.num_users = num_users
         self.num_items = num_items
 
-        self.W = nn.Embedding(num_users, num_components)  # User embedding
-        self.H = nn.Embedding(num_items, num_components)  # Item embedding
+        self.user_embedding = nn.Embedding(num_users, num_components)  # User embedding
+        self.item_embedding = nn.Embedding(num_items, num_components)  # Item embedding
 
+        self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
-        nn.init.normal_(self.W.weight, std=0.01)
-        nn.init.normal_(self.H.weight, std=0.01)
+        nn.init.normal_(self.user_embedding.weight, std=self.std)
+        nn.init.normal_(self.item_embedding.weight, std=self.std)
 
-    def forward(self, U: torch.Tensor, I: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, user_tensor: torch.Tensor, item_tensor: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute dot-product of user embedding (w_u) and item embedding (h_i)
-        for every user and item pair in U and I.
+        for every user and item pair in user_tensor and item_tensor.
 
-        :param U: [description]
-        :type U: [type]
-        :param I: [description]
-        :type I: [type]
+        :param user_tensor: [description]
+        :type user_tensor: [type]
+        :param item_tensor: [description]
+        :type item_tensor: [type]
         """
-        w_U = self.W(U)
-        h_I = self.H(I)
+        w_u = self.user_embedding(user_tensor)
+        h_i = self.item_embedding(item_tensor)
 
-        return w_U.matmul(h_I.T)
+        return w_u.matmul(h_i.T)

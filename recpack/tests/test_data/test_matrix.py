@@ -340,11 +340,11 @@ def test_num_interactions2(interaction_m_w_duplicate):
 
 
 def test_from_csr_matrix(data):
-    data_m = InteractionMatrix.from_csr_matrix(data)
+    interaction_m = InteractionMatrix.from_csr_matrix(data)
 
-    assert not data_m.has_timestamps
+    assert not interaction_m.has_timestamps
 
-    assert (data_m.values.toarray() == data.toarray()).all()
+    assert (interaction_m.values.toarray() == data.toarray()).all()
 
 
 # ----- TEST CONVERSIONS

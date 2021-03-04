@@ -14,6 +14,6 @@ from recpack.algorithms.BPRMF import BPRMF
 
 # from recpack.algorithms.metric_learning.cml import CML
 
-from recpack.algorithms.vae.mult_vae import MultVAE
-from recpack.algorithms.vae.rec_vae import RecVAE
+from recpack.algorithms.mult_vae import MultVAE
+from recpack.algorithms.rec_vae import RecVAE
 from recpack.algorithms.wmf import WeightedMatrixFactorization

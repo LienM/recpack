@@ -34,7 +34,7 @@ def pageviews_for_pairwise():
 
 
 @pytest.fixture(scope="function")
-def pageviews_data_m(pageviews):
+def pageviews_interaction_m(pageviews):
     return InteractionMatrix.from_csr_matrix(pageviews)
 
 

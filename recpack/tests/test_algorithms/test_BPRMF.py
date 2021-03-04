@@ -13,7 +13,7 @@ from recpack.metrics.recall import recall_k
 
 
 def test_bprmf(pageviews):
-    a = BPRMF(num_components=2, num_epochs=2, batch_size=1)
+    a = BPRMF(num_components=2, max_epochs=2, batch_size=1)
     a.fit(pageviews, (pageviews, pageviews))
 
     pred = a.predict(pageviews)
@@ -22,14 +22,14 @@ def test_bprmf(pageviews):
     assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
 
 
-def test_bprmf_w_datam(pageviews_data_m):
-    a = BPRMF(num_components=2, num_epochs=2, batch_size=1)
-    a.fit(pageviews_data_m, (pageviews_data_m, pageviews_data_m))
+def test_bprmf_w_interaction_mat(pageviews_interaction_m):
+    a = BPRMF(num_components=2, max_epochs=2, batch_size=1)
+    a.fit(pageviews_interaction_m, (pageviews_interaction_m, pageviews_interaction_m))
 
-    pred = a.predict(pageviews_data_m)
+    pred = a.predict(pageviews_interaction_m)
 
     # Users should be the exact same.
-    assert set(pred.nonzero()[0]) == set(pageviews_data_m.active_users)
+    assert set(pred.nonzero()[0]) == set(pageviews_interaction_m.active_users)
 
 
 @pytest.mark.parametrize("seed", list(range(1, 25)))
@@ -38,7 +38,7 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
 
     a = BPRMF(
         num_components=4,
-        num_epochs=10,
+        max_epochs=10,
         batch_size=2,
         seed=seed,
         learning_rate=0.5,
@@ -63,7 +63,7 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
 def test_save_and_load(pageviews_for_pairwise):
     a = BPRMF(
         num_components=4,
-        num_epochs=1,
+        max_epochs=1,
         batch_size=2,
         seed=42,
         learning_rate=0.05,
@@ -76,7 +76,7 @@ def test_save_and_load(pageviews_for_pairwise):
 
     b = BPRMF(
         num_components=4,
-        num_epochs=40,
+        max_epochs=40,
         batch_size=2,
         seed=42,
         learning_rate=0.05,
@@ -141,15 +141,5 @@ def test_bad_stopping_criterion(pageviews):
 
 def test_recall_stopping_criterion(pageviews):
 
-    a = BPRMF(num_components=2, num_epochs=2, batch_size=1, stopping_criterion="recall")
+    a = BPRMF(num_components=2, max_epochs=2, batch_size=1, stopping_criterion="recall")
     a.fit(pageviews, (pageviews, pageviews))
-
-
-def test_cleanup():
-    def inner():
-        a = BPRMF()
-        assert os.path.isfile(a.best_model.name)
-        return a.best_model.name
-
-    n = inner()
-    assert not os.path.isfile(n)

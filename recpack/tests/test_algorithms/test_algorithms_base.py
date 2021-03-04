@@ -1,4 +1,4 @@
-from recpack.algorithms.base import Algorithm
+from recpack.algorithms.base import Algorithm, TorchMLAlgorithm
 from recpack.algorithms import ItemKNN
 import scipy.sparse
 import numpy as np
