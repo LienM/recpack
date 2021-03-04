@@ -79,7 +79,7 @@ class EASE_XY(EASE):
         B = B_rr - P @ D
 
         if self.alpha != 0:
-            w = 1 / np.diag(XTX) ** self.alpha
+            w = 1 / np.diag(XTX.toarray()) ** self.alpha
             B = B @ np.diag(w)
 
         self.similarity_matrix_ = scipy.sparse.csr_matrix(B)
