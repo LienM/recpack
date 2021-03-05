@@ -5,11 +5,10 @@ from scipy.sparse import csr_matrix
 from torch import Tensor
 
 from recpack.algorithms.util import (
-    StoppingCriterion,
     naive_sparse2tensor,
     naive_tensor2sparse,
-    EarlyStoppingException
 )
+from recpack.algorithms.stopping_criterion import StoppingCriterion, EarlyStoppingException
 from recpack.metrics.recall import recall_k
 from recpack.metrics.dcg import ndcg_k
 

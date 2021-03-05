@@ -34,12 +34,12 @@ class KUNN(Algorithm):
         """
         X = to_csr_matrix(X, binary=True)  # To make sure the input is interpreted as a binary matrix
         self.training_interactions_ = csr_matrix(X, copy=True)
-        Xscaled, Cu_rooted, _ = self._calculate_scaled_matrices(X)
+        Xscaled, _, Ci_rooted = self._calculate_scaled_matrices(X)
 
-        # Element-wise multiplication with Cu_rooted. Result is x.T_iu / sqrt(c_u).
-        XtCu = csr_matrix(X.T.multiply(Cu_rooted))
-        # Matrix multiplication. Result is XtCu * Xscaled
-        sim_i = csr_matrix(XtCu * Xscaled)
+        # Element-wise multiplication with Ci_rooted. Result is x.T_iu / sqrt(c_i).
+        XtCi = csr_matrix(X.T.multiply(Ci_rooted.T))
+        # Matrix multiplication. Result is XtCi * Xscaled
+        sim_i = csr_matrix(XtCi * Xscaled)
         # Eliminate self-similarity
         sim_i.setdiag(0)
 
@@ -69,8 +69,9 @@ class KUNN(Algorithm):
 
         # Element-wise multiplication with Ci_rooted. Result is combined_ui / sqrt(c_i).
         CombinedCi = csr_matrix(Combined.multiply(Ci_rooted))
-        # Matrix multiplication. Result is CombinedCi * Xscaled.T
-        sim_u = csr_matrix(CombinedCi * Xscaled.T)
+        CombinedCu = csr_matrix(Combined.multiply(Cu_rooted.T))
+        # Matrix multiplication. Result is CombinedCu * Xscaled.T
+        sim_u = csr_matrix(CombinedCu * Xscaled.T)
         # Eliminate self-similarity
         sim_u.setdiag(0)
 

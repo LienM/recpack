@@ -10,10 +10,9 @@ from recpack.algorithms.base import Algorithm
 from recpack.algorithms.util import (
     naive_sparse2tensor,
     get_batches,
-    get_users,
-    StoppingCriterion,
-    EarlyStoppingException,
+    get_users
 )
+from recpack.algorithms.stopping_criterion import StoppingCriterion, EarlyStoppingException
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")

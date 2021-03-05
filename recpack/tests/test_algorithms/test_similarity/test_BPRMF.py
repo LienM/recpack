@@ -8,7 +8,7 @@ import torch
 from recpack.algorithms import BPRMF
 from recpack.algorithms.samplers import bootstrap_sample_pairs
 from recpack.algorithms.similarity.BPRMF import MFModule
-from recpack.algorithms.util import StoppingCriterion
+from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.metrics.recall import recall_k
 
 
@@ -41,7 +41,7 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
         num_epochs=10,
         batch_size=2,
         seed=seed,
-        learning_rate=0.20,
+        learning_rate=0.5,
     )
     a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
     pred = a.predict(pageviews_for_pairwise)

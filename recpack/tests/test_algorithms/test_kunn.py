@@ -3,7 +3,7 @@ from math import sqrt
 import numpy
 from scipy.sparse import csr_matrix
 
-from recpack.algorithms import KUNN
+from recpack.algorithms import KUNN, ItemKNN
 
 
 def test_kunn_calculate_scaled_matrices():
@@ -29,16 +29,16 @@ def test_kunn_calculate_scaled_matrices():
 def test_kunn_fit():
     kunn = KUNN(Ku=1, Ki=1)
 
-    values = [1, 1, 1, 1, 1, 1, 1]
-    users = [0, 0, 1, 1, 2, 2, 2]
-    items = [1, 2, 0, 2, 0, 1, 2]
+    values = [1, 1, 1, 1, 1, 1]
+    users = [0, 1, 1, 2, 2, 2]
+    items = [2, 0, 2, 0, 1, 2]
     test_matrix = csr_matrix((values, (users, items)))
 
     kunn.fit(test_matrix)
 
-    knni_values = [5 / (6 * sqrt(3)), 5 / (6 * sqrt(3)), 5 / (6 * sqrt(2))]
+    knni_values = [(sqrt(2) + sqrt(3)) / 6, 1 / sqrt(6), (sqrt(2) + sqrt(3)) / 6]
     knni_items_x = [0, 1, 2]
-    knni_items_y = [2, 2, 1]
+    knni_items_y = [2, 0, 0]
     knni_true = csr_matrix((knni_values, (knni_items_x, knni_items_y)))
 
     numpy.testing.assert_almost_equal(knni_true.todense(), kunn.knn_i_.todense())
@@ -61,8 +61,9 @@ def test_kunn_predict():
     pred_matrix = csr_matrix((values_pred, (users_pred, items_pred)), shape=test_matrix.shape)
     prediction = kunn.predict(pred_matrix)
 
-    pred_true_values = [7 / 36, 7 / 36, (17 + 5 * sqrt(3)) / 36,
-                        (6 + 5 * sqrt(2)) / 24, (9 + 5 * sqrt(3)) / 36]
+    pred_true_values = [(122/815 + 4*sqrt(5209)/815)**2, (122/815 + 4*sqrt(5209)/815)**2,
+                        sqrt(3*sqrt(401)/1478 + 931/1478),
+                        (-83/244 + sqrt(75331)/244)**2, (-83/244 + sqrt(75331)/244)**2]
     pred_true_users = [3, 3, 3, 4, 4]
     pred_true_items = [0, 1, 2, 1, 2]
     pred_true = csr_matrix((pred_true_values, (pred_true_users, pred_true_items)), shape=prediction.shape)
