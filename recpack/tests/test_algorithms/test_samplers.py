@@ -3,15 +3,14 @@ import pytest
 from scipy.sparse import csr_matrix
 
 from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
+from recpack.data.matrix import to_binary
 
 
 def test_warp_sampling_exact(pageviews):
-
+    pageviews = to_binary(pageviews)
     batch_size = 4
     U = 10
-
     total_interactions = 0
-
     for users, pos_interactions, neg_interactions in warp_sample_pairs(
         pageviews, U=U, batch_size=batch_size, exact=True
     ):
@@ -21,14 +20,11 @@ def test_warp_sampling_exact(pageviews):
         assert users.shape[0] == neg_interactions.shape[0]
         assert neg_interactions.shape[1] == U
         total_interactions += users.shape[0]
-
         # No negative interactions should exist in the original pageviews
         for i in range(U):
             items = neg_interactions.numpy()[:, i].copy()
-
             interactions = pageviews[users.numpy().copy(), items]
             np.testing.assert_array_almost_equal(interactions, 0)
-
     assert total_interactions == pageviews.nnz
 
 
