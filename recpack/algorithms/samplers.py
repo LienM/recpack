@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Iterator
 import numpy as np
 from scipy.sparse import csr_matrix
 import torch
@@ -66,7 +66,7 @@ def _spot_collisions(users: np.array, negatives_batch: np.array, X: csr_matrix) 
 
 def bootstrap_sample_pairs(
     X: csr_matrix, batch_size=100, sample_size=None, exact=False
-):
+) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
     """bootstrap sample triples from the data. Each triple contains (user, positive item, negative item).
     :param X: Interaction matrix
     :type X: csr_matrix
@@ -77,8 +77,8 @@ def bootstrap_sample_pairs(
     :type sample_size: int, optional
     :param exact: if False (default) negatives are checked agains the corresponding positive sample only, allowing for (rare) collisions. If collisions should be avoided at all costs, use exact = True, but suffer decreased performance.
     :type exact: bool, optional
-    :yield: tensor of shape (batch_size, 3), with user, positive item, negative item for each row.
-    :rtype: torch.LongTensor
+    :yield: Iterator of (user_batch, positive_samples_batch, negative_samples_batch)
+    :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
     """
     if sample_size is None:
         sample_size = X.nnz
@@ -117,14 +117,13 @@ def bootstrap_sample_pairs(
             else:
                 # Exit the while loop
                 break
-        sample_pairs_batch = np.empty((positives_batch.shape[0], 3))
-        sample_pairs_batch[:, 0] = users
-        sample_pairs_batch[:, 1] = positives_batch
-        sample_pairs_batch[:, 2] = negatives_batch
-        yield torch.LongTensor(sample_pairs_batch)
+
+        yield torch.LongTensor(users), torch.LongTensor(
+            positives_batch
+        ), torch.LongTensor(negatives_batch)
 
 
-def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False):
+def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
     """Sample U negatives for every user-item-pair (positive).
 
     :param X: Interaction matrix
@@ -135,8 +134,8 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False):
     :type batch_size: int, optional
     :param exact: if False (default) negatives are checked agains the corresponding positive sample only, allowing for (rare) collisions. If collisions should be avoided at all costs, use exact = True, but suffer decreased performance.
     :type exact: bool, optional
-    :yield: Iterator of torch.LongTensor of shape (batch_size, U+2). [User, Item, Negative Sample1, Negative Sample2, ...]
-    :rtype: Iterator[torch.LongTensor]
+    :yield: Iterator of (user_batch, positive_samples_batch, negative_samples_batch)
+    :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
     """
     # Need positive and negative pair. Requires the existence of a positive for this item.
     # As a (num_interactions, 2) numpy array

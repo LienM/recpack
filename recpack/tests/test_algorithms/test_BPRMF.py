@@ -107,12 +107,12 @@ def test_bootstrap_sampling(pageviews_for_pairwise, batch_size, sample_size):
         pageviews_for_pairwise, batch_size=batch_size, sample_size=sample_size
     )
 
-    sample_batch = next(res)
+    users, positives_batch, negatives_batch = next(res)
 
-    assert sample_batch.shape[0] == batch_size
+    assert users.shape[0] == batch_size
     b = 0
-    for batch in res:
-        b = batch.shape[0]
+    for users, positives_batch, negatives_batch in res:
+        b = users.shape[0]
 
     target_size = sample_size % batch_size
     if target_size == 0:

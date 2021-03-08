@@ -29,7 +29,7 @@ def test_warp_sampling_exact(pageviews):
 
 
 def test_warp_sampling(pageviews):
-
+    pageviews = to_binary(pageviews)
     batch_size = 4
     U = 10
 
@@ -55,25 +55,22 @@ def test_bootstrap_sampling_exact(pageviews):
     # values = [1 for i in range(10000)]
     # pageviews = csr_matrix((values, (users, items)), shape=(2000, 2000))
     # pageviews needs to be binary
-    pageviews[pageviews > 1] = 1
+    pageviews = to_binary(pageviews)
 
     batch_size = 1000
     sample_size = 10000
     total_interactions = 0
 
-    for output in bootstrap_sample_pairs(
+    for users, positives_batch, negatives_batch in bootstrap_sample_pairs(
         pageviews, batch_size=batch_size, exact=True, sample_size=sample_size
     ):
-        np_output = output.numpy()
-        b = output.shape[0]
+        b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
 
         total_interactions += b
-        print(pageviews.toarray())
-        print(np_output)
         # No negatives should be accidental positives
         np.testing.assert_array_almost_equal(
-            pageviews[np_output[:, 0], np_output[:, 2]], 0
+            pageviews[users.numpy(), negatives_batch.numpy()], 0
         )
 
     assert total_interactions == sample_size
@@ -84,8 +81,8 @@ def test_bootstrap_sampling(pageviews):
 
     total_interactions = 0
 
-    for output in bootstrap_sample_pairs(pageviews, batch_size=batch_size):
-        b = output.shape[0]
+    for users, positives_batch, negatives_batch in bootstrap_sample_pairs(pageviews, batch_size=batch_size):
+        b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
 
         total_interactions += b

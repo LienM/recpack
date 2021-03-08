@@ -120,18 +120,18 @@ class BPRMF(TorchMLAlgorithm):
         losses = []
         self.model_.train()
 
-        for d in tqdm(
+        for users, target_items, mnar_items in tqdm(
             bootstrap_sample_pairs(
                 train_data, batch_size=self.batch_size, sample_size=train_data.nnz
             ),
             desc="train_epoch BPRMF",
         ):
-            users = d[:, 0].to(self.device)
+            users = users.to(self.device)
             # Target items are items the user has interacted with,
             # and we expect to recommend high
-            target_items = d[:, 1].to(self.device)
+            target_items = target_items.to(self.device)
             # Items the user has not seen, and assuming MNAR data
-            mnar_items = d[:, 2].to(self.device)
+            mnar_items = mnar_items.to(self.device)
 
             self.optimizer.zero_grad()
             # TODO Maybe rename?

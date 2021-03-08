@@ -138,13 +138,13 @@ def bpr_loss_metric(
 
     losses = []
 
-    for d in bootstrap_sample_pairs(
+    for users, target_items, negative_items in bootstrap_sample_pairs(
         X_true, batch_size=batch_size, sample_size=sample_size, exact=exact
     ):
         # Needed to do copy, to use as index in the predidction matrix
-        users = d[:, 0].numpy().copy()
-        target_items = d[:, 1].numpy().copy()
-        negative_items = d[:, 2].numpy().copy()
+        users = users.numpy().copy()
+        target_items = target_items.numpy().copy()
+        negative_items = negative_items.numpy().copy()
 
         positive_sim = torch.tensor(X_pred[users, target_items])
         negative_sim = torch.tensor(X_pred[users, negative_items])
