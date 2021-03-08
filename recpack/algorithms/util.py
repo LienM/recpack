@@ -1,12 +1,12 @@
 import logging
 from math import ceil
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, diags
 import torch
 
 
 def normalize(X):
-    return scipy.sparse.csr_matrix(scipy.sparse.diags(1 / np.sum(X, axis=1).A1) @ X)
+    return csr_matrix(diags(1 / np.sum(X, axis=1).A1) @ X)
 
 
 def swish(x):

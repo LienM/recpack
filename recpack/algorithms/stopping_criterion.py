@@ -74,6 +74,9 @@ class StoppingCriterion:
             better = loss > self.best_value
 
         if self.stop_early:
+            print("better", better)
+            print("improvement", abs(loss - self.best_value))
+            print("min_change_made", abs(loss - self.best_value) > self.min_improvement)
             if not better:
                 # Decrease in performance also counts as no change.
                 self.n_iter_no_change += 1

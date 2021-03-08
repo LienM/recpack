@@ -16,6 +16,8 @@ class WeightedMatrixFactorization(Algorithm):
     as described in paper 'Collaborative Filtering for Implicit Feedback Datasets' (ICDM.2008.22)
     """
 
+    CONFIDENCE_SCHEMES = ["minimal", "log-scaling"]
+
     def __init__(
         self,
         cs: str = "minimal",
@@ -37,6 +39,11 @@ class WeightedMatrixFactorization(Algorithm):
         """
         super().__init__()
         self.confidence_scheme = cs
+        if cs in self.CONFIDENCE_SCHEMES:
+            self.confidence_scheme = cs
+        else:
+            raise ValueError("Invalid confidence scheme parameter.")
+
         self.alpha = alpha
         self.epsilon = epsilon
 
@@ -89,8 +96,6 @@ class WeightedMatrixFactorization(Algorithm):
             result.data = self.alpha * result.data
         elif self.confidence_scheme == "log-scaling":
             result.data = self.alpha * np.log(1 + result.data / self.epsilon)
-        else:
-            raise ValueError("Invalid confidence scheme parameter.")
 
         return result
 

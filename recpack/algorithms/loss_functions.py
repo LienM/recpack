@@ -30,7 +30,8 @@ def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
     W_as_tensor = next(W.parameters())
     H_as_tensor = next(H.parameters())
 
-    # Concatenate them together. They live in the same metric space, so share the same dimensions.
+    # Concatenate them together. They live in the same metric space,
+    # so share the same dimensions.
     #  X is a matrix of shape (|users| + |items|, num_dimensions)
     X = torch.cat([W_as_tensor, H_as_tensor], dim=0)
 
@@ -100,28 +101,45 @@ def bpr_loss(positive_sim, negative_sim):
     distance = positive_sim - negative_sim
     # Probability of ranking given parameters
     elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
+    # The goal is to minimize loss
+    # If negative sim > positive sim -> distance is negative,
+    # but loss is positive
     bpr_loss = -elementwise_bpr_loss.mean()
 
     return bpr_loss
 
 
-def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
+def bpr_loss_metric(
+    X_true: csr_matrix,
+    X_pred: csr_matrix,
+    batch_size=1000,
+    sample_size=None,
+    exact=False,
+):
     """Compute BPR reconstruction loss of the X_true matrix in X_pred
 
     :param X_true: [description]
     :type X_true: [type]
     :param X_pred: [description]
     :type X_pred: [type]
+    :param batch_size:
+    :type batch_size:
+    :param sample_size:
+    :type sample_size: [description]
     :raises an: [description]
     :return: [description]
     :rtype: [type]
     :yield: [description]
     :rtype: [type]
     """
+
+    if sample_size is None:
+        sample_size = X_true.nnz
+
     losses = []
 
     for d in bootstrap_sample_pairs(
-        X_true, batch_size=batch_size, sample_size=X_true.nnz
+        X_true, batch_size=batch_size, sample_size=sample_size, exact=exact
     ):
         # Needed to do copy, to use as index in the predidction matrix
         users = d[:, 0].numpy().copy()
@@ -136,31 +154,44 @@ def bpr_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size=1000):
     return np.mean(losses)
 
 
-def warp_loss_metric(X_true: csr_matrix, X_pred: csr_matrix, batch_size: int = 1000, U: int = 20, margin: float = 1.9):
+def warp_loss_metric(
+    X_true: csr_matrix,
+    X_pred: csr_matrix,
+    batch_size: int = 1000,
+    U: int = 20,
+    margin: float = 1.9,
+    exact=False,
+):
     losses = []
     J = X_true.shape[1]
 
     for users, positives_batch, negatives_batch in tqdm(
-        warp_sample_pairs(X_true, U=U, batch_size=batch_size)
+        warp_sample_pairs(X_true, U=U, batch_size=batch_size, exact=exact)
     ):
+        print("users", users)
+        print("positives", positives_batch)
+        print("negatives", negatives_batch)
+
         current_batch_size = users.shape[0]
 
-        dist_pos_interaction = X_pred[users.numpy(
-        ).tolist(), positives_batch.numpy().tolist()]
+        dist_pos_interaction = X_pred[
+            users.numpy().tolist(), positives_batch.numpy().tolist()
+        ]
 
-        dist_neg_interaction = X_pred[users.repeat_interleave(U).numpy().tolist(),
-                                      negatives_batch.reshape(
-            current_batch_size * U, 1).squeeze(-1).numpy().tolist()]
+        dist_neg_interaction = X_pred[
+            users.repeat_interleave(U).numpy().tolist(),
+            negatives_batch.reshape(current_batch_size * U, 1)
+            .squeeze(-1)
+            .numpy()
+            .tolist(),
+        ]
 
-        dist_pos_interaction = torch.tensor(
-            dist_pos_interaction.A[0]).unsqueeze(-1)
-        dist_neg_interaction_flat = torch.tensor(
-            dist_neg_interaction.A[0])
-        dist_neg_interaction = dist_neg_interaction_flat.reshape(
-            current_batch_size, -1
+        dist_pos_interaction = torch.tensor(dist_pos_interaction.A[0]).unsqueeze(-1)
+        dist_neg_interaction_flat = torch.tensor(dist_neg_interaction.A[0])
+        dist_neg_interaction = dist_neg_interaction_flat.reshape(current_batch_size, -1)
+
+        losses.append(
+            warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U)
         )
-
-        losses.append(warp_loss(dist_pos_interaction,
-                          dist_neg_interaction, margin, J, U))
 
     return np.mean(losses)

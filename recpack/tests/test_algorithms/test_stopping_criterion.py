@@ -126,6 +126,30 @@ def test_stopping_criterion_improves_minimize():
     assert crit.best_value == l[2]
 
 
+def test_stopping_criterion_no_change():
+    l = [0.5, 0.4999]
+    crit = StoppingCriterion(
+        loss_function(l),
+        minimize=True,
+        stop_early=True,
+        max_iter_no_change=3,
+        min_improvement=0.1,
+    )
+
+    # Setting X_pred and X_true to None,
+    # because they are not needed in these tests to be actual values
+    X_pred = None
+    X_true = None
+
+    # First update No change
+    crit.update(X_true, X_pred)
+    assert crit.best_value == l[0]
+
+    # updated, but no change detected
+    crit.update(X_true, X_pred)
+    assert crit.n_iter_no_change == 1
+
+
 @pytest.mark.parametrize(
     "criterion, expected_function", [("recall", recall_k), ("ndcg", ndcg_k)]
 )

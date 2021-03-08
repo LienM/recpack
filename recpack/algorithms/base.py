@@ -133,28 +133,10 @@ class TopKSimilarityMatrixAlgorithm(SimilarityMatrixAlgorithm):
         self.K = K
 
 
-class MetricLearningAlgorithm:
+class MetricLearningAlgorithm(Algorithm):
     """Base classes for algorithms that optimise a metric,
     and require validation data to select their optimal model.
     """
-
-    @property
-    def name(self):
-        return self.__class__.__name__
-
-    @property
-    def identifier(self):
-        paramstring = ",".join((f"{k}={v}" for k, v in self.get_params().items()))
-        return self.name + "(" + paramstring + ")"
-
-    def __str__(self):
-        return self.name
-
-    def _check_fit_complete(self):
-        """Helper function to check that fit stored information."""
-        # Use the sklear check_is_fitted function,
-        # https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
-        check_is_fitted(self)
 
     def fit(
         self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
@@ -370,6 +352,7 @@ class TorchMLAlgorithm(MetricLearningAlgorithm):
 
         X = self._transform_predict_input(X)
 
+        self.model_.eval()
         X_pred = self._batch_predict(X)
 
         self._check_prediction(X_pred, X)
