@@ -4,7 +4,7 @@ import numpy as np
 
 import numba
 
-from recpack.algorithms.base import SimilarityMatrixAlgorithm
+from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 
@@ -21,7 +21,7 @@ class Aggregator(enum.Enum):
 Agg = Aggregator
 
 
-class DAMIBCover(SimilarityMatrixAlgorithm):
+class DAMIBCover(ItemSimilarityMatrixAlgorithm):
     """
     DAMIB-Cover Algorithm by Koen Verstrepen et al.
     Only the rescaling os scores is implemented for now.
@@ -31,7 +31,7 @@ class DAMIBCover(SimilarityMatrixAlgorithm):
     (with denominator) depending on the `agg` param.
     """
 
-    def __init__(self, algo: SimilarityMatrixAlgorithm, p=0.75, agg: Agg = Agg.Adj):
+    def __init__(self, algo: ItemSimilarityMatrixAlgorithm, p=0.75, agg: Agg = Agg.Adj):
         super().__init__()
         self.algo = algo
         self.p = p

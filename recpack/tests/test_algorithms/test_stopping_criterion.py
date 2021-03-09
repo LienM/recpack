@@ -145,7 +145,7 @@ def test_stopping_criterion_no_change():
     crit.update(X_true, X_pred)
     assert crit.best_value == l[0]
 
-    # updated, but no change detected
+    # no change should get detected
     crit.update(X_true, X_pred)
     assert crit.n_iter_no_change == 1
 

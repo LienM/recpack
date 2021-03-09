@@ -11,6 +11,17 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class Random(Algorithm):
+    """Uniform random algorithm, each item has an equal chance of getting recommended.
+
+    Simple baseline, recommendations are sampled uniformly without replacement from the items that were interacted with in the matrix provided to fit.
+    Scores are given based on sampling rank, such that the items first in the sample has highest score
+
+    :param K: How many items to sample for recommendation, defaults to 200
+    :type K: int, optional
+    :param seed: Seed for the random number generator used, defaults to None
+    :type seed: int, optional
+    """
+
     def __init__(self, K=200, seed=None):
         super().__init__()
         self.items = None
@@ -53,6 +64,18 @@ class Random(Algorithm):
 
 
 class Popularity(Algorithm):
+    """Baseline algorithm recommending the most popular items in training data.
+
+    During training the occurrences of each item is counted,
+    and normalized by dividing by the max occurences.
+
+    TODO: does this render properly, and is there a better way to write this?
+    ``score_pop(i) = count(i) / max(count(j) for j in items)``
+
+    :param K: How many items to recommend when predicting, defaults to 200
+    :type K: int, optional
+    """
+
     def __init__(self, K=200):
         super().__init__()
         self.K = K

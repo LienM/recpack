@@ -22,16 +22,15 @@ from recpack.data.matrix import to_csr_matrix, Matrix
 
 logger = logging.getLogger("recpack")
 
-# TODO: needed to duplicate functionality between Algorithm and MetricLearningAlgorithm
-# Because fit method had different interface
-# Probably should make a super class Algorith, which does not have a fit method.
-# And then 2 sub classes ? and MetricLearningAlgorithm,
-#   which contain their respective fit interfaces
-# This also makes it possible to do a is_subtype check
-#   to see what needs to be passed as parameter.
-
 
 class Algorithm(BaseEstimator):
+    """Base class for all algorithm implementations.
+
+    Each algorithm should have a fit and predict method.
+
+    TODO? Add documentation how to create your own algorithm.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -81,15 +80,30 @@ class Algorithm(BaseEstimator):
             )
 
     def fit(self, X: Matrix) -> "Algorithm":
-        # TODO: There might be a way to use this
-        # to the advantage of handling csr_matrix or not
-        # Eg. 1 base class uses to_csr, the other an InteractionMatrix?
+        """Fit the model to the input interaction matrix.
+
+        After fitting the model will be ready to use for prediction.
+
+        :param X: The interactions to fit the model on.
+        :type X: Matrix
+        :return:
+        :rtype: Algorithm
+        """
         self._fit(X)
 
         self._check_fit_complete()
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:
+        """Predicts scores, given the interactions in X.
+
+        Recommends items for each nonzero user in the X matrix.
+
+        :param X: interactions to predict from.
+        :type X: Matrix
+        :return: The recommendation scores in a sparse matrix format.
+        :rtype: csr_matrix
+        """
         check_is_fitted(self)
 
         X_pred = self._predict(X)
@@ -99,7 +113,17 @@ class Algorithm(BaseEstimator):
         return X_pred
 
 
-class SimilarityMatrixAlgorithm(Algorithm):
+class ItemSimilarityMatrixAlgorithm(Algorithm):
+    """Base algorithm for algorithms that fit an item to item similarity model.
+
+    Fit will fill in the similarity_matrix_ property,
+    which encodes the similarity between items.
+    This can be a dense or sparse matrix depending on the algorithms.
+
+    Prediction will compute the dot product of the history vector of a user
+    and the similarity matrix.
+    """
+
     def _predict(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
 
@@ -127,44 +151,51 @@ class SimilarityMatrixAlgorithm(Algorithm):
             warnings.warn(f"{self.name} missing similar items for {missing} items.")
 
 
-class TopKSimilarityMatrixAlgorithm(SimilarityMatrixAlgorithm):
+class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
+    """Base class for algorithms where only the K most similar items are used for each item."""
+
     def __init__(self, K):
         super().__init__()
         self.K = K
 
 
-class MetricLearningAlgorithm(Algorithm):
-    """Base classes for algorithms that optimise a metric,
-    and require validation data to select their optimal model.
-    """
-
-    def fit(
-        self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
-    ) -> "MetricLearningAlgorithm":
-        self._fit(X, validation_data)
-
-        self._check_fit_complete()
-
-        return self
-
-    def predict(self, X: Matrix):
-        check_is_fitted(self)
-
-        X_pred = self._predict(X)
-
-        self._check_prediction(X_pred, X)
-
-        return X_pred
-
-
-class TorchMLAlgorithm(MetricLearningAlgorithm):
+class TorchMLAlgorithm(Algorithm):
     """Base class for algorithms using torch to learn a metric.
 
-    :param MetricLearningAlgorithm: [description]
-    :type MetricLearningAlgorithm: [type]
-    """
+    Fits a neural network to optimise a loss function.
+    During training a number of epochs is used, during each epoch
+    the model is updated, and evaluated.
 
-    # TODO: batch predict?
+    During evaluation the stopping criterion is used to manage
+    which is the best fitted model,
+    and if we can stop training early if not enough improvement
+    has been made in the last updates.
+
+    After training the best model will be loaded, and used for subsequent prediction.
+
+    The batch size is also used for prediction, to keep reduce load on GPU RAM.
+
+    :param batch_size: How many samples to use in each update step.
+        Higher batch sizes make each epoch more efficient,
+        but increases the amount of epochs needed to converge to the optimum,
+        by reducing the amount of updates per epoch.
+    :type batch_size: int
+    :param max_epochs: The max number of epochs to train,
+        if the stopping criterion uses early stopping,
+        it might stop earlier if the model on optimal weights.
+    :type max_epochs: int
+    :param learning_rate: How much to update the weights at each update.
+    :type learning_rate: float
+    :param stopping_criterion: The stopping criterion to use for training.
+    :type stopping_criterion: StoppingCriterion
+    :param seed: seed to the randomizers, useful for reproducible results,
+        defaults to None
+    :type seed: int, optional
+    :param save_best_to_file: If true, the best model will be saved after training,
+        defaults to False
+    :type save_best_to_file: bool, optional
+
+    """
 
     def __init__(
         self,
@@ -175,7 +206,7 @@ class TorchMLAlgorithm(MetricLearningAlgorithm):
         seed=None,
         save_best_to_file=False,
     ):
-        # TODO * torch.cuda.device_count() if cuda else batch_size -> Multi GPU
+        # TODO batch_size * torch.cuda.device_count() if cuda else batch_size -> Multi GPU
         self.batch_size = batch_size
 
         self.max_epochs = max_epochs
@@ -255,6 +286,9 @@ class TorchMLAlgorithm(MetricLearningAlgorithm):
         """
         results = lil_matrix(X.shape)
         for batch in get_batches(get_users(X), batch_size=self.batch_size):
+            # TODO: It might be possible to put this inner part of the loop
+            # into a function,
+            # making it possible to overwrite just that part in subclasses.
             in_ = X[batch]
             in_tensor = naive_sparse2tensor(in_).to(self.device)
 
@@ -301,6 +335,14 @@ class TorchMLAlgorithm(MetricLearningAlgorithm):
     def fit(
         self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
     ) -> "TorchMLAlgorithm":
+        """Fit the parameters of the model.
+
+        Interaction Matrix X will be used for training,
+        the validation data tuple will be used to compute the evaluate scores.
+
+        :return: self
+        :rtype: TorchMLAlgorithm
+        """
         # Preconditions:
         # The target for prediction is the validation data.
         assert X.shape == validation_data[0].shape
@@ -347,7 +389,21 @@ class TorchMLAlgorithm(MetricLearningAlgorithm):
         self._check_fit_complete()
         return self
 
-    def predict(self, X: Matrix):
+    def predict(self, X: Matrix) -> csr_matrix:
+        """Predict scores for nonzero users in the interaction matrix.
+
+        Predicts items in the interaction matrix in batch.
+        Prediction happens in batches, batch sizes in numbers of users
+        defined by the batch_size specified during model init.
+
+        Warnings are used if the model is unable to make any recommendations
+        for some users.
+
+        :param X: Matrix with interactions to predict from.
+        :type X: Matrix
+        :return: scores per user item pair
+        :rtype: csr_matrix
+        """
         check_is_fitted(self)
 
         X = self._transform_predict_input(X)

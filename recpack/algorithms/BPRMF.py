@@ -27,29 +27,41 @@ class BPRMF(TorchMLAlgorithm):
     """Implements Matrix Factorization by using the BPR-OPT objective
     and SGD optimization.
 
-    The BPR optimization aims to construct a factorization that optimally
+    MF implementation using the BPR criterion as defined in Rendle, Steffen, et al.
+    "BPR: Bayesian personalized ranking from implicit feedback."
+
+    The BPR optimization criterion aims to construct a factorization that optimally
     ranks interesting items (interacted with previously)
     above uninteresting or unknown items for all users.
 
     :param num_components: The size of the latent vectors for both users and items.
                             defaults to 100
     :type num_components: int, optional
-    :param reg: The regularization, determines with how much to
-                regularize the parameter values, defaults to 0.0
-    :type reg: float, optional
-    :param num_epochs: The max amount of epochs to train the model, defaults to 20
-    :type num_epochs: int, optional
+    :param lambda_h: the regularization parameter for the item embedding, defaults to 0.0
+    :type lambda_h: float, optional
+    :param lambda_w: the regularization parameter for the user embedding, defaults to 0.0
+    :type lambda_w: float, optional
+    :param batch_size: size of the batches to use during gradient descent. Defaults to 1000.
+    :type batch_size: int, optional
+    :param max_epochs: The max amount of epochs to train the model, defaults to 20
+    :type max_epochs: int, optional
     :param learning_rate: The learning rate of the optimization procedure,
                             defaults to 0.01
     :type learning_rate: float, optional
     :param seed: seed to fix random numbers, to make results reproducible,
                     defaults to None
     :type seed: [int], optional,
-    :param stopping_criterion: Used to identify the best model computed thus far.
-        The string indicates the name of the stopping criterion.
-        Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+    :param stopping_criterion: Which criterion to use optimise the parameters,
+        a string which indicates the name of the stopping criterion.
+        Which criterions are available can be found at
+        recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS.
         Defaults to 'recall'
     :type stopping_criterion: str, optional
+    :param stop_early: If True, early stopping is enabled,
+        and after 5 iterations where improvement of loss function
+        is below 0.01 the optimisation is stopped, even if max_epochs is not reached.
+        Defaults to False
+    :type stop_early: Boolean, optional
     :param save_best_to_file: If True, the best model is saved to disk after fit.
     :type save_best_to_file: bool
     """

@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import sklearn
 from recpack.algorithms import NMF, SVD, NMFItemToItem, SVDItemToItem
@@ -27,7 +28,7 @@ def test_nmf_item_to_item(pageviews):
 
     a.fit(pageviews)
     assert a.similarity_matrix_ is not None
-
+    np.testing.assert_array_equal(a.similarity_matrix_.diagonal(), 0)
     n_items = pageviews.shape[1]
     assert a.similarity_matrix_.shape == (n_items, n_items)
 
@@ -70,6 +71,7 @@ def test_svd_item_to_item(pageviews):
 
     n_items = pageviews.shape[1]
     assert a.similarity_matrix_.shape == (n_items, n_items)
+    np.testing.assert_array_equal(a.similarity_matrix_.diagonal(), 0)
 
     prediction = a.predict(pageviews[2])
     assert prediction.shape == (1, n_items)

@@ -5,10 +5,10 @@ import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
 
 from recpack.data.matrix import Matrix, to_csr_matrix
-from recpack.algorithms.base import TopKSimilarityMatrixAlgorithm
+from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 
 
-class ItemKNN(TopKSimilarityMatrixAlgorithm):
+class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     def __init__(self, K=200, normalize=False, similarity: str = "cosine"):
         """Construct an ItemKNN model. Before use make sure to fit the model.
         The K parameter defines the how much best neighbours are kept for each item.

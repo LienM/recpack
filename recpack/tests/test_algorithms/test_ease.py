@@ -120,12 +120,6 @@ def test_prune(data):
     np.testing.assert_almost_equal(density(algo.similarity_matrix_), TARGET_DENSITY)
 
 
-def test_EASE_XY_no_y(data):
-    with pytest.raises(RuntimeError):
-        algo = EASE_XY()
-        algo.fit(data)
-
-
 def test_XY_same_data(data):
     algo = EASE_XY(l2=0.03)
 

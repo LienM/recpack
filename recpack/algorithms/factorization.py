@@ -1,16 +1,29 @@
+import numpy as np
 import scipy.sparse
 import sklearn.decomposition
 
-from recpack.algorithms.base import Algorithm, SimilarityMatrixAlgorithm
+from recpack.algorithms.base import Algorithm, ItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class FactorizationAlgorithm(Algorithm):
-    """Just a simple wrapper, for readability?
+    """Base class for Factorization algorithms.
 
-    :param Algorithm: [description]
-    :type Algorithm: [type]
+    A factorization algorithm fits a user feature and item feature matrix.
+
+    Prediction happens by multiplying a users features with the item features.
+
+    TODO -> Add info for creating your own factorization algorithm
+    TODO -> In the Neural Network we call things embeddings,
+        probably should call the features here embeddings?
+
+    :param num_components: the dimension of the feature matrices. defaults to 100
+    :type num_components: int, optional
     """
+
+    def __init__(self, num_components=100):
+        super().__init__()
+        self.num_components = num_components
 
     def _predict(self, X: Matrix):
         assert X.shape == (self.user_features_.shape[0], self.item_features_.shape[1])
@@ -21,6 +34,16 @@ class FactorizationAlgorithm(Algorithm):
 
 
 class NMF(FactorizationAlgorithm):
+    """Non negative matrix factorization.
+
+    Matrix is decomposed into a user feature matrix, and a
+
+    :param FactorizationAlgorithm: [description]
+    :type FactorizationAlgorithm: [type]
+    :return: [description]
+    :rtype: [type]
+    """
+
     # TODO check params NMF to see which ones are useful.
     def __init__(self, num_components=100, random_state=42):
         """NMF factorization implemented using the sklearn library.
@@ -31,7 +54,7 @@ class NMF(FactorizationAlgorithm):
                              defaults to 42
         :type random_state: int, optional
         """
-        super().__init__()
+        super().__init__(num_components)
         self.num_components = num_components
         self.random_state = random_state
 
@@ -58,7 +81,21 @@ class NMF(FactorizationAlgorithm):
         return self
 
 
-class NMFItemToItem(SimilarityMatrixAlgorithm):
+class NMFItemToItem(ItemSimilarityMatrixAlgorithm):
+    """Algorithm using similarities between NMF item embeddings.
+
+    Item embeddings are computed using the NMF algorithm,
+    then a similarity matrix is constructed by
+    computing the dot product between the embeddings.
+
+    :param num_components: The size of the latent dimension
+    :type num_components: int
+
+    :param random_state: The seed for the random state to allow for comparison,
+                            defaults to 42
+    :type random_state: int, optional
+    """
+
     def __init__(self, num_components=100, random_state=42):
         super().__init__()
         self.num_components = num_components
@@ -71,6 +108,8 @@ class NMFItemToItem(SimilarityMatrixAlgorithm):
         self.similarity_matrix_ = (
             self.model_.item_features_.T @ self.model_.item_features_
         )
+        # Remove self similarity.
+        np.fill_diagonal(self.similarity_matrix_, 0)
 
 
 class SVD(FactorizationAlgorithm):
@@ -112,7 +151,7 @@ class SVD(FactorizationAlgorithm):
         return self
 
 
-class SVDItemToItem(SimilarityMatrixAlgorithm):
+class SVDItemToItem(ItemSimilarityMatrixAlgorithm):
     def __init__(self, num_components=100, random_state=42):
         super().__init__()
         self.num_components = num_components
@@ -125,3 +164,5 @@ class SVDItemToItem(SimilarityMatrixAlgorithm):
         self.similarity_matrix_ = (
             self.model_.item_features_.T @ self.model_.item_features_
         )
+        # Remove self similarity.
+        np.fill_diagonal(self.similarity_matrix_, 0)

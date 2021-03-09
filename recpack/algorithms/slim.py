@@ -7,11 +7,11 @@ import scipy.sparse
 
 from sklearn.linear_model import SGDRegressor
 
-from recpack.algorithms.base import SimilarityMatrixAlgorithm
+from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 
-class SLIM(SimilarityMatrixAlgorithm):
+class SLIM(ItemSimilarityMatrixAlgorithm):
     """Implementation of the SLIM model.
     loosely based on https://github.com/Mendeley/mrec
     """
