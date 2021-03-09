@@ -5,20 +5,25 @@ import numpy as np
 import pandas as pd
 import torch
 
-from recpack.data.data_matrix import DataM, USER_IX, ITEM_IX, TIMESTAMP_IX
+from recpack.data.matrix import InteractionMatrix
 from torch import Tensor
 from typing import Tuple
 
 
-def data_m_to_tensor(
-    data_m: DataM,
+USER_IX = InteractionMatrix.USER_IX
+ITEM_IX = InteractionMatrix.ITEM_IX
+TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
+
+
+def matrix_to_tensor(
+    matrix: InteractionMatrix,
     batch_size: int,
     device: str = "cpu",
     shuffle: bool = False,
     include_last: bool = False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
-    Converts a data matrix with interactions to torch tensors.
+    Converts a user-item interactions matrix to torch tensors.
 
     Information about the interactions is split over three different tensors
     of identical shape, containing item id, next item id and user id of the
@@ -75,7 +80,7 @@ def data_m_to_tensor(
         the number of complete batches that can be created.
     """
     # Convert the item and user ids to 1D tensors
-    df = data_m.dataframe
+    df = matrix.timestamps.reset_index()
     if shuffle:
         df = shuffle_and_sort(df)
     else:

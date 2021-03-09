@@ -14,13 +14,8 @@ from tqdm import tqdm
 from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.base import Algorithm
-from recpack.algorithms.util import (
-    StoppingCriterion,
-    EarlyStoppingException,
-)
 from recpack.metrics.recall import recall_k
-from recpack.data.data_matrix import DataM, ITEM_IX, USER_IX
-from recpack.data.matrix import Matrix, to_datam, to_csr_matrix
+from recpack.data.matrix import InteractionMatrix
 from typing import Tuple, Optional, List
 
 from recpack.algorithms.rnn.loss import (
@@ -30,11 +25,12 @@ from recpack.algorithms.rnn.loss import (
     TOP1Loss,
     TOP1MaxLoss,
 )
-from recpack.algorithms.rnn.data import data_m_to_tensor
+from recpack.algorithms.rnn.data import matrix_to_tensor
 from recpack.algorithms.rnn.model import SessionRNNTorch
 
 
 logger = logging.getLogger("recpack")
+ITEM_IX = InteractionMatrix.ITEM_IX
 
 
 class SessionRNN(Algorithm):
@@ -88,9 +84,6 @@ class SessionRNN(Algorithm):
     :param seed: Seed for random number generator
     :param bptt: Number of backpropagation through time steps
     :param num_epochs: Max training runs through entire dataset
-    :param stopping_criterion: Name of the stopping criterion used to evaluate the
-        model on a validation set during training. Must be one of the criterions in
-        StoppingCriterion.FUNCTIONS.
     """
 
     def __init__(
@@ -111,7 +104,6 @@ class SessionRNN(Algorithm):
         seed: int = 2,
         bptt: int = 1,
         num_epochs: int = 5,
-        stopping_criterion: str = "recall",
     ):
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -129,7 +121,6 @@ class SessionRNN(Algorithm):
         self.seed = seed
         self.bptt = bptt
         self.num_epochs = num_epochs
-        self.stopping_criterion = StoppingCriterion.create(stopping_criterion)
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
@@ -141,7 +132,7 @@ class SessionRNN(Algorithm):
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
-    def _init_model(self, train_data: DataM) -> None:
+    def _init_model(self, train_data: InteractionMatrix) -> None:
         """
         Initializes the neural network model.
         """
@@ -156,13 +147,14 @@ class SessionRNN(Algorithm):
             activation=self.activation,
         ).to(self.device)
 
-    def _init_training(self, train_data: DataM) -> None:
+    def _init_training(self, train_data: InteractionMatrix) -> None:
         """
         Initializes the objects required for network optimization.
         """
         num_items = train_data.shape[1]
+        dataframe = train_data.timestamps.reset_index()
 
-        item_counts_tr = train_data.dataframe[ITEM_IX].value_counts()
+        item_counts_tr = dataframe[ITEM_IX].value_counts()
         item_counts = pd.Series(np.arange(num_items))
         item_counts = item_counts.map(item_counts_tr).fillna(0)
         item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
@@ -201,7 +193,9 @@ class SessionRNN(Algorithm):
         return torch.load(file)
 
     def fit(
-        self, X: Matrix, validation_data: Tuple[Matrix, Matrix] = None
+        self,
+        X: InteractionMatrix,
+        validation_data: Tuple[InteractionMatrix, InteractionMatrix] = None,
     ) -> SessionRNN:
         """
         Fit the model on the X dataset.
@@ -214,27 +208,22 @@ class SessionRNN(Algorithm):
         :param validation_data: Validation in and out matrices. None for no validation.
             Timestamps required.
         """
-        X = to_datam(X, timestamps=True)
-        if validation_data:
-            validation_data = to_datam(validation_data, timestamps=True)
-
         self._init_random_state()
         self._init_model(X)
         self._init_training(X)
 
-        try:
-            for epoch in range(self.num_epochs):
-                logger.info(f"Epoch {epoch}")
-                self._train_epoch(X)
-                if validation_data:
-                    self._evaluate(validation_data)
-        except EarlyStoppingException:
-            pass
+        #try:
+        for epoch in range(self.num_epochs):
+            logger.info(f"Epoch {epoch}")
+            self._train_epoch(X)
+            #if validation_data:
+            #    self._evaluate(validation_data)
+        #except EarlyStoppingException:
+        #    pass
 
-        # TODO: restore best model from temp file
         return self
 
-    def predict(self, X: Matrix) -> csr_matrix:
+    def predict(self, X: InteractionMatrix) -> csr_matrix:
         """
         Predict recommendations for each user with at least a single event in their
         history.
@@ -243,12 +232,10 @@ class SessionRNN(Algorithm):
         """
         check_is_fitted(self)
 
-        X = to_datam(X, timestamps=True)
-
-        if X.interaction_count == 0:
+        if X.num_interactions == 0:
             return csr_matrix(X.shape)
 
-        num_users = X.active_user_count
+        num_users = X.num_active_users
         num_items = self.model_.output_size
         num_scores = num_users * num_items
 
@@ -257,7 +244,7 @@ class SessionRNN(Algorithm):
         col = np.tile(np.arange(num_items), num_users)
 
         with torch.no_grad():
-            actions, _, uids = data_m_to_tensor(
+            actions, _, uids = matrix_to_tensor(
                 X, batch_size=1, device=self.device, shuffle=False, include_last=True
             )
             is_last_action = uids != uids.roll(-1, dims=0)
@@ -284,11 +271,11 @@ class SessionRNN(Algorithm):
 
         return X_pred
 
-    def _train_epoch(self, X: DataM) -> None:
+    def _train_epoch(self, X: InteractionMatrix) -> None:
         """
         Train model for a single epoch.
         """
-        actions, targets, uids = data_m_to_tensor(
+        actions, targets, uids = matrix_to_tensor(
             X, batch_size=self.batch_size, device=self.device, shuffle=True
         )
         is_last_action = uids != uids.roll(-1, dims=0)
@@ -317,7 +304,9 @@ class SessionRNN(Algorithm):
 
         logger.info("training loss = {}".format(np.mean(losses)))
 
-    def _evaluate(self, validation_data: Tuple[DataM, DataM]) -> None:
+    def _evaluate(
+        self, validation_data: Tuple[InteractionMatrix, InteractionMatrix]
+    ) -> None:
         """
         Evaluate the current model on the validation data.
 
@@ -327,9 +316,6 @@ class SessionRNN(Algorithm):
         :param validation_data: Validation data interaction matrices.
         """
         self.model_.train(False)
-        X_true = to_csr_matrix(validation_data[1], binary=True)
+        X_true = validation_data[1].binary_values
         X_val_pred = self.predict(validation_data[0])
-        better = self.stopping_criterion.update(X_true, X_val_pred)
-        # TODO: save using temp files
-        # if better:
-        #    self.save(self.stopping_criterion.best_value)
+        # TODO: Maybe StoppingCriterion here? Tho unsure non-loss criteria make sense..
