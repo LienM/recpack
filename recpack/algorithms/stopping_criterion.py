@@ -68,22 +68,16 @@ class StoppingCriterion:
 
         if self.minimize:
             # If we try to minimize, smaller values of loss are better.
-            better = loss < self.best_value
+            better = loss < self.best_value and (
+                abs(loss - self.best_value) > self.min_improvement)
         else:
             # If we try to maximize, larger values of loss are better.
-            better = loss > self.best_value
+            better = loss > self.best_value and (
+                abs(loss - self.best_value) > self.min_improvement)
 
-        if self.stop_early:
-            print("better", better)
-            print("improvement", abs(loss - self.best_value))
-            print("min_change_made", abs(loss - self.best_value) > self.min_improvement)
-            if not better:
-                # Decrease in performance also counts as no change.
-                self.n_iter_no_change += 1
-            else:
-                min_change_made = abs(loss - self.best_value) > self.min_improvement
-                if not min_change_made:
-                    self.n_iter_no_change += 1
+        if self.stop_early and not better:
+            # Decrease in performance also counts as no change.
+            self.n_iter_no_change += 1
 
         logger.info(
             f"StoppingCriterion has value {loss}, which is {'better' if better else 'worse'} than previous iterations."
@@ -117,7 +111,8 @@ class StoppingCriterion:
     def create(cls, criterion_name, **kwargs):
 
         if criterion_name not in cls.FUNCTIONS:
-            raise RuntimeError(f"stopping criterion {criterion_name} not supported")
+            raise RuntimeError(
+                f"stopping criterion {criterion_name} not supported")
 
         return StoppingCriterion(**cls.FUNCTIONS[criterion_name], **kwargs)
 
