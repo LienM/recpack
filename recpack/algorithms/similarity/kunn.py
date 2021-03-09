@@ -10,12 +10,18 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
+# fit item knn: aparte functies en testen
+# fit user knn
+# combined in een aparte subfunctie en testen
+# testen van robin aanpassen, die moeten slagen
+
 
 class KUNN(Algorithm):
     """
     KUNN Algorithm by Koen Verstrepen and Bart Goethals
     as described in paper 'Unifying Nearest Neighbors Collaborative Filtering' (10.1145/2645710.2645731)
     """
+
     def __init__(self, Ku: int = 100, Ki: int = 100):
         """
         Initialize the KUNN Algorithm but setting the number of K (top-K) for users and items.
@@ -32,18 +38,11 @@ class KUNN(Algorithm):
         :param X: Sparse binary user-item matrix which will be used to fit the algorithm.
         :return: The fitted KUNN Algorithm itself.
         """
-        X = to_csr_matrix(X, binary=True)  # To make sure the input is interpreted as a binary matrix
-        self.training_interactions_ = csr_matrix(X, copy=True)
-        Xscaled, _, Ci_rooted = self._calculate_scaled_matrices(X)
+        # To make sure the input is interpreted as a binary matrix
+        X = to_csr_matrix(X, binary=True)
 
-        # Element-wise multiplication with Ci_rooted. Result is x.T_iu / sqrt(c_i).
-        XtCi = csr_matrix(X.T.multiply(Ci_rooted.T))
-        # Matrix multiplication. Result is XtCi * Xscaled
-        sim_i = csr_matrix(XtCi * Xscaled)
-        # Eliminate self-similarity
-        sim_i.setdiag(0)
-
-        self.knn_i_ = get_top_K_values(sim_i, self.Ki)
+        self.training_interactions_ = csr_matrix(X, copy=True)  # Memoize X
+        self.knn_i_ = self._fit_item_knn(X)
 
         return self
 
@@ -59,41 +58,39 @@ class KUNN(Algorithm):
         check_is_fitted(self)
 
         X = to_csr_matrix(X, binary=True)
+        knn_u = self._fit_user_knn(X)
+        self.knn_u_ = knn_u
+
         users_to_predict = set(X.nonzero()[0])
         num_users = X.shape[0]
 
         # Combine the memoized training interactions with the predict interactions
-        Combined = self.training_interactions_ + X
-        Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(Combined)
-        users_combined = set(Combined.nonzero()[0])
+        Combined = self._union_csr_matrices(self.training_interactions_, X)
+        _, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(Combined)
 
         # Element-wise multiplication with Ci_rooted. Result is combined_ui / sqrt(c_i).
         CombinedCi = csr_matrix(Combined.multiply(Ci_rooted))
-        CombinedCu = csr_matrix(Combined.multiply(Cu_rooted.T))
-        # Matrix multiplication. Result is CombinedCu * Xscaled.T
-        sim_u = csr_matrix(CombinedCu * Xscaled.T)
-        # Eliminate self-similarity
-        sim_u.setdiag(0)
-
-        # Make sure to remove the 'illegal' similarities between the target users themselves. Such that there are only
-        # similarities between the already known training users.
-        # Create a mask with 1's on the columns of the target users. Subtract the element-wise multiplication of the
-        # mask with the user similarity to remove the 'illegal' similarities.
-        mask = self._create_mask(users_combined, users_to_predict, sim_u.shape)
-        sim_u -= sim_u.multiply(mask)
-
-        knn_u = get_top_K_values(sim_u, self.Ku)
 
         # Element-wise multiplication. Result is combined_ui / sqrt(c.T_u)
         CombinedCTu = csr_matrix(Combined.multiply(Cu_rooted.T))
         # Matrix multiplication. Result is knn_u * CombinedCTu
         Su = csr_matrix(knn_u * CombinedCTu)
+        print("------")
+        print(knn_u.todense(), "\n\n", CombinedCTu.todense())
+        print("\n result \n")
+        print(
+            (Su.multiply(Ci_rooted ** (-1)).multiply((Cu_rooted ** (-1)).T)).todense()
+        )
+
+        print(Ci_rooted, Cu_rooted)
 
         # Element-wise multiplication. Result is combined_ui / sqrt(c_i). -- Already calculated => CombinedCi
         # Matrix multiplication. Result is CombinedCi * knn_i
-        Si = csr_matrix(CombinedCi * self.knn_i_)
+        Si = csr_matrix(CombinedCi * self.knn_i_.T)
 
         self.S_ = Si + Su
+        self.Si_ = Si
+        self.Su_ = Su
 
         # The scores for the target users are calculated by multiplying a diagonal matrix by the score matrix. On the
         # diagonal there is a 1 if that user is a target user.
@@ -103,7 +100,9 @@ class KUNN(Algorithm):
 
         return scores
 
-    def _calculate_scaled_matrices(self, X: csr_matrix) -> (csr_matrix, np.ndarray, np.ndarray):
+    def _calculate_scaled_matrices(
+        self, X: csr_matrix
+    ) -> (csr_matrix, np.ndarray, np.ndarray):
         """
         Helper method to calculate the scaled matrices. First the scaled matrix of X will be calculated base on each
         user and item counts. Ci-rooted is a vector with the number of users for each item.
@@ -167,3 +166,43 @@ class KUNN(Algorithm):
         U = np.array(list(users))
 
         return csr_matrix((V, (U, U)), shape=(num_users, num_users))
+
+    def _fit_item_knn(self, X: csr_matrix) -> csr_matrix:
+        Xscaled, _, Ci_rooted = self._calculate_scaled_matrices(X)
+
+        # Element-wise multiplication with Ci_rooted. Result is x.T_iu / sqrt(c_i).
+        XtCi = csr_matrix(X.T.multiply(Ci_rooted.T))
+        # Matrix multiplication. Result is XtCi * Xscaled
+        sim_i = csr_matrix(XtCi * Xscaled)
+        # Eliminate self-similarity
+        sim_i.setdiag(0)
+
+        return get_top_K_values(sim_i, self.Ki)
+
+    def _fit_user_knn(self, X: csr_matrix) -> csr_matrix:
+        users_to_predict = set(X.nonzero()[0])
+
+        # Combine the memoized training interactions with the predict interactions
+        Combined = self._union_csr_matrices(self.training_interactions_, X)
+        Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(Combined)
+        users_combined = set(Combined.nonzero()[0])
+
+        # Element-wise multiplication with Cu_rooted. Result is combined_ui / sqrt(c_u).
+        CombinedCu = csr_matrix(Combined.multiply(Cu_rooted.T))
+        # Matrix multiplication. Result is CombinedCu * Xscaled.T
+        sim_u = csr_matrix(CombinedCu * Xscaled.T)
+        # Eliminate self-similarity
+        sim_u.setdiag(0)
+
+        # Make sure to remove the 'illegal' similarities between the target users themselves. Such that there are only
+        # similarities between the already known training users.
+        # Create a mask with 1's on the columns of the target users. Subtract the element-wise multiplication of the
+        # mask with the user similarity to remove the 'illegal' similarities.
+        mask = self._create_mask(users_combined, users_to_predict, sim_u.shape)
+        sim_u -= sim_u.multiply(mask)
+
+        return get_top_K_values(sim_u, self.Ku)
+
+    def _union_csr_matrices(self, a: csr_matrix, b: csr_matrix) -> csr_matrix:
+        # pre-condition: a and b should be a binary csr_matrix (the values only consist out of 1.0's)
+        return csr_matrix(a.astype(np.bool) + b.astype(np.bool)) * 1.0
