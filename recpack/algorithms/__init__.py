@@ -1,3 +1,55 @@
+"""Algorithm implementations in the recpack repository.
+
+.. currentmodule:: recpack.algorithms
+
+
+.. rubric:: Simple baselines
+
+.. autosummary::
+    :toctree:
+
+    Popularity
+    Random
+
+.. rubric:: Item Similarity algorithms
+
+.. autosummary::
+    :toctree:
+
+    EASE
+    EASE_XY
+    SLIM
+    ItemKNN
+    NMFItemToItem
+    SVDItemToItem
+
+.. rubric:: User and Item Embedding algorithms
+
+.. autosummary::
+    :toctree:
+
+    NMF
+    SVD
+    WeightedMatrixFactorization
+    BPRMF
+    RecVAE
+    MultVAE
+
+
+.. rubric:: Abstract base classes
+
+TODO: add a page with base classes, and info on creating your own algorithms
+
+.. autosummary::
+    :toctree:
+
+    Algorithm
+    base.ItemSimilarityMatrixAlgorithm
+    base.TopKItemSimilarityMatrixAlgorithm
+    base.TorchMLAlgorithm
+
+"""
+
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms.baseline import Popularity, Random
 from recpack.algorithms.factorization import (

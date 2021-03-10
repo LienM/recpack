@@ -38,24 +38,17 @@ class NMF(FactorizationAlgorithm):
 
     Matrix is decomposed into a user feature matrix, and a
 
-    :param FactorizationAlgorithm: [description]
-    :type FactorizationAlgorithm: [type]
-    :return: [description]
-    :rtype: [type]
+    :param num_components: The size of the latent dimension
+    :type num_components: int
+
+    :param random_state: The seed for the random state to allow for comparison,
+                            defaults to 42
+    :type random_state: int, optional
     """
 
     # TODO check params NMF to see which ones are useful.
     def __init__(self, num_components=100, random_state=42):
-        """NMF factorization implemented using the sklearn library.
-        :param num_components: The size of the latent dimension
-        :type num_components: int
-
-        :param random_state: The seed for the random state to allow for comparison,
-                             defaults to 42
-        :type random_state: int, optional
-        """
         super().__init__(num_components)
-        self.num_components = num_components
         self.random_state = random_state
 
     def _fit(self, X: Matrix):
@@ -115,6 +108,10 @@ class NMFItemToItem(ItemSimilarityMatrixAlgorithm):
 class SVD(FactorizationAlgorithm):
     """Singular Value Decomposition as dimension reduction recommendation algorithm.
 
+    SVD computed using the TruncatedSVD implementation from sklearn.
+    U x Sigma x V = X
+    U are the user features, and the item features are computed as Sigma x V.
+
     :param num_components: The size of the latent dimension
     :type num_components: int
 
@@ -123,9 +120,8 @@ class SVD(FactorizationAlgorithm):
     """
 
     def __init__(self, num_components=100, random_state=42):
-        super().__init__()
+        super().__init__(num_components=num_components)
 
-        self.num_components = num_components
         self.random_state = random_state
 
     def _fit(self, X: Matrix):
@@ -152,6 +148,20 @@ class SVD(FactorizationAlgorithm):
 
 
 class SVDItemToItem(ItemSimilarityMatrixAlgorithm):
+    """Use similarity between item embeddings computed by using SVD.
+
+    Item embeddings are computed using the SVD algorithm,
+    the similarities are then computed by the dot product of the
+    item embeddings.
+
+    :param num_components: The size of the latent dimension
+    :type num_components: int
+
+    :param random_state: The seed for the random state to allow for comparison,
+                            defaults to 42
+    :type random_state: int, optional
+    """
+
     def __init__(self, num_components=100, random_state=42):
         super().__init__()
         self.num_components = num_components

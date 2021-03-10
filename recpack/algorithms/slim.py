@@ -13,17 +13,30 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 
 class SLIM(ItemSimilarityMatrixAlgorithm):
     """Implementation of the SLIM model.
-    loosely based on https://github.com/Mendeley/mrec
+
+    SLIM Model described in Ning, Xia, and George Karypis.
+    "Slim: Sparse linear methods for top-n recommender systems."
+    2011 IEEE 11th International Conference on Data Mining. IEEE, 2011
+
+    Code loosely based on https://github.com/Mendeley/mrec
+
+    :param l1_reg: l1 regularization coefficient, defaults to 0.0005
+    :type l1_reg: float, optional
+    :param l2_reg: l2 regularization coefficient, defaults to 0.00005
+    :type l2_reg: float, optional
+    :param fit_intercept: Whether the intercept should be estimated
+        or not during gradient descent.
+        If False, the data is assumed to be already centered., defaults to True
+    :type fit_intercept: bool, optional
+    :param ignore_neg_weights: Remove negative weights after training
+        to increase speed of predict, defaults to True
+    :type ignore_neg_weights: bool, optional
     """
 
     def __init__(
-        self,
-        l1_reg=0.0005,
-        l2_reg=0.00005,
-        fit_intercept=True,
-        ignore_neg_weights=True,
-        model="sgd",
+        self, l1_reg=0.0005, l2_reg=0.00005, fit_intercept=True, ignore_neg_weights=True
     ):
+
         super().__init__()
 
         self.l1_reg = l1_reg
@@ -35,22 +48,12 @@ class SLIM(ItemSimilarityMatrixAlgorithm):
         self.ignore_neg_weights = ignore_neg_weights
 
         # Construct internal model
-        # ALLOWED MODELS:
-        ALLOWED_MODELS = ["sgd"]
-
-        if model == "sgd":
-            self.model = SGDRegressor(
-                penalty="elasticnet",
-                fit_intercept=fit_intercept,
-                alpha=self.alpha,
-                l1_ratio=self.l1_ratio,
-            )
-
-        else:
-            raise NotImplementedError(
-                f"{model} is not yet implemented, "
-                f"please use one of {ALLOWED_MODELS}"
-            )
+        self.model = SGDRegressor(
+            penalty="elasticnet",
+            fit_intercept=fit_intercept,
+            alpha=self.alpha,
+            l1_ratio=self.l1_ratio,
+        )
 
     def _compute_similarities(self, work_matrix, item):
         new_matrix = work_matrix.tocoo()

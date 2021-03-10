@@ -11,9 +11,31 @@ logger = logging.getLogger("recpack")
 
 
 class WeightedMatrixFactorization(Algorithm):
-    """
-    WMF Algorithm by Yifan Hu, Yehuda Koren and Chris Volinsky et al.
-    as described in paper 'Collaborative Filtering for Implicit Feedback Datasets' (ICDM.2008.22)
+    """WMF Algorithm by Yifan Hu, Yehuda Koren and Chris Volinsky et al.
+
+    As described in paper 'Collaborative Filtering for Implicit Feedback Datasets'
+    (ICDM.2008.22)
+
+    :param cs: Which confidence scheme should be used
+        to calculate the confidence matrix.
+        Options are ["minimal", "log-scaling"].
+        Defaults to "minimal"
+    :type cs: string, optional
+    :param alpha: Alpha parameter for generating confidence matrix.
+        Defaults to 40.
+    :type alpha: int, optional
+    :param epsilon: Epsilon parameter for generating confidence matrix.
+        Defaults to 1e-8
+    :type epsilon: float, optional
+    :param num_components: Dimension of factors used by the user- and item-factors.
+        Defaults to 100
+    :type num_components: int, optional
+    :param regularization: Regularization parameter used to calculate the Least Squares.
+        Defaults to 0.01
+    :type regularization: float, optional
+    :param iterations: Number of iterations to execute the ALS calculations.
+        Defaults to 20
+    :type iterations: int, optional
     """
 
     CONFIDENCE_SCHEMES = ["minimal", "log-scaling"]
@@ -22,20 +44,13 @@ class WeightedMatrixFactorization(Algorithm):
         self,
         cs: str = "minimal",
         alpha: int = 40,
-        epsilon: float = 10 ** (-8),
+        epsilon: float = 1e-8,
         num_components: int = 100,
         regularization: float = 0.01,
         iterations: int = 20,
     ):
         """
         Initialize the weighted matrix factorization algorithm with confidence generator parameters.
-        :param cs: Which confidence scheme should be used to calculate the confidence matrix. Options are ["minimal",
-                   "log-scaling"]
-        :param alpha: Alpha parameter for generating confidence matrix.
-        :param epsilon: Epsilon parameter for generating confidence matrix.
-        :param num_components: Dimension of factors used by the user- and item-factors.
-        :param regularization: Regularization parameter used to calculate the Least Squares.
-        :param iterations: Number of iterations to execute the ALS calculations.
         """
         super().__init__()
         self.confidence_scheme = cs
@@ -150,11 +165,11 @@ class WeightedMatrixFactorization(Algorithm):
         Calculate the other factor based on the confidence matrix and the factors with the least squares algorithm.
         It is a general function for item- and user-factors. Depending on the parameter factor_type the other factor
         will be calculated.
-        @param conf_matrix: (Transposed) Confidence matrix
-        @param factors: Factor array
-        @param dimension: User/item dimension.
-        @param distinct_set: Set of users/items
-        @return: Other factor nd-array based on the factor array and the confidence matrix
+        :param conf_matrix: (Transposed) Confidence matrix
+        :param factors: Factor array
+        :param dimension: User/item dimension.
+        :param distinct_set: Set of users/items
+        :return: Other factor nd-array based on the factor array and the confidence matrix
         """
         factors_x = np.zeros((dimension, self.num_components))
         YtY = factors.T @ factors
@@ -169,11 +184,11 @@ class WeightedMatrixFactorization(Algorithm):
     ) -> np.ndarray:
         """
         Helper function to compute the linear equation used in the Least Squares calculations.
-        @param Y: Input factor array
-        @param YtY: Product of Y transpose and Y.
-        @param C: The (transposed) confidence matrix
-        @param x: Calculation for which item/user x
-        @return: Solution for the linear equation (YtCxY + regularization * I)^-1 (YtCxPx)
+        :param Y: Input factor array
+        :param YtY: Product of Y transpose and Y.
+        :param C: The (transposed) confidence matrix
+        :param x: Calculation for which item/user x
+        :return: Solution for the linear equation (YtCxY + regularization * I)^-1 (YtCxPx)
         """
         # accumulate YtCxY + regularization * I in A
         # -----------

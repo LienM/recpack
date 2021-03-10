@@ -206,7 +206,8 @@ class TorchMLAlgorithm(Algorithm):
         seed=None,
         save_best_to_file=False,
     ):
-        # TODO batch_size * torch.cuda.device_count() if cuda else batch_size -> Multi GPU
+        # TODO batch_size * torch.cuda.device_count() if cuda else batch_size
+        #   -> Multi GPU
         self.batch_size = batch_size
 
         self.max_epochs = max_epochs

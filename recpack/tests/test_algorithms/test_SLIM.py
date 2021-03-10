@@ -87,8 +87,3 @@ def test_slim_negatives(data_negatives):
     print(result2.toarray())
     # Item 0 is closer to item 2
     assert result2[2, 0] < 0
-
-
-def test_slim_incorrect_model():
-    with pytest.raises(NotImplementedError):
-        _ = SLIM(model="NONSENSE")

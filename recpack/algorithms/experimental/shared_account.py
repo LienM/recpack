@@ -87,7 +87,7 @@ def get_prediction_u(similarities, p, agg):
             # average
             predictions[col] = np.sum(filtered[:, col]) / nonzero
         else:
-            raise RuntimeError("Unknown aggragation method for SA algorithm")
+            raise ValueError("Unknown aggragation method for SA algorithm")
 
     return predictions
 

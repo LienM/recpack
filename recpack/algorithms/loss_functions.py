@@ -58,7 +58,8 @@ def warp_loss(
     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
     based on
     J. Weston, S. Bengio, and N. Usunier. Large scale image annotation:
-    learning to rank with joint word-image embeddings. Machine learning, 81(1):21–35, 2010.
+    learning to rank with joint word-image embeddings. Machine learning, 81(1):21–35,
+    2010.
 
     Adds a loss penalty for every negative sample that is not at least
     an amount of margin further away from the reference sample than a positive
@@ -66,9 +67,11 @@ def warp_loss(
     amount of samples in the negative sample batch were "misclassified",
     i.e. closer than the positive sample.
 
-    :param dist_pos_interaction: Tensor of distances between positive sample and reference sample.
+    :param dist_pos_interaction: Tensor of distances between positive sample
+        and reference sample.
     :type dist_pos_interaction: torch.Tensor
-    :param dist_neg_interaction: Tensor of distances between negatives samples and reference sample.
+    :param dist_neg_interaction: Tensor of distances between negatives samples
+        and reference sample.
     :type dist_neg_interaction: torch.Tensor
     :param margin: Required margin between positive and negative sample.
     :type margin: float
@@ -97,7 +100,23 @@ def warp_loss(
     return loss
 
 
-def bpr_loss(positive_sim, negative_sim):
+def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor):
+    """Implementation of the Bayesian Personalized Ranking loss.
+
+    BPR loss as defined in Rendle, Steffen, et al.
+    "BPR: Bayesian personalized ranking from implicit feedback."
+
+    Input are the scores for positive samples, and scores for negative samples.
+
+    :param positive_sim: tensor with scores of positive samples
+        (dimension = num_samples, 1)
+    :type positive_sim: torch.Tensor
+    :param negative_sim: tensor with scores of negative samples
+        (dimension = num_samples, 1)
+    :type negative_sim: torch.Tensor
+    :return: the loss value of the bpr criterion
+    :rtype: torch.Tensor
+    """
     distance = positive_sim - negative_sim
     # Probability of ranking given parameters
     elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
@@ -116,21 +135,26 @@ def bpr_loss_metric(
     sample_size=None,
     exact=False,
 ):
-    """Compute BPR reconstruction loss of the X_true matrix in X_pred
+    """Compute BPR reconstruction loss of the X_true matrix in X_pred.
 
-    :param X_true: [description]
-    :type X_true: [type]
-    :param X_pred: [description]
-    :type X_pred: [type]
-    :param batch_size:
-    :type batch_size:
-    :param sample_size:
-    :type sample_size: [description]
-    :raises an: [description]
-    :return: [description]
-    :rtype: [type]
-    :yield: [description]
-    :rtype: [type]
+    Positive and negative items are sampled using bootstrap_sample_pairs.
+    Scores are then extracted from the X_pred.
+
+    :param X_true: The expected interactions for the users
+    :type X_true: csr_matrix
+    :param X_pred: The predicted scores for users
+    :type X_pred: csr_matrix
+    :param batch_size: size of the batches to sample
+    :type batch_size: The size of the batches to sample, defaults to 1000
+    :param sample_size: int, optional
+    :type sample_size: How many samples to construct
+    :param exact: If True sampling happens exact,
+        otherwise sampling assumes high sparsity of data,
+        accepting a minimal amount of false negatives,
+        speeding up sampling without loss of quality, defaults to False
+    :type exact: bool, optional
+    :return: The mean of the losses of sampled pairs
+    :rtype: float
     """
 
     if sample_size is None:
@@ -162,15 +186,35 @@ def warp_loss_metric(
     margin: float = 1.9,
     exact=False,
 ):
+    """Metric wrapper around the WARP loss.
+
+    Positives and negatives are sampled from the X_true matrix using the WARP sampler,
+    Their scores are fetched from the X_pred matrix.
+
+    :param X_true: True interactions expected for the users
+    :type X_true: csr_matrix
+    :param X_pred: Predicted scores.
+    :type X_pred: csr_matrix
+    :param batch_size: Size of the sample batches, defaults to 1000
+    :type batch_size: int, optional
+    :param U: How many negatives to sample for each positive item, defaults to 20
+    :type U: int, optional
+    :param margin: required margin between positives and negatives, defaults to 1.9
+    :type margin: float, optional
+    :param exact: If True sampling happens exact,
+        otherwise sampling assumes high sparsity of data,
+        accepting a minimal amount of false negatives.
+        This speeds up sampling without significant loss of quality, defaults to False
+    :type exact: bool, optional
+    :return: The warp loss
+    :rtype: float
+    """
     losses = []
     J = X_true.shape[1]
 
     for users, positives_batch, negatives_batch in tqdm(
         warp_sample_pairs(X_true, U=U, batch_size=batch_size, exact=exact)
     ):
-        print("users", users)
-        print("positives", positives_batch)
-        print("negatives", negatives_batch)
 
         current_batch_size = users.shape[0]
 

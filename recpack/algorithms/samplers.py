@@ -6,7 +6,9 @@ import torch
 from recpack.data.matrix import to_binary
 
 
-def _spot_collisions(users: np.array, negatives_batch: np.array, X: csr_matrix) -> Tuple[int, np.array]:
+def _spot_collisions(
+    users: np.array, negatives_batch: np.array, X: csr_matrix
+) -> Tuple[int, np.array]:
     """Spot collisions between the negative samples and the interactions in X.
 
     :param users: Ordered batch of users
@@ -15,7 +17,8 @@ def _spot_collisions(users: np.array, negatives_batch: np.array, X: csr_matrix) 
     :type negatives_batch: np.array
     :param X: Entirety of all user interactions
     :type X: csr_matrix
-    :return: Tuple containing the number of incorrect negative samples, and the locations of these incorrect samples in the batch array
+    :return: Tuple containing the number of incorrect negative samples,
+        and the locations of these incorrect samples in the batch array
     :rtype: Tuple[int, np.array]
     """
     # Eliminate the collisions, exactly.
@@ -28,13 +31,12 @@ def _spot_collisions(users: np.array, negatives_batch: np.array, X: csr_matrix) 
         X.shape,
     )
     # Detect differences between the batch of negatives and X.
-    # Ideally, every negative sample should be different from samples in X (no collisions).
+    # Ideally, every negative sample should be different from samples in X
+    # (no collisions).
     negative_samples_mask = negatives_batch_csr.astype(bool)
     match_or_mismatch = to_binary(negatives_batch_csr) != X
     # If there are no false negatives, all values in false_negatives should be True.
-    false_negatives = np.bitwise_not(
-        match_or_mismatch[negative_samples_mask]
-    )
+    false_negatives = np.bitwise_not(match_or_mismatch[negative_samples_mask])
 
     # Count all locations where false_negatives = True
     # Negative samples can be duplicated, so multipy with their frequency
@@ -50,7 +52,8 @@ def _spot_collisions(users: np.array, negatives_batch: np.array, X: csr_matrix) 
     # Get the indices of the false_negatives
     _, false_negative_indices_csr = false_negatives.nonzero()
     # Get the corresponding false negative pairs
-    # Assumes the order of samples in false_negatives is the same as in negative_samples_mask
+    # Assumes the order of samples in false_negatives
+    # is the same as in negative_samples_mask
     false_negative_pairs = list(zip(*negative_samples_mask.nonzero()))
     # Get the originally sampled negative pairs, in the batch order
     negative_pairs = np.vstack([users, negatives_batch]).T
@@ -67,7 +70,10 @@ def _spot_collisions(users: np.array, negatives_batch: np.array, X: csr_matrix) 
 def bootstrap_sample_pairs(
     X: csr_matrix, batch_size=100, sample_size=None, exact=False
 ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
-    """bootstrap sample triples from the data. Each triple contains (user, positive item, negative item).
+    """bootstrap sample triples from the data.
+
+    Each triple contains (user, positive item, negative item).
+
     :param X: Interaction matrix
     :type X: csr_matrix
     :param batch_size: The number of samples returned per batch, defaults to 100
@@ -75,44 +81,47 @@ def bootstrap_sample_pairs(
     :param sample_size: The number of samples to generate, defaults to None,
                     if it is None, it is set to the number of positive samples in X
     :type sample_size: int, optional
-    :param exact: if False (default) negatives are checked agains the corresponding positive sample only, allowing for (rare) collisions. If collisions should be avoided at all costs, use exact = True, but suffer decreased performance.
+    :param exact: if False (default) negatives are checked agains the corresponding
+        positive sample only, allowing for (rare) collisions.
+        If collisions should be avoided at all costs, use exact = True,
+        but suffer decreased performance.
     :type exact: bool, optional
     :yield: Iterator of (user_batch, positive_samples_batch, negative_samples_batch)
     :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
     """
     if sample_size is None:
         sample_size = X.nnz
-    # Need positive and negative pair. Requires the existence of a positive for this item.
+    # Need positive and negative pair.
+    #   Requires the existence of a positive for this item.
     # As a (num_interactions, 2) numpy array
     positives = np.array(X.nonzero()).T
     num_positives = positives.shape[0]
     np.random.shuffle(positives)
     # Pick interactions at random, with replacement
-    samples = np.random.choice(
-        num_positives, size=(sample_size,), replace=True)
+    samples = np.random.choice(num_positives, size=(sample_size,), replace=True)
 
-    # TODO Could be better to only yield this when required, to keep the memory footprint low.
     possible_negatives = np.random.randint(0, X.shape[1], size=(sample_size,))
     for start in range(0, sample_size, batch_size):
-        sample_batch = samples[start: start + batch_size]
+        sample_batch = samples[start : start + batch_size]
 
         batch = positives[sample_batch]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
-        negatives_batch = possible_negatives[start: start + batch_size]
+        negatives_batch = possible_negatives[start : start + batch_size]
         while True:
             # Fix the negatives that are equal to the positives, if there are any
             if not exact:
-                # Do so approximately. Rely on sparsity of the positives matrix to ensure collisions are rare.
+                # Do so approximately. Rely on sparsity
+                # of the positives matrix to ensure collisions are rare.
                 negatives_mask = positives_batch == negatives_batch
                 num_incorrect = np.sum(negatives_mask)
             else:
                 num_incorrect, negatives_mask = _spot_collisions(
-                    users, negatives_batch, X)
+                    users, negatives_batch, X
+                )
 
             if num_incorrect > 0:
-                new_negatives = np.random.randint(
-                    0, X.shape[1], size=(num_incorrect,))
+                new_negatives = np.random.randint(0, X.shape[1], size=(num_incorrect,))
                 negatives_batch[negatives_mask] = new_negatives
             else:
                 # Exit the while loop
@@ -123,7 +132,9 @@ def bootstrap_sample_pairs(
         ), torch.LongTensor(negatives_batch)
 
 
-def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
+def warp_sample_pairs(
+    X: csr_matrix, U=10, batch_size=100, exact=False
+) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
     """Sample U negatives for every user-item-pair (positive).
 
     :param X: Interaction matrix
@@ -132,7 +143,10 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False) -> Itera
     :type U: int, optional
     :param batch_size: The number of samples returned per batch, defaults to 100
     :type batch_size: int, optional
-    :param exact: if False (default) negatives are checked agains the corresponding positive sample only, allowing for (rare) collisions. If collisions should be avoided at all costs, use exact = True, but suffer decreased performance.
+    :param exact: if False (default) negatives are checked agains the corresponding
+        positive sample only, allowing for (rare) collisions.
+        If collisions should be avoided at all costs, use exact = True,
+        but suffer decreased performance.
     :type exact: bool, optional
     :yield: Iterator of (user_batch, positive_samples_batch, negative_samples_batch)
     :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
@@ -144,7 +158,7 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False) -> Itera
     np.random.shuffle(positives)
 
     for start in range(0, num_positives, batch_size):
-        batch = positives[start: start + batch_size]
+        batch = positives[start : start + batch_size]
         users = batch[:, 0]
         positives_batch = batch[:, 1]
 
@@ -153,7 +167,8 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False) -> Itera
 
         if not exact:
             negatives_batch = np.random.randint(
-                0, X.shape[1], size=(true_batch_size, U))
+                0, X.shape[1], size=(true_batch_size, U)
+            )
             while True:
                 # Approximately fix the negatives that are equal to the positives, if there are any
                 # Assumes collisions are rare
@@ -164,7 +179,8 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False) -> Itera
 
                 if num_incorrect > 0:
                     new_negatives = np.random.randint(
-                        0, X.shape[1], size=(num_incorrect,))
+                        0, X.shape[1], size=(num_incorrect,)
+                    )
                     negatives_batch[mask] = new_negatives
                 else:
                     # Exit the while loop
@@ -174,13 +190,16 @@ def warp_sample_pairs(X: csr_matrix, U=10, batch_size=100, exact=False) -> Itera
             for i in range(0, U):
                 while True:
                     negatives_batch_col_i = np.random.randint(
-                        0, X.shape[1], size=(true_batch_size, ))
+                        0, X.shape[1], size=(true_batch_size,)
+                    )
                     num_incorrect, negatives_mask = _spot_collisions(
-                        users, negatives_batch_col_i, X)
+                        users, negatives_batch_col_i, X
+                    )
 
                     if num_incorrect > 0:
                         new_negatives = np.random.randint(
-                            0, X.shape[1], size=(num_incorrect,))
+                            0, X.shape[1], size=(num_incorrect,)
+                        )
                         negatives_batch_col_i[negatives_mask] = new_negatives
 
                     else:

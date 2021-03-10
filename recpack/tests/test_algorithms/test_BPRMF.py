@@ -135,7 +135,7 @@ def test_forward(pageviews_for_pairwise):
 
 
 def test_bad_stopping_criterion(pageviews):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         BPRMF(stopping_criterion="not_a_correct_value")
 
 

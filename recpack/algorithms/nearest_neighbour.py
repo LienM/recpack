@@ -9,14 +9,33 @@ from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 
 
 class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
-    def __init__(self, K=200, normalize=False, similarity: str = "cosine"):
-        """Construct an ItemKNN model. Before use make sure to fit the model.
-        The K parameter defines the how much best neighbours are kept for each item.
+    """Item K Nearest Neighbours model.
 
-        If normalize is True, the scores are normalized per item.
-        """
+    For each item the K most similar items are computed during fit.
+    Similarity parameter decides how to compute the similarity between two items.
+    Supported options are: ``"cosine"`` and ``"conditional_probability"``
+
+    If normalize is True, the scores are normalized per center item,
+    making sure the sum of each row in the similarity matrix is 1.
+
+
+    :param K: How many neigbours to use per item, defaults to 200
+    :type K: int, optional
+    :param normalize: Normalize scores per row in the similarity matrix,
+        defaults to False
+    :type normalize: bool, optional
+    :param similarity: Which similarity measure to use,
+        can be one of ["cosine", "conditional_probability"], defaults to "cosine"
+    :type similarity: str, optional
+    """
+
+    SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
+
+    def __init__(self, K=200, normalize=False, similarity: str = "cosine"):
         super().__init__(K)
         self.normalize = normalize
+        if similarity not in self.SUPPORTED_SIMILARITIES:
+            raise ValueError(f"similarity {similarity} not supported")
         self.similarity = similarity
 
     def _compute_conditional_probability(self, X):

@@ -44,11 +44,11 @@ class RecVAE(TorchMLAlgorithm):
         stop_early: bool = False,
         save_best_to_file: bool = False,
     ):
-        """
-        RecVAE Algorithm as first discussed in
+        """RecVAE Algorithm as first discussed in
         'RecVAE: a New Variational Autoencoder for
         Top-NRecommendations with Implicit Feedback',
-        I. Shenbin et al. @ WSDM2020
+        I. Shenbin et al. @ WSDM2020.
+
         Default values were taken from the paper.
 
         :param batch_size: Batch size for SGD, defaults to 500
@@ -87,6 +87,9 @@ class RecVAE(TorchMLAlgorithm):
             Which criterions are available can be found at StoppingCriterion.FUNCTIONS
             Defaults to 'ndcg'
         :type stopping_criterion: str, optional
+        :param stop_early: Use early stopping during optimisation,
+            defaults to False
+        :type stop_early: bool, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
         :type save_best_to_file: bool
 

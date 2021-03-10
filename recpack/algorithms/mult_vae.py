@@ -34,10 +34,10 @@ class MultVAE(TorchMLAlgorithm):
         stop_early: bool = False,
         save_best_to_file=False,
     ):
-        """
-        MultVAE Algorithm as first discussed in
+        """MultVAE Algorithm as first discussed in
         'Variational Autoencoders for Collaborative Filtering',
-        D. Liang et al. @ KDD2018
+        D. Liang et al. @ KDD2018.
+
         Default values were taken from the paper.
 
         :param batch_size: Batch size for SGD,
@@ -46,11 +46,11 @@ class MultVAE(TorchMLAlgorithm):
         :param max_epochs: Maximum number of epochs (iterations),
                            defaults to 200
         :type max_epochs: int, optional
+        :param learning_rate: Learning rate, defaults to 1e-4
+        :type learning_rate: [type], optional
         :param seed: Random seed for Torch, provided for reproducibility,
                      defaults to 42.
         :type seed: int, optional
-        :param learning_rate: Learning rate, defaults to 1e-4
-        :type learning_rate: [type], optional
         :param dim_bottleneck_layer: Size of the latent representation,
                                      defaults to 200
         :type dim_bottleneck_layer: int, optional
@@ -69,6 +69,9 @@ class MultVAE(TorchMLAlgorithm):
             Which criterions are available can be found at StoppingCriterion.FUNCTIONS
             Defaults to 'ndcg'
         :type stopping_criterion: str, optional
+        :param stop_early: Use early stopping during optimisation,
+            defaults to False
+        :type stop_early: bool, optional
         :param save_best_to_file: If True, the best model is saved to disk after fit.
         :type save_best_to_file: bool
         """
