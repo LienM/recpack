@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 
+
 setup(
     name="recpack",
     version="0.1.0",
@@ -15,8 +16,8 @@ setup(
         "torchtest==0.5",
         "tqdm==4.46.0",
         "dataclasses==0.6",
-        "numba==0.50.1",
     ]
     + ["pytest==5.4.1", "pytest-cov==2.8.1"],
+    extras_require={"experimental": ["numba==0.50.1"]},
     entry_points={"console_scripts": ["run_pipeline = recpack.cli:run_pipeline"]},
 )
