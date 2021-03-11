@@ -17,7 +17,7 @@ These are simple baseline methods, that allow quick testing of pipelines,
 and provide a trivial baseline to compare other algorithms against.
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     Popularity
     Random
@@ -30,7 +30,7 @@ and at prediction time the user is represented by the items
 they have interacted with.
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     EASE
     EASE_XY
@@ -46,7 +46,7 @@ This class of algorithms fits both item and user embeddings,
 prediction happens by calculating distance between user and item embeddings.
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     NMF
     SVD
@@ -63,7 +63,7 @@ To provide structure to the classes of algorithms we provide several base classe
 which can be used to create new algorithms.
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     base.Algorithm
     base.ItemSimilarityMatrixAlgorithm
@@ -79,7 +79,7 @@ we need a way to decide which is the best model, and when to stop.
 The Stopping Criterion module provides this functionality.
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     stopping_criterion.StoppingCriterion
     stopping_criterion.EarlyStoppingException
@@ -94,7 +94,7 @@ To use these loss functions in a StoppingCriterion,
 we also provide metric wrappers around the raw loss functions.
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     loss_functions.covariance_loss
     loss_functions.warp_loss
@@ -109,7 +109,7 @@ In multiple algorithms sampling plays an important role,
 as such we provide some preimplemented sampling methods.
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     samplers.bootstrap_sample_pairs
     samplers.warp_sample_pairs
@@ -122,7 +122,7 @@ The ``util`` module contains several functions used in multiple algorithms,
 that can help simplify certain tasks in creating a new algorithm
 
 .. autosummary::
-    :toctree:
+    :toctree: generated/
 
     util.normalize
     util.get_batches
