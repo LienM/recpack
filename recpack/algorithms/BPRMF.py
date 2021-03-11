@@ -34,12 +34,49 @@ class BPRMF(TorchMLAlgorithm):
     ranks interesting items (interacted with previously)
     above uninteresting or unknown items for all users.
 
+    **Example of use**::
+
+        # TODO is this example good enough
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import BPRMF
+
+        # Since BPRMF uses iterative optimisation, it needs validation data
+        # To decide which of the iterations yielded the best model
+        # This validation data should be split into an input and output matrix.
+        # In this example the data has been split in a strong generalization fashion
+        X = csr_matrix(np.array(
+            [[1, 0, 1], [1, 1, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
+        )
+        x_val_in = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
+        )
+        x_val_out = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
+        )
+
+        algo = BPRMF(num_components=5, batch_size=3, max_epochs=4)
+        # Fit algorithm
+        algo.fit(X, (x_val_in, x_val_out))
+
+        # Recommend for the validation input data,
+        # so we can inspect what the model learned
+        # In a realistic setting you would have a test dataset
+        predictions = algo.predict(x_val_in)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+
     :param num_components: The size of the latent vectors for both users and items.
                             defaults to 100
     :type num_components: int, optional
-    :param lambda_h: the regularization parameter for the item embedding, defaults to 0.0
+    :param lambda_h: the regularization parameter for the item embedding,
+        should be a value between 0 and 1.
+        Defaults to 0.0
     :type lambda_h: float, optional
-    :param lambda_w: the regularization parameter for the user embedding, defaults to 0.0
+    :param lambda_w: the regularization parameter for the user embedding,
+        defaults to 0.0
     :type lambda_w: float, optional
     :param batch_size: size of the batches to use during gradient descent. Defaults to 1000.
     :type batch_size: int, optional
@@ -50,7 +87,7 @@ class BPRMF(TorchMLAlgorithm):
     :type learning_rate: float, optional
     :param seed: seed to fix random numbers, to make results reproducible,
                     defaults to None
-    :type seed: [int], optional,
+    :type seed: int, optional,
     :param stopping_criterion: Which criterion to use optimise the parameters,
         a string which indicates the name of the stopping criterion.
         Which criterions are available can be found at
@@ -61,9 +98,9 @@ class BPRMF(TorchMLAlgorithm):
         and after 5 iterations where improvement of loss function
         is below 0.01 the optimisation is stopped, even if max_epochs is not reached.
         Defaults to False
-    :type stop_early: Boolean, optional
+    :type stop_early: bool, optional
     :param save_best_to_file: If True, the best model is saved to disk after fit.
-    :type save_best_to_file: bool
+    :type save_best_to_file: bool, optional
     """
 
     def __init__(

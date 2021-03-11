@@ -10,6 +10,8 @@ from recpack.metrics.recall import recall_k
 
 logger = logging.getLogger("recpack")
 
+# TODO: Add to docs
+
 
 class StoppingCriterion:
     def __init__(

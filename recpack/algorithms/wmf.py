@@ -13,21 +13,53 @@ logger = logging.getLogger("recpack")
 class WeightedMatrixFactorization(Algorithm):
     """WMF Algorithm by Yifan Hu, Yehuda Koren and Chris Volinsky et al.
 
-    As described in paper 'Collaborative Filtering for Implicit Feedback Datasets'
-    (ICDM.2008.22)
+    As described in Hu, Yifan, Yehuda Koren, and Chris Volinsky.
+    "Collaborative filtering for implicit feedback datasets."
+    2008 Eighth IEEE International Conference on Data Mining. Ieee, 2008
 
-    :param cs: Which confidence scheme should be used
+    Based on the input data a confidence of the interaction is computed.
+    Parametrized by alpha and epsilon (hyper parameters)
+
+    - If the chosen confidence scheme is ``'minimal'``,
+      confidence is computed as ``c(u,i) = 1 + alpha * r(u,i)``.
+    - If the chosen confidence scheme is ``'log-scaling'``,
+      confidence is computed as ``c(u,i) = 1 + alpha * log(1 + r(u,i)/epsilon)``
+
+    Since the data during fitting is assumed to be implicit,
+    this confidence will be the same for all interactions,
+    and as such leaving the HP to the defaults works good enough.
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import WMF
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+
+        algo = WMF()
+        # Fit algorithm
+        algo.fit(X)
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+    :param conficence_scheme: Which confidence scheme should be used
         to calculate the confidence matrix.
         Options are ["minimal", "log-scaling"].
         Defaults to "minimal"
-    :type cs: string, optional
-    :param alpha: Alpha parameter for generating confidence matrix.
+    :type conficence_scheme: string, optional
+    :param alpha: scaling parameter for generating confidences from ratings.
         Defaults to 40.
     :type alpha: int, optional
-    :param epsilon: Epsilon parameter for generating confidence matrix.
+    :param epsilon: Small value used to compute a confidence from a rating.
+        Only used in case cs is set to 'log-scaling'
         Defaults to 1e-8
     :type epsilon: float, optional
-    :param num_components: Dimension of factors used by the user- and item-factors.
+    :param num_components: Dimension of the embeddings of both user- and item-factors.
         Defaults to 100
     :type num_components: int, optional
     :param regularization: Regularization parameter used to calculate the Least Squares.
@@ -39,10 +71,11 @@ class WeightedMatrixFactorization(Algorithm):
     """
 
     CONFIDENCE_SCHEMES = ["minimal", "log-scaling"]
+    """Allowed values for confidence scheme parameter"""
 
     def __init__(
         self,
-        cs: str = "minimal",
+        confidence_scheme: str = "minimal",
         alpha: int = 40,
         epsilon: float = 1e-8,
         num_components: int = 100,
@@ -50,12 +83,13 @@ class WeightedMatrixFactorization(Algorithm):
         iterations: int = 20,
     ):
         """
-        Initialize the weighted matrix factorization algorithm with confidence generator parameters.
+        Initialize the weighted matrix factorization algorithm
+        with confidence generator parameters.
         """
         super().__init__()
-        self.confidence_scheme = cs
-        if cs in self.CONFIDENCE_SCHEMES:
-            self.confidence_scheme = cs
+        self.confidence_scheme = confidence_scheme
+        if confidence_scheme in self.CONFIDENCE_SCHEMES:
+            self.confidence_scheme = confidence_scheme
         else:
             raise ValueError("Invalid confidence scheme parameter.")
 
@@ -67,8 +101,9 @@ class WeightedMatrixFactorization(Algorithm):
         self.iterations = iterations
 
     def _fit(self, X: csr_matrix) -> Algorithm:
-        """
-        Calculate the user- and item-factors which will be approximate X after applying a dot-product.
+        """Calculate the user- and item-factors which will approximate X
+            after applying a dot-product.
+
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
         :return: The fitted WeightedMatrixFactorizationAlgorithm itself.
         """
@@ -77,9 +112,11 @@ class WeightedMatrixFactorization(Algorithm):
         self.user_factors_, self.item_factors_ = self._alternating_least_squares(X)
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
-        """
-        The prediction can easily be calculated as the dotproduct of the recalculated user-factor and the item-factor.
-        :param X: Sparse user-item matrix which will be used to do the predictions; only the set of users will be used.
+        """Prediction scores are calculated as the dotproduct of
+            the recomputed user-factors and the item-factors.
+
+        :param X: Sparse user-item matrix which will be used to do the predictions;
+            only for set of users with interactions will recommendations be generated.
         :return: User-item matrix with the prediction scores as values.
         """
 
@@ -98,11 +135,12 @@ class WeightedMatrixFactorization(Algorithm):
         """
         Generate the confidence matrix as described in the paper.
         This can be calculated in different ways:
-          - Minimal: c_ui = \alpha * r_ui
-          - Log scaling: c_ui = \alpha * log(1 + r_ui / \epsilon)
-        NOTE: This implementation deviates from the paper. The additional +1 won't be stored in memory to keep the
-        confidence matrix sparse. For this reason C-1 will be the result of this function. Important is that it will
-        infect the least squares calculation.
+          - Minimal: c_ui = alpha * r_ui
+          - Log scaling: c_ui = alpha * log(1 + r_ui / epsilon)
+        NOTE: This implementation deviates from the paper.
+        The additional +1 won't be stored to keep the confidence matrix sparse.
+        For this reason C-1 will be the result of this function.
+        Important is that it will impact the least squares calculation.
         :param r: User-item matrix which the calculations are based on.
         :return: User-item matrix converted with the confidence values.
         """

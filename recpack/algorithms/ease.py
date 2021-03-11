@@ -20,6 +20,51 @@ class EASE(ItemSimilarityMatrixAlgorithm):
     Memory consumption scales worse than quadratically in the amount of items.
     So check the size of the input matrix before using this algorithm.
 
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import EASE
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+
+        algo = EASE()
+        # Fit algorithm
+        algo.fit(X)
+
+        # This is a dense model
+        print(algo.similarity_matrix_.nnz)
+        # 6
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+    **Example of density**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import EASE
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+
+        algo = EASE(density=0.3334)
+        # Fit algorithm
+        algo.fit(X)
+
+        # Density of fitted model to one third of the full density
+        print(algo.similarity_matrix_.nnz)
+        # 3
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+
     :param l2: regularization parameter to avoid overfitting, defaults to 1e3
     :type l2: float, optional
     :param alpha: parameter to punish popular items.
@@ -31,19 +76,10 @@ class EASE(ItemSimilarityMatrixAlgorithm):
         little loss of accuracy.
         Does not impact memory consumption of training.
         Defaults to None
-    :type density: [type], optional
+    :type density: float, optional
     """
 
     def __init__(self, l2=1e3, alpha=0, density=None):
-        """[summary]
-
-        :param l2: [description], defaults to 1e3
-        :type l2: [type], optional
-        :param alpha: [description], defaults to 0
-        :type alpha: int, optional
-        :param density: [description], defaults to None
-        :type density: [type], optional
-        """
         super().__init__()
         self.l2 = l2
         self.alpha = alpha  # alpha exponent for filtering popularity bias
@@ -51,17 +87,19 @@ class EASE(ItemSimilarityMatrixAlgorithm):
 
     def _fit(self, X: Matrix):
         """Compute the closed form solution,
-        optionally rescalled to counter popularity bias (see param alpha)."""
-        # Dense linear model algorithm with closed-form solution
-        # Embarrassingly shallow auto-encoder from Steck @ WWW 2019
-        # https://arxiv.org/pdf/1905.03375.pdf
-        # Dense version in Steck et al. @ WSDM 2020
-        # http://www.cs.columbia.edu/~jebara/papers/wsdm20_ADMM.pdf
-        # Eq. 21: B = I − P · diagMat(1 ⊘ diag(P)
-        # More info on the solution for rescaling targets in section 4.2 of
-        # Collaborative Filtering via High-Dimensional Regression from Steck
-        # https://arxiv.org/pdf/1904.13033.pdf
-        # Eq. 14 B_scaled = B * diagM(w)
+        optionally rescalled to counter popularity bias (see param alpha).
+
+        Dense linear model algorithm with closed-form solution
+        Embarrassingly shallow auto-encoder from Steck @ WWW 2019
+        https://arxiv.org/pdf/1905.03375.pdf
+        Dense version in Steck et al. @ WSDM 2020
+        http://www.cs.columbia.edu/~jebara/papers/wsdm20_ADMM.pdf
+        Eq. 21: B = I − P · diagMat(1 ⊘ diag(P)
+        More info on the solution for rescaling targets in section 4.2 of
+        Collaborative Filtering via High-Dimensional Regression from Steck
+        https://arxiv.org/pdf/1904.13033.pdf
+        Eq. 14 B_scaled = B * diagM(w)
+        """
         X = to_csr_matrix(X, binary=True)
 
         # Compute P
@@ -82,8 +120,11 @@ class EASE(ItemSimilarityMatrixAlgorithm):
             self._prune()
 
     def _prune(self):
-        # Prune B (similarity matrix)
-        # Steck et al. state that we can increase the sparsity in matrix B without significant impact on quality.
+        """Prune the similarity matrix
+
+        Steck et al. state that we can increase the sparsity in matrix B
+        without significant impact on quality.
+        """
 
         K = min(
             int(self.density * np.product(self.similarity_matrix_.shape)),
@@ -101,6 +142,26 @@ class EASE_XY(EASE):
     Instead of autoencoding, trying to reconstruct the training matrix,
     training will try to construct the second matrix y, given the model and matrix X.
 
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import EASE_XY
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+        y = csr_matrix(np.array([[0, 0, 1], [0, 0, 1], [1, 0, 0]]))
+
+        algo = EASE_XY()
+        # Fit algorithm
+        # Uses interactions in X to predict interactions in y
+        algo.fit(X, y)
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
     :param l2: regularization parameter to avoid overfitting, defaults to 1e3
     :type l2: float, optional
     :param alpha: parameter to punish popular items.
@@ -112,7 +173,7 @@ class EASE_XY(EASE):
         little loss of accuracy.
         Does not impact memory consumption of training.
         Defaults to None
-    :type density: [type], optional
+    :type density: float, optional
 
     """
 

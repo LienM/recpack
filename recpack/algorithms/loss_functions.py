@@ -7,6 +7,8 @@ from tqdm import tqdm
 
 from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
 
+# TODO: loss functions need to be added to the docs
+
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
     # TODO Refactor so that it's no longer specific to CML

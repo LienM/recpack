@@ -2,41 +2,43 @@ import numpy as np
 import scipy.sparse
 import sklearn.decomposition
 
-from recpack.algorithms.base import Algorithm, ItemSimilarityMatrixAlgorithm
+from recpack.algorithms.base import (
+    FactorizationAlgorithm,
+    ItemSimilarityMatrixAlgorithm,
+)
 from recpack.data.matrix import Matrix, to_csr_matrix
-
-
-class FactorizationAlgorithm(Algorithm):
-    """Base class for Factorization algorithms.
-
-    A factorization algorithm fits a user feature and item feature matrix.
-
-    Prediction happens by multiplying a users features with the item features.
-
-    TODO -> Add info for creating your own factorization algorithm
-    TODO -> In the Neural Network we call things embeddings,
-        probably should call the features here embeddings?
-
-    :param num_components: the dimension of the feature matrices. defaults to 100
-    :type num_components: int, optional
-    """
-
-    def __init__(self, num_components=100):
-        super().__init__()
-        self.num_components = num_components
-
-    def _predict(self, X: Matrix):
-        assert X.shape == (self.user_features_.shape[0], self.item_features_.shape[1])
-        users = list(set(X.nonzero()[0]))
-        result = scipy.sparse.lil_matrix(X.shape)
-        result[users] = self.user_features_[users] @ self.item_features_
-        return result.tocsr()
 
 
 class NMF(FactorizationAlgorithm):
     """Non negative matrix factorization.
 
-    Matrix is decomposed into a user feature matrix, and a
+    Matrix is decomposed into a user embedding and an item embedding of the same size.
+    Decomposition happens using the NMF implementation from sklearn.
+    Uses default parameters from NMF.
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import NMF
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+
+        algo = NMF(num_components=2)
+        # Fit algorithm
+        algo.fit(X)
+
+        # After fitting user and item embeddings are available
+        print(algo.user_features_.shape)
+        # (3, 2)
+        print(algo.item_features_)
+        # (3, 2)
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
 
     :param num_components: The size of the latent dimension
     :type num_components: int
@@ -81,6 +83,29 @@ class NMFItemToItem(ItemSimilarityMatrixAlgorithm):
     then a similarity matrix is constructed by
     computing the dot product between the embeddings.
 
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import NMFItemToItem
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+
+        algo = NMFItemToItem(num_components=2)
+        # Fit algorithm
+        algo.fit(X)
+
+        # After fitting an item similarity matrix is fitted
+        print(algo.similarity_matrix_.shape)
+        # (3, 3)
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+
     :param num_components: The size of the latent dimension
     :type num_components: int
 
@@ -111,6 +136,31 @@ class SVD(FactorizationAlgorithm):
     SVD computed using the TruncatedSVD implementation from sklearn.
     U x Sigma x V = X
     U are the user features, and the item features are computed as Sigma x V.
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import SVD
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+
+        algo = SVD(num_components=2)
+        # Fit algorithm
+        algo.fit(X)
+
+        # After fitting user and item embeddings are available
+        print(algo.user_features_.shape)
+        # (3, 2)
+        print(algo.item_features_)
+        # (3, 2)
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
 
     :param num_components: The size of the latent dimension
     :type num_components: int
@@ -153,6 +203,28 @@ class SVDItemToItem(ItemSimilarityMatrixAlgorithm):
     Item embeddings are computed using the SVD algorithm,
     the similarities are then computed by the dot product of the
     item embeddings.
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import SVDItemToItem
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
+
+        algo = SVDItemToItem(num_components=2)
+        # Fit algorithm
+        algo.fit(X)
+
+        # After fitting an item similarity matrix is fitted
+        print(algo.similarity_matrix_.shape)
+        # (3, 3)
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
 
     :param num_components: The size of the latent dimension
     :type num_components: int

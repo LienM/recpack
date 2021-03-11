@@ -36,15 +36,29 @@ class Algorithm(BaseEstimator):
 
     @property
     def name(self):
+        """Name of the object's class."""
         return self.__class__.__name__
 
     @property
     def identifier(self):
+        """name of the object, combined with the parameters.
+
+        Constructed by recreating the initialisation call.
+        Example: ``Algorithm(param_1=value)``
+        """
         paramstring = ",".join((f"{k}={v}" for k, v in self.get_params().items()))
         return self.name + "(" + paramstring + ")"
 
     def __str__(self):
         return self.name
+
+    def set_params(self, **params):
+        """Set the parameters of the estimator.
+
+        :param params: Estimator parameters
+        :type params: dict
+        """
+        super().set_params(**params)
 
     def _fit(self, X: csr_matrix):
         raise NotImplementedError("Please implement _fit")
@@ -86,7 +100,7 @@ class Algorithm(BaseEstimator):
 
         :param X: The interactions to fit the model on.
         :type X: Matrix
-        :return:
+        :return: **self**, fitted algorithm
         :rtype: Algorithm
         """
         self._fit(X)
@@ -157,6 +171,33 @@ class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
     def __init__(self, K):
         super().__init__()
         self.K = K
+
+
+class FactorizationAlgorithm(Algorithm):
+    """Base class for Factorization algorithms.
+
+    A factorization algorithm fits a user feature and item feature matrix.
+
+    Prediction happens by multiplying a users features with the item features.
+
+    TODO -> Add info for creating your own factorization algorithm
+    TODO -> In the Neural Network we call things embeddings,
+        probably should call the features here embeddings?
+
+    :param num_components: the dimension of the feature matrices. defaults to 100
+    :type num_components: int, optional
+    """
+
+    def __init__(self, num_components=100):
+        super().__init__()
+        self.num_components = num_components
+
+    def _predict(self, X: Matrix):
+        assert X.shape == (self.user_features_.shape[0], self.item_features_.shape[1])
+        users = list(set(X.nonzero()[0]))
+        result = lil_matrix(X.shape)
+        result[users] = self.user_features_[users] @ self.item_features_
+        return result.tocsr()
 
 
 class TorchMLAlgorithm(Algorithm):
@@ -319,17 +360,26 @@ class TorchMLAlgorithm(Algorithm):
 
     @property
     def filename(self):
+        """Name of the file at which save(self) will write the current best model."""
         # TODO Give better names
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
     # TODO: Do we want to keep this? It's kind of useful to reuse the model.
     # But it has been removed from the Algorithm base class.
     def load(self, filename):
+        """Load torch model from file.
+
+        :param filename: File to load the model from
+        :type filename: str
+        """
         with open(filename, "rb") as f:
             self.model_ = torch.load(f)
 
     def save(self):
-        """Save the current model to disk"""
+        """Save the current model to disk.
+
+        filename of the file to save model in is defined by the ``filename`` property.
+        """
         with open(self.filename, "wb") as f:
             torch.save(self.model_, f)
 
@@ -341,7 +391,7 @@ class TorchMLAlgorithm(Algorithm):
         Interaction Matrix X will be used for training,
         the validation data tuple will be used to compute the evaluate scores.
 
-        :return: self
+        :return: **self**, fitted algorithm
         :rtype: TorchMLAlgorithm
         """
         # Preconditions:

@@ -19,6 +19,81 @@ logger = logging.getLogger("recpack")
 
 
 class MultVAE(TorchMLAlgorithm):
+    """MultVAE Algorithm as first discussed in
+        'Variational Autoencoders for Collaborative Filtering',
+        D. Liang et al. @ KDD2018.
+
+    Default values were taken from the paper.
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import MultVAE
+
+        # Since MultVAE uses iterative optimisation, it needs validation data
+        # To decide which of the iterations yielded the best model
+        # This validation data should be split into an input and output matrix.
+        # In this example the data has been split in a strong generalization fashion
+        X = csr_matrix(np.array(
+            [[1, 0, 1], [1, 1, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
+        )
+        x_val_in = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
+        )
+        x_val_out = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
+        )
+
+        algo = MultVAE(num_components=2, batch_size=3, max_epochs=4)
+        # Fit algorithm
+        algo.fit(X, (x_val_in, x_val_out))
+
+        # Recommend for the validation input data,
+        # so we can inspect what the model learned
+        # In a realistic setting you would have a test dataset
+        # To predict for
+        predictions = algo.predict(x_val_in)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+    :param batch_size: Batch size for SGD,
+                        defaults to 500
+    :type batch_size: int, optional
+    :param max_epochs: Maximum number of epochs (iterations),
+                        defaults to 200
+    :type max_epochs: int, optional
+    :param learning_rate: Learning rate, defaults to 1e-4
+    :type learning_rate: [type], optional
+    :param seed: Random seed for Torch, provided for reproducibility,
+                    defaults to 42.
+    :type seed: int, optional
+    :param dim_bottleneck_layer: Size of the latent representation,
+                                    defaults to 200
+    :type dim_bottleneck_layer: int, optional
+    :param dim_hidden_layer: Dimension of the hidden layer, defaults to 600
+    :type dim_hidden_layer: int, optional
+    :param max_beta: Regularization parameter, annealed over ``anneal_steps``
+                    until it reaches max_beta, defaults to 0.2
+    :type max_beta: float, optional
+    :param anneal_steps: Number of steps to anneal beta to ``max_beta``,
+                            defaults to 200000
+    :type anneal_steps: int, optional
+    :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
+    :type dropout: float, optional
+    :param stopping_criterion: Used to identify the best model computed thus far.
+        The string indicates the name of the stopping criterion.
+        Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+        Defaults to ``'ndcg'``
+    :type stopping_criterion: str, optional
+    :param stop_early: Use early stopping during optimisation,
+        defaults to False
+    :type stop_early: bool, optional
+    :param save_best_to_file: If True, the best model is saved to disk after fit.
+    :type save_best_to_file: bool, optional
+    """
+
     def __init__(
         self,
         batch_size=500,
@@ -34,47 +109,6 @@ class MultVAE(TorchMLAlgorithm):
         stop_early: bool = False,
         save_best_to_file=False,
     ):
-        """MultVAE Algorithm as first discussed in
-        'Variational Autoencoders for Collaborative Filtering',
-        D. Liang et al. @ KDD2018.
-
-        Default values were taken from the paper.
-
-        :param batch_size: Batch size for SGD,
-                           defaults to 500
-        :type batch_size: int, optional
-        :param max_epochs: Maximum number of epochs (iterations),
-                           defaults to 200
-        :type max_epochs: int, optional
-        :param learning_rate: Learning rate, defaults to 1e-4
-        :type learning_rate: [type], optional
-        :param seed: Random seed for Torch, provided for reproducibility,
-                     defaults to 42.
-        :type seed: int, optional
-        :param dim_bottleneck_layer: Size of the latent representation,
-                                     defaults to 200
-        :type dim_bottleneck_layer: int, optional
-        :param dim_hidden_layer: Dimension of the hidden layer, defaults to 600
-        :type dim_hidden_layer: int, optional
-        :param max_beta: Regularization parameter, annealed over {anneal_steps}
-                        until it reaches max_beta, defaults to 0.2
-        :type max_beta: float, optional
-        :param anneal_steps: Number of steps to anneal beta to {max_beta},
-                             defaults to 200000
-        :type anneal_steps: int, optional
-        :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
-        :type dropout: float, optional
-        :param stopping_criterion: Used to identify the best model computed thus far.
-            The string indicates the name of the stopping criterion.
-            Which criterions are available can be found at StoppingCriterion.FUNCTIONS
-            Defaults to 'ndcg'
-        :type stopping_criterion: str, optional
-        :param stop_early: Use early stopping during optimisation,
-            defaults to False
-        :type stop_early: bool, optional
-        :param save_best_to_file: If True, the best model is saved to disk after fit.
-        :type save_best_to_file: bool
-        """
 
         super().__init__(
             batch_size,

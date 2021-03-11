@@ -5,6 +5,8 @@ import torch
 
 from recpack.data.matrix import to_binary
 
+# TODO: Add to docs!
+
 
 def _spot_collisions(
     users: np.array, negatives_batch: np.array, X: csr_matrix

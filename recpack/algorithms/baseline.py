@@ -13,8 +13,31 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 class Random(Algorithm):
     """Uniform random algorithm, each item has an equal chance of getting recommended.
 
-    Simple baseline, recommendations are sampled uniformly without replacement from the items that were interacted with in the matrix provided to fit.
-    Scores are given based on sampling rank, such that the items first in the sample has highest score
+    Simple baseline, recommendations are sampled uniformly without replacement
+    from the items that were interacted with in the matrix provided to fit.
+    Scores are given based on sampling rank, such that the items first
+    in the sample has the highest score
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import Random
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 1, 0], [1, 1, 0]]))
+
+        # There are only 3 items to recommend,
+        # so can't recommend the default K=200
+        algo = Random(K=3)
+        # Fit algorithm, stores the nonzero items in matrix X
+        # as potential items to sample during predict
+        algo.fit(X)
+
+        # Get random recos for each nonzero user
+        predictions = algo.predict(X)
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
 
     :param K: How many items to sample for recommendation, defaults to 200
     :type K: int, optional
@@ -67,10 +90,36 @@ class Popularity(Algorithm):
     """Baseline algorithm recommending the most popular items in training data.
 
     During training the occurrences of each item is counted,
-    and normalized by dividing by the max occurences.
+    and then normalized by dividing each count by the max count over items.
 
-    TODO: does this render properly, and is there a better way to write this?
-    ``score_pop(i) = count(i) / max(count(j) for j in items)``
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import Popularity
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 1, 0], [1, 1, 0]]))
+
+        # There are only 3 items to recommend,
+        # so can't recommend the default K=200
+        algo = Popularity(K=3)
+        # Fit algorithm, computes the popularities per item in X
+        algo.fit(X)
+
+        # Get the most popular items per user
+        predictions = algo.predict(X)
+
+        # Popular items are the same for all users
+        assert predictions[0, 0] == predictions[1, 0]
+
+        # All scores are in the range 0 to 1
+        assert (predictions.toarray() >= 0).all()
+        assert (predictions.toarray() <= 1).all()
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
 
     :param K: How many items to recommend when predicting, defaults to 200
     :type K: int, optional
