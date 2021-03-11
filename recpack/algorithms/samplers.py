@@ -6,6 +6,10 @@ import torch
 from recpack.data.matrix import to_binary
 
 # TODO: Add to docs!
+# TODO: consider allowing bootstrap to also sample multiple negatives
+#  -> Rename some functions, bootstrap indicates resampling possible
+#     but the warp method just takes every positive sample,
+#     and attaches a negative one
 
 
 def _spot_collisions(
@@ -40,15 +44,6 @@ def _spot_collisions(
     # If there are no false negatives, all values in false_negatives should be True.
     false_negatives = np.bitwise_not(match_or_mismatch[negative_samples_mask])
 
-    # Count all locations where false_negatives = True
-    # Negative samples can be duplicated, so multipy with their frequency
-    num_incorrect = int(
-        np.sum(
-            false_negatives[0]
-            @ negatives_batch_csr[negative_samples_mask][0].T.astype(bool)
-        )
-    )
-
     # Initialize mask to all zeros = all False
     negatives_mask = np.zeros(negatives_batch.shape).astype(bool)
     # Get the indices of the false_negatives
@@ -60,12 +55,13 @@ def _spot_collisions(
     # Get the originally sampled negative pairs, in the batch order
     negative_pairs = np.vstack([users, negatives_batch]).T
     for i in false_negative_indices_csr:
-        # Find the corresponding row in  negative_pairs
+        # Find the corresponding row in negative_pairs
         a = np.all(negative_pairs == false_negative_pairs[i], axis=1)
         negative_mask_row_indices = a.nonzero()
         # Set these rows (most of the time should be one row) to True
         negatives_mask[negative_mask_row_indices] = True
 
+    num_incorrect = negatives_mask.sum()
     return num_incorrect, negatives_mask
 
 
@@ -74,7 +70,8 @@ def bootstrap_sample_pairs(
 ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
     """bootstrap sample triples from the data.
 
-    Each triple contains (user, positive item, negative item).
+    Triples are split over three tensors, a user tensor, a positive item tensor,
+    and a negative item tensor.
 
     :param X: Interaction matrix
     :type X: csr_matrix
@@ -153,7 +150,8 @@ def warp_sample_pairs(
     :yield: Iterator of (user_batch, positive_samples_batch, negative_samples_batch)
     :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
     """
-    # Need positive and negative pair. Requires the existence of a positive for this item.
+    # Need positive and negative pair.
+    # Requires the existence of a positive for this item.
     # As a (num_interactions, 2) numpy array
     positives = np.array(X.nonzero()).T
     num_positives = positives.shape[0]
@@ -190,19 +188,34 @@ def warp_sample_pairs(
         else:
             negatives_batch = np.zeros((true_batch_size, U))
             for i in range(0, U):
+                # Construct column i in the negatives matrix
+
+                # 1st try true random
+                # We will fix collisions in while loop
+                negatives_batch_col_i = np.random.randint(
+                    0, X.shape[1], size=(true_batch_size,)
+                )
                 while True:
-                    negatives_batch_col_i = np.random.randint(
-                        0, X.shape[1], size=(true_batch_size,)
-                    )
+
                     num_incorrect, negatives_mask = _spot_collisions(
                         users, negatives_batch_col_i, X
                     )
+
+                    # Check column against previous columns
+                    additional_mask = np.zeros(true_batch_size, dtype=bool)
+                    for j in range(0, i):
+                        additional_mask += (
+                            negatives_batch_col_i == negatives_batch[:, j]
+                        )
+
+                    total_mask = negatives_mask + additional_mask
+                    num_incorrect = total_mask.sum()
 
                     if num_incorrect > 0:
                         new_negatives = np.random.randint(
                             0, X.shape[1], size=(num_incorrect,)
                         )
-                        negatives_batch_col_i[negatives_mask] = new_negatives
+                        negatives_batch_col_i[total_mask] = new_negatives
 
                     else:
                         # Exit the while(True) loop

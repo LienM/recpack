@@ -1,5 +1,6 @@
 import numpy
 import pytest
+from unittest.mock import MagicMock
 
 
 from recpack.algorithms.stopping_criterion import (
@@ -163,3 +164,13 @@ def test_kwargs_criterion_create():
     c = StoppingCriterion.create("recall")
 
     assert "k" in c.kwargs
+
+
+def test_kwargs_criterion_called():
+    my_loss = MagicMock(return_value=0.5)
+
+    c = StoppingCriterion(my_loss, minimize=False, some_arg=True)
+
+    c.update(None, None)
+
+    my_loss.assert_called_with(None, None, some_arg=True)

@@ -6,10 +6,16 @@ from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pair
 from recpack.data.matrix import to_binary
 
 
-def test_warp_sampling_exact(pageviews):
+def test_warp_sampling_exact():
+    users = [np.random.randint(0, 100) for i in range(1000)]
+    items = [np.random.randint(0, 25) for i in range(1000)]
+    values = [1 for i in range(1000)]
+    pageviews = csr_matrix((values, (users, items)), shape=(100, 25))
     pageviews = to_binary(pageviews)
-    batch_size = 4
+
+    batch_size = 100
     U = 10
+
     total_interactions = 0
     for users, pos_interactions, neg_interactions in warp_sample_pairs(
         pageviews, U=U, batch_size=batch_size, exact=True
@@ -25,6 +31,27 @@ def test_warp_sampling_exact(pageviews):
             items = neg_interactions.numpy()[:, i].copy()
             interactions = pageviews[users.numpy().copy(), items]
             np.testing.assert_array_almost_equal(interactions, 0)
+
+        # There should be no collisions between columns of negative samples
+        for i in range(U):
+            for j in range(i):
+
+                overlap = (
+                    neg_interactions[:, j].numpy() == neg_interactions[:, i].numpy()
+                )
+                print(
+                    np.stack(
+                        (
+                            neg_interactions[:, j].numpy(),
+                            neg_interactions[:, i].numpy(),
+                            overlap,
+                        ),
+                        axis=1,
+                    )
+                )
+
+                np.testing.assert_array_equal(overlap, False)
+
     assert total_interactions == pageviews.nnz
 
 
@@ -50,10 +77,6 @@ def test_warp_sampling(pageviews):
 
 def test_bootstrap_sampling_exact(pageviews):
 
-    # users = [np.random.randint(0, 2000) for i in range(10000)]
-    # items = [np.random.randint(0, 2000) for i in range(10000)]
-    # values = [1 for i in range(10000)]
-    # pageviews = csr_matrix((values, (users, items)), shape=(2000, 2000))
     # pageviews needs to be binary
     pageviews = to_binary(pageviews)
 

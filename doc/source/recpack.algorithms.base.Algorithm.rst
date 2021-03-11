@@ -1,7 +1,7 @@
-recpack.algorithms.Algorithm
-============================
+recpack.algorithms.base.Algorithm
+=================================
 
-.. currentmodule:: recpack.algorithms
+.. currentmodule:: recpack.algorithms.base
 
 .. autoclass:: Algorithm
     :members:

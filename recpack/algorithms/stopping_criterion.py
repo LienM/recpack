@@ -10,10 +10,74 @@ from recpack.metrics.recall import recall_k
 
 logger = logging.getLogger("recpack")
 
-# TODO: Add to docs
-
 
 class StoppingCriterion:
+    """StoppingCriterion provides a wrapper around any loss function
+    used in the validation stage of an iterative algorithm.
+
+    A loss function can be maximized or minimized.
+    If stop_early is true, then an EarlyStoppingException
+    is raised when there were at least ``max_iter_no_change``
+    iterations with no improvements greater than {min_improvement}.
+
+    **Example**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms.stopping_criterion import StoppingCriterion
+        X_true = csr_matrix(np.array([[1, 0, 1], [1, 1, 0], [1, 1, 0]]))
+        X_pred = csr_matrix(np.array([[.9, .5, .2], [.3, .2, .05], [.1, .1, .9]]))
+
+        # Creating a simple loss function
+        # That computes the sum of the absolute error at each position in the matrix
+        def my_loss(X_true, X_pred):
+            error = np.abs(X_true - X_pred)
+            return np.sum(error)
+
+        # construct StoppingCriterion
+        sc = StoppingCriterion(my_loss, minimize=True)
+
+        # Update stopping criterion
+        better = sc.update(X_true, X_pred)
+
+        # Since this was the first update, it will be better than what was before
+        assert better
+
+        # Trying again with the same input, will give no improvement
+        better = sc.update(X_true, X_pred)
+        assert not better
+
+        # Constructing a better prediction matrix
+        # This would usually be done by a learning algorithm
+        X_pred = csr_matrix(np.array([[.9, .3, .8], [.4, .5, .05], [.4, .4, .5]]))
+        better = sc.update(X_true, X_pred)
+        assert better
+
+        # The best value for the loss function can also be retrieved
+        print(sc.best_value)
+
+    :param loss_function: Metric function used in validation,
+                            function should take two positional arguments
+                            ``X_true`` and ``X_pred``,
+                            and should return a single float value,
+                            which will be optimised.
+    :type loss_function: Callable
+    :param minimize: True if smaller values of loss_function are better,
+        defaults to False.
+    :type minimize: bool, optional
+    :param stop_early: Use early stopping to halt learning when overfitting,
+        defaults to False
+    :type stop_early: bool, optional
+    :param max_iter_no_change: Amount of iterations with no improvements greater
+        than ``min_improvement`` before we stop early, defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: Improvements smaller than min_improvement
+        are not counted as actual improvements, defaults to 0.01
+    :type min_improvement: float, optional
+    :param kwargs: The keyword arguments to be passed to the loss function
+    :type kwargs: dict, optional
+    """
+
     def __init__(
         self,
         loss_function: Callable,
@@ -23,32 +87,7 @@ class StoppingCriterion:
         min_improvement: float = 0.01,
         **kwargs,
     ):
-        """StoppingCriterion provides a wrapper around any loss function
-        used in the validation stage of an iterative algorithm.
 
-        A loss function can be maximized or minimized.
-        If stop_early is true, then an EarlyStoppingException
-        is raised when there were at least {max_iter_no_change}
-        iterations with no improvements greater than {min_improvement}.
-
-        :param loss_function: Metric function used in validation,
-                                required interface of func(X_true, X_pred)
-        :type loss_function: Callable
-        :param minimize: True if smaller values of loss_function are better,
-            defaults to False
-        :type minimize: bool, optional
-        :param stop_early: Use early stopping to halt learning when overfitting,
-            defaults to False
-        :type stop_early: bool, optional
-        :param max_iter_no_change: Amount of iterations with no improvements greater
-            than {min_improvement} before we stop early, defaults to 5
-        :type max_iter_no_change: int, optional
-        :param min_improvement: Improvements smaller than {min_improvement}
-            are not counted as actual improvements, defaults to 0.01
-        :type min_improvement: float, optional
-        :param kwargs: The keyword arguments to be passed to the loss function
-        :type kwargs: dict, optional
-        """
         self.best_value = np.inf if minimize else -np.inf
         self.loss_function = loss_function
         self.minimize = minimize
@@ -61,13 +100,21 @@ class StoppingCriterion:
         self.kwargs = kwargs
 
     def update(self, X_true: csr_matrix, X_pred: csr_matrix) -> bool:
-        """Update StoppingCriterion value.
+        """Update StoppingCriterion value based on
+        expected and predicted interactions.
 
-        All args and kwargs are passed to the loss function
-        that is maximized/minimized.
+        The two matrices and kwargs set during init of StoppingCriterion are
+        passed to the value function, the computed loss or metric is compared
+        to the previous best value.
+        If new value is better (bigger if ``minimize == False``, smaller otherwise),
+        the new value is marked as best,
+        and True is returned.
+
+        Logs an info statement with the computed loss value,
+        and if it was better.
 
         :raises EarlyStoppingException: When early stopping condition is met,
-            as configured in __init__.
+            if early stopping is enabled.
         :return: True if value is better than the previous best value, False if not.
         :rtype: bool
         """
@@ -116,19 +163,47 @@ class StoppingCriterion:
         "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
         "warp": {"loss_function": warp_loss_metric, "minimize": True},
     }
+    """Available preimplemented loss function options.
+
+    These values can be passed to the ``create`` method,
+    and will create the corresponding stopping criterion.
+
+    Available loss functions:
+
+    - bpr : Bayesian Personalised Ranking loss, will be minimized.
+    - warp : Weighted Approximate-Rank Pairwise loss, will be minimized.
+    - recall: Recall@k metric, will be maximized.
+    - ndcg: Normalized Discounted Cumulative Gain, will be maximized.
+    """
 
     @classmethod
     def create(cls, criterion_name: str, **kwargs):
         """Construct a StoppingCriterion instance,
-            based on the name of the loss function.
+        based on the name of the loss function.
 
         BPR and WARP loss will minimize a loss function,
         Recall and NDCG will optimise a ranking metric,
-            with default @K=50
+        with default @K=50
 
         keyword arguments of the criteria can be set by passing
         them as kwarg to this create function.
-        # TODO add example
+
+        **Example**::
+
+            import numpy as np
+            from scipy.sparse import csr_matrix
+            from recpack.algorithms.stopping_criterion import StoppingCriterion
+            X_true = csr_matrix(np.array([[1, 0, 1], [1, 1, 0], [1, 1, 0]]))
+            X_pred = csr_matrix(np.array([[.9, .5, .2], [.3, .2, .05], [.1, .1, .9]]))
+
+            # construct StoppingCriterion
+            # setting k to 2, such that when ndcg function is called,
+            # k=2 will be passed to it
+            sc = StoppingCriterion.create('ndcg', k=2)
+
+            # Update gives us if it was better or not
+            better = sc.update(X_true, X_pred)
+
 
         :param criterion_name: Name of the criterion to use,
             one of ["bpr", "warp", "recall", "ndcg"]
@@ -141,7 +216,6 @@ class StoppingCriterion:
         :rtype: [type]
         """
 
-        # TODO: In other similar checks we raise a Value error, should be unified.
         if criterion_name not in cls.FUNCTIONS:
             raise ValueError(f"stopping criterion {criterion_name} not supported")
 

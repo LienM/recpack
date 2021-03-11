@@ -103,6 +103,7 @@ class Algorithm(BaseEstimator):
         :return: **self**, fitted algorithm
         :rtype: Algorithm
         """
+        # TODO: could be nice to add timing + log here.
         self._fit(X)
 
         self._check_fit_complete()
@@ -130,7 +131,7 @@ class Algorithm(BaseEstimator):
 class ItemSimilarityMatrixAlgorithm(Algorithm):
     """Base algorithm for algorithms that fit an item to item similarity model.
 
-    Fit will fill in the similarity_matrix_ property,
+    Fit will fill in the ``similarity_matrix_`` property,
     which encodes the similarity between items.
     This can be a dense or sparse matrix depending on the algorithms.
 
@@ -182,7 +183,7 @@ class FactorizationAlgorithm(Algorithm):
 
     TODO -> Add info for creating your own factorization algorithm
     TODO -> In the Neural Network we call things embeddings,
-        probably should call the features here embeddings?
+    probably should call the features here embeddings?
 
     :param num_components: the dimension of the feature matrices. defaults to 100
     :type num_components: int, optional

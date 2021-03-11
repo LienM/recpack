@@ -7,8 +7,6 @@ from tqdm import tqdm
 
 from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
 
-# TODO: loss functions need to be added to the docs
-
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
     # TODO Refactor so that it's no longer specific to CML
@@ -137,10 +135,14 @@ def bpr_loss_metric(
     sample_size=None,
     exact=False,
 ):
-    """Compute BPR reconstruction loss of the X_true matrix in X_pred.
+    """Wrapper around :func:`bpr_loss` function for use with
+    :class:`recpack.algorithms.stopping_criterion.StoppingCriterion`.
 
-    Positive and negative items are sampled using bootstrap_sample_pairs.
-    Scores are then extracted from the X_pred.
+    Positive and negative items are sampled using
+    :func:`recpack.algorithms.samplers.bootstrap_sample_pairs`.
+    Scores are then extracted from the X_pred,
+    and these positive and negative predictions are passed to the
+    :func:`bpr_loss` function.
 
     :param X_true: The expected interactions for the users
     :type X_true: csr_matrix
@@ -188,9 +190,10 @@ def warp_loss_metric(
     margin: float = 1.9,
     exact=False,
 ):
-    """Metric wrapper around the WARP loss.
+    """Metric wrapper around the :func:`warp_loss` function.
 
-    Positives and negatives are sampled from the X_true matrix using the WARP sampler,
+    Positives and negatives are sampled from the X_true matrix using
+    :func:`recpack.algorithms.samplers.warp_sample_pairs`.
     Their scores are fetched from the X_pred matrix.
 
     :param X_true: True interactions expected for the users
