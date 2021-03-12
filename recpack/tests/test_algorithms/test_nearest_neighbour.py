@@ -82,8 +82,27 @@ def test_item_knn_conditional_probability(data):
     algo = ItemKNN(K=2, similarity="conditional_probability")
 
     algo.fit(data)
-    expected_similarities = numpy.array([[0, 0.5, 1], [0.5, 0, 1], [2 / 3, 2 / 3, 0]])
+    # similarity is computed as count(i^j) / (count(i) + 1)
 
+    # data matrix looks like
+    # 0 1 1
+    # 1 0 1
+    # 1 1 1
+
+    # cooc = XtX
+    # 2 1 2
+    # 1 2 2
+    # 2 2 3
+
+    # fmt: off
+    expected_similarities = numpy.array(
+        [
+            [0, 1 / 3, 2 / 3],
+            [1 / 3, 0, 2 / 3],
+            [2 / 4, 2 / 4, 0]
+        ]
+    )
+    # fmt: on
     numpy.testing.assert_almost_equal(
         algo.similarity_matrix_.toarray(), expected_similarities
     )

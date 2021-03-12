@@ -105,11 +105,10 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         co_mat = X.T @ X
 
         # Adding 1 additive smoothing to occurrences to avoid division by 0
-        A = diags(1 / co_mat.diagonal() + 1)
+        A = diags(1 / (co_mat.diagonal() + 1))
 
         # This has all item similarities
         item_cond_prob_similarities = A @ co_mat
-
         # Set diagonal to 0, because we don't support self similarity
         item_cond_prob_similarities.setdiag(0)
 

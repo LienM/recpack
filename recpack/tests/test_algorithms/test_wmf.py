@@ -7,7 +7,9 @@ from recpack.algorithms import WeightedMatrixFactorization
 
 @pytest.mark.parametrize("cs", ["log-scaling", "minimal"])
 def test_wmf(cs):
-    wmf = WeightedMatrixFactorization(cs=cs, num_components=10, iterations=500)
+    wmf = WeightedMatrixFactorization(
+        confidence_scheme=cs, num_components=10, iterations=500
+    )
 
     values = [2, 5, 4, 1, 3, 4, 3]
     users = [0, 0, 1, 1, 2, 2, 2]
@@ -58,4 +60,4 @@ def test_linear_equation():
 
 def test_wmf_invalid_confidence_scheme():
     with pytest.raises(ValueError):
-        _ = WeightedMatrixFactorization(cs="Nonsense")
+        _ = WeightedMatrixFactorization(confidence_scheme="Nonsense")
