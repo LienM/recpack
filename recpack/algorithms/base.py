@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import List, Tuple
 import warnings
 
 import numpy as np
@@ -8,7 +9,7 @@ from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_is_fitted
 import tempfile
 import torch
-from typing import Tuple
+
 
 from recpack.algorithms.stopping_criterion import (
     EarlyStoppingException,
@@ -118,7 +119,7 @@ class Algorithm(BaseEstimator):
                 f"for {len(missing)} users"
             )
 
-    def _transform_training_input(self, X: Matrix) -> csr_matrix:
+    def _transform_fit_input(self, X: Matrix) -> csr_matrix:
         """Transform the training data to expected type
 
         Data will be turned into a binary csr matrix.
@@ -162,11 +163,12 @@ class Algorithm(BaseEstimator):
         :rtype: Algorithm
         """
         start = time.time()
+        X = self._transform_fit_input(X)
         self._fit(X)
 
         self._check_fit_complete()
         end = time.time()
-        logger.info(f"fitting {self.name} complete - Took {start - end :.3}s")
+        logger.info(f"fitting {self.name} complete - Took {end - start :.3}s")
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:
@@ -186,6 +188,8 @@ class Algorithm(BaseEstimator):
         :rtype: csr_matrix
         """
         self._check_fit_complete()
+
+        X = self._transform_predict_input(X)
 
         X_pred = self._predict(X)
 
@@ -266,8 +270,10 @@ class FactorizationAlgorithm(Algorithm):
 
     During fitting two matrices are constructed.
 
-    - ``user_features_`` contains the users embedded in a lower dimensional space
+    - ``user_features_`` contains the users embedded in a lower dimensional space,
+      shape = ``|users| x num_components``
     - ``item_features_`` contains the items embedded in the same dimensions
+      shape = ``num_components x |items|``
 
     Prediction happens by multiplying a user's features with the item features.
 
@@ -282,6 +288,18 @@ class FactorizationAlgorithm(Algorithm):
     def __init__(self, num_components=100):
         super().__init__()
         self.num_components = num_components
+
+    def _check_fit_complete(self):
+        """Helper function to check that fit stored information.
+
+        Uses the sklear check_is_fitted function,
+        https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
+        """
+        check_is_fitted(self)
+
+        # Post conditions
+        assert self.user_features_.shape[1] == self.num_components
+        assert self.item_features_.shape[0] == self.num_components
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Predict scores for nonzero users in the interaction matrix.
@@ -429,8 +447,23 @@ class TorchMLAlgorithm(Algorithm):
         """
         raise NotImplementedError()
 
+    def _predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+        """Predict scores for matrix X, given the selected users.
+
+        If there are no selected users, you can assume X is a full matrix,
+        and users can be retrieved as the nonzero indices in the X matrix.
+
+        :param X: Matrix of user item interactions
+        :type X: csr_matrix
+        :param users: users selected for recommendation
+        :type users: List[int]
+        :return: dense matrix of scores per user item pair.
+        :rtype: np.ndarray
+        """
+        raise NotImplementedError("Please implement this function")
+
     def _batch_predict(self, X: csr_matrix) -> csr_matrix:
-        """Helper function to batch the prediction,
+        """Compute predictions per batch of users,
         to avoid going out of RAM on the GPU
 
         Will batch the nonzero users into batches of self.batch_size.
@@ -441,25 +474,14 @@ class TorchMLAlgorithm(Algorithm):
         :rtype: csr_matrix
         """
         results = lil_matrix(X.shape)
-        for batch in get_batches(get_users(X), batch_size=self.batch_size):
-            # TODO: It might be possible to put this inner part of the loop
-            # into a function,
-            # making it possible to overwrite just that part in subclasses.
-            in_ = X[batch]
-            in_tensor = naive_sparse2tensor(in_).to(self.device)
-
-            out_tensor, _, _ = self.model_(in_tensor)
-            batch_results = out_tensor.detach().cpu().numpy()
-
-            results[batch] = batch_results
+        for users in get_batches(get_users(X), batch_size=self.batch_size):
+            results[users] = self._predict(X[users], users)
 
         logger.debug(f"shape of response ({results.shape})")
 
         return results.tocsr()
 
-    def _transform_training_input(
-        self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
-    ):
+    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
         """Transform the input matrices of the training function to the expected types.
 
         All matrices get converted to binary csr matrices
@@ -508,7 +530,7 @@ class TorchMLAlgorithm(Algorithm):
 
         This function provides the generic framework for training a torch algorithm,
         such that each child class only needs to implement the
-        :meth:`_transform_training_input`, :meth:`_init_model`, :meth:`_train_epoch`
+        :meth:`_transform_fit_input`, :meth:`_init_model`, :meth:`_train_epoch`
         and :meth:`_evaluate` functions.
 
         The function will:
@@ -534,7 +556,7 @@ class TorchMLAlgorithm(Algorithm):
         assert X.shape == validation_data[1].shape
 
         # Transform training and validation data to the expected types
-        X, validation_data = self._transform_training_input(X, validation_data)
+        X, validation_data = self._transform_fit_input(X, validation_data)
 
         # Construct variable which will maintain the best model through training
         self.best_model = tempfile.NamedTemporaryFile()
@@ -573,7 +595,7 @@ class TorchMLAlgorithm(Algorithm):
 
         self._check_fit_complete()
         end = time.time()
-        logger.info(f"fitting {self.name} complete - Took {start - end :.3}s")
+        logger.info(f"fitting {self.name} complete - Took {end - start :.3}s")
 
         return self
 

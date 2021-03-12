@@ -285,6 +285,25 @@ class RecVAE(TorchMLAlgorithm):
         for _ in range(self.n_dec_epochs):
             self._train_partial(train_data, users, self.dec_optimizer)
 
+    def _predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+        """Predict scores for matrix X, given the selected users.
+
+        If there are no selected users, you can assume X is a full matrix,
+        and users can be retrieved as the nonzero indices in the X matrix.
+
+        :param X: Matrix of user item interactions
+        :type X: csr_matrix
+        :param users: users selected for recommendation
+        :type users: List[int]
+        :return: dense matrix of scores per user item pair.
+        :rtype: np.ndarray
+        """
+
+        in_tensor = naive_sparse2tensor(X).to(self.device)
+
+        out_tensor, _, _ = self.model_(in_tensor)
+        return out_tensor.detach().cpu().numpy()
+
 
 class CompositePrior(nn.Module):
     def __init__(

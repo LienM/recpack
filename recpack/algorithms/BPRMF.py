@@ -1,5 +1,7 @@
 import logging
+from typing import List
 
+import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 
 from tqdm.auto import tqdm
@@ -128,7 +130,6 @@ class BPRMF(TorchMLAlgorithm):
         self.num_components = num_components
         self.lambda_h = lambda_h
         self.lambda_w = lambda_w
-        self.learning_rate = learning_rate
 
         self.stop_early = stop_early
 
@@ -141,21 +142,24 @@ class BPRMF(TorchMLAlgorithm):
         self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
         self.steps = 0
 
-    def _batch_predict(self, X):
-        """Helper function for predict, so we can also use it in validation loss
-        without the model being fitted"""
+    def _predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+        """Predict scores for matrix X, given the selected users.
 
-        results = lil_matrix(X.shape)
-        for users in get_batches(get_users(X), batch_size=self.batch_size):
+        If there are no selected users, you can assume X is a full matrix,
+        and users can be retrieved as the nonzero indices in the X matrix.
 
-            user_tensor = torch.LongTensor(users).to(self.device)
-            item_tensor = torch.arange(X.shape[1]).to(self.device)
+        :param X: Matrix of user item interactions
+        :type X: csr_matrix
+        :param users: users selected for recommendation
+        :type users: List[int]
+        :return: dense matrix of scores per user item pair.
+        :rtype: np.ndarray
+        """
 
-            results[users] = (
-                self.model_(user_tensor, item_tensor).detach().cpu().numpy()
-            )
+        user_tensor = torch.LongTensor(users).to(self.device)
+        item_tensor = torch.arange(X.shape[1]).to(self.device)
 
-        return results.tocsr()
+        return self.model_(user_tensor, item_tensor).detach().cpu().numpy()
 
     def _train_epoch(self, train_data: csr_matrix):
         """train a single epoch. Uses sampler to generate samples,
