@@ -219,7 +219,8 @@ class StoppingCriterion:
         if criterion_name not in cls.FUNCTIONS:
             raise ValueError(f"stopping criterion {criterion_name} not supported")
 
-        return StoppingCriterion(**cls.FUNCTIONS[criterion_name], **kwargs)
+        # We will combine the two dicts, with kwargs getting precendence.
+        return StoppingCriterion(**{**cls.FUNCTIONS[criterion_name], **kwargs})
 
 
 class EarlyStoppingException(Exception):

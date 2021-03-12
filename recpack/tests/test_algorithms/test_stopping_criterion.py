@@ -174,3 +174,10 @@ def test_kwargs_criterion_called():
     c.update(None, None)
 
     my_loss.assert_called_with(None, None, some_arg=True)
+
+
+def test_create_w_kwargs_overwrite():
+
+    c = StoppingCriterion.create("ndcg", k=10)
+    assert c.kwargs["k"] == 10
+    assert not c.minimize
