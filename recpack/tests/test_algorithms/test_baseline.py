@@ -7,7 +7,7 @@ import recpack.algorithms
 
 @pytest.fixture(scope="function")
 def data():
-    # TODO generate scipy.sparse matrix with user interactions.
+    # generate scipy.sparse matrix with user interactions.
     users = list(range(10))
     u_, i_ = [], []
     for user in users:

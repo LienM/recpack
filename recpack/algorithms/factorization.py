@@ -177,7 +177,6 @@ class SVD(FactorizationAlgorithm):
     def _fit(self, X: Matrix):
         X = to_csr_matrix(X, binary=True)
 
-        # TODO use other parameter options?
         model = sklearn.decomposition.TruncatedSVD(
             n_components=self.num_components, n_iter=7, random_state=self.random_state
         )

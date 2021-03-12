@@ -51,9 +51,6 @@ class Random(Algorithm):
         self.K = K
         self.seed = seed
 
-        # TODO: mention this choice in docstring
-        #  -> predicting twice will not give same results.
-        #  -> predicting on two new instances with same seed will give same results.
         if self.seed is not None:
             random.seed(self.seed)
 

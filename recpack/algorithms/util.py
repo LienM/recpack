@@ -5,8 +5,6 @@ import numpy as np
 from scipy.sparse import csr_matrix, diags
 import torch
 
-# TODO: Add to docs
-
 
 def normalize(X: Union[csr_matrix, np.ndarray]):
     """Normalize the scores in X row wise.

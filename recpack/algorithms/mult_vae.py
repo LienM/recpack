@@ -253,7 +253,6 @@ class MultiVAETorch(nn.Module):
 
         self.tanh = nn.Tanh()
 
-        # TODO Make it possible to go deeper?
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.

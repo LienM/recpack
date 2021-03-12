@@ -182,7 +182,7 @@ class BPRMF(TorchMLAlgorithm):
             mnar_items = mnar_items.to(self.device)
 
             self.optimizer.zero_grad()
-            # TODO Maybe rename?
+
             target_sim = self.model_.forward(users, target_items).diag()
             mnar_sim = self.model_.forward(users, mnar_items).diag()
 

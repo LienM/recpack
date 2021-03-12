@@ -1,4 +1,7 @@
 import logging
+import time
+import warnings
+
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.base import BaseEstimator
@@ -6,8 +9,6 @@ from sklearn.utils.validation import check_is_fitted
 import tempfile
 import torch
 from typing import Tuple
-
-import warnings
 
 from recpack.algorithms.stopping_criterion import (
     EarlyStoppingException,
@@ -103,10 +104,12 @@ class Algorithm(BaseEstimator):
         :return: **self**, fitted algorithm
         :rtype: Algorithm
         """
-        # TODO: could be nice to add timing + log here.
+        start = time.time()
         self._fit(X)
 
         self._check_fit_complete()
+        end = time.time()
+        logger.info(f"fitting {self.name} complete - Took {start - end :.3}s")
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:
@@ -362,11 +365,8 @@ class TorchMLAlgorithm(Algorithm):
     @property
     def filename(self):
         """Name of the file at which save(self) will write the current best model."""
-        # TODO Give better names
         return f"{self.name}_loss_{self.stopping_criterion.best_value}.trch"
 
-    # TODO: Do we want to keep this? It's kind of useful to reuse the model.
-    # But it has been removed from the Algorithm base class.
     def load(self, filename):
         """Load torch model from file.
 
@@ -395,6 +395,7 @@ class TorchMLAlgorithm(Algorithm):
         :return: **self**, fitted algorithm
         :rtype: TorchMLAlgorithm
         """
+        start = time.time()
         # Preconditions:
         # The target for prediction is the validation data.
         assert X.shape == validation_data[0].shape
@@ -439,6 +440,9 @@ class TorchMLAlgorithm(Algorithm):
         self.best_model.close()
 
         self._check_fit_complete()
+        end = time.time()
+        logger.info(f"fitting {self.name} complete - Took {start - end :.3}s")
+
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:

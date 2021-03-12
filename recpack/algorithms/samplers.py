@@ -5,7 +5,6 @@ import torch
 
 from recpack.data.matrix import to_binary
 
-# TODO: Add to docs!
 # TODO: consider allowing bootstrap to also sample multiple negatives
 #  -> Rename some functions, bootstrap indicates resampling possible
 #     but the warp method just takes every positive sample,

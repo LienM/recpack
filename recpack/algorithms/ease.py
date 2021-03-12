@@ -1,8 +1,13 @@
+import logging
+import time
+
 import numpy as np
 import scipy.sparse
 
 from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
+
+logger = logging.getLogger("recpack")
 
 
 class EASE(ItemSimilarityMatrixAlgorithm):
@@ -187,7 +192,7 @@ class EASE_XY(EASE):
         :return: self
         :rtype: EASE_XY
         """
-
+        start = time.time()
         X, y = to_csr_matrix((X, y), binary=True)
 
         XTX = X.T @ X
@@ -209,5 +214,7 @@ class EASE_XY(EASE):
             self._prune()
 
         self._check_fit_complete()
+        end = time.time()
+        logger.info(f"fitting {self.name} complete - Took {start - end :.3}s")
 
         return self
