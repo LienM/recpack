@@ -5,7 +5,8 @@ recpack.algorithms.base.Algorithm
 
 .. autoclass:: Algorithm
     :members:
-    :inherited-members:
+    :private-members:
+
 
     
 
@@ -15,10 +16,53 @@ recpack.algorithms.base.Algorithm
     .. autosummary::
     
         
-        ~Algorithm.fit
-        ~Algorithm.get_params
-        ~Algorithm.predict
-        ~Algorithm.set_params
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        ~Algorithm._check_fit_complete 
+        
+        ~Algorithm._check_prediction 
+        ~Algorithm._fit 
+        
+        
+        
+        ~Algorithm._predict 
+        
+        
+        
+        ~Algorithm._transform_predict_input 
+        ~Algorithm._transform_training_input 
+        
+        ~Algorithm.fit 
+        
+        
+        
+        ~Algorithm.predict 
+        ~Algorithm.set_params 
     
     
 

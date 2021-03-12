@@ -5,7 +5,8 @@ recpack.algorithms.base.ItemSimilarityMatrixAlgorithm
 
 .. autoclass:: ItemSimilarityMatrixAlgorithm
     :members:
-    :inherited-members:
+    :private-members:
+
 
     
 
@@ -15,10 +16,53 @@ recpack.algorithms.base.ItemSimilarityMatrixAlgorithm
     .. autosummary::
     
         
-        ~ItemSimilarityMatrixAlgorithm.fit
-        ~ItemSimilarityMatrixAlgorithm.get_params
-        ~ItemSimilarityMatrixAlgorithm.predict
-        ~ItemSimilarityMatrixAlgorithm.set_params
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        ~ItemSimilarityMatrixAlgorithm._check_fit_complete 
+        
+        
+        
+        
+        
+        
+        ~ItemSimilarityMatrixAlgorithm._predict 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
     
     
 

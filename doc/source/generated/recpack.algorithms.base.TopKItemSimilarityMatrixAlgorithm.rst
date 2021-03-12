@@ -5,7 +5,8 @@ recpack.algorithms.base.TopKItemSimilarityMatrixAlgorithm
 
 .. autoclass:: TopKItemSimilarityMatrixAlgorithm
     :members:
-    :inherited-members:
+    :private-members:
+
 
     
 
@@ -15,10 +16,53 @@ recpack.algorithms.base.TopKItemSimilarityMatrixAlgorithm
     .. autosummary::
     
         
-        ~TopKItemSimilarityMatrixAlgorithm.fit
-        ~TopKItemSimilarityMatrixAlgorithm.get_params
-        ~TopKItemSimilarityMatrixAlgorithm.predict
-        ~TopKItemSimilarityMatrixAlgorithm.set_params
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
     
     
 

@@ -5,7 +5,8 @@ recpack.algorithms.base.FactorizationAlgorithm
 
 .. autoclass:: FactorizationAlgorithm
     :members:
-    :inherited-members:
+    :private-members:
+
 
     
 
@@ -15,10 +16,53 @@ recpack.algorithms.base.FactorizationAlgorithm
     .. autosummary::
     
         
-        ~FactorizationAlgorithm.fit
-        ~FactorizationAlgorithm.get_params
-        ~FactorizationAlgorithm.predict
-        ~FactorizationAlgorithm.set_params
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        ~FactorizationAlgorithm._predict 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
     
     
 

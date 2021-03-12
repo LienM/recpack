@@ -5,7 +5,8 @@ recpack.algorithms.base.TorchMLAlgorithm
 
 .. autoclass:: TorchMLAlgorithm
     :members:
-    :inherited-members:
+    :private-members:
+
 
     
 
@@ -15,12 +16,62 @@ recpack.algorithms.base.TorchMLAlgorithm
     .. autosummary::
     
         
-        ~TorchMLAlgorithm.fit
-        ~TorchMLAlgorithm.get_params
-        ~TorchMLAlgorithm.load
-        ~TorchMLAlgorithm.predict
-        ~TorchMLAlgorithm.save
-        ~TorchMLAlgorithm.set_params
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        ~TorchMLAlgorithm._batch_predict 
+        
+        
+        ~TorchMLAlgorithm._check_prediction 
+        ~TorchMLAlgorithm._evaluate 
+        
+        
+        
+        ~TorchMLAlgorithm._init_model 
+        ~TorchMLAlgorithm._load_best 
+        
+        
+        
+        
+        
+        ~TorchMLAlgorithm._save_best 
+        ~TorchMLAlgorithm._train_epoch 
+        ~TorchMLAlgorithm._transform_predict_input 
+        ~TorchMLAlgorithm._transform_training_input 
+        
+        
+        ~TorchMLAlgorithm.fit 
+        
+        
+        ~TorchMLAlgorithm.load 
+        
+        ~TorchMLAlgorithm.predict 
+        ~TorchMLAlgorithm.save 
+        
     
     
 

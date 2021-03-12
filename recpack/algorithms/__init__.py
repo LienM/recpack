@@ -64,6 +64,7 @@ which can be used to create new algorithms.
 
 .. autosummary::
     :toctree: generated/
+    :template: autosummary/base_algorithm_classs.rst
 
     base.Algorithm
     base.ItemSimilarityMatrixAlgorithm
