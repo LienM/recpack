@@ -29,7 +29,8 @@ class Algorithm(BaseEstimator):
     """Base class for all algorithm implementations.
 
     This class provides fit and predict methods that handle generic
-    pre and post-conditions, usually a new algorithm will have to
+    pre and post-conditions.
+    Usually a new algorithm will have to
     implement just the :meth:`_fit` and :meth:`_predict` methods.
     """
 
@@ -208,6 +209,10 @@ class ItemSimilarityMatrixAlgorithm(Algorithm):
 
     Prediction will compute the dot product of the history vector of a user
     and the similarity matrix.
+
+    Usually a new algorithm will have to
+    implement just the :meth:`_fit` method,
+    to construct the `self.similarity_matrix_` attribute.
     """
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
@@ -256,6 +261,10 @@ class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
     """Base class for algorithms where
     only the K most similar items are used for each item.
 
+    Usually a child class will have to
+    implement just the :meth:`_fit` method,
+    to construct the `self.similarity_matrix_` attribute.
+
     :param K: How many similar items will be kept per item.
     :type K: int
     """
@@ -277,7 +286,10 @@ class FactorizationAlgorithm(Algorithm):
 
     Prediction happens by multiplying a user's features with the item features.
 
-    TODO -> Add info for creating your own factorization algorithm
+    Usually a child class will have to
+    implement just the :meth:`_fit` method,
+    to construct the `self.user_features_` and `self.item_features_` attributes.
+
     TODO -> In the Neural Network we call things embeddings,
     probably should call the features here embeddings?
 
@@ -341,6 +353,9 @@ class TorchMLAlgorithm(Algorithm):
     After training the best model will be loaded, and used for subsequent prediction.
 
     The batch size is also used for prediction, to keep reduce load on GPU RAM.
+
+    Usually a child class will have to
+    implement the :meth:`_predict`, :meth:`_init_model` and :meth:`_train_epoch`.
 
     :param batch_size: How many samples to use in each update step.
         Higher batch sizes make each epoch more efficient,
