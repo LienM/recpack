@@ -1,19 +1,14 @@
 import logging
 import numpy as np
-from recpack.util import get_top_K_values
 
 from scipy.sparse import csr_matrix
 from sklearn.utils.validation import check_is_fitted
 
+from recpack.util import get_top_K_values
 from recpack.algorithms import Algorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
-
-# fit item knn: aparte functies en testen
-# fit user knn
-# combined in een aparte subfunctie en testen
-# testen van robin aanpassen, die moeten slagen
 
 
 class KUNN(Algorithm):
@@ -52,7 +47,6 @@ class KUNN(Algorithm):
         calculated score matrix for items.
         :param X: Sparse binary user-item matrix which will be used to do the predictions. The scores will returned for
         the users of this input matrix.
-        :param user_ids: Unused parameter.
         :return: User-item matrix with the prediction scores as values.
         """
         check_is_fitted(self)
@@ -66,31 +60,23 @@ class KUNN(Algorithm):
 
         # Combine the memoized training interactions with the predict interactions
         Combined = self._union_csr_matrices(self.training_interactions_, X)
-        _, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(Combined)
+        # Cu rooted is based on the combined interactions
+        _, Cu_rooted, _ = self._calculate_scaled_matrices(Combined)
+        # Ci rooted is based on only the training interactions.
+        _, _, Ci_rooted = self._calculate_scaled_matrices(self.training_interactions_)
 
-        # Element-wise multiplication with Ci_rooted. Result is combined_ui / sqrt(c_i).
-        CombinedCi = csr_matrix(Combined.multiply(Ci_rooted))
-
+        # Element-wise multiplication with Ci_rooted. Result is training_ui / sqrt(c_i).
+        TrXi = csr_matrix(self.training_interactions_.multiply(Ci_rooted))
         # Element-wise multiplication. Result is combined_ui / sqrt(c.T_u)
-        CombinedCTu = csr_matrix(Combined.multiply(Cu_rooted.T))
-        # Matrix multiplication. Result is knn_u * CombinedCTu
-        Su = csr_matrix(knn_u * CombinedCTu)
-        print("------")
-        print(knn_u.todense(), "\n\n", CombinedCTu.todense())
-        print("\n result \n")
-        print(
-            (Su.multiply(Ci_rooted ** (-1)).multiply((Cu_rooted ** (-1)).T)).todense()
-        )
+        CombinedCu = csr_matrix(Combined.multiply(Cu_rooted.T))
 
-        print(Ci_rooted, Cu_rooted)
+        # Matrix multiplication. Result is knn_u * CombinedCi
+        Su = csr_matrix(knn_u * TrXi)
 
-        # Element-wise multiplication. Result is combined_ui / sqrt(c_i). -- Already calculated => CombinedCi
-        # Matrix multiplication. Result is CombinedCi * knn_i
-        Si = csr_matrix(CombinedCi * self.knn_i_.T)
+        # Matrix multiplication. Result is CombinedCu * knn_i
+        Si = csr_matrix(CombinedCu * self.knn_i_)
 
         self.S_ = Si + Su
-        self.Si_ = Si
-        self.Su_ = Su
 
         # The scores for the target users are calculated by multiplying a diagonal matrix by the score matrix. On the
         # diagonal there is a 1 if that user is a target user.
@@ -168,6 +154,11 @@ class KUNN(Algorithm):
         return csr_matrix((V, (U, U)), shape=(num_users, num_users))
 
     def _fit_item_knn(self, X: csr_matrix) -> csr_matrix:
+        """
+        Helper method to compute the Item KNN, used in the KUNN implementation.
+        @param X: Sparse binary user-item matrix
+        @return: Item KNN matrix for X
+        """
         Xscaled, _, Ci_rooted = self._calculate_scaled_matrices(X)
 
         # Element-wise multiplication with Ci_rooted. Result is x.T_iu / sqrt(c_i).
@@ -177,9 +168,15 @@ class KUNN(Algorithm):
         # Eliminate self-similarity
         sim_i.setdiag(0)
 
-        return get_top_K_values(sim_i, self.Ki)
+        return get_top_K_values(sim_i, self.Ki).T
 
     def _fit_user_knn(self, X: csr_matrix) -> csr_matrix:
+        """
+        Helper method to compute the User KNN, used in the KUNN implementation. The memoized training interactions are
+        used to compute the user similarities.
+        @param X: Sparse binary user-item matrix
+        @return: User KNN matrix for X
+        """
         users_to_predict = set(X.nonzero()[0])
 
         # Combine the memoized training interactions with the predict interactions
@@ -204,5 +201,11 @@ class KUNN(Algorithm):
         return get_top_K_values(sim_u, self.Ku)
 
     def _union_csr_matrices(self, a: csr_matrix, b: csr_matrix) -> csr_matrix:
+        """
+        Helper method to combine 2 binary csr_matrices.
+        @param a: Binary csr_matrix
+        @param b: Binary csr_matrix
+        @return: The union of a and b
+        """
         # pre-condition: a and b should be a binary csr_matrix (the values only consist out of 1.0's)
         return csr_matrix(a.astype(np.bool) + b.astype(np.bool)) * 1.0
