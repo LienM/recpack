@@ -56,6 +56,8 @@ prediction happens by calculating distance between user and item embeddings.
     MultVAE
 
 
+.. _algorithm-base-classes:
+
 Abstract base classes
 -----------------------
 
@@ -64,7 +66,7 @@ which can be used to create new algorithms.
 
 .. autosummary::
     :toctree: generated/
-    :template: autosummary/base_algorithm_classs.rst
+    :template: autosummary/base_algorithm_class.rst
 
     base.Algorithm
     base.ItemSimilarityMatrixAlgorithm

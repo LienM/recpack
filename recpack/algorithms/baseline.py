@@ -2,7 +2,7 @@ from collections import Counter
 import random
 
 import numpy as np
-import scipy.sparse
+from scipy.sparse import csr_matrix
 import numpy.random
 
 
@@ -54,17 +54,15 @@ class Random(Algorithm):
         if self.seed is not None:
             random.seed(self.seed)
 
-    def _fit(self, X: Matrix):
-        X = to_csr_matrix(X)
+    def _fit(self, X: csr_matrix):
         self.items_ = list(set(X.nonzero()[1]))
 
-    def _predict(self, X: Matrix):
+    def _predict(self, X: csr_matrix):
         """Predict K random scores for items per row in X
 
         Returns numpy array of the same shape as X,
         with non zero scores for K items per row.
         """
-        X = to_csr_matrix(X)
 
         # For each user choose random K items, and generate a score for these items
         # Then create a matrix with the scores on the right indices
@@ -76,9 +74,7 @@ class Random(Algorithm):
             for i in np.random.choice(self.items_, size=self.K, replace=False)
         ]
         user_idxs, item_idxs, scores = list(zip(*score_list))
-        score_matrix = scipy.sparse.csr_matrix(
-            (scores, (user_idxs, item_idxs)), shape=X.shape
-        )
+        score_matrix = csr_matrix((scores, (user_idxs, item_idxs)), shape=X.shape)
 
         return score_matrix
 
@@ -151,5 +147,5 @@ class Popularity(Algorithm):
             I.extend(items)
             V.extend(values)
 
-        score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
+        score_matrix = csr_matrix((V, (U, I)), shape=X.shape)
         return score_matrix

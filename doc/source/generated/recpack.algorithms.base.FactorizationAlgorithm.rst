@@ -43,7 +43,7 @@ recpack.algorithms.base.FactorizationAlgorithm
         
         
         
-        
+        ~FactorizationAlgorithm._check_fit_complete 
         
         
         

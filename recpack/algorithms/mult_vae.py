@@ -176,8 +176,6 @@ class MultVAE(TorchMLAlgorithm):
         """
         start_time = time.time()
         losses = []
-        # Set to training
-        self.model_.train()
 
         users = list(set(train_data.nonzero()[0]))
 

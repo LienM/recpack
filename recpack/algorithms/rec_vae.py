@@ -272,8 +272,6 @@ class RecVAE(TorchMLAlgorithm):
         :param users: List of all users in the training dataset.
         :type users: List[int]
         """
-        # Set model to training
-        self.model_.train()
 
         users = list(set(train_data.nonzero()[0]))
 

@@ -54,8 +54,8 @@ recpack.algorithms.base.Algorithm
         
         
         
+        ~Algorithm._transform_fit_input 
         ~Algorithm._transform_predict_input 
-        ~Algorithm._transform_training_input 
         
         ~Algorithm.fit 
         

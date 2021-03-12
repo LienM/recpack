@@ -42,6 +42,9 @@ from scipy.sparse import csr_matrix
 
 logger = logging.getLogger("recpack")
 
+# TODO: has_timestamps is not documented in autodocumentation,
+# might be better to make it a property?
+
 
 class DataMatrix:
     """Base class for representing data"""

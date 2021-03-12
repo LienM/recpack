@@ -53,8 +53,7 @@ class NMF(FactorizationAlgorithm):
         super().__init__(num_components)
         self.random_state = random_state
 
-    def _fit(self, X: Matrix):
-        X = to_csr_matrix(X, binary=True)
+    def _fit(self, X: scipy.sparse.csr_matrix):
 
         # Using Sklearn NMF implementation. For info and parameters:
         # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
@@ -119,7 +118,7 @@ class NMFItemToItem(ItemSimilarityMatrixAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def _fit(self, X: Matrix):
+    def _fit(self, X: scipy.sparse.csr_matrix):
         self.model_ = NMF(self.num_components, self.random_state)
         self.model_.fit(X)
 
@@ -174,8 +173,7 @@ class SVD(FactorizationAlgorithm):
 
         self.random_state = random_state
 
-    def _fit(self, X: Matrix):
-        X = to_csr_matrix(X, binary=True)
+    def _fit(self, X: scipy.sparse.csr_matrix):
 
         model = sklearn.decomposition.TruncatedSVD(
             n_components=self.num_components, n_iter=7, random_state=self.random_state
@@ -238,7 +236,7 @@ class SVDItemToItem(ItemSimilarityMatrixAlgorithm):
         self.num_components = num_components
         self.random_state = random_state
 
-    def _fit(self, X: Matrix):
+    def _fit(self, X: scipy.sparse.csr_matrix):
         self.model_ = SVD(self.num_components, self.random_state)
         self.model_.fit(X)
 

@@ -156,6 +156,9 @@ class BPRMF(TorchMLAlgorithm):
         :rtype: np.ndarray
         """
 
+        if users is None:
+            users = get_users(X)
+
         user_tensor = torch.LongTensor(users).to(self.device)
         item_tensor = torch.arange(X.shape[1]).to(self.device)
 

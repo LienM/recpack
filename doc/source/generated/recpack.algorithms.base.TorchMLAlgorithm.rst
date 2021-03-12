@@ -60,8 +60,8 @@ recpack.algorithms.base.TorchMLAlgorithm
         
         ~TorchMLAlgorithm._save_best 
         ~TorchMLAlgorithm._train_epoch 
+        ~TorchMLAlgorithm._transform_fit_input 
         ~TorchMLAlgorithm._transform_predict_input 
-        ~TorchMLAlgorithm._transform_training_input 
         
         
         ~TorchMLAlgorithm.fit 
