@@ -51,8 +51,8 @@ def test_kunn_fit():
     kunn.fit(test_matrix)
 
     knni_values = [(sqrt(2) + sqrt(3)) / 6, 1 / sqrt(6), (sqrt(2) + sqrt(3)) / 6]
-    knni_items_x = [0, 1, 2]
-    knni_items_y = [2, 0, 0]
+    knni_items_x = [2, 0, 0]
+    knni_items_y = [0, 1, 2]
     knni_true = csr_matrix((knni_values, (knni_items_x, knni_items_y)))
 
     numpy.testing.assert_almost_equal(knni_true.todense(), kunn.knn_i_.todense())
@@ -78,14 +78,15 @@ def test_kunn_predict():
     prediction = kunn.predict(pred_matrix)
 
     pred_true_values = [
-        (122 / 815 + 4 * sqrt(5209) / 815) ** 2,
-        (122 / 815 + 4 * sqrt(5209) / 815) ** 2,
-        sqrt(3 * sqrt(401) / 1478 + 931 / 1478),
-        (-83 / 244 + sqrt(75331) / 244) ** 2,
-        (-83 / 244 + sqrt(75331) / 244) ** 2,
+        (2 + sqrt(3)) / 12,
+        (2 + sqrt(3)) / 12,
+        (2 + sqrt(6)) / 12 + (2 * sqrt(6) + 3 * sqrt(2)) / 36,
+        (2 + sqrt(6)) / 12,
+        (2 + sqrt(6)) / 12 + 1 / (2 * sqrt(2)),
+        (2 + sqrt(6)) / 12 + 1 / (2 * sqrt(3)),
     ]
-    pred_true_users = [3, 3, 3, 4, 4]
-    pred_true_items = [0, 1, 2, 1, 2]
+    pred_true_users = [3, 3, 3, 4, 4, 4]
+    pred_true_items = [0, 1, 2, 0, 1, 2]
     pred_true = csr_matrix(
         (pred_true_values, (pred_true_users, pred_true_items)), shape=prediction.shape
     )

@@ -77,6 +77,8 @@ class KUNN(Algorithm):
         Si = csr_matrix(CombinedCu * self.knn_i_)
 
         self.S_ = Si + Su
+        self.Su_ = Su
+        self.Si_ = Si
 
         # The scores for the target users are calculated by multiplying a diagonal matrix by the score matrix. On the
         # diagonal there is a 1 if that user is a target user.
