@@ -46,12 +46,21 @@ class NMF(FactorizationAlgorithm):
     :param random_state: The seed for the random state to allow for comparison,
                             defaults to 42
     :type random_state: int, optional
+    :param alpha: regularization parameter, defines how much regularization is applied.
+    :type alpha: float, optional
+    :param l1_ratio: Defines how much L1 normalisation is used,
+        compared to L2 normalisation.
+        Value between 1 and 0, where 1 means only L1 normalisation,
+        and 0 only L2 normalisation.
+        Defaults to 0
+    :type l1_ratio: float, optional
     """
 
-    # TODO check params NMF to see which ones are useful.
-    def __init__(self, num_components=100, random_state=42):
+    def __init__(self, num_components=100, random_state=42, alpha=0.0, l1_ratio=0.0):
         super().__init__(num_components)
         self.random_state = random_state
+        self.alpha = alpha
+        self.l1_ratio = l1_ratio
 
     def _fit(self, X: scipy.sparse.csr_matrix):
 
@@ -61,6 +70,8 @@ class NMF(FactorizationAlgorithm):
             n_components=self.num_components,
             init="random",
             random_state=self.random_state,
+            alpha=self.alpha,
+            l1_ratio=self.l1_ratio,
         )
 
         # Factorization is W * H. Where W contains user latent vectors, and H
