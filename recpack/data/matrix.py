@@ -10,7 +10,8 @@ Summary
 
 Example
 ---------
-An InteractionMatrix object can be constructed from a pandas DataFrame with a row for each interaction. 
+An InteractionMatrix object can be constructed from a pandas DataFrame
+with a row for each interaction.
 The ``item`` and ``user`` values will be indices in the resulting matrix.
 The following example constructs a 4x4 matrix, with 4 nonzero values::
 
@@ -41,9 +42,6 @@ from scipy.sparse import csr_matrix
 
 
 logger = logging.getLogger("recpack")
-
-# TODO: has_timestamps is not documented in autodocumentation,
-# might be better to make it a property?
 
 
 class DataMatrix:
@@ -101,9 +99,6 @@ class InteractionMatrix(DataMatrix):
 
         if timestamp_ix is not None:
             col_mapper[timestamp_ix] = InteractionMatrix.TIMESTAMP_IX
-            self.has_timestamps = True
-        else:
-            self.has_timestamps = False
 
         self._df = df.rename(columns=col_mapper)
 
@@ -149,6 +144,15 @@ class InteractionMatrix(DataMatrix):
 
         matrix = csr_matrix((values, indices), shape=self.shape, dtype=np.int32)
         return matrix
+
+    @property
+    def has_timestamps(self) -> bool:
+        """Boolean indicating whether instance has timestamp information.
+
+        :return: True if timestamps information is available, False otherwise.
+        :rtype: bool
+        """
+        return self.TIMESTAMP_IX in self._df
 
     def get_timestamp(self, interactionid: int) -> int:
         """Return the timestamp of a specific interaction
@@ -209,8 +213,6 @@ class InteractionMatrix(DataMatrix):
                 errors="ignore",
             )
 
-        # Set boolean to False
-        interaction_m.has_timestamps = False
         return None if inplace else interaction_m
 
     @property

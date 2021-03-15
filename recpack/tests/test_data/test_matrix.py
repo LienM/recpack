@@ -67,7 +67,9 @@ def test_init_w_timestamps(interaction_m):
 
 
 def test_init_without_timestamps(df):
-    d2 = InteractionMatrix(df, ITEM_IX, USER_IX)
+    # Drop the column, otherwise it matches the column being checked for.
+    # And the class detects timestamps are actually available.
+    d2 = InteractionMatrix(df.drop(columns=[TIMESTAMP_IX]), ITEM_IX, USER_IX)
     with pytest.raises(AttributeError):
         d2.timestamps
     assert d2.values is not None
