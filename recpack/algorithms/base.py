@@ -402,10 +402,6 @@ class TorchMLAlgorithm(Algorithm):
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
-        # TODO: base VAE had drop_negative_recommendations option to spare RAM usage
-        # A better solution would be a prune style action like EASE
-        #   -> keep highest absolute values
-
         self.save_best_to_file = save_best_to_file
 
         cuda = torch.cuda.is_available()
