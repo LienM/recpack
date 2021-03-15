@@ -147,7 +147,7 @@ from recpack.algorithms.ease import EASE, EASE_XY
 from recpack.algorithms.slim import SLIM
 
 from recpack.algorithms.nearest_neighbour import ItemKNN
-from recpack.algorithms.BPRMF import BPRMF
+from recpack.algorithms.bprmf import BPRMF
 
 # from recpack.algorithms.metric_learning.cml import CML
 
