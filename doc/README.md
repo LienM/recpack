@@ -14,7 +14,7 @@ To clear the docs: `make clean`
 ## Adding to the documentation
 
 ### Adding to the algorithm documentation
-Algorithm documentation is auto generated based on the docstring in `recpack.algorithms.__ini__.py`.
+Algorithm documentation is auto generated based on the docstring in `recpack.algorithms.__init__.py`.
 
 Documentation of each algorithm is rendered based on its docstrings.
 
