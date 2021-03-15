@@ -53,16 +53,16 @@ class RecVAE(TorchMLAlgorithm):
         x_val_out = csr_matrix(np.array(
             [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
         )
+        x_test_in = csr_matrix(np.array(
+            [[1, 0, 0], [0, 1, 0], [1, 0, 0], [1, 0, 0], [0, 0, 1]])
+        )
 
         algo = RecVAE(num_components=2, batch_size=3, max_epochs=4)
         # Fit algorithm
         algo.fit(X, (x_val_in, x_val_out))
 
-        # Recommend for the validation input data,
-        # so we can inspect what the model learned
-        # In a realistic setting you would have a test dataset
-        # To predict for
-        predictions = algo.predict(x_val_in)
+        # Recommend for the test input data,
+        predictions = algo.predict(x_test_in)
 
         # Predictions is a csr matrix, inspecting the scores with
         predictions.toarray()
