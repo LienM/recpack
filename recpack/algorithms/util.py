@@ -1,5 +1,5 @@
 from math import ceil
-from typing import List, Union
+from typing import Iterator, List, Union
 
 import numpy as np
 from scipy.sparse import csr_matrix, diags
@@ -51,7 +51,7 @@ def get_users(data):
     return list(set(data.nonzero()[0]))
 
 
-def get_batches(users: List[int], batch_size=1000):
+def get_batches(users: List[int], batch_size=1000) -> Iterator[List[int]]:
     """Get user ids in batches from a list of ids.
 
     The list of users will be split into batches of batch_size.
@@ -61,14 +61,11 @@ def get_batches(users: List[int], batch_size=1000):
     :type users: List[int]
     :param batch_size: Size of each batch, defaults to 1000
     :type batch_size: int, optional
-    :return: [description]
-    :rtype: [type]
+    :yield: Iterator of lists of users
+    :rtype: Iterator[List[int]]
     """
-    # TODO: should we use yield, or does this list comprehension do that auto?
-    return [
-        users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
-        for i in range(ceil(len(users) / batch_size))
-    ]
+    for i in range(ceil(len(users) / batch_size)):
+        yield users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
 
 
 def sample(*args: csr_matrix, sample_size: int = 1000):
