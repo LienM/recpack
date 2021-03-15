@@ -9,7 +9,6 @@ from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pair
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
-    # TODO Refactor so that it's no longer specific to CML
     """
     Implementation of covariance loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017

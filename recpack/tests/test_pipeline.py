@@ -17,7 +17,10 @@ def generate_data():
 
     df = pd.DataFrame.from_dict(input_dict)
     data = InteractionMatrix(
-        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
     return data
 
@@ -30,7 +33,7 @@ def test_pipeline():
     scenario = scenarios.Timed(20)
     scenario.split(data)
 
-    algo = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
+    algo = recpack.algorithms.Popularity(K=2)
 
     p = recpack.pipeline.Pipeline([algo], ["NDCG", "Recall"], [2])
 
