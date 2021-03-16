@@ -32,8 +32,6 @@ they have interacted with.
 .. autosummary::
     :toctree: generated/
 
-    EASE
-    EASE_XY
     SLIM
     ItemKNN
     NMFItemToItem
@@ -52,8 +50,20 @@ prediction happens by calculating distance between user and item embeddings.
     SVD
     WeightedMatrixFactorization
     BPRMF
+
+
+Auto Encoder Algorithms
+------------------------
+
+This class of algorithms tries to learn a matrix A, such that X = AX.
+More information on autoencoders can be found on `Wikipedia <https://en.wikipedia.org/wiki/Autoencoder>`_
+
+.. autosummary::
+    :toctree: generated/
+
     RecVAE
     MultVAE
+    EASE
 
 
 .. _algorithm-base-classes:

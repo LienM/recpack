@@ -20,8 +20,8 @@ logger = logging.getLogger("recpack")
 
 class MultVAE(TorchMLAlgorithm):
     """MultVAE Algorithm as first discussed in
-        'Variational Autoencoders for Collaborative Filtering',
-        D. Liang et al. @ KDD2018.
+    'Variational Autoencoders for Collaborative Filtering',
+    D. Liang et al. @ KDD2018.
 
     Default values were taken from the paper.
 
