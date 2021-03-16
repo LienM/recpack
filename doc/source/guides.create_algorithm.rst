@@ -67,7 +67,7 @@ implement the ``__init__`` function.::
     class RandomPopularity(Algorithm):
         """Recomend items using softmax on popularity scores.
         
-        During recommendation the softmax is taken of the popularity score and subsequent items are
+        During recommendation the softmax of the popularity score is taken and subsequent items are
         sampled by their softmax probability, scores are assigned by receding rank
         (such that item sampled first gets highest score)
         
