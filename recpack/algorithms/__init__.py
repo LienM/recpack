@@ -2,8 +2,7 @@
 
 The algorithm module in recpack contains a collection of implemented algorithms,
 as well as utilities such as loss functions, and
-samplers used by these algorithms
-and helpful for use in creating new algorithms.
+samplers.
 
 .. currentmodule:: recpack.algorithms
 
