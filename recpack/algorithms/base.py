@@ -25,7 +25,7 @@ logger = logging.getLogger("recpack")
 
 
 class Algorithm(BaseEstimator):
-    """Base class for all algorithm implementations.
+    """Base class for all recpack algorithm implementations.
 
     This class provides fit and predict methods that handle generic
     pre and post-conditions.
@@ -43,7 +43,10 @@ class Algorithm(BaseEstimator):
 
     @property
     def identifier(self):
-        """name of the object, combined with the parameters.
+        """Name of the object.
+
+        Name is made by combining the class name with the parameters
+        passed at construction time.
 
         Constructed by recreating the initialisation call.
         Example: ``Algorithm(param_1=value)``
@@ -65,30 +68,31 @@ class Algorithm(BaseEstimator):
     def _fit(self, X: csr_matrix):
         """Stub implementation for fitting an algorithm.
 
-        Child classes should implement this function,
-        such that it will be called by the :meth:`fit` wrapper.
+        Will be called by the :meth:`fit` wrapper.
+        Child classes should implement this function.
 
-        :param X: The interactions to fit a model to
+        :param X: User-item interaction matrix to fit the model to
         :type X: csr_matrix
+        :raises NotImplementedError: Implement this method in the child class
         """
         raise NotImplementedError("Please implement _fit")
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Stub for predicting scores to users
 
-        Child classes should implement this function,
-        such that it will be called by the :meth:`predict` wrapper.
+        Will be called by the :meth:`predict` wrapper.
+        Child classes should implement this function.
 
-        :param X: [description]
+        :param X: User-item interaction matrix used as input to predict
         :type X: csr_matrix
-        :raises NotImplementedError: [description]
-        :return: [description]
+        :raises NotImplementedError: Implement this method in the child class
+        :return: Predictions made for all nonzero users in X
         :rtype: csr_matrix
         """
         raise NotImplementedError("Please implement _predict")
 
     def _check_fit_complete(self):
-        """Helper function to check that fit stored information.
+        """Helper function to check if model was correctly fitted
 
         Uses the sklear check_is_fitted function,
         https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
@@ -96,17 +100,17 @@ class Algorithm(BaseEstimator):
         check_is_fitted(self)
 
     def _check_prediction(self, X_pred: csr_matrix, X: csr_matrix) -> None:
-        """Checks that the prediction matches expectations.
+        """Checks that the predictions matches expectations
 
-        Checks implemented
+        Checks implemented:
 
         - Check that all users with history got at least 1 recommendation
 
         For failing checks a warning is printed.
 
-        :param X_pred: The matrix with predictions
+        :param X_pred: Predictions made for all nonzero users in X
         :type X_pred: csr_matrix
-        :param X: The input matrix for prediction, used as 'history'
+        :param X: User-item interaction matrix used as input to predict
         :type X: csr_matrix
         """
 
@@ -124,9 +128,9 @@ class Algorithm(BaseEstimator):
 
         Data will be turned into a binary csr matrix.
 
-        :param X: The interactions to transform
+        :param X: User-item interaction matrix to fit the model to
         :type X: Matrix
-        :return: The transformed training matrix
+        :return: Transformed user-item interaction matrix to fit the model
         :rtype: csr_matrix
         """
         return to_csr_matrix(X, binary=True)
@@ -136,9 +140,9 @@ class Algorithm(BaseEstimator):
 
         Data will be turned into a binary csr matrix.
 
-        :param X: The interactions to transform
+        :param X: User-item interaction matrix used as input to predict
         :type X: Matrix
-        :return: The transformed training matrix
+        :return: Transformed user-item interaction matrix used as input to predict
         :rtype: csr_matrix
         """
         return to_csr_matrix(X, binary=True)
@@ -152,7 +156,7 @@ class Algorithm(BaseEstimator):
         for each of the child classes,
 
         - The fit function gets timed, and this will get printed
-        - Input data gets converted to expected type using call to
+        - Input data is converted to expected type using call to
           :meth:`_transform_predict_input`
         - The model is trained using the :meth:`_fit` method
         - :meth:`_check_fit_complete` is called to check fitting was succesful
@@ -172,7 +176,7 @@ class Algorithm(BaseEstimator):
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:
-        """Predicts scores, given the interactions in X.
+        """Predicts scores, given the interactions in X
 
         Recommends items for each nonzero user in the X matrix.
 
@@ -199,14 +203,15 @@ class Algorithm(BaseEstimator):
 
 
 class ItemSimilarityMatrixAlgorithm(Algorithm):
-    """Base algorithm for algorithms that fit an item to item similarity model.
+    """Base algorithm for algorithms that fit an item to item similarity model
 
-    Fit should construct in the ``similarity_matrix_`` attribute,
-    which encodes the similarity between items.
+    Model that encodes the similarity between items is expected
+    under the ``similarity_matrix_`` attribute.
+
     This matrix should have shape ``(|items| x |items|)``.
-    This can be a dense or sparse matrix depending on the algorithm used.
+    This can be dense or sparse matrix depending on the algorithm used.
 
-    Prediction will compute the dot product of the history vector of a user
+    Predictions are made by computing the dot product of the history vector of a user
     and the similarity matrix.
 
     Usually a new algorithm will have to
@@ -215,7 +220,7 @@ class ItemSimilarityMatrixAlgorithm(Algorithm):
     """
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
-        """Predict scores for nonzero users in X.
+        """Predict scores for nonzero users in X
 
         Scores are computed by matrix multiplication of X
         with the stored similarity matrix.
@@ -235,11 +240,14 @@ class ItemSimilarityMatrixAlgorithm(Algorithm):
         return scores
 
     def _check_fit_complete(self):
-        """Checks if the fitted matrix.
+        """Helper function to check if model was correctly fitted
 
-        In addition to the check that a member has been fit,
-        checks that the fitted similarity matrix contains similar items for each item.
-        Uses warnings to push this info to the customer.
+        Checks implemented:
+
+        - Checks if the algorithm has been fitted, using sklearn's `check_is_fitted`
+        - Checks if the fitted similarity matrix contains similar items for each item
+
+        For failing checks a warning is printed.
         """
         # Use super to check is fitted
         super()._check_fit_complete()
@@ -257,10 +265,18 @@ class ItemSimilarityMatrixAlgorithm(Algorithm):
 
 
 class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
-    """Base class for algorithms where
-    only the K most similar items are used for each item.
+    """Base algorithm for algorithms that fit an item to item similarity model with K similar items for every item
 
-    Usually a child class will have to
+    Model that encodes the similarity between items is expected
+    under the ``similarity_matrix_`` attribute.
+
+    This matrix should have shape ``(|items| x |items|)``.
+    This can be dense or sparse matrix depending on the algorithm used.
+
+    Predictions are made by computing the dot product of the history vector of a user
+    and the similarity matrix.
+
+    Usually a new algorithm will have to
     implement just the :meth:`_fit` method,
     to construct the `self.similarity_matrix_` attribute.
 
@@ -274,7 +290,7 @@ class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
 
 
 class FactorizationAlgorithm(Algorithm):
-    """Base class for Factorization algorithms.
+    """Base class for factorization algorithms
 
     During fitting two matrices are constructed.
 
@@ -303,8 +319,11 @@ class FactorizationAlgorithm(Algorithm):
     def _check_fit_complete(self):
         """Helper function to check that fit stored information.
 
-        Uses the sklear check_is_fitted function,
+        Checks implemented:
+
+        - Checks if model is fitting, using the sklear check_is_fitted function,
         https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
+        - Checks if `num_components` is correct
         """
         check_is_fitted(self)
 
@@ -313,10 +332,10 @@ class FactorizationAlgorithm(Algorithm):
         assert self.item_features_.shape[0] == self.num_components
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
-        """Predict scores for nonzero users in the interaction matrix.
+        """Predict scores for nonzero users in the interaction matrix
 
         For each nonzero users their embedding is multiplied with the item embeddings,
-        and scores are the result of this matrix multiplication product.
+        and scores are the result of this matrix multiplication.
 
         Before recommending checks the shape of X to the number of
         items and users in the embeddings.
@@ -338,18 +357,16 @@ class FactorizationAlgorithm(Algorithm):
 
 
 class TorchMLAlgorithm(Algorithm):
-    """Base class for algorithms using torch to learn a metric.
+    """Base class for PyTorch algorithms optimized by means of gradient descent/ascent
 
-    Fits a neural network to optimise a loss function.
-    During training a number of epochs is used, during each epoch
-    the model is updated, and evaluated.
+    Uses gradient descent/ascent with respect to a loss function
+    to optimize a model over several epochs of training.
 
-    During evaluation the stopping criterion is used to manage
-    which is the best fitted model,
-    and if we can stop training early if not enough improvement
-    has been made in the last updates.
+    During evaluation the stopping criterion is used to determine
+    which model is best and if it would pay to stop training early 
+    if the model converges before `max_epochs` have concluded.
 
-    After training the best model will be loaded, and used for subsequent prediction.
+    After training the best or last model will be loaded, and used for subsequent prediction.
 
     The batch size is also used for prediction, to reduce load on GPU memory.
 
@@ -362,9 +379,8 @@ class TorchMLAlgorithm(Algorithm):
         but increases the amount of epochs needed to converge to the optimum,
         by reducing the amount of updates per epoch.
     :type batch_size: int
-    :param max_epochs: The max number of epochs to train,
-        if the stopping criterion uses early stopping,
-        it might stop earlier if the model on optimal weights.
+    :param max_epochs: The max number of epochs to train.
+        If the stopping criterion uses early stopping, less epochs could be used.
     :type max_epochs: int
     :param learning_rate: How much to update the weights at each update.
     :type learning_rate: float
@@ -386,7 +402,7 @@ class TorchMLAlgorithm(Algorithm):
         if the improvement is below this value.
         Defaults to 0.01
     :type min_improvement: float, optional
-    :param seed: seed to the randomizers, useful for reproducible results,
+    :param seed: Seed to the randomizers, useful for reproducible results,
         defaults to None
     :type seed: int, optional
     :param save_best_to_file: If true, the best model will be saved after training,
@@ -403,7 +419,7 @@ class TorchMLAlgorithm(Algorithm):
         stopping_criterion: str,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: int = 0.01,
+        min_improvement: float = 0.01,
         seed=None,
         save_best_to_file=False,
     ):
@@ -436,7 +452,7 @@ class TorchMLAlgorithm(Algorithm):
         self.device = torch.device("cuda" if cuda else "cpu")
 
     def _init_model(self, X: Matrix) -> None:
-        """Initialise the torch model that will learn the weights.
+        """Initialise the torch model that will learn the weights
 
         :param X: a user item interaction Matrix.
         :type X: Matrix
@@ -455,7 +471,7 @@ class TorchMLAlgorithm(Algorithm):
         self.model_ = torch.load(self.best_model)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
-        """Perform evaluation step.
+        """Perform evaluation step
 
         Evaluation computes predictions by passing the ``val_in`` matrix to the model,
         the expected output and predictions are passed to the
@@ -487,7 +503,7 @@ class TorchMLAlgorithm(Algorithm):
         raise NotImplementedError()
 
     def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
-        """Predict scores for matrix X, given the selected users in this batch.
+        """Predict scores for matrix X, given the selected users in this batch
 
         If there are no selected users, assumes X is a full matrix,
         and users can be retrieved as the nonzero indices in the X matrix.
@@ -521,7 +537,7 @@ class TorchMLAlgorithm(Algorithm):
         return results.tocsr()
 
     def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
-        """Transform the input matrices of the training function to the expected types.
+        """Transform the input matrices of the training function to the expected types
 
         All matrices get converted to binary csr matrices
 
