@@ -61,7 +61,7 @@ class KUNN(Algorithm):
 
         # Combine the memoized training interactions with the predict interactions
         # We will only use this combination for the user we are trying to predict for!
-        combined_interactions = self._union_csr_matrices(self.training_interactions_, X)
+        Combined = self._union_csr_matrices(self.training_interactions_, X)
 
         # Cu rooted is based on the combined interactions
         _, Cu_rooted, _ = self._calculate_scaled_matrices(Combined)
@@ -83,7 +83,8 @@ class KUNN(Algorithm):
         self.Su_ = Su
         self.Si_ = Si
 
-        # The scores for the target users are calculated by multiplying a diagonal matrix by the score matrix. On the
+        # The scores for the target users are calculated
+        # by multiplying a diagonal matrix by the score matrix. On the
         # diagonal there is a 1 if that user is a target user.
         pred_users = self._get_users_diag(users_to_predict, num_users)
         scores = csr_matrix(pred_users * self.S_)
