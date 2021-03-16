@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
+from recpack.algorithms.samplers import (
+    bootstrap_sample_pairs,
+    warp_sample_pairs,
+    sample_positives_and_negatives,
+)
 from recpack.data.matrix import to_binary
 
 
@@ -111,5 +115,70 @@ def test_bootstrap_sampling(pageviews):
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
 
         total_interactions += b
+
+    assert total_interactions == pageviews.nnz
+
+
+def test_sample_positives_and_negatives_bootstrap(pageviews):
+    batch_size = 4
+
+    total_interactions = 0
+
+    for users, positives_batch, negatives_batch in sample_positives_and_negatives(
+        pageviews, batch_size=batch_size, U=1, replace=True
+    ):
+        b = users.shape[0]
+        assert (b == batch_size) or (b == pageviews.nnz % batch_size)
+
+        total_interactions += b
+
+    assert total_interactions == pageviews.nnz
+
+
+def test_sample_positives_and_negatives_bootstrap_exact(pageviews):
+
+    # pageviews needs to be binary
+    pageviews = to_binary(pageviews)
+
+    batch_size = 1000
+    sample_size = 10000
+    total_interactions = 0
+
+    for users, positives_batch, negatives_batch in sample_positives_and_negatives(
+        pageviews,
+        sample_size=sample_size,
+        batch_size=batch_size,
+        U=1,
+        replace=True,
+        exact=True,
+    ):
+        b = users.shape[0]
+        assert (b == batch_size) or (b == pageviews.nnz % batch_size)
+
+        total_interactions += b
+        # No negatives should be accidental positives
+        np.testing.assert_array_almost_equal(
+            pageviews[users.numpy().copy(), negatives_batch.squeeze().numpy().copy()], 0
+        )
+
+    assert total_interactions == sample_size
+
+
+def test_sample_positives_and_negatives_warp(pageviews):
+    pageviews = to_binary(pageviews)
+    batch_size = 4
+    U = 10
+
+    total_interactions = 0
+
+    for users, positives_batch, negatives_batch in sample_positives_and_negatives(
+        pageviews, batch_size=batch_size, U=U, replace=False
+    ):
+        b = users.shape[0]
+        assert (b == batch_size) or (b == pageviews.nnz % batch_size)
+        assert users.shape[0] == positives_batch.shape[0]
+        assert users.shape[0] == negatives_batch.shape[0]
+        assert negatives_batch.shape[1] == U
+        total_interactions += users.shape[0]
 
     assert total_interactions == pageviews.nnz

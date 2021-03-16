@@ -13,7 +13,7 @@ import torch.optim as optim
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import bpr_loss
-from recpack.algorithms.samplers import bootstrap_sample_pairs
+from recpack.algorithms.samplers import sample_positives_and_negatives
 from recpack.algorithms.stopping_criterion import (
     StoppingCriterion,
 )
@@ -177,9 +177,10 @@ class BPRMF(TorchMLAlgorithm):
         losses = []
         self.model_.train()
 
+        # For each positive item sample a single negative item.
         for users, target_items, mnar_items in tqdm(
-            bootstrap_sample_pairs(
-                train_data, batch_size=self.batch_size, sample_size=train_data.nnz
+            sample_positives_and_negatives(
+                train_data, U=1, batch_size=self.batch_size, replace=False
             ),
             desc="train_epoch BPRMF",
         ):
@@ -188,7 +189,13 @@ class BPRMF(TorchMLAlgorithm):
             # and we expect to recommend high
             target_items = target_items.to(self.device)
             # Items the user has not seen, and assuming MNAR data
-            mnar_items = mnar_items.to(self.device)
+            # Is a batch_size x 1 matrix, squeeze into an array.
+            mnar_items = mnar_items.squeeze(-1).to(self.device)
+
+            print("mnar, target")
+            print(mnar_items)
+            print(target_items)
+            print("===")
 
             self.optimizer.zero_grad()
 
@@ -196,6 +203,7 @@ class BPRMF(TorchMLAlgorithm):
             mnar_sim = self.model_.forward(users, mnar_items).diag()
 
             # Checks to make sure the shapes are correct.
+            print(mnar_sim.shape, target_sim.shape)
             assert mnar_sim.shape == target_sim.shape
             assert target_sim.shape[0] == users.shape[0]
 

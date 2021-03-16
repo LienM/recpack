@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from recpack.algorithms import BPRMF
-from recpack.algorithms.samplers import bootstrap_sample_pairs
+from recpack.algorithms.samplers import sample_positives_and_negatives
 from recpack.algorithms.bprmf import MFModule
 from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.metrics.recall import recall_k
@@ -92,34 +92,6 @@ def test_save_and_load(pageviews_for_pairwise):
 
     # TODO cleanup
     os.remove(a.filename)
-
-
-@pytest.mark.parametrize(
-    "batch_size, sample_size",
-    [
-        (4, 12),
-        (3, 10),
-    ],
-)
-def test_bootstrap_sampling(pageviews_for_pairwise, batch_size, sample_size):
-
-    res = bootstrap_sample_pairs(
-        pageviews_for_pairwise, batch_size=batch_size, sample_size=sample_size
-    )
-
-    users, positives_batch, negatives_batch = next(res)
-
-    assert users.shape[0] == batch_size
-    b = 0
-    for users, positives_batch, negatives_batch in res:
-        b = users.shape[0]
-
-    target_size = sample_size % batch_size
-    if target_size == 0:
-        # Special case where it matches.
-        target_size = batch_size
-
-    assert b == target_size
 
 
 def test_forward(pageviews_for_pairwise):

@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from tqdm import tqdm
 
-from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
+from recpack.algorithms.samplers import sample_positives_and_negatives
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
@@ -138,7 +138,7 @@ def bpr_loss_metric(
     :class:`recpack.algorithms.stopping_criterion.StoppingCriterion`.
 
     Positive and negative items are sampled using
-    :func:`recpack.algorithms.samplers.bootstrap_sample_pairs`.
+    :func:`recpack.algorithms.samplers.sample_positives_and_negatives`.
     Scores are then extracted from the X_pred,
     and these positive and negative predictions are passed to the
     :func:`bpr_loss` function.
@@ -165,13 +165,19 @@ def bpr_loss_metric(
 
     losses = []
 
-    for users, target_items, negative_items in bootstrap_sample_pairs(
-        X_true, batch_size=batch_size, sample_size=sample_size, exact=exact
+    for users, target_items, negative_items in sample_positives_and_negatives(
+        X_true,
+        U=1,
+        batch_size=batch_size,
+        sample_size=sample_size,
+        exact=exact,
+        replace=True,
     ):
         # Needed to do copy, to use as index in the predidction matrix
         users = users.numpy().copy()
         target_items = target_items.numpy().copy()
-        negative_items = negative_items.numpy().copy()
+        # need to squeeze from batch_size x 1 matrix into array.
+        negative_items = negative_items.squeeze(-1).numpy().copy()
 
         positive_sim = torch.tensor(X_pred[users, target_items])
         negative_sim = torch.tensor(X_pred[users, negative_items])
@@ -217,7 +223,9 @@ def warp_loss_metric(
     J = X_true.shape[1]
 
     for users, positives_batch, negatives_batch in tqdm(
-        warp_sample_pairs(X_true, U=U, batch_size=batch_size, exact=exact)
+        sample_positives_and_negatives(
+            X_true, U=U, batch_size=batch_size, exact=exact, replace=False
+        )
     ):
 
         current_batch_size = users.shape[0]
