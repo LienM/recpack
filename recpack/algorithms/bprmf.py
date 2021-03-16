@@ -13,7 +13,7 @@ import torch.optim as optim
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import bpr_loss
-from recpack.algorithms.samplers import sample_positives_and_negatives
+from recpack.algorithms.samplers import bootstrap_sample_pairs
 from recpack.algorithms.stopping_criterion import (
     StoppingCriterion,
 )
@@ -104,6 +104,12 @@ class BPRMF(TorchMLAlgorithm):
     :type stop_early: bool, optional
     :param save_best_to_file: If True, the best model is saved to disk after fit.
     :type save_best_to_file: bool, optional
+    :param sample_size: How much samples to take during training using bootstrap sampling.
+        If None a sample is taken for each interaction,
+        there is no guarantee that all interactions will be used though,
+        since sampling happens with replacement.
+        Defaults to None
+    :type sample_size: int, optional
     """
 
     def __init__(
@@ -118,6 +124,7 @@ class BPRMF(TorchMLAlgorithm):
         stop_early: bool = False,
         seed=None,
         save_best_to_file: bool = False,
+        sample_size=None,
     ):
 
         super().__init__(
@@ -134,6 +141,7 @@ class BPRMF(TorchMLAlgorithm):
         self.lambda_w = lambda_w
 
         self.stop_early = stop_early
+        self.sample_size = sample_size
 
     def _init_model(self, X: csr_matrix):
         num_users, num_items = X.shape
@@ -179,8 +187,11 @@ class BPRMF(TorchMLAlgorithm):
 
         # For each positive item sample a single negative item.
         for users, target_items, mnar_items in tqdm(
-            sample_positives_and_negatives(
-                train_data, U=1, batch_size=self.batch_size, replace=False
+            bootstrap_sample_pairs(
+                train_data,
+                U=1,
+                batch_size=self.batch_size,
+                sample_size=self.sample_size,
             ),
             desc="train_epoch BPRMF",
         ):
@@ -191,11 +202,6 @@ class BPRMF(TorchMLAlgorithm):
             # Items the user has not seen, and assuming MNAR data
             # Is a batch_size x 1 matrix, squeeze into an array.
             mnar_items = mnar_items.squeeze(-1).to(self.device)
-
-            print("mnar, target")
-            print(mnar_items)
-            print(target_items)
-            print("===")
 
             self.optimizer.zero_grad()
 

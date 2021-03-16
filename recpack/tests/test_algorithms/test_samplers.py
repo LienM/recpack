@@ -97,7 +97,7 @@ def test_bootstrap_sampling_exact(pageviews):
         total_interactions += b
         # No negatives should be accidental positives
         np.testing.assert_array_almost_equal(
-            pageviews[users.numpy().copy(), negatives_batch.numpy().copy()], 0
+            pageviews[users.numpy().copy(), negatives_batch.squeeze().numpy().copy()], 0
         )
 
     assert total_interactions == sample_size

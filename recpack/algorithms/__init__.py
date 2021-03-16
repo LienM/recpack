@@ -114,6 +114,8 @@ as such we provide some preimplemented sampling methods.
 .. autosummary::
     :toctree: generated/
 
+    samplers.bootstrap_sample_pairs
+    samplers.warp_sample_pairs
     samplers.sample_positives_and_negatives
 
 
