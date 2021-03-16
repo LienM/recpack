@@ -7,6 +7,7 @@ from sklearn.utils.validation import check_is_fitted
 from recpack.util import get_top_K_values
 from recpack.algorithms import Algorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
+from recpack.algorithms.util import get_users, invert_np_array
 
 logger = logging.getLogger("recpack")
 
@@ -52,14 +53,16 @@ class KUNN(Algorithm):
         check_is_fitted(self)
 
         X = to_csr_matrix(X, binary=True)
+
         knn_u = self._fit_user_knn(X)
-        self.knn_u_ = knn_u
 
         users_to_predict = set(X.nonzero()[0])
         num_users = X.shape[0]
 
         # Combine the memoized training interactions with the predict interactions
-        Combined = self._union_csr_matrices(self.training_interactions_, X)
+        # We will only use this combination for the user we are trying to predict for!
+        combined_interactions = self._union_csr_matrices(self.training_interactions_, X)
+
         # Cu rooted is based on the combined interactions
         _, Cu_rooted, _ = self._calculate_scaled_matrices(Combined)
         # Ci rooted is based on only the training interactions.
@@ -179,28 +182,78 @@ class KUNN(Algorithm):
         @param X: Sparse binary user-item matrix
         @return: User KNN matrix for X
         """
-        users_to_predict = set(X.nonzero()[0])
+        users_to_predict = get_users(X)
 
         # Combine the memoized training interactions with the predict interactions
-        Combined = self._union_csr_matrices(self.training_interactions_, X)
-        Xscaled, Cu_rooted, Ci_rooted = self._calculate_scaled_matrices(Combined)
-        users_combined = set(Combined.nonzero()[0])
+        combined_interactions = self._union_csr_matrices(self.training_interactions_, X)
 
-        # Element-wise multiplication with Cu_rooted. Result is combined_ui / sqrt(c_u).
-        CombinedCu = csr_matrix(Combined.multiply(Cu_rooted.T))
-        # Matrix multiplication. Result is CombinedCu * Xscaled.T
-        sim_u = csr_matrix(CombinedCu * Xscaled.T)
-        # Eliminate self-similarity
-        sim_u.setdiag(0)
+        # Cut combined interactions to only nonzero users in prediction matrix.
+        mask = np.zeros(combined_interactions.shape[0])
+        mask[users_to_predict] = 1
+        # Turn mask into a column vector
+        mask = mask.reshape(mask.shape[0], 1)
+        # Select the interactions for nonzero users in mask
+        print(combined_interactions.shape, mask.shape)
+        combined_interactions_selected_users = csr_matrix(
+            combined_interactions.multiply(mask)
+        )
 
-        # Make sure to remove the 'illegal' similarities between the target users themselves. Such that there are only
-        # similarities between the already known training users.
-        # Create a mask with 1's on the columns of the target users. Subtract the element-wise multiplication of the
-        # mask with the user similarity to remove the 'illegal' similarities.
-        mask = self._create_mask(users_combined, users_to_predict, sim_u.shape)
-        sim_u -= sim_u.multiply(mask)
+        # Compute the interactions that are only in the prediction matrix.
+        combined_interactions_only_predict = (
+            combined_interactions_selected_users
+            - self.training_interactions_.multiply(mask)
+        )
 
-        return get_top_K_values(sim_u, self.Ku)
+        # Count the number of interactions per user for which we need to predict
+        # This count is based on the union of train and predict data
+        pred_user_interaction_counts = combined_interactions_selected_users.sum(axis=1)
+
+        # Counts based on only training data
+        train_user_counts = self.training_interactions_.sum(axis=1)
+        train_item_counts = self.training_interactions_.sum(axis=0)
+
+        # Compute the c(i) values in the paper
+        # Because we have to account for items that occur both in train and predict,
+        # but can only use interactions in the X matrix for the user we are computing
+        # similarities for (avoid leakage of data),
+        # we need to add 1 to the training counts in some occasions.
+        #
+        # We do this by taking the count in the training matrix per item.
+        # vertically stacking these values to get these counts for each user
+        # And we then add the interactions, that only occur in the prediction dataset,
+        # for prediction users,
+        #
+        # This gives us per user the accurate count per item,
+        # taking into account training data, and only their own history
+        # from the prediction dataset.
+        item_counts_per_user = (
+            np.vstack([train_item_counts for _ in range(X.shape[0])])
+            + combined_interactions_only_predict
+        )
+
+        # Similarities are computed by matrix multiplication of two interaction matrices
+        # the training matrix is scaled by dividing each interaction by
+        #   the square root of the number of user interactions.
+        # The combined interactions for prediction users is scaled by dividing
+        #   by the square root of user interactions
+        #   and by the square root of the interactions with the item.
+        # fmt:off
+        similarities = (
+            combined_interactions_selected_users.multiply(
+                invert_np_array(np.sqrt(pred_user_interaction_counts))
+            ).multiply(
+                invert_np_array(np.sqrt(item_counts_per_user))
+            )
+            @
+            self.training_interactions_.multiply(
+                invert_np_array(np.sqrt(train_user_counts))
+            ).T
+        )
+        # fmt:on
+
+        similarities.setdiag(0)
+
+        return get_top_K_values(similarities, self.Ku)
 
     def _union_csr_matrices(self, a: csr_matrix, b: csr_matrix) -> csr_matrix:
         """

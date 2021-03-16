@@ -44,7 +44,7 @@ def get_users(data):
 
 def get_batches(users, batch_size=1000):
     return [
-        users[i * batch_size: min((i * batch_size) + batch_size, len(users))]
+        users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
         for i in range(ceil(len(users) / batch_size))
     ]
 
@@ -69,3 +69,9 @@ def sample(*args: csr_matrix, sample_size: int = 1000):
         sampled_matrices.append(sampled_mat)
 
     return sampled_matrices
+
+
+def invert_np_array(x):
+    ret = np.zeros(x.shape)
+    ret[x.nonzero()] = 1 / x[x.nonzero()]
+    return ret
