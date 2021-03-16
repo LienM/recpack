@@ -138,7 +138,6 @@ that can help simplify certain tasks in creating a new algorithm
 .. autosummary::
     :toctree: generated/
 
-    util.normalize
     util.get_batches
     util.sample
     util.naive_sparse2tensor

@@ -3,6 +3,7 @@ import scipy
 from scipy.sparse import diags
 import scipy.sparse
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import Normalizer
 
 from recpack.data.matrix import Matrix, to_csr_matrix
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
@@ -150,9 +151,10 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         item_similarities = item_similarities.multiply(mask)
 
         if self.normalize:
-            # normalize per row
-            row_sums = item_similarities.sum(axis=1)
-            item_similarities = item_similarities / row_sums
-            item_similarities = scipy.sparse.csr_matrix(item_similarities)
+            # normalize such that sum per row = 1
+            transformer = Normalizer(norm="l1")
+            item_similarities = scipy.sparse.csr_matrix(
+                transformer.transform(item_similarities)
+            )
 
         self.similarity_matrix_ = item_similarities

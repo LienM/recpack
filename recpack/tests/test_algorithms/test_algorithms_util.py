@@ -5,7 +5,6 @@ from torch import Tensor
 from recpack.algorithms.util import (
     naive_sparse2tensor,
     naive_tensor2sparse,
-    normalize,
     sample,
 )
 
@@ -18,14 +17,6 @@ def test_csr_tensor_conversions(larger_matrix):
     csr_again = naive_tensor2sparse(tensor)
 
     assert isinstance(csr_again, csr_matrix)
-
-
-def test_normalize():
-    mat = csr_matrix(np.array([[1, 4, 5], [2, 3, 3]]))
-    n_mat = normalize(mat)
-
-    expected_values = np.array([[0.1, 0.4, 0.5], [2 / 8, 3 / 8, 3 / 8]])
-    np.testing.assert_array_almost_equal(n_mat.toarray(), expected_values)
 
 
 def test_sample():
