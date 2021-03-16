@@ -35,7 +35,7 @@ and maximal weight on highest scoring items.
 During prediction we will sample for each user K items, 
 with the probabilities computed during fitting.
 
-The start of creating a new algorithm is selecting which base class to use as a parrent.
+The start of creating a new algorithm is selecting which base class to use as parent.
 None of the more specific subclasses make sense for our simple popularity 
 and randomness based algorithm, so we will use :class:`recpack.algorithms.base.Algorithm`.
 
