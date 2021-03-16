@@ -10,7 +10,7 @@ which you can inherit from to make integration easy.
 For more info on the base classes, check out :ref:`algorithm-base-classes`.
 
 Through four example algorithms we will explain the concepts of the base classes, 
-and give pointers how to work on your own algorithms.
+and give pointers on how to implement your own algorithms within the recpack framework.
 
 After reading through these examples you should be able to 
 
@@ -35,7 +35,7 @@ and maximal weight on highest scoring items.
 During prediction we will sample for each user K items, 
 with the probabilities computed during fitting.
 
-The start of creating a new algorithm is selecting which base class to use as a parrent.
+The start of creating a new algorithm is selecting which base class to use as parent.
 None of the more specific subclasses make sense for our simple popularity 
 and randomness based algorithm, so we will use :class:`recpack.algorithms.base.Algorithm`.
 
@@ -67,7 +67,7 @@ implement the ``__init__`` function.::
     class RandomPopularity(Algorithm):
         """Recomend items using softmax on popularity scores.
         
-        During recommendation the softmax is taken of the popularity score and subsequent items are
+        During recommendation the softmax of the popularity score is taken and subsequent items are
         sampled by their softmax probability, scores are assigned by receding rank
         (such that item sampled first gets highest score)
         
