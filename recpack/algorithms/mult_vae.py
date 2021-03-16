@@ -10,7 +10,6 @@ from scipy.sparse import csr_matrix
 import numpy as np
 
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.algorithms.util import naive_sparse2tensor
 from recpack.splitters.splitter_base import batch
 
@@ -87,9 +86,19 @@ class MultVAE(TorchMLAlgorithm):
         Which criterions are available can be found at StoppingCriterion.FUNCTIONS
         Defaults to ``'ndcg'``
     :type stopping_criterion: str, optional
-    :param stop_early: Use early stopping during optimisation,
-        defaults to False
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
     :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
+        Defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.01
     :param save_best_to_file: If True, the best model is saved to disk after fit.
     :type save_best_to_file: bool, optional
     """
@@ -107,6 +116,8 @@ class MultVAE(TorchMLAlgorithm):
         dropout=0.5,
         stopping_criterion="ndcg",
         stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: int = 0.01,
         save_best_to_file=False,
     ):
 
@@ -114,12 +125,13 @@ class MultVAE(TorchMLAlgorithm):
             batch_size,
             max_epochs,
             learning_rate,
-            StoppingCriterion.create(stopping_criterion, stop_early=stop_early),
+            stopping_criterion,
+            stop_early,
+            max_iter_no_change,
+            min_improvement,
             seed,
             save_best_to_file=save_best_to_file,
         )
-
-        self.stop_early = stop_early
 
         self.dim_hidden_layer = dim_hidden_layer
         self.dim_bottleneck_layer = dim_bottleneck_layer

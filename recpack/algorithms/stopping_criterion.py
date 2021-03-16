@@ -177,7 +177,7 @@ class StoppingCriterion:
     """
 
     @classmethod
-    def create(cls, criterion_name: str, **kwargs):
+    def create(cls, criterion_name: str, **kwargs) -> "StoppingCriterion":
         """Construct a StoppingCriterion instance,
         based on the name of the loss function.
 
@@ -213,7 +213,7 @@ class StoppingCriterion:
         :raises ValueError: If the requested criterion
             is not one of tha allowed options.
         :return: The constructed stopping criterion
-        :rtype: [type]
+        :rtype: StoppingCriterion
         """
 
         if criterion_name not in cls.FUNCTIONS:

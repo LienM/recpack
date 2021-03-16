@@ -1,4 +1,3 @@
-from functools import partial
 import logging
 import time
 from typing import List, Tuple
@@ -20,8 +19,6 @@ from recpack.algorithms.util import (
     log_norm_pdf,
     naive_sparse2tensor,
 )
-from recpack.algorithms.stopping_criterion import StoppingCriterion
-from recpack.metrics.dcg import ndcg_k
 
 logger = logging.getLogger("recpack")
 
@@ -103,9 +100,19 @@ class RecVAE(TorchMLAlgorithm):
         Which criterions are available can be found at StoppingCriterion.FUNCTIONS
         Defaults to 'ndcg'
     :type stopping_criterion: str, optional
-    :param stop_early: Use early stopping during optimisation,
-        defaults to False
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
     :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
+        Defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.01
     :param save_best_to_file: If True, the best model is saved to disk after fit.
         Defaults to False.
     :type save_best_to_file: bool, optional
@@ -126,6 +133,8 @@ class RecVAE(TorchMLAlgorithm):
         dropout=0.5,
         stopping_criterion: str = "ndcg",
         stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: int = 0.01,
         save_best_to_file: bool = False,
     ):
 
@@ -133,12 +142,13 @@ class RecVAE(TorchMLAlgorithm):
             batch_size,
             max_epochs,
             learning_rate,
-            StoppingCriterion.create(stopping_criterion, stop_early=stop_early),
+            stopping_criterion,
+            stop_early,
+            max_iter_no_change,
+            min_improvement,
             seed,
             save_best_to_file=save_best_to_file,
         )
-
-        self.stop_early = stop_early
 
         self.n_enc_epochs = n_enc_epochs
         self.n_dec_epochs = n_dec_epochs

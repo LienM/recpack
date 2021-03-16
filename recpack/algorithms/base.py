@@ -16,7 +16,6 @@ from recpack.algorithms.stopping_criterion import (
     StoppingCriterion,
 )
 from recpack.algorithms.util import (
-    naive_sparse2tensor,
     get_batches,
     get_users,
 )
@@ -369,8 +368,24 @@ class TorchMLAlgorithm(Algorithm):
     :type max_epochs: int
     :param learning_rate: How much to update the weights at each update.
     :type learning_rate: float
-    :param stopping_criterion: The stopping criterion to use for training.
-    :type stopping_criterion: StoppingCriterion
+    :param stopping_criterion: Name of the stopping criterion to use for training.
+        For available values,
+        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
+    :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
+        Defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.01
+    :type min_improvement: float, optional
     :param seed: seed to the randomizers, useful for reproducible results,
         defaults to None
     :type seed: int, optional
@@ -385,7 +400,10 @@ class TorchMLAlgorithm(Algorithm):
         batch_size,
         max_epochs,
         learning_rate,
-        stopping_criterion: StoppingCriterion,
+        stopping_criterion: str,
+        stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: int = 0.01,
         seed=None,
         save_best_to_file=False,
     ):
@@ -396,7 +414,16 @@ class TorchMLAlgorithm(Algorithm):
         self.max_epochs = max_epochs
 
         self.learning_rate = learning_rate
-        self.stopping_criterion = stopping_criterion
+        self.stopping_criterion = StoppingCriterion.create(
+            stopping_criterion,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+        )
+        # Set these values here as well, otherwise identifier will not work
+        self.stop_early = stop_early
+        self.max_iter_no_change = max_iter_no_change
+        self.min_improvement = min_improvement
 
         self.seed = seed
         if self.seed:

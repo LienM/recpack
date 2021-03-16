@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix
 
 from tqdm.auto import tqdm
 
@@ -14,12 +14,8 @@ import torch.optim as optim
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import bpr_loss
 from recpack.algorithms.samplers import bootstrap_sample_pairs
-from recpack.algorithms.stopping_criterion import (
-    StoppingCriterion,
-)
 from recpack.algorithms.util import (
     get_users,
-    get_batches,
 )
 
 logger = logging.getLogger("recpack")
@@ -98,10 +94,19 @@ class BPRMF(TorchMLAlgorithm):
         Defaults to 'recall'
     :type stopping_criterion: str, optional
     :param stop_early: If True, early stopping is enabled,
-        and after 5 iterations where improvement of loss function
-        is below 0.01 the optimisation is stopped, even if max_epochs is not reached.
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
         Defaults to False
     :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
+        Defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.01
+    :type min_improvement: float, optional
     :param save_best_to_file: If True, the best model is saved to disk after fit.
     :type save_best_to_file: bool, optional
     :param sample_size: How much samples to take during training using bootstrap sampling.
@@ -122,6 +127,8 @@ class BPRMF(TorchMLAlgorithm):
         learning_rate=0.01,
         stopping_criterion: str = "bpr",
         stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: int = 0.01,
         seed=None,
         save_best_to_file: bool = False,
         sample_size=None,
@@ -131,7 +138,10 @@ class BPRMF(TorchMLAlgorithm):
             batch_size,
             max_epochs,
             learning_rate,
-            StoppingCriterion.create(stopping_criterion, stop_early=stop_early),
+            stopping_criterion,
+            stop_early,
+            max_iter_no_change,
+            min_improvement,
             seed,
             save_best_to_file,
         )
@@ -140,7 +150,6 @@ class BPRMF(TorchMLAlgorithm):
         self.lambda_h = lambda_h
         self.lambda_w = lambda_w
 
-        self.stop_early = stop_early
         self.sample_size = sample_size
 
     def _init_model(self, X: csr_matrix):
