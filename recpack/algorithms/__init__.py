@@ -1,19 +1,21 @@
 """
 
-The algorithm module in recpack contains a collection of implemented algorithms,
-as well as utilities such as loss functions, and
-samplers.
+The algorithms module in recpack contains a wide array of state-of-the-art
+collaborative filtering algorithms.
+Also included are two baseline algorithms, as well as several reusable building blocks
+ such as commonly used loss functions and sampling methods.
 
 .. currentmodule:: recpack.algorithms
 
 .. contents:: Table of Contents
     :depth: 2
 
-Simple baselines
+Baselines
 ------------------
 
-These are simple baseline methods, that allow quick testing of pipelines,
-and provide a trivial baseline to compare other algorithms against.
+Recpack contains two non-personalized baseline algorithms.
+Use these baselines if you wish to quickly test a pipeline,
+or for comparison in experiments.
 
 .. autosummary::
     :toctree: generated/
@@ -21,11 +23,12 @@ and provide a trivial baseline to compare other algorithms against.
     Popularity
     Random
 
-Item Similarity algorithms
+Item Similarity Algorithms
 ----------------------------
 
-These algorithms all compute item to item similirities,
-and at prediction time the user is represented by the items
+Recpack contains four item similarity algorithms.
+These algorithms exploit relationships between items to make recommendations.
+At prediction time, the user is represented by the items
 they have interacted with.
 
 .. autosummary::
@@ -36,11 +39,13 @@ they have interacted with.
     NMFItemToItem
     SVDItemToItem
 
-User and Item Embedding algorithms
+Factorization Algorithms
 ------------------------------------
 
-This class of algorithms fits both item and user embeddings,
-prediction happens by calculating distance between user and item embeddings.
+Recpack contains four factorization algorithms.
+These factorization algorithms factorize the interaction matrix into
+a user embeddings (U) and item embeddings (V) matrix, that can be
+user to reconstruct the original interaction matrix R = UV^T.
 
 .. autosummary::
     :toctree: generated/
@@ -51,10 +56,11 @@ prediction happens by calculating distance between user and item embeddings.
     BPRMF
 
 
-Auto Encoder Algorithms
+Autoencoder Algorithms
 ------------------------
 
-This class of algorithms tries to learn a matrix A, such that X = AX.
+Recpack contains three autoencoder algorithms.
+Autoencoder algorithms aim to learn a function f, such that X = f(X).
 More information on autoencoders can be found on `Wikipedia <https://en.wikipedia.org/wiki/Autoencoder>`_
 
 .. autosummary::
@@ -67,11 +73,14 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
 
 .. _algorithm-base-classes:
 
-Abstract base classes
+Abstract Base Classes
 -----------------------
 
-To provide structure to the classes of algorithms we provide several base classes,
-which can be used to create new algorithms.
+Recpack algorithm implementations inherit from one of five base classes. 
+These base classes provide the basic building blocks to easily create new algorithm
+implementations that can be used within the recpack evaluation framework.
+
+For more information on how to create your own recpack algorithm, see :ref:`guides-algorithms`.
 
 .. autosummary::
     :toctree: generated/
@@ -99,8 +108,10 @@ The Stopping Criterion module provides this functionality.
 Loss Functions
 ----------------
 
-Iterative methods often use a loss function to improve a model,
-in this module we already provide several preimplemented loss functions.
+Recommendation models learned iteratively by means of gradient descent (or ascent)
+require a loss function.
+in this module you will find some of the most common loss functions that can be used
+with any TorchMLAlgorithm.
 
 To use these loss functions in a StoppingCriterion,
 we also provide metric wrappers around the raw loss functions.
@@ -117,8 +128,9 @@ we also provide metric wrappers around the raw loss functions.
 Samplers
 ----------
 
-In multiple algorithms sampling plays an important role,
-as such we provide some preimplemented sampling methods.
+In multiple recommendation algorithms (e.g. BPRMF) sampling methods play
+ an important role.
+As such we recpack contains a number of commonly used sampling methods.
 
 .. autosummary::
     :toctree: generated/
@@ -131,8 +143,9 @@ as such we provide some preimplemented sampling methods.
 Utility Functions
 -------------------
 
-The ``util`` module contains several functions used in multiple algorithms, 
-that can help simplify certain tasks in creating a new algorithm
+The ``util`` module contains a number of utility functions
+used across algorithms. 
+Use these to simplify certain tasks (such as batching) when creating a new algorithm.
 
 .. autosummary::
     :toctree: generated/
