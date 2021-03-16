@@ -227,10 +227,10 @@ class MultVAE(TorchMLAlgorithm):
 
         return loss
 
-    def _predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
         """Predict scores for matrix X, given the selected users.
 
-        If there are no selected users, you can assume X is a full matrix,
+        If there are no selected users, assumes X is a full matrix,
         and users can be retrieved as the nonzero indices in the X matrix.
 
         :param X: Matrix of user item interactions

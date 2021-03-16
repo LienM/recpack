@@ -352,10 +352,11 @@ class TorchMLAlgorithm(Algorithm):
 
     After training the best model will be loaded, and used for subsequent prediction.
 
-    The batch size is also used for prediction, to keep reduce load on GPU RAM.
+    The batch size is also used for prediction, to reduce load on GPU memory.
 
     Usually a child class will have to
-    implement the :meth:`_predict`, :meth:`_init_model` and :meth:`_train_epoch`.
+    implement the :meth:`_batch_predict`, :meth:`_init_model`
+    and :meth:`_train_epoch` methods.
 
     :param batch_size: How many samples to use in each update step.
         Higher batch sizes make each epoch more efficient,
@@ -440,7 +441,7 @@ class TorchMLAlgorithm(Algorithm):
         :type val_out: csr_matrix
         """
         # Evaluate batched
-        X_pred_cpu = self._batch_predict(val_in)
+        X_pred_cpu = self._predict(val_in)
         X_true = val_out
 
         better = self.stopping_criterion.update(X_true, X_pred_cpu)
@@ -458,10 +459,10 @@ class TorchMLAlgorithm(Algorithm):
         """
         raise NotImplementedError()
 
-    def _predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
-        """Predict scores for matrix X, given the selected users.
+    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+        """Predict scores for matrix X, given the selected users in this batch.
 
-        If there are no selected users, you can assume X is a full matrix,
+        If there are no selected users, assumes X is a full matrix,
         and users can be retrieved as the nonzero indices in the X matrix.
 
         :param X: Matrix of user item interactions
@@ -473,7 +474,7 @@ class TorchMLAlgorithm(Algorithm):
         """
         raise NotImplementedError("Please implement this function")
 
-    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+    def _predict(self, X: csr_matrix) -> csr_matrix:
         """Compute predictions per batch of users,
         to avoid going out of RAM on the GPU
 
@@ -486,7 +487,7 @@ class TorchMLAlgorithm(Algorithm):
         """
         results = lil_matrix(X.shape)
         for users in get_batches(get_users(X), batch_size=self.batch_size):
-            results[users] = self._predict(X[users], users)
+            results[users] = self._batch_predict(X[users], users)
 
         logger.debug(f"shape of response ({results.shape})")
 
@@ -609,32 +610,6 @@ class TorchMLAlgorithm(Algorithm):
         logger.info(f"fitting {self.name} complete - Took {end - start :.3}s")
 
         return self
-
-    def predict(self, X: Matrix) -> csr_matrix:
-        """Predict scores for nonzero users in the interaction matrix.
-
-        Predicts items in the interaction matrix in batch.
-        Prediction happens in batches, batch sizes in numbers of users
-        defined by the batch_size specified during model init.
-
-        Warnings are used if the model is unable to make any recommendations
-        for some users.
-
-        :param X: Matrix with interactions to predict from.
-        :type X: Matrix
-        :return: scores per user item pair
-        :rtype: csr_matrix
-        """
-        check_is_fitted(self)
-
-        X = self._transform_predict_input(X)
-
-        self.model_.eval()
-        X_pred = self._batch_predict(X)
-
-        self._check_prediction(X_pred, X)
-
-        return X_pred
 
     def _check_prediction(self, X_pred: csr_matrix, X: csr_matrix) -> None:
         """Checks that the prediction matches expectations.
