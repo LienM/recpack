@@ -152,7 +152,7 @@ Use these to simplify certain tasks (such as batching) when creating a new algor
     :toctree: generated/
 
     util.get_batches
-    util.sample
+    util.sample_rows
     util.naive_sparse2tensor
     util.naive_tensor2sparse
 """

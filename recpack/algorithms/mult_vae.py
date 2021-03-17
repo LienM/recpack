@@ -357,6 +357,3 @@ class MultiVAETorch(nn.Module):
             nn.init.normal_(
                 layer.bias, mean=0, std=0.001
             )  # TODO This should be truncated normal
-
-
-# TODO: Move out of this file / move the KLD loss and BCE loss out of the file

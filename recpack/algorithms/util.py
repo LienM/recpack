@@ -68,7 +68,7 @@ def get_batches(users: List[int], batch_size=1000) -> Iterator[List[int]]:
         yield users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
 
 
-def sample(*args: csr_matrix, sample_size: int = 1000):
+def sample_rows(*args: csr_matrix, sample_size: int = 1000):
     """Samples rows from the matrices
 
     rows are sampled from the nonzero rows in the first csr_matrix argument.
