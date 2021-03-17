@@ -162,6 +162,8 @@ from recpack.algorithms.baseline import Popularity, Random
 from recpack.algorithms.factorization import (
     NMF,
     SVD,
+)
+from recpack.algorithms.factorization_item_similarity import (
     NMFItemToItem,
     SVDItemToItem,
 )
