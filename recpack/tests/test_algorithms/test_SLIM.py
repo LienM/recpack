@@ -58,7 +58,6 @@ def test_slim(data):
     _in = csr_matrix(([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
     result = algo.predict(_in)
 
-    print(result.toarray())
     # Item 0 is closer to item 2
     assert result[2, 0] > result[2, 1]
     # Zero diagonal
@@ -74,7 +73,6 @@ def test_slim_negatives(data_negatives):
     _in = csr_matrix(([1, 1, 1, 1], ([0, 1, 2, 3], [0, 1, 2, 3])), shape=(4, 4))
     result = algo.predict(_in)
 
-    print(result.toarray())
     # Item 0 is closer to item 2
     assert result[2, 0] == 0
 
@@ -84,6 +82,5 @@ def test_slim_negatives(data_negatives):
     # Make sure the predictions "make sense"
     result2 = algo2.predict(_in)
 
-    print(result2.toarray())
     # Item 0 is closer to item 2
     assert result2[2, 0] < 0

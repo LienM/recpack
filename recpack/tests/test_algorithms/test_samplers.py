@@ -43,16 +43,6 @@ def test_warp_sampling_exact():
                 overlap = (
                     neg_interactions[:, j].numpy() == neg_interactions[:, i].numpy()
                 )
-                print(
-                    np.stack(
-                        (
-                            neg_interactions[:, j].numpy(),
-                            neg_interactions[:, i].numpy(),
-                            overlap,
-                        ),
-                        axis=1,
-                    )
-                )
 
                 np.testing.assert_array_equal(overlap, False)
 

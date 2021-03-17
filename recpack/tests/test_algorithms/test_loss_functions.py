@@ -63,10 +63,6 @@ def test_covariance_loss():
     W = nn.Embedding.from_pretrained(W_as_tensor)
     H = nn.Embedding.from_pretrained(H_as_tensor)
 
-    print(next(W.parameters()))
-
-    print(W_as_tensor.mean(dim=0))
-
     cov_loss = covariance_loss(W, H)
 
     # Different computation of loss:
@@ -120,7 +116,6 @@ def test_bpr_loss_wrapper(X_true, X_pred):
     pos_samples = X_pred[x, i]
     neg_samples = X_pred[x, j]
 
-    # print(pos_samples, neg_samples)
     expected_loss = bpr_loss(
         torch.FloatTensor(pos_samples), torch.FloatTensor(neg_samples)
     )

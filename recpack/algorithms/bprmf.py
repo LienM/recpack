@@ -218,7 +218,6 @@ class BPRMF(TorchMLAlgorithm):
             mnar_sim = self.model_.forward(users, mnar_items).diag()
 
             # Checks to make sure the shapes are correct.
-            print(mnar_sim.shape, target_sim.shape)
             assert mnar_sim.shape == target_sim.shape
             assert target_sim.shape[0] == users.shape[0]
 
