@@ -2,6 +2,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from tqdm import tqdm
 
@@ -42,6 +43,35 @@ def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
 
     # Per element covariance, excluding the variance of individual random variables.
     return cov.fill_diagonal_(0).sum() / (X.shape[0] * X.shape[1])
+
+
+def vae_loss(reconstructed_X, mu, logvar, X, anneal=1.0):
+    """VAE loss function for use with Auto Encoders.
+
+    Loss defined in 'Variational Autoencoders for Collaborative Filtering',
+    D. Liang et al. @ KDD2018.
+    Uses a combination of Binary Cross Entropy loss and
+    Kullback–Leibler divergence (relative entropy).
+
+    :param reconstructed_X: The reconstructed matrix X
+    :type reconstructed_X: torch.Tensor
+    :param mu: The mean tensor
+    :type mu: torch.Tensor
+    :param logvar: The variance Tensor.
+    :type logvar: torch.Tensor
+    :param X: The matrix to reconstruct
+    :type X: torch.Tensor
+    :param anneal: multiplicative factor for the KLD part of the loss function,
+        defaults to 1.0
+    :type anneal: float, optional
+    :return: The loss as a 0D tensor
+    :rtype: torch.Tensor
+    """
+
+    BCE = -torch.mean(torch.sum(F.log_softmax(reconstructed_X, 1) * X, -1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+
+    return BCE + anneal * KLD
 
 
 def warp_loss(

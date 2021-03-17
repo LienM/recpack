@@ -9,9 +9,9 @@ from typing import Callable
 from unittest.mock import MagicMock
 
 from recpack.algorithms import MultVAE
+from recpack.algorithms.loss_functions import vae_loss
 from recpack.algorithms.mult_vae import (
     MultiVAETorch,
-    vae_loss_function,
 )
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
@@ -143,7 +143,7 @@ def test_multi_vae_forward(input_size, inputs, targets):
 
     _training_step(
         mult_vae,
-        vae_loss_function,
+        vae_loss,
         torch.optim.Adam(mult_vae.parameters()),
         inputs,
         targets,

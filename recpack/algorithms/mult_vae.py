@@ -10,9 +10,9 @@ from scipy.sparse import csr_matrix
 import numpy as np
 
 from recpack.algorithms.base import TorchMLAlgorithm
+from recpack.algorithms.loss_functions import vae_loss
 from recpack.algorithms.util import naive_sparse2tensor
 from recpack.splitters.splitter_base import batch
-
 
 logger = logging.getLogger("recpack")
 
@@ -143,7 +143,7 @@ class MultVAE(TorchMLAlgorithm):
         self.dropout = dropout
 
         self.optimizer = None
-        self.loss_function = vae_loss_function
+        self.loss_function = vae_loss
 
     @property
     def _beta(self):
@@ -360,8 +360,3 @@ class MultiVAETorch(nn.Module):
 
 
 # TODO: Move out of this file / move the KLD loss and BCE loss out of the file
-def vae_loss_function(recon_x, mu, logvar, x, anneal=1.0):
-    BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
-
-    return BCE + anneal * KLD

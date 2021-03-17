@@ -124,6 +124,7 @@ we also provide metric wrappers around the raw loss functions.
     loss_functions.warp_loss_wrapper
     loss_functions.bpr_loss
     loss_functions.bpr_loss_wrapper
+    loss_functions.vae_loss
 
 Samplers
 ----------
