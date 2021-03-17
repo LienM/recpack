@@ -71,7 +71,7 @@ implement the ``__init__`` function.::
         sampled by their softmax probability, scores are assigned by receding rank
         (such that item sampled first gets highest score)
         
-        :param K: How much of the popular items to consider
+        :param K: How many of the popular items to consider
         :param tau: temperature in the softmax computation, 
             if 1 -> always picks the best action, 0 uniform random.
         """
