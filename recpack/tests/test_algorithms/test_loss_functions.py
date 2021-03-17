@@ -7,11 +7,11 @@ import torch
 import torch.nn as nn
 
 from recpack.algorithms.loss_functions import (
-    warp_loss_metric,
+    warp_loss_wrapper,
     warp_loss,
     covariance_loss,
     bpr_loss,
-    bpr_loss_metric,
+    bpr_loss_wrapper,
 )
 
 
@@ -31,7 +31,7 @@ def X_pred():
     return csr_matrix((scores, (users, items)), shape=(2, 3))
 
 
-def test_warp_loss_metric():
+def test_warp_loss_wrapper():
 
     X_true = csr_matrix([[0, 0, 1], [0, 1, 0], [0, 1, 0]])
 
@@ -40,7 +40,7 @@ def test_warp_loss_metric():
     margin = 0.1
     U = 2
 
-    loss = warp_loss_metric(
+    loss = warp_loss_wrapper(
         X_true, X_pred, batch_size=1, U=U, margin=margin, exact=True
     )
 
@@ -109,7 +109,7 @@ def test_bpr_loss():
     np.testing.assert_almost_equal(loss, expected_loss)
 
 
-def test_bpr_loss_metric(X_true, X_pred):
+def test_bpr_loss_wrapper(X_true, X_pred):
     # Tuples are user, pos_item, neg_item
     xij_samples = np.array([[0, 1, 0], [0, 2, 0], [1, 0, 2], [1, 1, 2]])
 
@@ -127,6 +127,6 @@ def test_bpr_loss_metric(X_true, X_pred):
 
     # Using more samples than positives this will make the estimate more stable,
     # And assert below should match.
-    loss = bpr_loss_metric(X_true, X_pred, batch_size=1, sample_size=1000, exact=True)
+    loss = bpr_loss_wrapper(X_true, X_pred, batch_size=1, sample_size=1000, exact=True)
 
     np.testing.assert_almost_equal(loss, expected_loss, decimal=2)

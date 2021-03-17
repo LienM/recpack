@@ -128,7 +128,7 @@ def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor):
     return bpr_loss
 
 
-def bpr_loss_metric(
+def bpr_loss_wrapper(
     X_true: csr_matrix,
     X_pred: csr_matrix,
     batch_size=1000,
@@ -187,7 +187,7 @@ def bpr_loss_metric(
     return np.mean(losses)
 
 
-def warp_loss_metric(
+def warp_loss_wrapper(
     X_true: csr_matrix,
     X_pred: csr_matrix,
     batch_size: int = 1000,

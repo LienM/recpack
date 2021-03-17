@@ -121,9 +121,9 @@ we also provide metric wrappers around the raw loss functions.
 
     loss_functions.covariance_loss
     loss_functions.warp_loss
-    loss_functions.warp_loss_metric
+    loss_functions.warp_loss_wrapper
     loss_functions.bpr_loss
-    loss_functions.bpr_loss_metric
+    loss_functions.bpr_loss_wrapper
 
 Samplers
 ----------

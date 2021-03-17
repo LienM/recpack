@@ -4,7 +4,7 @@ from typing import Callable
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from recpack.algorithms.loss_functions import bpr_loss_metric, warp_loss_metric
+from recpack.algorithms.loss_functions import bpr_loss_wrapper, warp_loss_wrapper
 from recpack.metrics.dcg import ndcg_k
 from recpack.metrics.recall import recall_k
 
@@ -155,13 +155,13 @@ class StoppingCriterion:
 
     FUNCTIONS = {
         "bpr": {
-            "loss_function": bpr_loss_metric,
+            "loss_function": bpr_loss_wrapper,
             "minimize": True,
             "batch_size": 1000,
         },
         "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
         "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
-        "warp": {"loss_function": warp_loss_metric, "minimize": True},
+        "warp": {"loss_function": warp_loss_wrapper, "minimize": True},
     }
     """Available preimplemented loss function options.
 
