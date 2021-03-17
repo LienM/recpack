@@ -43,7 +43,7 @@ class BPRMF(TorchMLAlgorithm):
         # This validation data should be split into an input and output matrix.
         # In this example the data has been split in a strong generalization fashion
         X = csr_matrix(np.array(
-            [[1, 0, 1], [1, 1, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
+            [[1, 0, 1], [1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
         )
         x_val_in = csr_matrix(np.array(
             [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
@@ -52,7 +52,7 @@ class BPRMF(TorchMLAlgorithm):
             [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
         )
         x_test_in = csr_matrix(np.array(
-            [[1, 0, 0], [0, 1, 0], [1, 0, 0], [1, 0, 0], [0, 0, 1]])
+            [[0, 0, 0], [0, 0, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
         )
 
 
