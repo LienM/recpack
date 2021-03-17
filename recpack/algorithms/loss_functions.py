@@ -9,6 +9,7 @@ from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pair
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
+    # TODO: Refactor so it's not CML specific
     """
     Implementation of covariance loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
@@ -107,13 +108,13 @@ def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor):
 
     Input are the scores for positive samples, and scores for negative samples.
 
-    :param positive_sim: tensor with scores of positive samples
+    :param positive_sim: Tensor with scores of positive samples
         (dimension = num_samples, 1)
     :type positive_sim: torch.Tensor
-    :param negative_sim: tensor with scores of negative samples
+    :param negative_sim: Tensor with scores of negative samples
         (dimension = num_samples, 1)
     :type negative_sim: torch.Tensor
-    :return: the loss value of the bpr criterion
+    :return: The loss value of the bpr criterion
     :rtype: torch.Tensor
     """
     distance = positive_sim - negative_sim

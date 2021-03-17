@@ -69,9 +69,9 @@ class EASE(ItemSimilarityMatrixAlgorithm):
         predictions.toarray()
 
 
-    :param l2: regularization parameter to avoid overfitting, defaults to 1e3
+    :param l2: Regularization parameter to avoid overfitting, defaults to 1e3
     :type l2: float, optional
-    :param alpha: parameter to punish popular items.
+    :param alpha: Parameter to punish popular items.
         Each similarity score between items i and j is divided by count(j)**alpha.
         Defaults to 0
     :type alpha: int, optional

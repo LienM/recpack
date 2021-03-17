@@ -70,21 +70,21 @@ class BPRMF(TorchMLAlgorithm):
     :param num_components: The size of the latent vectors for both users and items.
                             defaults to 100
     :type num_components: int, optional
-    :param lambda_h: the regularization parameter for the item embedding,
+    :param lambda_h: The regularization parameter for the item embedding,
         should be a value between 0 and 1.
         Defaults to 0.0
     :type lambda_h: float, optional
-    :param lambda_w: the regularization parameter for the user embedding,
+    :param lambda_w: The regularization parameter for the user embedding,
         defaults to 0.0
     :type lambda_w: float, optional
-    :param batch_size: size of the batches to use during gradient descent. Defaults to 1000.
+    :param batch_size: Size of the batches to use during gradient descent. Defaults to 1000.
     :type batch_size: int, optional
     :param max_epochs: The max amount of epochs to train the model, defaults to 20
     :type max_epochs: int, optional
     :param learning_rate: The learning rate of the optimization procedure,
                             defaults to 0.01
     :type learning_rate: float, optional
-    :param seed: seed to fix random numbers, to make results reproducible,
+    :param seed: Seed to fix random numbers, to make results reproducible,
                     defaults to None
     :type seed: int, optional,
     :param stopping_criterion: Which criterion to use optimise the parameters,
@@ -109,7 +109,7 @@ class BPRMF(TorchMLAlgorithm):
     :type min_improvement: float, optional
     :param save_best_to_file: If True, the best model is saved to disk after fit.
     :type save_best_to_file: bool, optional
-    :param sample_size: How much samples to take during training using bootstrap sampling.
+    :param sample_size: How many samples to take during training using bootstrap sampling.
         If None a sample is taken for each interaction,
         there is no guarantee that all interactions will be used though,
         since sampling happens with replacement.

@@ -46,7 +46,7 @@ class NMF(FactorizationAlgorithm):
     :param random_state: The seed for the random state to allow for comparison,
                             defaults to 42
     :type random_state: int, optional
-    :param alpha: regularization parameter, defines how much regularization is applied.
+    :param alpha: Regularization parameter, defines how much regularization is applied.
     :type alpha: float, optional
     :param l1_ratio: Defines how much L1 normalisation is used,
         compared to L2 normalisation.

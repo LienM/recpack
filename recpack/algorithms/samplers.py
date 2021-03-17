@@ -110,7 +110,7 @@ def warp_sample_pairs(
     :type U: int, optional
     :param batch_size: The number of samples returned per batch, defaults to 100
     :type batch_size: int, optional
-    :param exact: if False (default) negatives are checked agains the corresponding
+    :param exact: If False (default) negatives are checked agains the corresponding
         positive sample only, allowing for (rare) collisions.
         If collisions should be avoided at all costs, use exact = True,
         but suffer decreased performance.
@@ -134,7 +134,7 @@ def sample_positives_and_negatives(
     """Sample U negatives for each sampled user-item-pair (positive).
 
     When sampling without replacement,
-    samplesize cannot exceed the number of positives in X.
+    ``sample_size`` cannot exceed the number of positives in X.
 
     :param X: Interaction matrix
     :type X: csr_matrix
@@ -148,7 +148,7 @@ def sample_positives_and_negatives(
     :type sample_size: int, optional
     :param replace: Sample positives with or without replacement. Defaults to True
     :type replace: bool, optional
-    :param exact: if False (default) negatives are checked agains the corresponding
+    :param exact: If False (default) negatives are checked agains the corresponding
         positive sample only, allowing for (rare) collisions.
         If collisions should be avoided at all costs, use exact = True,
         but suffer decreased performance.

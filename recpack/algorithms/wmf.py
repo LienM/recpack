@@ -52,10 +52,11 @@ class WeightedMatrixFactorization(Algorithm):
         Options are ["minimal", "log-scaling"].
         Defaults to "minimal"
     :type conficence_scheme: string, optional
-    :param alpha: scaling parameter for generating confidences from ratings.
+    :param alpha: Scaling parameter for generating confidences from ratings.
         Defaults to 40.
     :type alpha: int, optional
-    :param epsilon: Small value used to compute a confidence from a rating.
+    :param epsilon: Small value to avoid division by zero,
+        used to compute a confidence from a rating.
         Only used in case cs is set to 'log-scaling'
         Defaults to 1e-8
     :type epsilon: float, optional
