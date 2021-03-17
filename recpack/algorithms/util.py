@@ -6,17 +6,6 @@ from scipy.sparse import csr_matrix, diags
 import torch
 
 
-def normalize(X: Union[csr_matrix, np.ndarray]):
-    """Normalize the scores in X row wise.
-
-    :param X: The matrix to normalize
-    :type X: Union[csr_matrix, np.ndarray]
-    :return: csr matrix with normalised scores
-    :rtype: csr_matrix
-    """
-    return csr_matrix(diags(1 / np.sum(X, axis=1).A1) @ X)
-
-
 def swish(x):
     return x.mul(torch.sigmoid(x))
 
@@ -68,11 +57,16 @@ def get_batches(users: List[int], batch_size=1000) -> Iterator[List[int]]:
         yield users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
 
 
-def sample_rows(*args: csr_matrix, sample_size: int = 1000):
+def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     """Samples rows from the matrices
 
-    rows are sampled from the nonzero rows in the first csr_matrix argument.
+    Rows are sampled from the nonzero rows in the first csr_matrix argument.
     The return value will contain a matrix for each of the matrix arguments, with only the sampled rows nonzero.
+
+    :param sample_size: Number of rows to sample, defaults to 1000
+    :type sample_size: int, optional
+    :return: List of all matrices passed as args
+    :rtype: List[csr_matrix]
     """
     nonzero_users = list(set(args[0].nonzero()[0]))
     users = np.random.choice(
