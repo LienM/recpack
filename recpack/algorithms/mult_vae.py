@@ -12,7 +12,7 @@ import numpy as np
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import vae_loss
 from recpack.algorithms.util import naive_sparse2tensor
-from recpack.splitters.splitter_base import batch
+from recpack.splitters.splitter_base import yield_batches
 
 logger = logging.getLogger("recpack")
 
@@ -193,7 +193,7 @@ class MultVAE(TorchMLAlgorithm):
 
         np.random.shuffle(users)
 
-        for batch_idx, user_batch in enumerate(batch(users, self.batch_size)):
+        for batch_idx, user_batch in enumerate(yield_batches(users, self.batch_size)):
             X = naive_sparse2tensor(train_data[user_batch, :]).to(self.device)
 
             # Clear gradients

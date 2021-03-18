@@ -5,11 +5,11 @@ import recpack.splitters.scenarios as scenarios
 
 
 @pytest.mark.parametrize(
-    "perc_users_train, perc_interactions_in", [(0.7, 0.5), (0, 0.5)]
+    "frac_users_train, frac_interactions_in", [(0.7, 0.5), (0, 0.5)]
 )
-def test_strong_generalization_split(data_m, perc_users_train, perc_interactions_in):
+def test_strong_generalization_split(data_m, frac_users_train, frac_interactions_in):
 
-    scenario = scenarios.StrongGeneralization(perc_users_train, perc_interactions_in)
+    scenario = scenarios.StrongGeneralization(frac_users_train, frac_interactions_in)
     scenario.split(data_m)
 
     tr = scenario.training_data
@@ -31,7 +31,7 @@ def test_strong_generalization_split(data_m, perc_users_train, perc_interactions
     diff_allowed = 0.1
 
     assert (
-        abs(len(tr_users) / (len(tr_users) + len(te_users)) - perc_users_train)
+        abs(len(tr_users) / (len(tr_users) + len(te_users)) - frac_users_train)
         < diff_allowed
     )
 
@@ -41,7 +41,7 @@ def test_strong_generalization_split(data_m, perc_users_train, perc_interactions
         abs(
             len(te_in_interactions)
             / (len(te_in_interactions) + len(te_out_interactions))
-            - perc_interactions_in
+            - frac_interactions_in
         )
         < diff_allowed
     )
@@ -50,10 +50,10 @@ def test_strong_generalization_split(data_m, perc_users_train, perc_interactions
 
 
 @pytest.mark.parametrize(
-    "perc_users_train, perc_interactions_in", [(0.7, 0.5), (0.3, 0.5)]
+    "frac_users_train, frac_interactions_in", [(0.7, 0.5), (0.3, 0.5)]
 )
 def test_strong_generalization_split_w_validation(
-    data_m, perc_users_train, perc_interactions_in
+    data_m, frac_users_train, frac_interactions_in
 ):
 
     # Filter a bit in the data_m, so we only have users with at least 2
@@ -65,7 +65,7 @@ def test_strong_generalization_split_w_validation(
     data_m.users_in(list(users), inplace=True)
 
     scenario = scenarios.StrongGeneralization(
-        perc_users_train, perc_interactions_in, validation=True
+        frac_users_train, frac_interactions_in, validation=True
     )
     scenario.split(data_m)
 
@@ -96,7 +96,7 @@ def test_strong_generalization_split_w_validation(
     tr_and_val_to_te_perc = (len(tr_users) + len(val_in_users)) / (
         len(tr_users) + len(val_in_users) + len(te_in_users)
     )
-    assert abs(tr_and_val_to_te_perc - perc_users_train) < diff_allowed
+    assert abs(tr_and_val_to_te_perc - frac_users_train) < diff_allowed
 
     assert val_data_in.num_active_users > 0
 

@@ -23,7 +23,9 @@ def data_m_w_timestamps():
     max_t = 100
 
     input_dict = {
-        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.USER_IX: [
+            np.random.randint(0, num_users) for _ in range(0, num_interactions)
+        ],
         InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
@@ -33,9 +35,14 @@ def data_m_w_timestamps():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
+    df.drop_duplicates(
+        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
+    )
     data = InteractionMatrix(
-        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
     return data
 
@@ -52,7 +59,9 @@ def data_m_w_dups():
     max_t = 100
 
     input_dict = {
-        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.USER_IX: [
+            np.random.randint(0, num_users) for _ in range(0, num_interactions)
+        ],
         InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
@@ -62,9 +71,19 @@ def data_m_w_dups():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX, InteractionMatrix.TIMESTAMP_IX], inplace=True)
+    df.drop_duplicates(
+        [
+            InteractionMatrix.USER_IX,
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.TIMESTAMP_IX,
+        ],
+        inplace=True,
+    )
     data = InteractionMatrix(
-        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
     return data
 
@@ -117,7 +136,12 @@ def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
 
 @pytest.mark.parametrize(
     "t, n_tr_expected, n_te_expected",
-    [(2, 0, 3), (4, 1, 2),(5, 2, 1),(8, 3, 0),],
+    [
+        (2, 0, 3),
+        (4, 1, 2),
+        (5, 2, 1),
+        (8, 3, 0),
+    ],
 )
 def test_user_interaction_time_splitter(
     data_m_sessions, t, n_tr_expected, n_te_expected
@@ -127,9 +151,7 @@ def test_user_interaction_time_splitter(
     tr, te = splitter.split(data_m_sessions)
 
     # No users are ever discarded
-    assert (
-        tr.num_active_users + te.num_active_users == data_m_sessions.num_active_users
-    )
+    assert tr.num_active_users + te.num_active_users == data_m_sessions.num_active_users
 
     # Users can have interactions in only one of the sets, never both
     assert not tr.active_users.intersection(te.active_users)
@@ -299,7 +321,7 @@ def test_perc_interaction_splitter(data_m_w_timestamps, tr_perc):
 
     num_te_interactions = num_interactions - num_tr_interactions
 
-    splitter = splitter_base.PercentageInteractionSplitter(tr_perc, seed=42)
+    splitter = splitter_base.FractionInteractionSplitter(tr_perc, seed=42)
     tr, te = splitter.split(data_m_w_timestamps)
 
     assert len(tr.values.nonzero()[0]) == num_tr_interactions
@@ -311,7 +333,7 @@ def test_perc_interaction_splitter(data_m_w_timestamps, tr_perc):
 
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
 def test_fold_iterator_correctness(data_m_w_timestamps, batch_size):
-    splitter = splitter_base.PercentageInteractionSplitter(0.7, seed=42)
+    splitter = splitter_base.FractionInteractionSplitter(0.7, seed=42)
 
     data_m_in, data_m_out = splitter.split(data_m_w_timestamps)
 

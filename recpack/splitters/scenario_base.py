@@ -7,49 +7,64 @@ from recpack.data.matrix import InteractionMatrix
 
 
 class Scenario(ABC):
+    """Base class for defining an evaluation "Scenario".
+
+    A scenario is a set of steps that splits data into training,
+    validation and test sets and creates the required data
+    folds for evaluation where a fold of the user's history is
+    used to predict another fold.
+    """
+
     def __init__(self, validation=False):
-        """
-        Base class for defining an evaluation "Scenario",
-        i.e. a set of steps that splits data into training,
-        validation and test sets and creates the required data
-        folds for evaluation where a fold of the user's history is
-        used to predict another fold.
-        """
         self.validation = validation
         if validation:
             self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8)
 
     @abstractmethod
-    def split(self, data_m: InteractionMatrix):
-        """
-        Method to be implemented in all classes that inherit
-        from Scenario. Used to create the required data objects.
-        Returns them as follows:
-        train, test_in, test_out
-        or when separate labels for training are provided by the scenario:
-        train_X, train_y, test_in, test_out
+    def _split(self, data_m: InteractionMatrix) -> None:
+        """Abstract method to be implemented by the scenarios.
 
-        :param data_m: Interaction matrix
+        Splits the data, and assigns data to ``self.train_X``,
+        ``self.test_data_in``, ``self.test_data_out``, ``self.validation_data_in``
+        and ``self.validation_data_out``
+
+        :param data_m: Interaction matrix to be split.
+        :type data_m: InteractionMatrix
+        """
+
+    def split(self, data_m: InteractionMatrix) -> None:
+        """Split the provided interaction matrix according to the scenario.
+
+        After splitting properties ``training_data``,
+        ``validation_data`` and ``test_data`` can be used to retrieve the splitted data.
+
+        :param data_m: Interaction matrix that should be split.
         :type data: InteractionMatrix
         """
-        pass
+        self._split(data_m)
+
+        self._check_split()
 
     @property
-    def training_data(
-        self,
-    ) -> Union[Tuple[InteractionMatrix, InteractionMatrix], InteractionMatrix]:
-        return (
-            (self.train_X, self.train_y) if hasattr(self, "train_y") else self.train_X
-        )
+    def training_data(self) -> InteractionMatrix:
+        """The training data interactions.
+
+        :return: Interaction Matrix of training interactions.
+        :rtype: InteractionMatrix
+        """
+        return self.train_X
 
     @property
     def validation_data(
         self,
     ) -> Union[Tuple[InteractionMatrix, InteractionMatrix], None]:
-        """
-        Returns validation data.
+        """The validation input, expected output data tuple.
 
-        :return: Validation data matrices as InteractionMatrix in, InteractionMatrix out.
+        Data is processed such that both matrices contain the same nonzero users.
+        Users that occured in one of the matrices, and not in the other are removed.
+
+        :return: Validation data matrices as
+            InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         if not hasattr(self, "_validation_data_in"):
@@ -67,8 +82,10 @@ class Scenario(ABC):
 
     @property
     def test_data(self) -> Tuple[InteractionMatrix, InteractionMatrix]:
-        """
-        Returns test data.
+        """The test input, test expected output data tuple.
+
+        Data is processed such that both matrices contain the same nonzero users.
+        Users that occured in one of the matrices, and not in the other are removed.
 
         :return: Test data matrices as InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
@@ -83,8 +100,14 @@ class Scenario(ABC):
             self.test_data_out.users_in(matching),
         )
 
-    def validate(self):
-        # TODO Test presency of train_y
+    def _check_split(self):
+        """Checks that the splits have been done properly.
+
+        Makes sure all expected attributes are set.
+
+        18/3: Renamed from validate to _check_split,
+        validate conflicted with validation data, and thus risked confusing users.
+        """
         assert hasattr(self, "train_X") and self.train_X is not None
         if self.validation:
             assert (
