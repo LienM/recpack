@@ -379,14 +379,44 @@ This concludes the modification of the TruncatedSVD algorithm for use in recpack
 Gradient Descent Algorithm
 ----------------------------
 
-As example for how to use gradient descent based algorithms using torch with recpack, 
-we will create a kind of silly iterative matrix factorization algorithm.
-It's by no means sophisticated or guaranteed to even converge, 
-but will serve well for our illustration purposes.
+Description
+^^^^^^^^^^^^
+
+In this example we implement a very silly, iterative matrix factorization algorithm in PyTorch. 
+It is by no means sophisticated or even guaranteed to converge, 
+but serves well for our illustration purposes.
+
+Implementation
+^^^^^^^^^^^^^^^
+Because we are now dealing with an algorithm optimised
+by means of gradient descent, it makes sense to use :class:`recpack.algorithms.base.TorchMLAlgorithm`
+as base class in this example.
+This base class comes with quite a bit more plumbing that the others:
+
+- ``_predict`` generates recommendations by calling ``_batch_predict`` for batches of users (to keep the memory footprint low).
+- ``_check_fit_complete`` performs an additional check of the dimensions of the embeddings.
+- ``_check_prediction`` makes sure predictions were made for all nonzero users.
+- ``fit`` performs a fixed number (``max_epochs``) of training epochs, each followed by an evaluation step on the full dataset. 
+- ``save`` saves the current PyTorch model to disk.
+- ``load`` loads a PyTorch model from file.
+- ``filename`` generates a unique filename for the current best model.
+- ``_transform_predict_input`` transforms the input matrix to a ``csr_matrix`` by default.
+- ``_transform_fit_input`` transforms the input matrix to a ``csr_matrix`` by default.
+-  ``_evaluate`` performs one evaluation step, which consists of making predictions .
+    for the validation data and subsequently evaluating the stopping criterion.
+-  ``_load_best`` loads the best model encountered during training as the final model used to make predictions. 
+-  ``_save_best`` saves the best model encountered during training to a temporary file.
+
+Which leaves ``__init``, ``_init_model``, ``_train_epoch`` and ``_batch_predict``
+for you to implement, as well as the actual PyTorch nn.Module that is your PyTorch model.
+
+MFModule
+""""""""
+
 
 The model tries to learn the weights of a 2 matrix factorization of the initial matrix X, 
 ``X = U x V``.
-The first step is to create a torch model that encodes this factorization. 
+The first step is to create a PyTorch model that encodes this factorization. 
 This module will be the base model we will fit. 
 The forward function will be used to generate recommendations. ::
 
