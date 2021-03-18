@@ -8,8 +8,8 @@ def test_nmf(pageviews):
     a = NMF(2)
     a.fit(pageviews)
 
-    assert a.user_features_ is not None
-    assert a.item_features_ is not None
+    assert a.user_embedding_ is not None
+    assert a.item_embedding_ is not None
 
     prediction = a.predict(pageviews)
     assert prediction.shape == pageviews.shape
@@ -34,8 +34,8 @@ def test_svd(pageviews):
     a = SVD(2)
     a.fit(pageviews)
 
-    assert a.user_features_ is not None
-    assert a.item_features_ is not None
+    assert a.user_embedding_ is not None
+    assert a.item_embedding_ is not None
 
     prediction = a.predict(pageviews)
     assert prediction.shape == pageviews.shape

@@ -55,7 +55,7 @@ class NMFItemToItem(ItemSimilarityMatrixAlgorithm):
         self.model_.fit(X)
 
         self.similarity_matrix_ = (
-            self.model_.item_features_.T @ self.model_.item_features_
+            self.model_.item_embedding_.T @ self.model_.item_embedding_
         )
         # Remove self similarity.
         np.fill_diagonal(self.similarity_matrix_, 0)
@@ -108,7 +108,7 @@ class SVDItemToItem(ItemSimilarityMatrixAlgorithm):
         self.model_.fit(X)
 
         self.similarity_matrix_ = (
-            self.model_.item_features_.T @ self.model_.item_features_
+            self.model_.item_embedding_.T @ self.model_.item_embedding_
         )
         # Remove self similarity.
         np.fill_diagonal(self.similarity_matrix_, 0)

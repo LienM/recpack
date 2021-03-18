@@ -232,8 +232,8 @@ class BPRMF(TorchMLAlgorithm):
 
         loss = bpr_loss(positive_sim, negative_sim)
         loss += (
-            self.lambda_h * self.model_.item_embedding.weight.norm()
-            + self.lambda_w * self.model_.user_embedding.weight.norm()
+            self.lambda_h * self.model_.item_embedding_.weight.norm()
+            + self.lambda_w * self.model_.user_embedding_.weight.norm()
         )
 
         return loss
@@ -257,13 +257,13 @@ class MFModule(nn.Module):
         self.num_users = num_users
         self.num_items = num_items
 
-        self.user_embedding = nn.Embedding(num_users, num_components)  # User embedding
-        self.item_embedding = nn.Embedding(num_items, num_components)  # Item embedding
+        self.user_embedding_ = nn.Embedding(num_users, num_components)  # User embedding
+        self.item_embedding_ = nn.Embedding(num_items, num_components)  # Item embedding
 
         self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
-        nn.init.normal_(self.user_embedding.weight, std=self.std)
-        nn.init.normal_(self.item_embedding.weight, std=self.std)
+        nn.init.normal_(self.user_embedding_.weight, std=self.std)
+        nn.init.normal_(self.item_embedding_.weight, std=self.std)
 
     def forward(
         self, user_tensor: torch.Tensor, item_tensor: torch.Tensor
@@ -277,7 +277,7 @@ class MFModule(nn.Module):
         :param item_tensor: [description]
         :type item_tensor: [type]
         """
-        w_u = self.user_embedding(user_tensor)
-        h_i = self.item_embedding(item_tensor)
+        w_u = self.user_embedding_(user_tensor)
+        h_i = self.item_embedding_(item_tensor)
 
         return w_u.matmul(h_i.T)

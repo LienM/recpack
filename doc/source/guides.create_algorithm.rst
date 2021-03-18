@@ -311,11 +311,11 @@ and ``Sigma x V`` is still a ``(num_components x |items|)`` matrix. ::
         # Factorization computes U x Sigma x V
         # U are the user features,
         # Sigma x V are the item features.
-        self.user_features_ = model.fit_transform(X)
+        self.user_embedding_ = model.fit_transform(X)
 
         V = model.components_
         sigma = diags(model.singular_values_)
-        self.item_features_ = sigma @ V
+        self.item_embedding_ = sigma @ V
 
         return self
 

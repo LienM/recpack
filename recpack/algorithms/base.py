@@ -294,16 +294,16 @@ class FactorizationAlgorithm(Algorithm):
 
     During fitting two matrices are constructed.
 
-    - ``user_features_`` contains the users embedded in a lower dimensional space,
+    - ``user_embedding_`` contains the users embedded in a lower dimensional space,
       shape = ``|users| x num_components``
-    - ``item_features_`` contains the items embedded in the same dimensions
+    - ``item_embedding_`` contains the items embedded in the same dimensions
       shape = ``num_components x |items|``
 
     Prediction happens by multiplying a user's features with the item features.
 
     Usually a child class will have to
     implement just the :meth:`_fit` method,
-    to construct the `self.user_features_` and `self.item_features_` attributes.
+    to construct the `self.user_embedding_` and `self.item_embedding_` attributes.
 
     TODO -> In the Neural Network we call things embeddings,
     probably should call the features here embeddings?
@@ -328,8 +328,8 @@ class FactorizationAlgorithm(Algorithm):
         check_is_fitted(self)
 
         # Post conditions
-        assert self.user_features_.shape[1] == self.num_components
-        assert self.item_features_.shape[0] == self.num_components
+        assert self.user_embedding_.shape[1] == self.num_components
+        assert self.item_embedding_.shape[0] == self.num_components
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Predict scores for nonzero users in the interaction matrix
@@ -345,13 +345,13 @@ class FactorizationAlgorithm(Algorithm):
         :return: matrix with scores for each nonzero user.
         :rtype: csr_matrix
         """
-        assert X.shape == (self.user_features_.shape[0], self.item_features_.shape[1])
+        assert X.shape == (self.user_embedding_.shape[0], self.item_embedding_.shape[1])
         # Get the nonzero users, for these we will recommend.
         users = list(set(X.nonzero()[0]))
         # result is a lil matrix, makes editing rows easy
         result = lil_matrix(X.shape)
         # Set rows of the nonzero users to the predicted scores
-        result[users] = self.user_features_[users] @ self.item_features_
+        result[users] = self.user_embedding_[users] @ self.item_embedding_
 
         return result.tocsr()
 

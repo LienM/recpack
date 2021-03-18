@@ -26,9 +26,9 @@ class NMF(FactorizationAlgorithm):
         algo.fit(X)
 
         # After fitting user and item embeddings are available
-        print(algo.user_features_.shape)
+        print(algo.user_embedding_.shape)
         # (3, 2)
-        print(algo.item_features_)
+        print(algo.item_embedding_)
         # (3, 2)
 
         # Get the predictions
@@ -73,12 +73,12 @@ class NMF(FactorizationAlgorithm):
 
         # Factorization is W * H. Where W contains user latent vectors, and H
         # contains item latent vectors
-        self.user_features_ = model.fit_transform(X)
-        self.item_features_ = model.components_
+        self.user_embedding_ = model.fit_transform(X)
+        self.item_embedding_ = model.components_
 
         # Post conditions
-        assert self.user_features_.shape == (X.shape[0], self.num_components)
-        assert self.item_features_.shape == (self.num_components, X.shape[1])
+        assert self.user_embedding_.shape == (X.shape[0], self.num_components)
+        assert self.item_embedding_.shape == (self.num_components, X.shape[1])
 
         return self
 
@@ -103,9 +103,9 @@ class SVD(FactorizationAlgorithm):
         algo.fit(X)
 
         # After fitting user and item embeddings are available
-        print(algo.user_features_.shape)
+        print(algo.user_embedding_.shape)
         # (3, 2)
-        print(algo.item_features_)
+        print(algo.item_embedding_)
         # (3, 2)
 
         # Get the predictions
@@ -135,14 +135,14 @@ class SVD(FactorizationAlgorithm):
         # Factorization computes U x Sigma x V
         # U are the user features,
         # Sigma x V are the item features.
-        self.user_features_ = model.fit_transform(X)
+        self.user_embedding_ = model.fit_transform(X)
 
         V = model.components_
         sigma = scipy.sparse.diags(model.singular_values_)
-        self.item_features_ = sigma @ V
+        self.item_embedding_ = sigma @ V
 
         # Post conditions
-        assert self.user_features_.shape == (X.shape[0], self.num_components)
-        assert self.item_features_.shape == (self.num_components, X.shape[1])
+        assert self.user_embedding_.shape == (X.shape[0], self.num_components)
+        assert self.item_embedding_.shape == (self.num_components, X.shape[1])
 
         return self
