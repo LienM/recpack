@@ -128,7 +128,7 @@ Samplers
 
 In multiple recommendation algorithms (e.g. BPRMF) sampling methods play
  an important role.
-As such we recpack contains a number of commonly used sampling methods.
+As such recpack contains a number of commonly used sampling methods.
 
 .. autosummary::
     :toctree: generated/
