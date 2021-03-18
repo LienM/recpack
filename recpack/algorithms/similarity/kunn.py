@@ -18,16 +18,18 @@ logger = logging.getLogger("recpack")
 
 
 class KUNN(Algorithm):
-    """
-    KUNN Algorithm by Koen Verstrepen and Bart Goethals
-    as described in paper 'Unifying Nearest Neighbors Collaborative Filtering' (10.1145/2645710.2645731)
+    """KUNN Algorithm
+    as described in 'Unifying Nearest Neighbors Collaborative Filtering'
+    Verstrepen et al. (10.1145/2645710.2645731)
+
+    :param Ku: How many neighbours to keep in the user similarity matrix.
+    :param Ki: How many items to keep as neighbours in the item similarity matrix
+
     """
 
     def __init__(self, Ku: int = 100, Ki: int = 100):
-        """
-        Initialize the KUNN Algorithm but setting the number of K (top-K) for users and items.
-        :param Ku: The top-K users which should be fit and predict for.
-        :param Ki: The top-K items which should be fit and predict for.
+        """Initialize the KUNN Algorithm but setting the
+        number of K (top-K) for users and items.
         """
         super().__init__()
         self.Ku = Ku
@@ -36,7 +38,8 @@ class KUNN(Algorithm):
     def fit(self, X: Matrix) -> Algorithm:
         """
         Calculate the score matrix for items based on the binary matrix .
-        :param X: Sparse binary user-item matrix which will be used to fit the algorithm.
+        :param X: Sparse binary user-item interaction matrix
+            which will be used to fit the algorithm.
         :return: The fitted KUNN Algorithm itself.
         """
         # To make sure the input is interpreted as a binary matrix
@@ -48,12 +51,14 @@ class KUNN(Algorithm):
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:
-        """
-        The prediction can easily be calculated by computing score matrix for users and add this to the already
-        calculated score matrix for items.
-        :param X: Sparse binary user-item matrix which will be used to do the predictions. The scores will returned for
-        the users of this input matrix.
+        """Predict recommendations for all nonzero users in the interaction matrix.
+
+        Computes a userKNN model, and then predicts based on the combined
+        score of user and item similarity.
+        :param X: Sparse binary user-item matrix which will be used as history.
+        :type X: Matrix
         :return: User-item matrix with the prediction scores as values.
+        :rtype: csr_matrix
         """
         check_is_fitted(self)
 
@@ -132,11 +137,10 @@ class KUNN(Algorithm):
         return get_top_K_values(item_to_item_similarity, self.Ki).T
 
     def _fit_user_knn(self, X: csr_matrix) -> csr_matrix:
-        """
-        Helper method to compute the User KNN, used in the KUNN implementation. The memoized training interactions are
-        used to compute the user similarities.
-        @param X: Sparse binary user-item matrix
-        @return: User KNN matrix for X
+        """Helper method to compute the User KNN, used in the KUNN implementation.
+        The memoized training interactions are used to compute the user similarities.
+        :param X: Sparse binary user-item matrix
+        :return: User KNN matrix for X
         """
         users_to_predict = get_users(X)
 
