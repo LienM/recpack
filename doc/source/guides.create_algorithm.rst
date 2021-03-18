@@ -274,42 +274,44 @@ Here we go, another algorithm ready for use in evaluation!
 Singular Value Decomposition
 ------------------------------
 
-Let's implement SVD, a well known matrix factorization algorithm.
-Singular value decomposition decomposes a matrix of interactions into three matrices which
+Description
+^^^^^^^^^^^^
+
+Let's now implement SVD, a well-known matrix factorization algorithm.
+Singular Value Decomposition decomposes a matrix of interactions into three matrices which
 when multiplied together will approximately reconstruct the original matrix , ``X = U x Sigma X V``.
 If matrix ``X`` is of shape ``(|users| x |items|)``,
 then ``U`` will be of shape ``(|users| x num_components)``,
 ``Sigma`` will be a ``(num_components x num_components)`` matrix,
 and finally ``V`` will be a ``(num_components x |items|)`` matrix.
 
-Rather than implement the SVD computation ourselves, 
-we will rely on the optimised TruncatedSVD implementation in sklearn.
+Implementation
+^^^^^^^^^^^^^^^
 
-As base class for this algorithm it makes sense to use the 
-:class:`recpack.algorithms.base.FactorizationAlgorithm` as the name suggests.
-This class provides standard functionality for matrix factorization algorithms.
-In addition to the standard functions from :class:`recpack.algorithms.base.Algorithm` 
+Rather than implement the SVD computation ourselves, 
+we adapt the optimised TruncatedSVD implementation in sklearn
+so that it matches the recpack interface.
+
+As the name suggests, it makes sense to use :class:`recpack.algorithms.base.FactorizationAlgorithm`
+as base class in this example.
+In addition to the methods implemented in :class:`recpack.algorithms.base.Algorithm` 
 which we have highlighted in :ref:`guides-algorithms-pop-softmax`, this class provides:
 
-- ``_predict``, prediction always happens in the same way, 
-  by multiplying the user embedding with the item embeddings, 
-  so that is already implemented in this function
-- ``_check_fit_complete`` is extended from the base class, 
-  to also check that the dimensions of the embeddings are as expected after fitting.
+- ``_predict`` generates recommendations by multiplying the user embeddings of nonzero users with all item embeddings.
+- ``_check_fit_complete`` performs an additional check of the dimensions of the embeddings 
 
-All that remains for us to implement is the ``__init__`` function 
-setting hyperparameters and the ``_fit`` function to compute the embeddings.
+All that remains for us to implement is ``__init__`` 
+to set hyperparameters and ``_fit`` to compute the embeddings.
 
-For simplicity we will only use one hyperparameter, the num_components. 
-This is a required parameter for the ``__init__`` of FactorizationAlgorithm, 
-defining the size of the embeddings.
-We will also add the parameter `random_state`, which is a parameter of ``TruncatedSVD``, 
-and will allow us to control the randomisation in the algorithm.
+__init__
+"""""""""
+
+For simplicity we will use only one hyperparameter: ``num_components``, which defines the dimension of the embedding.
+We also add a parameter ``random_state``, also a parameter of ``TruncatedSVD``, to ensure reproducibility.
 
 .. warning:: 
-    The random_state parameter should not be considered a hyperparameter. 
-    Do not try to optimise it. 
-    It's used to guarantee reproducible results not to find a good seed for recommendation.
+    The random_state parameter should not be considered a hyperparameter, i.e. we 
+    should not perform a parameter search to determine its optimal value.
 
 ::
 
@@ -338,16 +340,21 @@ and will allow us to control the randomisation in the algorithm.
 
             self.random_state = random_state
 
-In ``_fit`` we will call use the TruncatedSVD implementation from sklearn, 
-for simplicity we don't expose any of its hyperparameters except ``num_components`` in our algorithm, 
-and just pick reasonable defaults.
+_fit
+"""""
 
-SVD composes the matrix into three matrices, while the 
-:class:`recpack.algorithms.base.FactorizationAlgorithm` class expects us to fit 
+In ``_fit`` we initialize an object of type TruncatedSVD.
+For simplicity's sake we expose only ``num_components`` in our algorithm.
+All other hyperparameter are left at their default values.
+
+SVD decomposes the matrix into three matrices, while the 
+:class:`recpack.algorithms.base.FactorizationAlgorithm` class expects only two: 
 a user and item embedding.
-We will handle this by computing the item embedding by pre multiplying `Sigma` and `V`. 
-Since `Sigma` is a square matrix this won't change the size, 
-and ``Sigma x V`` is still a ``(num_components x |items|)`` matrix. ::
+Therefore we take the item embedding to be the product of `Sigma` and `V`. 
+Since `Sigma` is a square matrix this does not change the matrix dimension:
+``Sigma x V`` is still a ``(num_components x |items|)`` matrix. 
+
+::
 
     def _fit(self, X: csr_matrix):
         model = TruncatedSVD(
@@ -364,12 +371,15 @@ and ``Sigma x V`` is still a ``(num_components x |items|)`` matrix. ::
 
         return self
 
+
+This concludes the modification of the TruncatedSVD algorithm for use in recpack!
+
 .. _guides-algorithms-silly-mf:
 
 Gradient Descent Algorithm
 ----------------------------
 
-As example for how to use gradient descent based algorithms using torch with RecPack, 
+As example for how to use gradient descent based algorithms using torch with recpack, 
 we will create a kind of silly iterative matrix factorization algorithm.
 It's by no means sophisticated or guaranteed to even converge, 
 but will serve well for our illustration purposes.
