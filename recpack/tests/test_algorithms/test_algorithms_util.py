@@ -30,7 +30,7 @@ def test_sample_rows():
     mat_2 = csr_matrix(([v / 2 for v in values], (users, items)))
 
     s_1, s_2 = sample_rows(mat_1, mat_2, sample_size=2)
-    np.testing.assert_array_almost_equal(s_1.nonzero(), s_2.nonzero())
+    np.testing.assert_array_equal(s_1.nonzero(), s_2.nonzero())
     assert len(set(s_1.nonzero()[0])) == 2
-    np.testing.assert_array_almost_equal(s_1[s_1.nonzero()], 1)
+    np.testing.assert_array_equal(s_1[s_1.nonzero()], 1)
     np.testing.assert_array_almost_equal(s_2[s_2.nonzero()], 0.5)

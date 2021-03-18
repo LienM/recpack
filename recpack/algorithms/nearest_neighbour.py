@@ -24,7 +24,7 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
       the ``count(i and j) / (count(i)*count(j))``.
     - Conditional probablity of item i with j is computed
       as ``count(i and j) / (count(i))``.
-      Note that this is a non-simetrical similarity measure.
+      Note that this is a non-symmetric similarity measure.
 
     If normalize is True, the scores are normalized per center item,
     making sure the sum of each row in the similarity matrix is 1.
