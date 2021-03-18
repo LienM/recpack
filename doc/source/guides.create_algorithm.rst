@@ -3,14 +3,16 @@
 Creating your own algorithms
 ==============================
 
-In this guide we will explain how to create or adapt your own algorithm, 
-so it can be used with the other recpack functionality.
-The recpack algorithms module provides several base classes 
-which you can inherit from to make integration easy.
-For more info on the base classes, check out :ref:`algorithm-base-classes`.
+Recpack's goal is to make it easy to set up an offline
+recommendation experiment to evaluate the merits of a recommendation algorithm.
+That is why we've made it super easy to create your own algorithm from scratch,
+or adapt from one of the many algorithm implementations included. 
 
-Through four example algorithms we will explain the concepts of the base classes, 
-and give pointers on how to implement your own algorithms within the recpack framework.
+We have created a number of base classes that provide the necessary 
+plumbing for your algorithm to fit within the recpack evaluation framework
+so that you can focus on what really matters: the algorithm itself!
+
+We will explain when and how to use these base classes by means of four example algorithms. 
 
 After reading through these examples you should be able to 
 
@@ -19,75 +21,94 @@ After reading through these examples you should be able to
 
 .. _guides-algorithms-pop-softmax:
 
-Softmax Popularity algorithm
-------------------------------
+Randomized Softmax Popularity Algorithm
+---------------------------------------
 
-In this section we create an algorithm that samples from the most popular items, 
-with the probabilities defined by applying softmax to the raw popularity scores.
-For more info on softmax, check out `Wikipedia <https://en.wikipedia.org/wiki/Softmax_function>`_.
+Description
+^^^^^^^^^^^
 
-The algorithm computes probabilities, and keeps the K most popular items.
-For these most popular items the softmax of their scores is used to get a probability 
-for sampling each item.
-We use softmax with a temperature parameter, to scale between uniform randomness,
-and maximal weight on highest scoring items.
+The Softmax Popularity Algorithm samples recommended items relative to their item popularity.
+It does so by computing the temperature-weighted softmax of the natural logarithm of the 
+item's frequency in the training data. 
+With a temperature of 1, we end up with the standard softmax function. 
+For a temperature of 0 we always choose the best action, whereas high values of 
+temperature starts to resemble uniformly random sampling. 
+For more information on the softmax function, check out `Wikipedia <https://en.wikipedia.org/wiki/Softmax_function>`_.
 
-During prediction we will sample for each user K items, 
-with the probabilities computed during fitting.
+We limit our recommendations to the K most popular items, to avoid ever recommending a very unpopular item.
 
-The start of creating a new algorithm is selecting which base class to use as parent.
-None of the more specific subclasses make sense for our simple popularity 
-and randomness based algorithm, so we will use :class:`recpack.algorithms.base.Algorithm`.
+At prediction time, recommendations are sampled according to their probability (as defined by the softmax). 
+The algorithm can thus be considered randomized or stochastic: subsequent calls of the ``predict`` method will
+not necessarily yield the same results. 
 
-The base class already implements quite a few functions:
+Implementation
+^^^^^^^^^^^^^^
 
-- ``fit(X)`` -> The fit function provides a wrapper around the ``_fit`` function we will implement,
+We start by selecting a base class as parent. 
+We have no need for PyTorch, so :class:`recpack.algorithms.base.TorchMLAlgorithm` 
+is easily discarded.
+Likewise, this is neither a factorization nor item-similarity algorithm, 
+so we will use the base class of base classes: :class:`recpack.algorithms.base.Algorithm`.
+
+Even this base class already implements quite a bit:
+
+- ``fit(X)`` provides a wrapper around the ``_fit`` function we will implement,
   and handles type management and some additional checks.
-- ``predict(X)`` -> Also a wrapper, this time around the ``_predict`` function we will implement.
-- ``_transform_predict_input(X)`` and ``_transform_fit_input(X)``, which ``fit`` and ``predict`` 
-  use to put the inputs into the right types. 
-  For the baseclass these transform the data into csr_matrices, which we want for our algorithm, 
-  so we need not touch these.
-- ``_check_fit_complete()`` function at the end of the ``fit`` method to make sure 
-  fitting was successful
-- ``_check_prediction(X_pred, X)`` function that is called at the end of predict,
-  to make sure the output predicted is as expected, and log warnings otherwise.
+- ``predict(X)`` provides a wrapper around the ``_predict`` function we will implement.
+- ``_transform_predict_input(X)`` and ``_transform_fit_input(X)`` are used by ``fit`` and ``predict`` 
+  to convert their input matrices (X) into the required types. By default, this base class 
+  transform the data into a csr_matrix, which suits our purpose perfectly as we have no need 
+  of timestamps.
+- ``_check_fit_complete()`` is called at the end of the ``fit`` method to make sure 
+  fitting was successful.
+- ``_check_prediction(X_pred, X)`` is called at the end of ``predict``,
+  to make sure the output predicted is as expected. If not it will log a warning.
 
-So all that is left for us to do, is implement ``__init__`` to set the hyper-parameters,
+All we really need to do is thus implement ``__init__`` to set the hyper-parameters,
 ``_fit`` and ``_predict``.
 
+__init__
+""""""""
+
 Let's get started, and define our class, add a docstring for reference and
-implement the ``__init__`` function.::
+implement the ``__init__`` function.
+
+Our algorithm has two hyper parameters:
+
+- K: The number of items that can be considered for recommendations.
+- Tau: The temperature parameter. 
+
+::
 
     import numpy as np
     from scipy.sparse import csr_matrix
 
     from recpack.algorithms.base import Algorithm
 
-    class RandomPopularity(Algorithm):
-        """Recomend items using softmax on popularity scores.
+    class RandomizedSoftmaxPopularity(Algorithm):
+        """Recommend items using softmax on the natural logarithm of item counts.
         
-        During recommendation the softmax of the popularity score is taken and subsequent items are
-        sampled by their softmax probability, scores are assigned by receding rank
-        (such that item sampled first gets highest score)
+        Recommendations are sampled from the probability distribution
+        created by taking the softmax of the natural logarithm of item counts. 
+        Items are scored such that the distance between the item in first place
+        and the item in second place is the same as between all other items.
         
-        :param K: How many of the popular items to consider
-        :param tau: temperature in the softmax computation, 
-            if 1 -> always picks the best action, 0 uniform random.
+        :param K: Only the K most frequent items are considered for recommendation
+        :param tau: Temperature in the softmax computation
         """
         def __init__(self, K, tau):
             self.K = K
             self.tau = tau
 
-In our algorithm we have two hyper parameters, K and temperature parameter tau, 
-and so these are set during initialisation.
+_fit
+""""
 
-Next step is implementing the ``_fit`` function. 
-In this function we will receive a matrix with interactions.
-Popularity of an item will be computed as the logarithm of the number of times interacted 
-with that item.
-Once we have popularity, we will compute the sampling probabilities using softmax 
-on the K most popular items. ::
+Next we implement the ``_fit`` function. 
+Our input is the matrix of interactions considered for training. 
+We compute the natural logarithm of the number of times users interacted 
+with the item, then take the softmax of the K most popular items. 
+
+::
 
     def _fit(self, X: csr_matrix):
         # compute pop by taking logarithm of the raw counts
@@ -101,7 +122,7 @@ on the K most popular items. ::
         top_k_pop = pop[self.top_k_pop_items_]
 
         # To make softmax numerically stable, we will compute exp(pop - max(pop))/self.tau
-        # instead of exp(pop)
+        # instead of exp(pop):
         # 
         # softmax for item i can then be computed as 
         # e^((pop[i] - max(pop))/tau) / sum([e^(pop[j] - max(pop))/self.tau for j in topK])
@@ -113,22 +134,26 @@ on the K most popular items. ::
         
         self.softmax_scores_ = top_k_exp / top_k_pop_sum
 
-After fit has been run, the model will be ready for prediction, and ``self.top_k_pop_items_``
-and ``self.softmax_scores_`` are fitted.
+After fitting, the model is ready for prediction.
 
-Final function to implement is the ``_predict`` function.
-In this function we will sample recommendations for each user with at least one interaction
-in the interaction matrix. 
-Sampling probabilities are defined by the computed ``softmax_scores_``.::
+_predict
+""""""""
+
+Finally we implement ``_predict``.
+Here we sample recommendations for each user with at least one interaction
+in the matrix of interactions considerd for prediction. 
+Sampling probabilities were stored in ``softmax_scores_`` during fitting.
+
+::
 
     def _predict(self, X:csr_matrix):
         # Randomly sample items, with weights decided by the softmax scores
         users = X.nonzero()[0]
 
-        # The score will be set as K - ix of sampling
-        # The first sampled item will get score K, and the last sampled item score 1
+        # The score will be set as (K - ix)/K of sampling
+        # The first sampled item will get score 1, and the last sampled item score 1/K
         score_list = [
-            (u, i, self.K-ix)
+            (u, i, (self.K-ix)/self.K)
             for u in set(users)
             for ix, i in enumerate(
                 np.random.choice(
@@ -144,29 +169,40 @@ Sampling probabilities are defined by the computed ``softmax_scores_``.::
 
         return score_matrix
 
-We have now defined our algorithm, we can use it to predict scores,
-and use it in evaluation pipelines just like any other algorithm already available in RecPack.
+This algorithm can now be used in evaluation pipelines 
+just like any other algorithm already available in recpack!
 
 .. _guides-algorithms-recency:
 
 Recency
 ---------
-In this section we will create an algorithm that recommends the items that
-have been interacted with most recently.
 
-As baseclass we will again use the :class:`recpack.algorithms.base.Algorithm` class.
-Our new algorithm is special in that it needs timestamps in order to know which when
-items were last visited.
-As such we need the ``timestamps`` property from the `recpack.data.DataMatrix` class in the input.
-To make sure we receive this class, we will update the ``_transform_fit_input`` to make
-sure we get a ``DataMatrix`` object.
+Description
+^^^^^^^^^^^^
 
-We don't have any hyperparameters, our algorithm will just give each item a score
-proportional to how long ago the item was last interacted with.
+Next we create an algorithm that recommends the items that
+have been interacted with most recently. 
+This algorithm can be considered a baseline, as it is not personalized.
 
-So the first thing to do, is to overwrite the ``_transform_fit_input``. 
-We will make the function assert the type and precondition of having timestamps on
-the input data. No further transformation is needed.::
+
+Implementation
+^^^^^^^^^^^^^^
+
+Again, we start from :class:`recpack.algorithms.base.Algorithm`.
+This new algorithm is different from :ref:`guides-algorithms-pop-softmax` in that 
+it needs the time of interaction to be able to make recommendations.
+Thankfully, the recpack data format :class:`recpack.data.matrix.InteractionMatrix`
+has a `timestamps` attribute that stores the time of interaction. 
+
+Our algorithm has no hyperparameters, so we have no use for an ``__init__`` method. 
+
+_transform_fit_input
+""""""""""""""""""""
+
+To make sure we receive a :class:`recpack.data.matrix.InteractionMatrix` at fitting time, 
+we update ``_transform_fit_input``.
+
+::
 
     import numpy as np
     from scipy.sparse import csr_matrix, lil_matrix
@@ -176,22 +212,27 @@ the input data. No further transformation is needed.::
 
     class Recency(Algorithm):
         def _transform_fit_input(self, X):
-            # X needs to be an interactionMatrix for it to have timestamps
+            # X needs to be an InteractionMatrix for us to have access to
+            # the time of interaction at fitting time
             assert issubclass(X, InteractionMatrix)
             # X needs to have timestamps available
             assert X.has_timestamps
             # No transformation needed
             return X
 
-Now that we know that the X we receive in ``_fit`` will be of the InteractionMatrix type,
-we can fit our algorithm by computing per item it's most recent interaction timestamp.
-We will then scale this to the interval [0, 1] using minmax normalisation to avoid
-unnecessarily high scores. ::
+_fit
+"""""
+
+Now that we have asserted that ``_fit`` receives an object of type :class:`recpack.data.matrix.InteractionMatrix`,
+we fit our algorithm by extracting for each item, its most recent time of interaction.
+We then scale this to the interval [0, 1] using minmax normalisation. 
+
+::
 
     def _fit(self, X:InteractionMatrix):
         # data.timestamps gives a pandas MultiIndex object, indexed by user and item,
-        # we will drop the index, and group by just the item index
-        # Then we select the maximal timestamp from this groupby
+        # we drop the index, and group by just the item index
+        # then we select the maximal timestamp from this groupby
         max_ts_per_item = data.timestamps.reset_index().groupby('iid')['ts'].max()
 
         # apply min_max normalisation
@@ -204,14 +245,18 @@ unnecessarily high scores. ::
         recency = (recency - least_recent) / (most_recent - least_recent)
         self.recency_ = recency.copy()
 
-After calling ``fit``, which will call our just defined ``_transform_fit_input`` and 
-``_fit`` functions, 
-our model is ready for use, with member ``self.recency_`` containing the recommendation
+At fitting time, the base class' ``fit`` method calls both ``_transform_fit_input`` and 
+``_fit``.
+The model is then ready for use, with attribute ``self.recency_`` which contains the recommendation
 scores per item.
 
-Prediction is easy, for each nonzero user in the input matrix
-we will set each items score equal to the recency score we compouted in the ``_fit`` method.
-There is no personalisation, each user will get the same scores.::
+_predict
+"""""""""
+
+Prediction is noweasy: for each nonzero user in the input matrix
+we set the item's score equal to the recency score we computed in ``_fit``.
+
+::
 
     def _predict(self, X: csr_matrix):
         results = lil_matrix(X.shape)
@@ -222,7 +267,7 @@ There is no personalisation, each user will get the same scores.::
         
         return results.tocsr()
 
-And there we go, another algorithm ready for use in evaluation.
+Here we go, another algorithm ready for use in evaluation!
 
 .. _guides-algorithms-svd:
 
