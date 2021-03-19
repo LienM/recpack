@@ -506,7 +506,7 @@ By default, early stopping is disabled.
                 batch_size, 
                 max_epochs,
                 learning_rate,
-                StoppingCriterion.create('recall', k=10),
+                "recall",
                 seed=42
             )
             self.num_components = num_components
