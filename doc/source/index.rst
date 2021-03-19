@@ -6,7 +6,8 @@ Welcome to Recpack's documentation!
 
    recpack.data
    recpack.preprocessing
-
+   recpack.algorithms
+   guides
 
 Indices and tables
 ==================

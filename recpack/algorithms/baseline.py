@@ -1,10 +1,9 @@
-from collections import Counter, defaultdict
+from collections import Counter
 import random
 
 import numpy as np
-import scipy.sparse
+from scipy.sparse import csr_matrix
 import numpy.random
-from sklearn.utils.validation import check_is_fitted
 
 
 from recpack.algorithms.base import Algorithm
@@ -12,28 +11,58 @@ from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class Random(Algorithm):
+    """Uniform random algorithm, each item has an equal chance of getting recommended.
+
+    Simple baseline, recommendations are sampled uniformly without replacement
+    from the items that were interacted with in the matrix provided to fit.
+    Scores are given based on sampling rank, such that the items first
+    in the sample has the highest score
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import Random
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 1, 0], [1, 1, 0]]))
+
+        # There are only 3 items to recommend,
+        # so can't recommend the default K=200
+        algo = Random(K=3)
+        # Fit algorithm, stores the nonzero items in matrix X
+        # as potential items to sample during predict
+        algo.fit(X)
+
+        # Get random recos for each nonzero user
+        predictions = algo.predict(X)
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+
+    :param K: How many items to sample for recommendation, defaults to 200
+    :type K: int, optional
+    :param seed: Seed for the random number generator used, defaults to None
+    :type seed: int, optional
+    """
+
     def __init__(self, K=200, seed=None):
         super().__init__()
         self.items = None
         self.K = K
         self.seed = seed
 
-        # TODO: Do we need this in the predict method, or is this enough.
         if self.seed is not None:
             random.seed(self.seed)
 
-    def fit(self, X: Matrix):
-        X = to_csr_matrix(X)
+    def _fit(self, X: csr_matrix):
         self.items_ = list(set(X.nonzero()[1]))
-        return self
 
-    def predict(self, X: Matrix):
+    def _predict(self, X: csr_matrix):
         """Predict K random scores for items per row in X
 
-        Returns numpy array of the same shape as X, with non zero scores for K items per row.
+        Returns numpy array of the same shape as X,
+        with non zero scores for K items per row.
         """
-        check_is_fitted(self)
-        X = to_csr_matrix(X)
 
         # For each user choose random K items, and generate a score for these items
         # Then create a matrix with the scores on the right indices
@@ -45,19 +74,55 @@ class Random(Algorithm):
             for i in np.random.choice(self.items_, size=self.K, replace=False)
         ]
         user_idxs, item_idxs, scores = list(zip(*score_list))
-        score_matrix = scipy.sparse.csr_matrix(
-            (scores, (user_idxs, item_idxs)), shape=X.shape
-        )
-        self._check_prediction(score_matrix, X)
+        score_matrix = csr_matrix((scores, (user_idxs, item_idxs)), shape=X.shape)
+
         return score_matrix
 
 
 class Popularity(Algorithm):
+    """Baseline algorithm recommending the most popular items in training data.
+
+    During training the occurrences of each item is counted,
+    and then normalized by dividing each count by the max count over items.
+
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import Popularity
+
+        X = csr_matrix(np.array([[1, 0, 1], [1, 1, 0], [1, 1, 0]]))
+
+        # There are only 3 items to recommend,
+        # so can't recommend the default K=200
+        algo = Popularity(K=3)
+        # Fit algorithm, computes the popularities per item in X
+        algo.fit(X)
+
+        # Get the most popular items per user
+        predictions = algo.predict(X)
+
+        # Popular items are the same for all users
+        assert predictions[0, 0] == predictions[1, 0]
+
+        # All scores are in the range 0 to 1
+        assert (predictions.toarray() >= 0).all()
+        assert (predictions.toarray() <= 1).all()
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+
+    :param K: How many items to recommend when predicting, defaults to 200
+    :type K: int, optional
+    """
+
     def __init__(self, K=200):
         super().__init__()
         self.K = K
 
-    def fit(self, X: Matrix):
+    def _fit(self, X: Matrix):
         #  Values in the matrix X are considered as counts of visits
         #  If your data contains ratings, you should make them binary before fitting
         X = to_csr_matrix(X)
@@ -66,11 +131,9 @@ class Popularity(Algorithm):
         self.sorted_scores_ = [
             (item, score / sorted_scores[0][1]) for item, score in sorted_scores
         ]
-        return self
 
-    def predict(self, X: Matrix):
+    def _predict(self, X: Matrix):
         """For each user predict the K most popular items"""
-        check_is_fitted(self)
         X = to_csr_matrix(X)
 
         items, values = zip(*self.sorted_scores_[: self.K])
@@ -84,6 +147,5 @@ class Popularity(Algorithm):
             I.extend(items)
             V.extend(values)
 
-        score_matrix = scipy.sparse.csr_matrix((V, (U, I)), shape=X.shape)
-        self._check_prediction(score_matrix, X)
+        score_matrix = csr_matrix((V, (U, I)), shape=X.shape)
         return score_matrix

@@ -21,7 +21,9 @@ def data_m():
     np.random.seed(42)
 
     input_dict = {
-        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.USER_IX: [
+            np.random.randint(0, num_users) for _ in range(0, num_interactions)
+        ],
         InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
@@ -31,9 +33,14 @@ def data_m():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
+    df.drop_duplicates(
+        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
+    )
     data = InteractionMatrix(
-        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
     return data
 
@@ -43,7 +50,9 @@ def data_m_w_dups():
     np.random.seed(42)
 
     input_dict = {
-        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.USER_IX: [
+            np.random.randint(0, num_users) for _ in range(0, num_interactions)
+        ],
         InteractionMatrix.ITEM_IX: [
             np.random.randint(0, num_items) for _ in range(0, num_interactions)
         ],
@@ -53,9 +62,19 @@ def data_m_w_dups():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX, InteractionMatrix.TIMESTAMP_IX], inplace=True)
+    df.drop_duplicates(
+        [
+            InteractionMatrix.USER_IX,
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.TIMESTAMP_IX,
+        ],
+        inplace=True,
+    )
     data = InteractionMatrix(
-        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
     return data
 
@@ -70,9 +89,14 @@ def data_m_small():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
+    df.drop_duplicates(
+        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
+    )
     data = InteractionMatrix(
-        df, InteractionMatrix.ITEM_IX, InteractionMatrix.USER_IX, timestamp_ix=InteractionMatrix.TIMESTAMP_IX
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
     return data
 
@@ -81,6 +105,7 @@ def data_m_small():
 def data_m_sessions():
     """Data matrix with sessions of varying time overlap for testing time-based splits"""
     # (user, time) matrix, non-zero entries are item ids
+    # fmt:off
     user_time = csr_matrix(
         [
             #0  1  2  3  4  5  6  7
@@ -89,6 +114,7 @@ def data_m_sessions():
             [0, 0, 0, 0, 0, 2, 1, 1],  # time: max 7
         ]
     )
+    # fmt:on
     user_ids, timestamps = user_time.nonzero()
     item_ids = user_time.data
     df = pd.DataFrame(

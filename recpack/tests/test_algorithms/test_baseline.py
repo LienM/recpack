@@ -1,11 +1,13 @@
 import numpy
+import pytest
 import random
 import scipy.sparse
 import recpack.algorithms
 
 
-def generate_data():
-    # TODO generate scipy.sparse matrix with user interactions.
+@pytest.fixture(scope="function")
+def data():
+    # generate scipy.sparse matrix with user interactions.
     users = list(range(10))
     u_, i_ = [], []
     for user in users:
@@ -17,7 +19,9 @@ def generate_data():
     return scipy.sparse.csr_matrix((numpy.ones(len(u_)), (u_, i_)))
 
 
-def generate_in_out():
+@pytest.fixture(scope="function")
+def data_in_out():
+    d = []
     for i in range(1, 11):
         users = list(range(i))
         u_in, i_in = [], []
@@ -40,18 +44,18 @@ def generate_in_out():
             (numpy.ones(len(u_out)), (u_out, i_out)), shape=(i, 10)
         )
 
-        yield in_, out_
+        d.append((in_, out_))
+    return d
 
 
-def test_random():
-    train_data = generate_data()
+def test_random(data, data_in_out):
 
     seed = 42
     K = 5
-    algo = recpack.algorithms.algorithm_registry.get("random")(K=K, seed=42)
-    algo.fit(train_data)
+    algo = recpack.algorithms.Random(K=K, seed=42)
+    algo.fit(data)
 
-    for out_, in_ in generate_in_out():
+    for out_, in_ in data_in_out:
         result = algo.predict(in_)
         assert len(result.nonzero()[1]) == result.shape[0] * K
         # TODO: What else to test?
@@ -62,7 +66,7 @@ def test_popularity():
     user_i = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
     values = [1] * 10
     train_data = scipy.sparse.csr_matrix((values, (user_i, item_i)))
-    algo = recpack.algorithms.algorithm_registry.get("popularity")(K=2)
+    algo = recpack.algorithms.Popularity(K=2)
 
     algo.fit(train_data)
 

@@ -186,14 +186,14 @@ class DataFramePreprocessor:
         for index, df in enumerate(dfs):
             self._update_id_mappings(df)
 
-        data_ms = []
+        interaction_ms = []
 
         for df in dfs:
             df.loc[:, DataFramePreprocessor.ITEM_IX] = self.map_items(df)
             df.loc[:, DataFramePreprocessor.USER_IX] = self.map_users(df)
 
             # Convert input data into internal data objects
-            data_m = InteractionMatrix(
+            interaction_m = InteractionMatrix(
                 df,
                 DataFramePreprocessor.ITEM_IX,
                 DataFramePreprocessor.USER_IX,
@@ -201,9 +201,9 @@ class DataFramePreprocessor:
                 shape=self.shape,
             )
 
-            data_ms.append(data_m)
+            interaction_ms.append(interaction_m)
 
-        return data_ms
+        return interaction_ms
 
     def _update_id_mappings(self, df: pd.DataFrame):
         """
