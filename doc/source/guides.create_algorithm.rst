@@ -12,7 +12,7 @@ We have created a number of base classes that provide the necessary
 plumbing for your algorithm to fit within the recpack evaluation framework
 so that you can focus on what really matters: the algorithm itself!
 
-We will explain when and how to use these base classes by means of four example algorithms. 
+We explain when and how to use these base classes by means of four example algorithms. 
 
 After reading through these examples you should be able to 
 
@@ -48,13 +48,13 @@ We start by selecting a base class as parent.
 We have no need for PyTorch, so :class:`recpack.algorithms.base.TorchMLAlgorithm` 
 is easily discarded.
 Likewise, this is neither a factorization nor item-similarity algorithm, 
-so we will use the base class of base classes: :class:`recpack.algorithms.base.Algorithm`.
+so we use the base class of base classes: :class:`recpack.algorithms.base.Algorithm`.
 
 Even this base class already implements quite a bit:
 
-- ``fit(X)`` provides a wrapper around the ``_fit`` function we will implement,
+- ``fit(X)`` provides a wrapper around the ``_fit`` function we need to implement
   and handles type management and some additional checks.
-- ``predict(X)`` provides a wrapper around the ``_predict`` function we will implement.
+- ``predict(X)`` provides a wrapper around the ``_predict`` function we need to implement.
 - ``_transform_predict_input(X)`` and ``_transform_fit_input(X)`` are used by ``fit`` and ``predict`` 
   to convert their input matrices (X) into the required types. By default, this base class 
   transform the data into a csr_matrix, which suits our purpose perfectly as we have no need 
@@ -121,7 +121,7 @@ with the item, then take the softmax of the K most popular items.
         self.top_k_pop_items_ = np.argsort(pop)[-self.K:]
         top_k_pop = pop[self.top_k_pop_items_]
 
-        # To make softmax numerically stable, we will compute exp((pop - max(pop))/self.tau)
+        # To make softmax numerically stable, we compute exp((pop - max(pop))/self.tau)
         # instead of exp(pop/self.tau):
         # 
         # softmax for item i can then be computed as 
@@ -150,8 +150,8 @@ Sampling probabilities were stored in ``softmax_scores_`` during fitting.
         # Randomly sample items, with weights decided by the softmax scores
         users = X.nonzero()[0]
 
-        # The score will be set as (K - ix)/K of sampling
-        # The first sampled item will get score 1, and the last sampled item score 1/K
+        # The resulting score = (K - ix)/K
+        # The first sampled item gets score 1, and the last sampled item score 1/K
         score_list = [
             (u, i, (self.K-ix)/self.K)
             for u in set(users)
@@ -192,7 +192,7 @@ Again, we start from :class:`recpack.algorithms.base.Algorithm`.
 This new algorithm is different from :ref:`guides-algorithms-pop-softmax` in that 
 it needs the time of interaction to be able to make recommendations.
 Thankfully, the recpack data format :class:`recpack.data.matrix.InteractionMatrix`
-has a `timestamps` attribute that stores the time of interaction. 
+has a ``timestamps`` attribute that stores the time of interaction. 
 
 Our algorithm has no hyperparameters, so we have no use for an ``__init__`` method. 
 
@@ -279,11 +279,11 @@ Description
 
 Let's now implement SVD, a well-known matrix factorization algorithm.
 Singular Value Decomposition decomposes a matrix of interactions into three matrices which
-when multiplied together will approximately reconstruct the original matrix , ``X = U x Sigma X V``.
+when multiplied together approximately reconstructs the original matrix , ``X = U x Sigma X V``.
 If matrix ``X`` is of shape ``(|users| x |items|)``,
-then ``U`` will be of shape ``(|users| x num_components)``,
-``Sigma`` will be a ``(num_components x num_components)`` matrix,
-and finally ``V`` will be a ``(num_components x |items|)`` matrix.
+then ``U`` is of shape ``(|users| x num_components)``,
+``Sigma`` is a ``(num_components x num_components)`` matrix,
+and finally ``V`` is a ``(num_components x |items|)`` matrix.
 
 Implementation
 ^^^^^^^^^^^^^^^
@@ -306,7 +306,7 @@ to set hyperparameters and ``_fit`` to compute the embeddings.
 __init__
 """""""""
 
-For simplicity we will use only one hyperparameter: ``num_components``, which defines the dimension of the embedding.
+For simplicity we use only one hyperparameter: ``num_components``, which defines the dimension of the embedding.
 We also add a parameter ``random_state``, also a parameter of ``TruncatedSVD``, to ensure reproducibility.
 
 .. warning:: 
@@ -350,8 +350,8 @@ All other hyperparameter are left at their default values.
 SVD decomposes the matrix into three matrices, while the 
 :class:`recpack.algorithms.base.FactorizationAlgorithm` class expects only two: 
 a user and item embedding.
-Therefore we take the item embedding to be the product of `Sigma` and `V`. 
-Since `Sigma` is a square matrix this does not change the matrix dimension:
+Therefore we take the item embedding to be the product of ``Sigma`` and ``V``. 
+Since ``Sigma`` is a square matrix this does not change the matrix dimension:
 ``Sigma x V`` is still a ``(num_components x |items|)`` matrix. 
 
 ::
@@ -376,8 +376,8 @@ This concludes the modification of the TruncatedSVD algorithm for use in recpack
 
 .. _guides-algorithms-silly-mf:
 
-Gradient Descent Algorithm
-----------------------------
+SillyMF (Gradient Descent Algorithm)
+--------------------------------------
 
 Description
 ^^^^^^^^^^^^
@@ -385,6 +385,9 @@ Description
 In this example we implement a very silly, iterative matrix factorization algorithm in PyTorch. 
 It is by no means sophisticated or even guaranteed to converge, 
 but serves well for our illustration purposes.
+
+The model learns the weights of a matrix factorization of the initial matrix X as 
+``X = U x V^T``.
 
 Implementation
 ^^^^^^^^^^^^^^^
@@ -396,7 +399,8 @@ This base class comes with quite a bit more plumbing that the others:
 - ``_predict`` generates recommendations by calling ``_batch_predict`` for batches of users (to keep the memory footprint low).
 - ``_check_fit_complete`` performs an additional check of the dimensions of the embeddings.
 - ``_check_prediction`` makes sure predictions were made for all nonzero users.
-- ``fit`` performs a fixed number (``max_epochs``) of training epochs, each followed by an evaluation step on the full dataset. 
+- ``fit(X, validation_data)`` performs a number of training epochs, each followed by an evaluation step on the full dataset. 
+    Unlike the other base classes, it now takes an additional ``validation_data`` argument to perform this evaluation step.
 - ``save`` saves the current PyTorch model to disk.
 - ``load`` loads a PyTorch model from file.
 - ``filename`` generates a unique filename for the current best model.
@@ -407,18 +411,16 @@ This base class comes with quite a bit more plumbing that the others:
 -  ``_load_best`` loads the best model encountered during training as the final model used to make predictions. 
 -  ``_save_best`` saves the best model encountered during training to a temporary file.
 
-Which leaves ``__init``, ``_init_model``, ``_train_epoch`` and ``_batch_predict``
+Which leaves ``__init__``, ``_init_model``, ``_train_epoch``, ``_compute_loss`` and ``_batch_predict``
 for you to implement, as well as the actual PyTorch nn.Module that is your PyTorch model.
 
 MFModule
 """"""""
 
+First we create a PyTorch model that encodes this factorization. 
+The ``forward`` method is also used to make recommendations at prediction time.
 
-The model tries to learn the weights of a 2 matrix factorization of the initial matrix X, 
-``X = U x V``.
-The first step is to create a PyTorch model that encodes this factorization. 
-This module will be the base model we will fit. 
-The forward function will be used to generate recommendations. ::
+::
 
     import numpy as np
     from scipy.sparse import csr_matrix, lil_matrix
@@ -429,114 +431,93 @@ The forward function will be used to generate recommendations. ::
     from recpack.algorithms.base import TorchMLAlgorithm
     from recpack.algorithms.stopping_criterion import StoppingCriterion
     class MFModule(nn.Module):
-    """MF torch module, encodes the embeddings and the forward functionality.
+        """MF torch module, encodes the embeddings and the forward functionality.
 
-    :param num_users: the amount of users
-    :type num_users: int
-    :param num_items: the amount of items
-    :type num_items: int
-    :param num_components: The size of the embedding per user and item, defaults to 100
-    :type num_components: int, optional
-    """
-
-    def __init__(self, num_users, num_items, num_components=100):
-        super().__init__()
-
-        self.num_components = num_components
-        self.num_users = num_users
-        self.num_items = num_items
-
-        self.user_embedding = nn.Embedding(num_users, num_components)  # User embedding
-        self.item_embedding = nn.Embedding(num_items, num_components)  # Item embedding
-
-        self.std = 1 / num_components ** 0.5
-        # Initialise embeddings to a random start
-        nn.init.normal_(self.user_embedding.weight, std=self.std)
-        nn.init.normal_(self.item_embedding.weight, std=self.std)
-
-    def forward(
-        self, user_tensor: torch.Tensor, item_tensor: torch.Tensor
-    ) -> torch.Tensor:
+        :param num_users: the amount of users
+        :type num_users: int
+        :param num_items: the amount of items
+        :type num_items: int
+        :param num_components: The size of the embedding per user and item, defaults to 100
+        :type num_components: int, optional
         """
-        Compute dot-product of user embedding (w_u) and item embedding (h_i)
-        for every user and item pair in user_tensor and item_tensor.
 
-        :param user_tensor: [description]
-        :type user_tensor: [type]
-        :param item_tensor: [description]
-        :type item_tensor: [type]
-        """
-        w_u = self.user_embedding(user_tensor)
-        h_i = self.item_embedding(item_tensor)
+        def __init__(self, num_users, num_items, num_components=100):
+            super().__init__()
 
-        return w_u.matmul(h_i.T)
+            self.num_components = num_components
+            self.num_users = num_users
+            self.num_items = num_items
 
-Next step is to define a loss function. 
-This loss function will tell how well our estimate of the embeddings in the MFModule
-is able to perform at the task we set for it.
-In this simple case we want to recreate the original matrix.
-Our loss function will compute the average of the absolute error between ``U x V`` 
-and the original matrix ``X`` per user.
+            self.user_embedding = nn.Embedding(num_users, num_components)  # User embedding
+            self.item_embedding = nn.Embedding(num_items, num_components)  # Item embedding
 
-.. note::
-    For better loss functions check out for example Shenbin, Ilya, et al. 
-    "RecVAE: A new variational autoencoder for Top-N recommendations with implicit feedback." 
-    Proceedings of the 13th International Conference on Web Search and Data Mining. 2020.
+            self.std = 1 / num_components ** 0.5
+            # Initialise embeddings to a random start
+            nn.init.normal_(self.user_embedding.weight, std=self.std)
+            nn.init.normal_(self.item_embedding.weight, std=self.std)
+
+        def forward(
+            self, user_tensor: torch.Tensor, item_tensor: torch.Tensor
+        ) -> torch.Tensor:
+            """
+            Compute dot-product of user embedding (w_u) and item embedding (h_i)
+            for every user and item pair in user_tensor and item_tensor.
+
+            :param user_tensor: [description]
+            :type user_tensor: [type]
+            :param item_tensor: [description]
+            :type item_tensor: [type]
+            """
+            w_u = self.user_embedding(user_tensor)
+            h_i = self.item_embedding(item_tensor)
+
+            return w_u.matmul(h_i.T)
+
+__init__
+"""""""""
+
+Next, we create the actual :class:`recpack.algorithms.base.TorchMLAlgorithm`.
+The ``__init__`` of any TorchMLAlgorithm expects at least the following
+default hyperparameters to be defined:
+
+- ``batch_size`` which dictactes how many users make up a training batch.
+- ``max_epochs`` which defines the maximum number of training epochs to run.
+- ``learning_rate`` which determines how much to change the model with every update.
+- ``stopping_criterion`` to define how to evaluate the model's performance, and if and when to stop early.
+
+We define one additional hyperparameter:
+
+- ``num_components`` which is the dimension of our embeddings for both users and items.
+
+For the sake of example we use a fixed random seed. 
+The random seed is set to guarantee reproducibility of results. 
+
+As :class:`recpack.algorithms.stopping_criterion.StoppingCriterion` we use Recall@10.
+By default, early stopping is disabled.
 
 ::
 
-    def my_loss(true_sim, predicted_sim):
-        """Computes the total absolute error from predicted compared to true, 
-        and averages over all users
-        """
-        return torch.mean(torch.sum(torch.abs(true_sim - predicted_sim), axis=1))
+    class SillyMF(TorchMLAlgorithm):
+        def __init__(self, batch_size, max_epochs, learning_rate, num_components=100):
+            super().__init__(
+                batch_size, 
+                max_epochs,
+                learning_rate,
+                StoppingCriterion.create('recall', k=10),
+                seed=42
+            )
+            self.num_components = num_components
 
-Now that we have the loss function and the Module implementation we can create 
-a recommendation algorithm.
-Since we are using torch to learn a specified loss function, 
-it makes sense to use the :class:`recpack.algorithms.base.TorchMLAlgorithm`.
-This class helps streamline the process of learning the model iteratively, 
-and provides us with a lot of functionality we won't have to create anymore.
 
-- ``fit(X, validation_data)``, unlike the other algorithms we need an additional 
-  argument in the fit method.
-  The validation data is needed to pick which of the models was best during iteration, 
-  this way can pick the model
-  that generalizes the best, and avoid overfitting to the training dataset.
-  The fit method handles iterating through each of the epochs of training, 
-  and potential early stopping.
-- ``_transform_fit_input``, this function will overwrite the base one, 
-  to also transform the validation data into the required format.
-- ``predict(X)``, will call the ``_transform_predict_input`` function and then call 
-  the ``_batch_predict`` function.
-  The latter is a wrapper around the ``_predict`` method we will implement, 
-  to make sure recommendations happen in batches,
-  to avoid exceeding RAM usage of a GPU when used.
+_init_model
+""""""""""""
 
-Remains for us to implement:
+Next we implement ``_init_model``. We cannot initialize ``MFModule`` as part of SillyMF's
+``__init__``, because at this stage, we're unaware of the dimensions of the interaction matrix.
 
-- ``_predict``, predicting scores
-- ``_train_epoch`` how to perform a training step
-- ``_init_model`` initialising our MFModule to start fitting it.
+We then define the optimizer.
+Here we use simple SGD, but any PyTorch optimizer can be used.
 
-Let's start with ``__init__`` and ``_init_model``, 
-we will use the hyperparameters expected by the `TorchMLAlgorithm` class 
-and how big our learned embeddings should be.
-
-- ``batch_size`` - how many users to use together in a training batch.
-- ``max_epochs`` - How many epochs to train for.
-- ``learning_rate`` - How fast should our model's weights be updated.
-- ``num_components`` - The size of our embeddings for both users and items.
-
-We will choose the recall@10 as our StoppingCriterion, the StoppingCriterion decides which
-of the iterations got the best model, the decision of best model will be based
-on the validation data received in the fit method.
-For more info on StoppingCriterion and options, see 
-:class:`recpack.algorithms.stopping_criterion.StoppingCriterion`.
-
-During ``_init_model`` we will initialise our MFModule based on the received matrix, 
-and setup our optimizer.
-In this case we'll use SGD, but you could use any other of the torch optimizers.
 ::
 
     class SillyMF(TorchMLAlgorithm):
@@ -559,16 +540,69 @@ In this case we'll use SGD, but you could use any other of the torch optimizers.
             # We'll use a basic SGD optimiser
             self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
             self.steps = 0
+            
+_train_epoch
+"""""""""""""
 
-Predicting items is the same as for the SVD algorithm we defined before, 
-user embeddings will be multiplied with item embeddings.
-However, here we'll use our MFModule to apply this operation. 
-Its ``forward`` method takes a tensor of userids and a tensor of itemids.
-It will then compute matrix multiplication of its stored embeddings.
-Thus in our ``_predict`` method, we should get the users to predict with, 
-and all items, and pass them to the forward method. ::
+Next we implement training.
+First, we need to define a loss function to indicate how well our 
+current embeddings are able to perform at the task we set.
+As mentioned in the description, this task is to reconstruct the matrix ``X``.
+Our loss function computes the average of the absolute error between ``U x V`` 
+and the original matrix ``X`` per user.
 
-    def _predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+.. note::
+    For better loss functions check out for example Shenbin, Ilya, et al. 
+    "RecVAE: A new variational autoencoder for Top-N recommendations with implicit feedback." 
+    Proceedings of the 13th International Conference on Web Search and Data Mining. 2020.
+            
+::
+
+    def my_loss(true_sim, predicted_sim):
+        """Computes the total absolute error from predicted compared to true, 
+        and averages over all users
+        """
+        return torch.mean(torch.sum(torch.abs(true_sim - predicted_sim), axis=1))
+
+Now we can continue with ``_train_epoch``. 
+Every epoch loops through the entire dataset (most often in batches).
+For every batch, the loss and resulting gradients are computed and the embeddings are updated. 
+
+::
+
+    def _train_epoch(self, X):
+        losses = []
+        item_tensor = torch.arange(X.shape[1]).to(self.device)
+        for users in get_batches(get_users(X), batch_size=self.batch_size):
+            self.optimizer.zero_grad()
+            user_tensor = torch.LongTensor(users).to(self.device)
+            scores = self.model_.forward(user_tensor, item_tensor)
+            expected_scores = naive_sparse2tensor(X[users])
+            loss = my_loss(expected_scores, scores)
+            
+            # Backwards propagation of the loss
+            loss.backward()
+            losses.append(loss.item())
+            # Update the weight according to the gradients.
+            # All automated thanks to torch.
+            self.optimizer.step()
+            self.steps += 1
+
+
+_batch_predict
+"""""""""""""""
+
+Now we can move on to the final step of our implementation: prediction.
+Predicting items is the same here as in :ref:`guides-algorithms-svd`: 
+the user embeddings of nonzero users are multiplied with item embeddings.
+
+As mentioned in the definition of ``MFModule``, ``MFModule.forward`` is used to make predictions.
+This method takes a PyTorch ``Tensor`` of userids and a ``Tensor`` of itemids as inputs.
+It then computes the matrix multiplication of its embeddings.
+
+::
+
+    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
         """Predict scores for matrix X, given the selected users.
 
         If there are no selected users, you can assume X is a full matrix,
@@ -591,27 +625,4 @@ and all items, and pass them to the forward method. ::
 
         return self.model_(user_tensor, item_tensor).detach().cpu().numpy()
 
-The final method we should implement is the ``_train_epoch``. 
-During each epoch we will compute the predictions for batches of users, 
-and then compute the loss on these predicitons compared with our training matrix.
-Based on the loss we will let the optimizer update the weights of our embeddings.::
-
-    def _train_epoch(self, X):
-        losses = []
-        item_tensor = torch.arange(X.shape[1]).to(self.device)
-        for users in get_batches(get_users(X), batch_size=self.batch_size):
-            self.optimizer.zero_grad()
-            user_tensor = torch.LongTensor(users).to(self.device)
-            scores = self.model_.forward(user_tensor, item_tensor)
-            expected_scores = naive_sparse2tensor(X[users])
-            loss = my_loss(expected_scores, scores)
-            
-            # Backwards propagation of the loss
-            loss.backward()
-            losses.append(loss.item())
-            # Update the weight according to the gradients.
-            # All automated thanks to torch.
-            self.optimizer.step()
-            self.steps += 1
-
-And that's it for implementing the torch based matrix factorization.
+And that's all for implementing SillyMF!
