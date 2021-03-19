@@ -421,15 +421,18 @@ First we create a PyTorch model that encodes this factorization.
 The ``forward`` method is also used to make recommendations at prediction time.
 
 ::
+    from typing import List
 
     import numpy as np
     from scipy.sparse import csr_matrix, lil_matrix
     import torch
     import torch.optim as optim
-
+    import torch.nn as nn
 
     from recpack.algorithms.base import TorchMLAlgorithm
     from recpack.algorithms.stopping_criterion import StoppingCriterion
+
+
     class MFModule(nn.Module):
         """MF torch module, encodes the embeddings and the forward functionality.
 
@@ -519,27 +522,16 @@ We then define the optimizer.
 Here we use simple SGD, but any PyTorch optimizer can be used.
 
 ::
-
-    class SillyMF(TorchMLAlgorithm):
-        def __init__(self, batch_size, max_epochs, learning_rate, num_components=100):
-            super().__init__(
-                batch_size, 
-                max_epochs,
-                learning_rate,
-                StoppingCriterion.create('recall', k=10),
-                seed=42
-            )
-            self.num_components = num_components
             
-        def _init_model(self, X:csr_matrix):
-            num_users, num_items = X.shape
-            self.model_ = MFModule(
-                num_users, num_items, num_components=self.num_components
-            ).to(self.device)
-            
-            # We'll use a basic SGD optimiser
-            self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
-            self.steps = 0
+    def _init_model(self, X:csr_matrix):
+        num_users, num_items = X.shape
+        self.model_ = MFModule(
+            num_users, num_items, num_components=self.num_components
+        ).to(self.device)
+        
+        # We'll use a basic SGD optimiser
+        self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
+        self.steps = 0
             
 _train_epoch
 """""""""""""
