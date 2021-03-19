@@ -121,8 +121,8 @@ with the item, then take the softmax of the K most popular items.
         self.top_k_pop_items_ = np.argsort(pop)[-self.K:]
         top_k_pop = pop[self.top_k_pop_items_]
 
-        # To make softmax numerically stable, we will compute exp(pop - max(pop))/self.tau
-        # instead of exp(pop):
+        # To make softmax numerically stable, we will compute exp((pop - max(pop))/self.tau)
+        # instead of exp(pop/self.tau):
         # 
         # softmax for item i can then be computed as 
         # e^((pop[i] - max(pop))/tau) / sum([e^(pop[j] - max(pop))/self.tau for j in topK])
