@@ -319,7 +319,7 @@ class FactorizationAlgorithm(Algorithm):
         Checks implemented:
 
         - Checks if model is fitting, using the sklear check_is_fitted function,
-        https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
+          https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
         - Checks if `num_components` is correct
         """
         check_is_fitted(self)
@@ -360,7 +360,7 @@ class TorchMLAlgorithm(Algorithm):
     to optimize a model over several epochs of training.
 
     During evaluation the stopping criterion is used to determine
-    which model is best and if it would pay to stop training early 
+    which model is best and if it would pay to stop training early
     if the model converges before `max_epochs` have concluded.
 
     After training the best or last model will be loaded, and used for subsequent prediction.

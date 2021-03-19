@@ -421,6 +421,7 @@ First we create a PyTorch model that encodes this factorization.
 The ``forward`` method is also used to make recommendations at prediction time.
 
 ::
+
     from typing import List
 
     import numpy as np
