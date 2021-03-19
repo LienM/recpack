@@ -19,9 +19,6 @@ class Splitter(ABC):
 
     """
 
-    def __init__(self):
-        pass
-
     @abstractmethod
     def split(self, data: InteractionMatrix):
         """Split data
@@ -29,7 +26,7 @@ class Splitter(ABC):
         :param data: Interactions to split
         :type data: InteractionMatrix
         """
-        pass
+        raise NotImplementedError()
 
     @property
     def name(self):
@@ -67,8 +64,7 @@ class UserSplitter(Splitter):
     def split(
         self, data: InteractionMatrix
     ) -> Tuple[InteractionMatrix, InteractionMatrix]:
-        """
-        Splits a user-interaction matrix by the interactions' user indices.
+        """Splits a user-interaction matrix by the interactions' user indices.
 
         :param data: Matrix with item interactions to be split.
         :type data: InteractionMatrix
@@ -330,8 +326,7 @@ class MostRecentSplitter(Splitter):
     def split(
         self, data: InteractionMatrix
     ) -> Tuple[InteractionMatrix, InteractionMatrix]:
-        """
-        Returns a data matrix with all but the n most recent actions of each user
+        """Returns a data matrix with all but the n most recent actions of each user
         and a data matrix with the n most recent actions of each user.
 
         :param data: Data matrix to be split. Must contain timestamps.
@@ -360,8 +355,6 @@ class MostRecentSplitter(Splitter):
 
 def yield_batches(iterable, n=1):
     """Helper to generate batches from an iterable.
-
-    TODO: Move this to a util file
 
     :param iterable: iterable to get batches from
     :type iterable: Iterable
