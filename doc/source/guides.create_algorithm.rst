@@ -141,7 +141,7 @@ _predict
 
 Finally we implement ``_predict``.
 Here we sample recommendations for each user with at least one interaction
-in the matrix of interactions considerd for prediction. 
+in the matrix of interactions. 
 Sampling probabilities were stored in ``softmax_scores_`` during fitting.
 
 ::
@@ -253,7 +253,7 @@ scores per item.
 _predict
 """""""""
 
-Prediction is noweasy: for each nonzero user in the input matrix
+Prediction is now easy: for each nonzero user in the input matrix
 we set the item's score equal to the recency score we computed in ``_fit``.
 
 ::
@@ -298,7 +298,7 @@ In addition to the methods implemented in :class:`recpack.algorithms.base.Algori
 which we have highlighted in :ref:`guides-algorithms-pop-softmax`, this class provides:
 
 - ``_predict`` generates recommendations by multiplying the user embeddings of nonzero users with all item embeddings.
-- ``_check_fit_complete`` performs an additional check of the dimensions of the embeddings 
+- ``_check_fit_complete`` performs an additional check on the dimensions of the embeddings 
 
 All that remains for us to implement is ``__init__`` 
 to set hyperparameters and ``_fit`` to compute the embeddings.
@@ -401,9 +401,9 @@ This base class comes with quite a bit more plumbing that the others:
 - ``load`` loads a PyTorch model from file.
 - ``filename`` generates a unique filename for the current best model.
 - ``_transform_predict_input`` transforms the input matrix to a ``csr_matrix`` by default.
-- ``_transform_fit_input`` transforms the input matrix to a ``csr_matrix`` by default.
+- ``_transform_fit_input`` transforms the input matrices to a ``csr_matrix`` by default.
 -  ``_evaluate`` performs one evaluation step, which consists of making predictions .
-    for the validation data and subsequently evaluating the stopping criterion.
+    for the validation data and subsequently updating the stopping criterion.
 -  ``_load_best`` loads the best model encountered during training as the final model used to make predictions. 
 -  ``_save_best`` saves the best model encountered during training to a temporary file.
 
