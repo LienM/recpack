@@ -86,7 +86,6 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     return sampled_matrices
 
 
-# TODO: Add tests
 def union_csr_matrices(a: csr_matrix, b: csr_matrix) -> csr_matrix:
     """Combine entries of 2 binary csr_matrices.
 
