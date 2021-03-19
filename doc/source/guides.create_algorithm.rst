@@ -207,14 +207,14 @@ we update ``_transform_fit_input``.
     import numpy as np
     from scipy.sparse import csr_matrix, lil_matrix
 
-    from recpack.algorithm.base import Algorithm
+    from recpack.algorithms.base import Algorithm
     from recpack.data.matrix import InteractionMatrix
 
     class Recency(Algorithm):
         def _transform_fit_input(self, X):
             # X needs to be an InteractionMatrix for us to have access to
             # the time of interaction at fitting time
-            assert issubclass(X, InteractionMatrix)
+            assert isinstance(X, InteractionMatrix)
             # X needs to have timestamps available
             assert X.has_timestamps
             # No transformation needed
@@ -411,7 +411,7 @@ This base class comes with quite a bit more plumbing that the others:
 -  ``_load_best`` loads the best model encountered during training as the final model used to make predictions. 
 -  ``_save_best`` saves the best model encountered during training to a temporary file.
 
-Which leaves ``__init__``, ``_init_model``, ``_train_epoch``, ``_compute_loss`` and ``_batch_predict``
+Which leaves ``__init__``, ``_init_model``, ``_train_epoch``, ``my_loss`` and ``_batch_predict``
 for you to implement, as well as the actual PyTorch nn.Module that is your PyTorch model.
 
 MFModule
@@ -552,9 +552,8 @@ Our loss function computes the average of the absolute error between ``U x V``
 and the original matrix ``X`` per user.
 
 .. note::
-    For better loss functions check out for example Shenbin, Ilya, et al. 
-    "RecVAE: A new variational autoencoder for Top-N recommendations with implicit feedback." 
-    Proceedings of the 13th International Conference on Web Search and Data Mining. 2020.
+    For an overview of commonly used loss functions, 
+    check out `PyTorch <https://pytorch.org/docs/stable/nn.html#loss-functions>`_ loss functions.
             
 ::
 
