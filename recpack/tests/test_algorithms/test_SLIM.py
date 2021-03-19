@@ -73,7 +73,7 @@ def test_slim_negatives(data_negatives):
     _in = csr_matrix(([1, 1, 1, 1], ([0, 1, 2, 3], [0, 1, 2, 3])), shape=(4, 4))
     result = algo.predict(_in)
 
-    # Item 0 is closer to item 2
+    # No similarity between item 0 and 2
     assert result[2, 0] == 0
 
     algo2 = SLIM(ignore_neg_weights=False)

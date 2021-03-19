@@ -2,8 +2,8 @@
 
 The algorithms module in recpack contains a wide array of state-of-the-art
 collaborative filtering algorithms.
-Also included are two baseline algorithms, as well as several reusable building blocks
- such as commonly used loss functions and sampling methods.
+Also included are some baseline algorithms, as well as several reusable building blocks
+such as commonly used loss functions and sampling methods.
 
 .. currentmodule:: recpack.algorithms
 
@@ -13,7 +13,7 @@ Also included are two baseline algorithms, as well as several reusable building 
 Baselines
 ------------------
 
-Recpack contains two non-personalized baseline algorithms.
+In recpack, baseline algorithms are algorithms that are not personalized.
 Use these baselines if you wish to quickly test a pipeline,
 or for comparison in experiments.
 
@@ -26,8 +26,7 @@ or for comparison in experiments.
 Item Similarity Algorithms
 ----------------------------
 
-Recpack contains four item similarity algorithms.
-These algorithms exploit relationships between items to make recommendations.
+Item similarity algorithms exploit relationships between items to make recommendations.
 At prediction time, the user is represented by the items
 they have interacted with.
 
@@ -42,8 +41,7 @@ they have interacted with.
 Factorization Algorithms
 ------------------------------------
 
-Recpack contains four factorization algorithms.
-These factorization algorithms factorize the interaction matrix into
+Factorization algorithms factorize the interaction matrix into
 a user embeddings (U) and item embeddings (V) matrix, that can be
 user to reconstruct the original interaction matrix R = UV^T.
 
@@ -59,7 +57,6 @@ user to reconstruct the original interaction matrix R = UV^T.
 Autoencoder Algorithms
 ------------------------
 
-Recpack contains three autoencoder algorithms.
 Autoencoder algorithms aim to learn a function f, such that X = f(X).
 More information on autoencoders can be found on `Wikipedia <https://en.wikipedia.org/wiki/Autoencoder>`_
 
@@ -76,7 +73,7 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
 Abstract Base Classes
 -----------------------
 
-Recpack algorithm implementations inherit from one of five base classes. 
+Recpack algorithm implementations inherit from one of these base classes.
 These base classes provide the basic building blocks to easily create new algorithm
 implementations that can be used within the recpack evaluation framework.
 
@@ -130,8 +127,8 @@ Samplers
 ----------
 
 In multiple recommendation algorithms (e.g. BPRMF) sampling methods play
- an important role.
-As such we recpack contains a number of commonly used sampling methods.
+an important role.
+As such recpack contains a number of commonly used sampling methods.
 
 .. autosummary::
     :toctree: generated/
@@ -145,7 +142,7 @@ Utility Functions
 -------------------
 
 The ``util`` module contains a number of utility functions
-used across algorithms. 
+used across algorithms.
 Use these to simplify certain tasks (such as batching) when creating a new algorithm.
 
 .. autosummary::

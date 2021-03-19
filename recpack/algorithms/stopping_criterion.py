@@ -78,6 +78,29 @@ class StoppingCriterion:
     :type kwargs: dict, optional
     """
 
+    FUNCTIONS = {
+        "bpr": {
+            "loss_function": bpr_loss_wrapper,
+            "minimize": True,
+            "batch_size": 1000,
+        },
+        "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
+        "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
+        "warp": {"loss_function": warp_loss_wrapper, "minimize": True},
+    }
+    """Available loss function options.
+
+    These values can be passed to the ``create`` method,
+    and will create the corresponding stopping criterion.
+
+    Available loss functions:
+
+    - bpr : Bayesian Personalised Ranking loss, will be minimized.
+    - warp : Weighted Approximate-Rank Pairwise loss, will be minimized.
+    - recall: Recall@k metric, will be maximized.
+    - ndcg: Normalized Discounted Cumulative Gain, will be maximized.
+    """
+
     def __init__(
         self,
         loss_function: Callable,
@@ -153,29 +176,6 @@ class StoppingCriterion:
 
         return False
 
-    FUNCTIONS = {
-        "bpr": {
-            "loss_function": bpr_loss_wrapper,
-            "minimize": True,
-            "batch_size": 1000,
-        },
-        "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
-        "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
-        "warp": {"loss_function": warp_loss_wrapper, "minimize": True},
-    }
-    """Available preimplemented loss function options.
-
-    These values can be passed to the ``create`` method,
-    and will create the corresponding stopping criterion.
-
-    Available loss functions:
-
-    - bpr : Bayesian Personalised Ranking loss, will be minimized.
-    - warp : Weighted Approximate-Rank Pairwise loss, will be minimized.
-    - recall: Recall@k metric, will be maximized.
-    - ndcg: Normalized Discounted Cumulative Gain, will be maximized.
-    """
-
     @classmethod
     def create(cls, criterion_name: str, **kwargs) -> "StoppingCriterion":
         """Construct a StoppingCriterion instance,
@@ -217,7 +217,8 @@ class StoppingCriterion:
         """
 
         if criterion_name not in cls.FUNCTIONS:
-            raise ValueError(f"stopping criterion {criterion_name} not supported")
+            raise ValueError(
+                f"stopping criterion {criterion_name} not supported")
 
         # We will combine the two dicts, with kwargs getting precendence.
         return StoppingCriterion(**{**cls.FUNCTIONS[criterion_name], **kwargs})

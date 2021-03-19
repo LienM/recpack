@@ -294,19 +294,16 @@ class FactorizationAlgorithm(Algorithm):
 
     During fitting two matrices are constructed.
 
-    - ``user_features_`` contains the users embedded in a lower dimensional space,
+    - ``user_embedding_`` contains the users embedded in a lower dimensional space,
       shape = ``|users| x num_components``
-    - ``item_features_`` contains the items embedded in the same dimensions
+    - ``item_embedding_`` contains the items embedded in the same dimensions
       shape = ``num_components x |items|``
 
-    Prediction happens by multiplying a user's features with the item features.
+    Prediction happens by multiplying a user's features with the item embedding.
 
     Usually a child class will have to
     implement just the :meth:`_fit` method,
-    to construct the `self.user_features_` and `self.item_features_` attributes.
-
-    TODO -> In the Neural Network we call things embeddings,
-    probably should call the features here embeddings?
+    to construct the `self.user_embedding_` and `self.item_embedding_` attributes.
 
     :param num_components: the dimension of the feature matrices. defaults to 100
     :type num_components: int, optional
@@ -322,14 +319,14 @@ class FactorizationAlgorithm(Algorithm):
         Checks implemented:
 
         - Checks if model is fitting, using the sklear check_is_fitted function,
-        https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
+          https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
         - Checks if `num_components` is correct
         """
         check_is_fitted(self)
 
         # Post conditions
-        assert self.user_features_.shape[1] == self.num_components
-        assert self.item_features_.shape[0] == self.num_components
+        assert self.user_embedding_.shape[1] == self.num_components
+        assert self.item_embedding_.shape[0] == self.num_components
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Predict scores for nonzero users in the interaction matrix
@@ -345,13 +342,13 @@ class FactorizationAlgorithm(Algorithm):
         :return: matrix with scores for each nonzero user.
         :rtype: csr_matrix
         """
-        assert X.shape == (self.user_features_.shape[0], self.item_features_.shape[1])
+        assert X.shape == (self.user_embedding_.shape[0], self.item_embedding_.shape[1])
         # Get the nonzero users, for these we will recommend.
         users = list(set(X.nonzero()[0]))
         # result is a lil matrix, makes editing rows easy
         result = lil_matrix(X.shape)
         # Set rows of the nonzero users to the predicted scores
-        result[users] = self.user_features_[users] @ self.item_features_
+        result[users] = self.user_embedding_[users] @ self.item_embedding_
 
         return result.tocsr()
 
@@ -363,7 +360,7 @@ class TorchMLAlgorithm(Algorithm):
     to optimize a model over several epochs of training.
 
     During evaluation the stopping criterion is used to determine
-    which model is best and if it would pay to stop training early 
+    which model is best and if it would pay to stop training early
     if the model converges before `max_epochs` have concluded.
 
     After training the best or last model will be loaded, and used for subsequent prediction.
@@ -583,7 +580,7 @@ class TorchMLAlgorithm(Algorithm):
         Interaction Matrix X will be used for training,
         the validation data tuple will be used to compute the evaluate scores.
 
-        This function provides the generic framework for training a torch algorithm,
+        This function provides the generic framework for training a PyTorch algorithm,
         such that each child class only needs to implement the
         :meth:`_transform_fit_input`, :meth:`_init_model`, :meth:`_train_epoch`
         and :meth:`_evaluate` functions.
@@ -592,14 +589,13 @@ class TorchMLAlgorithm(Algorithm):
 
         - Transform input data to the expected types
         - Initialize the model using :meth:`_init_model`
-        - Iterate for each epoch until max epochs, or early stopping is detected
+        - Iterate for each epoch until max epochs, or when early stopping conditions are met.
 
             - Training step using :meth:`_train_epoch`
             - Evaluation step using :meth:`_evaluate`
 
         Once the model has been fit, the best model is stored to disk,
         if specified during init.
-
 
         :return: **self**, fitted algorithm
         :rtype: TorchMLAlgorithm
