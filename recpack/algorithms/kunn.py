@@ -118,9 +118,9 @@ class KUNN(Algorithm):
     def _fit_item_knn(self, X: csr_matrix) -> csr_matrix:
         """
         Helper method to compute the Item KNN, used in the KUNN implementation.
-        :param X: Sparse binary user-item matrix
-        :return: Item KNN matrix for X
-        """
+
+        .. math::
+            sim(i,j) = \sum_{u \in U} { \frac{ R_{ui} R_{vi}}{\sqrt{c(i) c(u) c(j)}}}
 
         user_counts = X.sum(axis=1)
         item_counts = X.sum(axis=0)
@@ -137,10 +137,10 @@ class KUNN(Algorithm):
     def _fit_user_knn(self, X: csr_matrix) -> csr_matrix:
         """Helper method to compute the User KNN, used in the KUNN implementation.
         The memoized training interactions are used to compute the user similarities.
+        
+        .. math::
+            sim(u,v) = \sum_{i \in I} { \frac{ R_{ui} R_{vi}}{\sqrt{c(u) c(v) c(i)}}}
 
-        :param X: Sparse binary user-item matrix
-        :return: User KNN matrix for X
-        """
         users_to_predict = get_users(X)
 
         # Combine the memoized training interactions with the predict interactions
@@ -152,7 +152,6 @@ class KUNN(Algorithm):
         # Turn mask into a column vector
         mask = mask.reshape(mask.shape[0], 1)
         # Select the interactions for nonzero users in mask
-        print(combined_interactions.shape, mask.shape)
         combined_interactions_selected_users = csr_matrix(
             combined_interactions.multiply(mask)
         )
