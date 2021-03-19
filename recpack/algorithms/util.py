@@ -5,6 +5,8 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
+from recpack.data.matrix import to_binary
+
 
 def swish(x):
     return x.mul(torch.sigmoid(x))
@@ -84,12 +86,6 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     return sampled_matrices
 
 
-def invert_np_array(x):
-    ret = np.zeros(x.shape)
-    ret[x.nonzero()] = 1 / x[x.nonzero()]
-    return ret
-
-
 # TODO: Add tests
 def union_csr_matrices(a: csr_matrix, b: csr_matrix) -> csr_matrix:
     """Combine entries of 2 binary csr_matrices.
@@ -102,7 +98,7 @@ def union_csr_matrices(a: csr_matrix, b: csr_matrix) -> csr_matrix:
     :return: The union of a and b
     :rtype csr_matrix:
     """
-    return csr_matrix(a.astype(np.bool) + b.astype(np.bool)) * 1.0
+    return to_binary(a + b)
 
 
 def invert(x: np.array):

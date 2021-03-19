@@ -3,9 +3,12 @@ from scipy.sparse import csr_matrix
 from torch import Tensor
 
 from recpack.algorithms.util import (
+    get_batches,
+    invert,
     naive_sparse2tensor,
     naive_tensor2sparse,
     sample_rows,
+    union_csr_matrices,
 )
 
 
@@ -34,3 +37,50 @@ def test_sample_rows():
     assert len(set(s_1.nonzero()[0])) == 2
     np.testing.assert_array_equal(s_1[s_1.nonzero()], 1)
     np.testing.assert_array_almost_equal(s_2[s_2.nonzero()], 0.5)
+
+
+def test_get_batches():
+    users = list(range(100))
+    batch_size = 12
+
+    total = 0
+    for batch in get_batches(users, batch_size=batch_size):
+        total += len(batch)
+
+    assert total == len(users)
+
+
+def test_union_csr_matrices():
+    # fmt:off
+    a = csr_matrix(np.array([
+        [1, 0, 0, 1],
+        [0, 1, 0, 0],
+        [0, 1, 1, 0]
+    ]))
+
+    b = csr_matrix(np.array([
+        [0, 0, 1, 1],
+        [1, 0, 0, 0],
+        [1, 0, 0, 0]
+    ]))
+
+    expected = csr_matrix(np.array([
+        [1, 0, 1, 1],
+        [1, 1, 0, 0],
+        [1, 1, 1, 0]
+    ]))
+
+    # fmt:on
+    combined = union_csr_matrices(a, b)
+
+    np.testing.assert_equal(combined.toarray(), expected.toarray())
+
+
+def test_invert():
+    a = np.array([1, 2, 3, 0])
+
+    expected = np.array([1, 1 / 2, 1 / 3, 0])
+
+    inv = invert(a)
+
+    np.testing.assert_almost_equal(inv, expected)

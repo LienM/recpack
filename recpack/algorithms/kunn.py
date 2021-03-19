@@ -2,17 +2,14 @@ import logging
 import numpy as np
 
 from scipy.sparse import csr_matrix, lil_matrix
-from sklearn.utils.validation import check_is_fitted
 
-from recpack.util import get_top_K_values
 from recpack.algorithms import Algorithm
-from recpack.data.matrix import Matrix, to_csr_matrix
 from recpack.algorithms.util import (
     get_users,
-    invert_np_array,
-    union_csr_matrices,
     invert,
+    union_csr_matrices,
 )
+from recpack.util import get_top_K_values
 
 logger = logging.getLogger("recpack")
 
@@ -22,8 +19,17 @@ class KUNN(Algorithm):
     as described in 'Unifying Nearest Neighbors Collaborative Filtering'
     Verstrepen et al. (10.1145/2645710.2645731)
 
+    During fit computes the item KNN model, and stores training interactions.
+    During prediction computes the user KNN model between test users and training users.
+
+    Scores are computed as a sum of item and user similarity.
+
     :param Ku: How many neighbours to keep in the user similarity matrix.
+        Defaults to 100
+    :type Ku: int, optional
     :param Ki: How many items to keep as neighbours in the item similarity matrix
+        Defaults to 100
+    :type Ki: int, optional
 
     """
 
@@ -35,34 +41,27 @@ class KUNN(Algorithm):
         self.Ku = Ku
         self.Ki = Ki
 
-    def fit(self, X: Matrix) -> Algorithm:
-        """
-        Calculate the score matrix for items based on the binary matrix .
+    def _fit(self, X: csr_matrix):
+        """Calculate the item similarity matrix based on the interactions.
+
         :param X: Sparse binary user-item interaction matrix
             which will be used to fit the algorithm.
-        :return: The fitted KUNN Algorithm itself.
         """
-        # To make sure the input is interpreted as a binary matrix
-        X = to_csr_matrix(X, binary=True)
 
         self.training_interactions_ = csr_matrix(X, copy=True)  # Memoize X
         self.knn_i_ = self._fit_item_knn(X)
 
-        return self
-
-    def predict(self, X: Matrix) -> csr_matrix:
+    def _predict(self, X: csr_matrix) -> csr_matrix:
         """Predict recommendations for all nonzero users in the interaction matrix.
 
         Computes a userKNN model, and then predicts based on the combined
         score of user and item similarity.
+
         :param X: Sparse binary user-item matrix which will be used as history.
-        :type X: Matrix
+        :type X: csr_matrix
         :return: User-item matrix with the prediction scores as values.
         :rtype: csr_matrix
         """
-        check_is_fitted(self)
-
-        X = to_csr_matrix(X, binary=True)
 
         knn_u = self._fit_user_knn(X)
 
@@ -73,9 +72,9 @@ class KUNN(Algorithm):
         combined_interactions = union_csr_matrices(self.training_interactions_, X)
 
         # Compute user similarity,
-        # Formula 10 in paper.
+        # Formula (10) in paper.
         # we'll pull the 1/ sqrt(c(u)c(i))
-        # into the computation
+        # into the subcomputations of user similarity and item similarity.
 
         # Note that user_knn scores already compute the
         # inner sum in the user similarity formula
@@ -113,15 +112,14 @@ class KUNN(Algorithm):
         scores[users_to_predict] = similarity[users_to_predict]
 
         scores = scores.tocsr()
-        self._check_prediction(scores, X)
 
         return scores
 
     def _fit_item_knn(self, X: csr_matrix) -> csr_matrix:
         """
         Helper method to compute the Item KNN, used in the KUNN implementation.
-        @param X: Sparse binary user-item matrix
-        @return: Item KNN matrix for X
+        :param X: Sparse binary user-item matrix
+        :return: Item KNN matrix for X
         """
 
         user_counts = X.sum(axis=1)
@@ -139,6 +137,7 @@ class KUNN(Algorithm):
     def _fit_user_knn(self, X: csr_matrix) -> csr_matrix:
         """Helper method to compute the User KNN, used in the KUNN implementation.
         The memoized training interactions are used to compute the user similarities.
+
         :param X: Sparse binary user-item matrix
         :return: User KNN matrix for X
         """
@@ -200,13 +199,13 @@ class KUNN(Algorithm):
         # fmt:off
         similarities = (
             combined_interactions_selected_users.multiply(
-                invert_np_array(np.sqrt(pred_user_interaction_counts))
+                invert(np.sqrt(pred_user_interaction_counts))
             ).multiply(
-                invert_np_array(np.sqrt(item_counts_per_user))
+                invert(np.sqrt(item_counts_per_user))
             )
             @
             self.training_interactions_.multiply(
-                invert_np_array(np.sqrt(train_user_counts))
+                invert(np.sqrt(train_user_counts))
             ).T
         )
         # fmt:on

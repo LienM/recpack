@@ -38,6 +38,18 @@ they have interacted with.
     NMFItemToItem
     SVDItemToItem
 
+Hybrid Similarity Algorithms
+----------------------------
+
+Hybrid similarity algorithms use a combination of user and item similarities
+to generate recommendations.
+
+.. autosummary::
+    :toctree: generated/
+
+    KUNN
+
+
 Factorization Algorithms
 ------------------------------------
 
@@ -67,45 +79,15 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
     MultVAE
     EASE
 
-<<<<<<< HEAD
-from recpack.algorithms.vae.mult_vae import MultVAE
-from recpack.algorithms.vae.rec_vae import RecVAE
-from recpack.algorithms.similarity.kunn import KUNN
-from recpack.algorithms.matrix_factorization.wmf import WeightedMatrixFactorization
-=======
->>>>>>> 0e7679356d99c0ad73ca8c248eb11faf9999b7da
 
 .. _algorithm-base-classes:
 
-<<<<<<< HEAD
-
-class AlgorithmRegistry:
-
-    # TODO Resolve based on imports
-    ALGORITHMS = {
-        "ease": EASE,
-        "random": Random,
-        "popularity": Popularity,
-        "itemKNN": ItemKNN,
-        "NMF": NMF,
-        "SVD": SVD,
-        "NMFItemToItem": NMFItemToItem,
-        "SVDItemToItem": SVDItemToItem,
-        "slim": SLIM,
-        "mult_vae": MultVAE,
-        "rec_vae": RecVAE,
-        "BPRMF": BPRMF,
-        "KUNN": KUNN,
-        "wmf": WeightedMatrixFactorization
-    }
-=======
 Abstract Base Classes
 -----------------------
 
 Recpack algorithm implementations inherit from one of these base classes.
 These base classes provide the basic building blocks to easily create new algorithm
 implementations that can be used within the recpack evaluation framework.
->>>>>>> 0e7679356d99c0ad73ca8c248eb11faf9999b7da
 
 For more information on how to create your own recpack algorithm, see :ref:`guides-algorithms`.
 
@@ -199,6 +181,7 @@ from recpack.algorithms.ease import EASE
 from recpack.algorithms.slim import SLIM
 
 from recpack.algorithms.nearest_neighbour import ItemKNN
+from recpack.algorithms.kunn import KUNN
 from recpack.algorithms.bprmf import BPRMF
 
 # from recpack.algorithms.metric_learning.cml import CML
