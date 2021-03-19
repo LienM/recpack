@@ -298,6 +298,7 @@ class FactorizationAlgorithm(Algorithm):
 
     - ``user_embedding_`` contains the users embedded in a lower dimensional space,
       shape = ``|users| x num_components``
+
     - ``item_embedding_`` contains the items embedded in the same dimensions
       shape = ``num_components x |items|``
 
@@ -320,7 +321,7 @@ class FactorizationAlgorithm(Algorithm):
 
         Checks implemented:
 
-        - Checks if model is fitting, using the sklear check_is_fitted function,
+        - Checks if model is fitting, using the sklearn check_is_fitted function,
           https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
         - Checks if `num_components` is correct
         """

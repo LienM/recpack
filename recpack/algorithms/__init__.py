@@ -70,6 +70,14 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
     EASE
 
 
+Recurrent Neural Networks
+-------------------------
+
+.. autosummary::
+    :toctree: generated/
+
+    SessionRNN
+
 .. _algorithm-base-classes:
 
 Abstract Base Classes
@@ -181,3 +189,4 @@ from recpack.algorithms.wmf import WeightedMatrixFactorization
 
 from recpack.algorithms.p2v import Prod2Vec
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
+from recpack.algorithms.rnn.session_rnn import SessionRNN

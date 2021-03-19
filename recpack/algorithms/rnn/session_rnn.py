@@ -34,8 +34,7 @@ ITEM_IX = InteractionMatrix.ITEM_IX
 
 
 class SessionRNN(Algorithm):
-    """
-    A recurrent neural network for session-based recommendations.
+    """A recurrent neural network for session-based recommendations.
 
     The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
     "Session-based Recommendations with Recurrent Neural Networks" and
@@ -46,8 +45,8 @@ class SessionRNN(Algorithm):
     recommendations. At the heart of it is a Gated Recurrent Unit (GRU), a recurrent
     network architecture that is able to form long-term memories.
 
-    Predictions are made by processing a user's actions so far one by one, in chrono-
-    logical order:
+    Predictions are made by processing a user's actions so far one by one,
+    in chronological order::
 
                                           iid_3_predictions
                                                   |
@@ -176,8 +175,7 @@ class SessionRNN(Algorithm):
         }[self.optimizer]
 
     def save(self, file) -> None:
-        """
-        Saves the algorithm, all its learned parameters and optimization state.
+        """Saves the algorithm, all its learned parameters and optimization state.
 
         :param file: A file-like or string containing a filepath.
         """
@@ -185,8 +183,7 @@ class SessionRNN(Algorithm):
 
     @staticmethod
     def load(file) -> SessionRNN:
-        """
-        Loads an algorithm previously stored with save().
+        """Loads an algorithm previously stored with save().
 
         :param file: A file-like or string with the filepath of the algorithm
         """
@@ -197,8 +194,7 @@ class SessionRNN(Algorithm):
         X: InteractionMatrix,
         validation_data: Tuple[InteractionMatrix, InteractionMatrix] = None,
     ) -> SessionRNN:
-        """
-        Fit the model on the X dataset.
+        """Fit the model on the X dataset.
 
         Model quality is evaluated after every epoch on validation_data using the
         algorithm's stopping criterion. If no validation data is provided or early
@@ -212,20 +208,19 @@ class SessionRNN(Algorithm):
         self._init_model(X)
         self._init_training(X)
 
-        #try:
+        # try:
         for epoch in range(self.num_epochs):
             logger.info(f"Epoch {epoch}")
             self._train_epoch(X)
-            #if validation_data:
+            # if validation_data:
             #    self._evaluate(validation_data)
-        #except EarlyStoppingException:
+        # except EarlyStoppingException:
         #    pass
 
         return self
 
     def predict(self, X: InteractionMatrix) -> csr_matrix:
-        """
-        Predict recommendations for each user with at least a single event in their
+        """Predict recommendations for each user with at least a single event in their
         history.
 
         :param X: Data matrix, same shape as training matrix. Timestamps required.
@@ -272,9 +267,7 @@ class SessionRNN(Algorithm):
         return X_pred
 
     def _train_epoch(self, X: InteractionMatrix) -> None:
-        """
-        Train model for a single epoch.
-        """
+        """Train model for a single epoch."""
         actions, targets, uids = matrix_to_tensor(
             X, batch_size=self.batch_size, device=self.device, shuffle=True
         )
@@ -307,8 +300,7 @@ class SessionRNN(Algorithm):
     def _evaluate(
         self, validation_data: Tuple[InteractionMatrix, InteractionMatrix]
     ) -> None:
-        """
-        Evaluate the current model on the validation data.
+        """Evaluate the current model on the validation data.
 
         If performance improved over previous epoch, store the model and update
         best value. If performance stagnates, stop training.
