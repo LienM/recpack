@@ -35,20 +35,23 @@ class Scenario(ABC):
         pass
 
     @property
-    def training_data(self) -> Union[Tuple[InteractionMatrix, InteractionMatrix], InteractionMatrix]:
+    def training_data(
+        self,
+    ) -> Union[Tuple[InteractionMatrix, InteractionMatrix], InteractionMatrix]:
         return (
             (self.train_X, self.train_y) if hasattr(self, "train_y") else self.train_X
         )
 
     @property
-    def validation_data(self) -> Union[Tuple[InteractionMatrix, InteractionMatrix], None]:
+    def validation_data(
+        self,
+    ) -> Union[Tuple[InteractionMatrix, InteractionMatrix], None]:
         """
         Returns validation data.
 
         :return: Validation data matrices as InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
-        # TODO: make sure the users in and out match (Here? or elsewhere?)
         if not hasattr(self, "_validation_data_in"):
             return None
 
@@ -126,4 +129,3 @@ class Scenario(ABC):
             check("Validation set", n_val, n_total, 0.01)
             check("Validation in set", n_val_in, n_val, 0.05)
             check("Validation out set", n_val_out, n_val, 0.01)
-

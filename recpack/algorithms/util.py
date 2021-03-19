@@ -1,5 +1,5 @@
-import logging
 from math import ceil
+from typing import Iterator, List
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -15,8 +15,7 @@ def log_norm_pdf(x, mu, logvar):
 
 
 def naive_sparse2tensor(data: csr_matrix) -> torch.Tensor:
-    """
-    Naively converts sparse csr_matrix to torch Tensor.
+    """Naively converts sparse csr_matrix to torch Tensor.
 
     :param data: CSR matrix to convert
     :type data: csr_matrix
@@ -27,8 +26,7 @@ def naive_sparse2tensor(data: csr_matrix) -> torch.Tensor:
 
 
 def naive_tensor2sparse(tensor: torch.Tensor) -> csr_matrix:
-    """
-    Converts torch Tensor to sparse csr_matrix.
+    """Converts torch Tensor to sparse csr_matrix.
 
     :param tensor: Torch Tensor representation of the matrix to convert.
     :type tensor: torch.Tensor
@@ -42,18 +40,33 @@ def get_users(data):
     return list(set(data.nonzero()[0]))
 
 
-def get_batches(users, batch_size=1000):
-    return [
-        users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
-        for i in range(ceil(len(users) / batch_size))
-    ]
+def get_batches(users: List[int], batch_size=1000) -> Iterator[List[int]]:
+    """Get user ids in batches from a list of ids.
+
+    The list of users will be split into batches of batch_size.
+    The final batch might contain less users, as it will be the remainder.
+
+    :param users: list of user ids that will be split
+    :type users: List[int]
+    :param batch_size: Size of each batch, defaults to 1000
+    :type batch_size: int, optional
+    :yield: Iterator of lists of users
+    :rtype: Iterator[List[int]]
+    """
+    for i in range(ceil(len(users) / batch_size)):
+        yield users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
 
 
-def sample(*args: csr_matrix, sample_size: int = 1000):
+def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     """Samples rows from the matrices
 
-    rows are sampled from the nonzero rows in the first csr_matrix argument.
+    Rows are sampled from the nonzero rows in the first csr_matrix argument.
     The return value will contain a matrix for each of the matrix arguments, with only the sampled rows nonzero.
+
+    :param sample_size: Number of rows to sample, defaults to 1000
+    :type sample_size: int, optional
+    :return: List of all matrices passed as args
+    :rtype: List[csr_matrix]
     """
     nonzero_users = list(set(args[0].nonzero()[0]))
     users = np.random.choice(

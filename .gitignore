@@ -144,3 +144,6 @@ results.json
 *.trch
 
 .vscode/
+
+# Auto generated docs
+doc/source/generated/

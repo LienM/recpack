@@ -13,6 +13,14 @@ To clear the docs: `make clean`
 
 ## Adding to the documentation
 
+### Adding to the algorithm documentation
+Algorithm documentation is auto generated based on the docstring in `recpack.algorithms.__init__.py`.
+
+Documentation of each algorithm is rendered based on its docstrings.
+
+To add a new algorithm to the docs, you need to add it to one of the `autosummary` entries in the docstring.
+To generate the page run `sphinx-autogen -o source/generated/ source/recpack.algorithms.rst -t source/_templates/` This will generate the documentation pages in the source/generated directory.
+
 ### Adding to existing modules
 The documentation for existing modules is written in the docstring of each module.
 These docstrings are written in reStructuredText. Typical modules contain:

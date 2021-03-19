@@ -9,7 +9,7 @@ logger = logging.getLogger("recpack")
 
 
 def to_tuple(el):
-    """ Whether single element or tuple, always returns as tuple. """
+    """Whether single element or tuple, always returns as tuple. """
     if type(el) == tuple:
         return el
     else:

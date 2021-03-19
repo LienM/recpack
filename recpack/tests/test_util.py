@@ -20,7 +20,9 @@ def test_get_topK_ranks():
 
 def test_get_all_topK_ranks(data, ranked_data_complete):
     top_k_ranks = get_top_K_ranks(data, None)
-    np.testing.assert_almost_equal(top_k_ranks.todense(), ranked_data_complete.todense())
+    np.testing.assert_almost_equal(
+        top_k_ranks.todense(), ranked_data_complete.todense()
+    )
 
 
 def test_get_topK_ranks_no_reco():
