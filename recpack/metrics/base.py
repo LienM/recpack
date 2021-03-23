@@ -6,23 +6,29 @@ from scipy.sparse import csr_matrix
 import pandas as pd
 from sklearn.base import BaseEstimator
 
-from recpack.util import get_top_K_ranks
-
 logger = logging.getLogger("recpack")
 
 
 class Metric:
+    """Metric Baseclass,
+    computes metrics given true labels and predicted scores.
+
+    After ``calculate`` the results are stored in the object.
+    Detailed results can be retrieved using ``results`` attribute,
+    the aggregated results is retrieved with ``value``.
+    """
+
     def __init__(self):
         self.num_users_ = 0
         self.num_items_ = 0
 
     @property
     def name(self):
+        """Name of the metric."""
         return str(self.__class__).lower()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """
-        Calculates this Metric for all users.
+        """Calculates this Metric for all users.
 
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
@@ -33,29 +39,33 @@ class Metric:
 
     @property
     def results(self) -> pd.DataFrame:
+        """Detailed results of the metric."""
         pass
 
     @property
     def value(self) -> float:
+        """The aggregated value of the metric."""
         return self.value_
 
     @property
     def num_items(self) -> int:
+        """The number of items in the matrix used to calculate."""
         return self.num_items_
 
     @property
     def num_users(self) -> int:
+        """The number of users items have been predicted."""
         return self.num_users_
 
     @property
     def indices(self) -> Tuple[np.array, np.array]:
+        """?"""
         row, col = np.indices((self.num_users_, self.num_items_))
 
         return row.flatten(), col.flatten()
 
     def verify_shape(self, y_true: csr_matrix, y_pred: csr_matrix) -> bool:
-        """
-        Make sure the dimensions of y_true and y_pred match.
+        """Make sure the dimensions of y_true and y_pred match.
 
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
@@ -80,8 +90,7 @@ class Metric:
     def eliminate_empty_users(
         self, y_true: csr_matrix, y_pred: csr_matrix
     ) -> Tuple[csr_matrix, csr_matrix]:
-        """
-        Eliminate users that have no interactions, so
+        """Eliminate users that have no interactions, so
         no prediction could ever be right.
 
         :param y_true: True user-item interactions.
@@ -98,6 +107,7 @@ class Metric:
         return y_true[nonzero_users, :], y_pred[nonzero_users, :]
 
     def map_users(self, users):
+        """?"""
         if hasattr(self, "user_id_map_"):
             return self.user_id_map_[users]
         else:
@@ -105,9 +115,7 @@ class Metric:
 
 
 class MetricTopK(Metric):
-    """
-    Base class for any metric computed on the TopK items for a user.
-    """
+    """Base class for any metric computed on the TopK items for a user."""
 
     def __init__(self, K):
         super().__init__()
@@ -115,24 +123,28 @@ class MetricTopK(Metric):
 
     @property
     def name(self):
+        """Name of the metric."""
         return f"{super().name}_{self.K}"
 
     @property
     def indices(self):
+        """?"""
         row, col = self.y_pred_top_K_.nonzero()
         return row, col
 
 
 class ElementwiseMetricK(MetricTopK):
-    """
-    Base class for all metrics that can be calculated for
+    """Base class for all metrics that can be calculated for
     each user-item pair.
+
+    The ``results`` contains an entry for each user item pair.
 
     Examples are: DCG, HR
     """
 
     @property
     def col_names(self):
+        """Names of columns in the results table"""
         return ["user_id", "item_id", "score"]
 
     @property
@@ -169,6 +181,7 @@ class ElementwiseMetricK(MetricTopK):
 
     @property
     def value(self):
+        """Aggregated value of the metric."""
         if hasattr(self, "value_"):
             return self.value_
         else:
@@ -176,8 +189,7 @@ class ElementwiseMetricK(MetricTopK):
 
 
 class ListwiseMetricK(MetricTopK):
-    """
-    Base class for all metrics that can only be calculated
+    """Base class for all metrics that can only be calculated
     at the list-level, i.e. one value for each user.
 
     Examples are: Diversity, nDCG, RR, Recall
@@ -185,16 +197,19 @@ class ListwiseMetricK(MetricTopK):
 
     @property
     def col_names(self):
+        """The names of the columns in the results table."""
         return ["user_id", "score"]
 
     @property
     def indices(self):
+        """?"""
         row = np.arange(self.y_pred_top_K_.shape[0])
         col = np.zeros(self.y_pred_top_K_.shape[0], dtype=np.int32)
         return row, col
 
     @property
     def results(self):
+        """Detailed results of the metric."""
         scores = self.scores_.toarray()
 
         int_users, items = self.indices
@@ -206,6 +221,7 @@ class ListwiseMetricK(MetricTopK):
 
     @property
     def value(self):
+        """Aggregated result."""
         if hasattr(self, "value_"):
             return self.value_
         else:
@@ -222,6 +238,7 @@ class GlobalMetricK(MetricTopK):
 
     @property
     def results(self):
+        """Dataframe with a single entry with the global score."""
 
         return pd.DataFrame({"score": self.value})
 

@@ -7,12 +7,12 @@ from recpack.metrics import (
     NDCGK,
     DCGK,
     RecallK,
-    RRK,
+    ReciprocalRankK,
     CoverageK,
     IPSHitRateK,
     PrecisionK,
     IntraListDiversityK,
-    # SNIPSHitRateK,
+    HitK,
 )
 
 from recpack.metrics.base import (
@@ -24,9 +24,7 @@ from recpack.metrics.base import (
 )
 
 
-@pytest.mark.parametrize(
-    "metric_cls", [DCGK, RecallK, PrecisionK, IPSHitRateK]
-)
+@pytest.mark.parametrize("metric_cls", [HitK, IPSHitRateK])
 def test_results_elementwise_topK(metric_cls, X_true, X_pred):
     K = 2
 
@@ -42,20 +40,20 @@ def test_results_elementwise_topK(metric_cls, X_true, X_pred):
     results = metric.results
 
     # TODO verify something about the shape
-    np.testing.assert_array_equal(
-        results.columns, [
-            "user_id", "item_id", "score"])
+    np.testing.assert_array_equal(results.columns, ["user_id", "item_id", "score"])
 
     assert 2 in results["user_id"].unique()
     assert 1 not in results["user_id"].unique()
 
-    assert results.shape[0] == metric.num_users_ * \
-        K  # K interactions for each user
+    assert results.shape[0] == metric.num_users_ * K  # K interactions for each user
     assert metric.num_users_ == X_pred.sum(axis=1)[:, 0].nonzero()[0].shape[0]
     assert metric.num_items_ == X_pred.shape[1]
 
 
-@pytest.mark.parametrize("metric_cls", [NDCGK, RRK, IntraListDiversityK])
+@pytest.mark.parametrize(
+    "metric_cls",
+    [DCGK, RecallK, PrecisionK, NDCGK, ReciprocalRankK, IntraListDiversityK],
+)
 def test_results_listwise_topK(metric_cls, X_true, X_pred):
     K = 2
 
@@ -88,11 +86,10 @@ def test_eliminate_zeros(X_true, X_pred):
     assert 2 == X_true_aft.shape[0]
 
 
-@pytest.mark.parametrize(
-    "metric_cls", [DCGK, RecallK, PrecisionK, IPSHitRateK]
-)
+@pytest.mark.parametrize("metric_cls", [HitK, IPSHitRateK])
 def test_results_elementwise_topK_no_reco(
-        metric_cls, X_true_unrecommended_user, X_pred):
+    metric_cls, X_true_unrecommended_user, X_pred
+):
     K = 2
 
     metric = metric_cls(K)
@@ -107,26 +104,24 @@ def test_results_elementwise_topK_no_reco(
     results = metric.results
 
     # TODO verify something about the shape
-    np.testing.assert_array_equal(
-        results.columns, [
-            "user_id", "item_id", "score"])
+    np.testing.assert_array_equal(results.columns, ["user_id", "item_id", "score"])
 
     assert 2 in results["user_id"].unique()
     assert 1 not in results["user_id"].unique()
 
-    assert results.shape[0] == metric.num_users_ * \
-        K  # K interactions for each user
+    assert results.shape[0] == metric.num_users_ * K  # K interactions for each user
     # There is a user without any predictions,
     # so the number of users is equal to
     # 1 + the number of users with predictions
-    assert metric.num_users_ == X_pred.sum(
-        axis=1)[:, 0].nonzero()[0].shape[0] + 1
+    assert metric.num_users_ == X_pred.sum(axis=1)[:, 0].nonzero()[0].shape[0] + 1
     assert metric.num_items_ == X_pred.shape[1]
 
 
-@pytest.mark.parametrize("metric_cls", [NDCGK, RRK, IntraListDiversityK])
-def test_results_listwise_topK_no_reco(
-        metric_cls, X_true_unrecommended_user, X_pred):
+@pytest.mark.parametrize(
+    "metric_cls",
+    [DCGK, RecallK, PrecisionK, NDCGK, ReciprocalRankK, IntraListDiversityK],
+)
+def test_results_listwise_topK_no_reco(metric_cls, X_true_unrecommended_user, X_pred):
     K = 2
 
     metric = metric_cls(K)
@@ -146,8 +141,7 @@ def test_results_listwise_topK_no_reco(
 
     assert results.shape[0] == metric.num_users_  # One entry for each user
     # There is a user without any prediction
-    assert metric.num_users_ == X_pred.sum(
-        axis=1)[:, 0].nonzero()[0].shape[0] + 1
+    assert metric.num_users_ == X_pred.sum(axis=1)[:, 0].nonzero()[0].shape[0] + 1
     assert metric.num_items_ == X_pred.shape[1]
 
 
@@ -155,7 +149,8 @@ def test_eliminate_zeros_no_reco(X_true_unrecommended_user, X_pred):
     recall = RecallK(2)
 
     X_true_aft, X_pred_aft = recall.eliminate_empty_users(
-        X_true_unrecommended_user, X_pred)
+        X_true_unrecommended_user, X_pred
+    )
 
     assert X_true_unrecommended_user.shape[1] == X_true_aft.shape[1]
     assert 3 == X_true_aft.shape[0]

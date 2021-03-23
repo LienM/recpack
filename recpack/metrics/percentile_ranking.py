@@ -5,14 +5,33 @@ from recpack.util import get_top_K_ranks
 
 
 class PercentileRanking(GlobalMetricK):
-    """
-    This is a global metric where the rating r_ui of y_true and the rank/position of this item
-    in the ordered prediction list (for user u in y_pred) is taken into account.
-    Lower values of this percentile-rank are more advisable, because it will indicate that the highly rated items
-    are closer to the top of the recommendation list.
+    """Expected Percentile Ranking.
 
-    It will be calculated according the following forumula:
-        perc-rank = \\sum_{u,i}{r_{ui} * rank_{ui}} / \\sum_{u,i}{r_{ui}}
+    Metric as described in Hu, Yifan, Yehuda Koren, and Chris Volinsky.
+    "Collaborative filtering for implicit feedback datasets."
+    2008 Eighth IEEE International Conference on Data Mining. Ieee, 2008.
+
+    Percentile ranking is calculated according the following forumula:
+
+    .. math::
+
+        \\text{perc_rank} = \\frac{\\sum_{u \\in U,i \\in I}y^{true}_{ui} * \\overline{\\text{rank}}_{ui}}{\\sum_{u \\in U,i \\in I} y^{true}_{ui}}
+
+    where
+
+    .. math::
+
+        \\overline{rank}_{ui} =
+        \\begin{cases}
+            \\frac{\\text{rank}_{ui} - 1}{|I|} & \\text{if $i$ $\\in$ TopK($u$)}\\\\
+            1 & \\text{otherwise}
+        \\end{cases}
+
+    Lower values indicate
+    in the ordered prediction list (for user u in y_pred) is taken into account.
+    Lower values of this percentile-rank are more advisable,
+    because it will indicate that the highly rated items
+    are closer to the top of the recommendation list.
     """
 
     def __init__(self):
@@ -36,7 +55,16 @@ class PercentileRanking(GlobalMetricK):
         # Ranking starts at 0 for this metric
         ranking.data -= 1
         rank_values = ranking / self.num_items_  # to get a percentile ranking
-        numerator = y_true.multiply(rank_values).sum()
+
+        # Compute the percentile rankings of hits in the topK
+        hit_mat = y_true.multiply(rank_values)
+
+        # Add 1 for each y_true value not in the topK
+        hit_mat.data = hit_mat.data - 1
+        ranking_mat = y_true + hit_mat
+
+        # Numerator is the sum of the ranks of y_true values.
+        numerator = ranking_mat.sum()
 
         self.value_ = numerator / denominator
         return

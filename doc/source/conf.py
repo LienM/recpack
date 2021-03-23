@@ -35,7 +35,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    # "sphinx.ext.imgmath",
+    "sphinx.ext.mathjax",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -58,3 +58,9 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+# -- Options for MathJax --------
+mathjax_config = {
+    "extensions": ["tex2jax.js"],
+    "jax": ["input/TeX", "output/HTML-CSS"],
+}

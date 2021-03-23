@@ -4,14 +4,28 @@ import itertools
 from scipy.sparse import csr_matrix
 import numpy as np
 
-from recpack.metrics.base import ElementwiseMetricK, ListwiseMetricK
+from recpack.metrics.base import ListwiseMetricK
 from recpack.metrics.util import sparse_divide_nonzero
 from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
 
-class DCGK(ElementwiseMetricK):
+class DCGK(ListwiseMetricK):
+    """Discounted Cumulative Gain metric. Sum of cumulative gains.
+
+    Discounted Cumulative Gain is computed as follows,
+
+    .. math::
+
+        DCG(u) = \\sum_{i \\in TopK(u)} \\frac{y^{true}_{u,i}}{\\log_2 (rank(u,i) + 1)}
+
+    NDCG is then the sum of DG for the whole list.
+
+    :param ElementwiseMetricK: [description]
+    :type ElementwiseMetricK: [type]
+    """
+
     def __init__(self, K):
         super().__init__(K)
 
@@ -32,7 +46,7 @@ class DCGK(ElementwiseMetricK):
 
         dcg = sparse_divide_nonzero(numerator, denominator)
 
-        self.scores_ = dcg
+        self.scores_ = csr_matrix(dcg.sum(axis=1))
 
         return
 
@@ -45,6 +59,19 @@ def dcg_k(y_true, y_pred, k=50):
 
 
 class NDCGK(ListwiseMetricK):
+    """Normalized Discounted Cumulative Gain metric.
+
+    NDCG is similar to DCG, but normalises by dividing with the optimal,
+    possible DCG for the recommendation.
+    Thus accounting for users where less than K items are available,
+    and so the max score is lower than for other users.
+
+    Scores are always in the interval [0, 1]
+
+    :param K: How many of the top recommendations to consider.
+    :type K: int
+    """
+
     def __init__(self, K):
         super().__init__(K)
 
@@ -86,6 +113,17 @@ class NDCGK(ListwiseMetricK):
 
 
 def ndcg_k(y_true, y_pred, k=50):
+    """Wrapper function around ndcg class.
+
+    :param y_true: True labels
+    :type y_true: csr_matrix
+    :param y_pred: Predicted scores
+    :type y_pred: csr_matrix
+    :param k: top k to use for prediction, defaults to 50.
+    :type k: int, optional
+    :return: ndcg value
+    :rtype: float
+    """
     r = NDCGK(K=k)
     r.calculate(y_true, y_pred)
 

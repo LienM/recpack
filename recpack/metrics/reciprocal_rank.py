@@ -9,7 +9,16 @@ from recpack.util import get_top_K_ranks
 logger = logging.getLogger("recpack")
 
 
-class RRK(ListwiseMetricK):
+class ReciprocalRankK(ListwiseMetricK):
+    """Reciprocal Rank or the inverse of the lowest rank of a hit.
+
+    Per user with a hit the reciprocal rank is computed as
+
+    .. math::
+
+        \\text{RR}(u) = \\frac{1}{min_{i \\in KNN(u)} \\text{rank}(u,i) * y^{True}_{u,i}}
+    """
+
     def __init__(self, K):
         super().__init__(K)
 

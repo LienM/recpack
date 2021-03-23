@@ -7,6 +7,21 @@ from recpack.util import get_top_K_ranks
 
 
 class IntraListDiversityK(FittedMetric, ListwiseMetricK):
+    """Computes the diversity of items in a list of recommendations.
+
+    Requires to be fit, to be used.
+    Fit typically happens on a boolean metadata association matrix.
+    Where each row is an item, and each column a metadata concept.
+    The distance between two items is then computed as their Jaccard distance.
+
+    For each user u, the intra list diversity is computed as
+
+    .. math::
+
+        \\frac{\\sum_{i \\in topK(u), j \\in topK(u) \\setdiff i} J(i,j)}{K(K-1)}
+
+    """
+
     def __init__(self, K):
         super().__init__(K)
 
@@ -35,13 +50,11 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
 
         t_distance = sum(distances)
 
-        ild = (2 / (len(recommended_items) *
-                    (len(recommended_items) - 1))) * t_distance
+        ild = (2 / (len(recommended_items) * (len(recommended_items) - 1))) * t_distance
         return ild
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """ Compute the diversity of the predicted user preferences.
-        """
+        """Compute the diversity of the predicted user preferences."""
         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
         self.verify_shape(y_true, y_pred)
         # resolve top K items per user
@@ -59,6 +72,4 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
 
         self.scores_ = scores
 
-        self.value_ = (
-            self.scores_.sum() / self.scores_.shape[0]
-        )
+        self.value_ = self.scores_.sum() / self.scores_.shape[0]

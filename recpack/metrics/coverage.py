@@ -5,6 +5,17 @@ from recpack.util import get_top_K_ranks
 
 
 class CoverageK(GlobalMetricK):
+    """Fraction of items present in the predictions.
+
+    Coverage is computed by dividing the amount of items in the predictions
+    with the total amount of items in the catalog.
+
+    TODO: Should that be total present in the expected output?
+
+    :param K: How many recommendations to consider for the metrics.
+    :type K: int
+    """
+
     def __init__(self, K):
         super().__init__(K)
 
