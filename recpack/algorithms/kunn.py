@@ -24,6 +24,39 @@ class KUNN(Algorithm):
 
     Scores are computed as a sum of item and user similarity.
 
+    user KNN are computed using
+    
+    .. math::
+
+        sim(u,v) = \\sum_{i \\in I} { \\frac{ R_{ui} R_{vi}}{\\sqrt{c(u) c(v) c(i)}}}
+
+    item KNN is computed as
+
+
+    .. math::
+        
+        sim(i,j) = \\sum_{u \\in U} { \\frac{ R_{ui} R_{vi}}{\\sqrt{c(i) c(u) c(j)}}}
+       
+    Similarity is computed as
+
+    .. math::
+
+        sim(u, i) = S_U(u, i) + S_I(u, i)
+
+    Where user similarity is computed as
+
+    .. math::
+
+        S_U(u, i) = \\sum_{v \\in KNN(u)} \\frac{R_{vi} * sim(u,v)}{\\sqrt{c(i)}}
+
+    and item similarity is computed as
+    
+    .. math::
+
+        S_I(u, i) = \\sum_{j \\in KNN(i)} \\frac{R_{uj} * sim(i, j)}{\\sqrt{c(u)}}
+
+
+
     :param Ku: How many neighbours to keep in the user similarity matrix.
         Defaults to 100
     :type Ku: int, optional
@@ -119,9 +152,6 @@ class KUNN(Algorithm):
         """
         Helper method to compute the Item KNN, used in the KUNN implementation.
 
-        .. math::
-            sim(i,j) = \sum_{u \in U} { \frac{ R_{ui} R_{vi}}{\sqrt{c(i) c(u) c(j)}}}
-        
         """
 
         user_counts = X.sum(axis=1)
@@ -140,9 +170,6 @@ class KUNN(Algorithm):
         """Helper method to compute the User KNN, used in the KUNN implementation.
         The memoized training interactions are used to compute the user similarities.
         
-        .. math::
-            sim(u,v) = \sum_{i \in I} { \frac{ R_{ui} R_{vi}}{\sqrt{c(u) c(v) c(i)}}}
-
         """
 
         users_to_predict = get_users(X)
