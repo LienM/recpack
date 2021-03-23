@@ -121,6 +121,8 @@ class KUNN(Algorithm):
 
         .. math::
             sim(i,j) = \sum_{u \in U} { \frac{ R_{ui} R_{vi}}{\sqrt{c(i) c(u) c(j)}}}
+        
+        """
 
         user_counts = X.sum(axis=1)
         item_counts = X.sum(axis=0)
@@ -140,6 +142,8 @@ class KUNN(Algorithm):
         
         .. math::
             sim(u,v) = \sum_{i \in I} { \frac{ R_{ui} R_{vi}}{\sqrt{c(u) c(v) c(i)}}}
+
+        """
 
         users_to_predict = get_users(X)
 
