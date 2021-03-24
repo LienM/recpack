@@ -14,14 +14,14 @@ class PrecisionK(ListwiseMetricK):
     """Computes precision@K: number of correct predictions in the top K.
 
     Different than in the definition for some classification tasks,
-    the recommender should always be expected to return K items,
-    if it does not, the missing items are considered negatives.
+    the recommender is expected to return K items,
+    if it does not, the missing items are considered misses.
 
     Precision is computed per user, as
 
     .. math::
 
-        \\text{precision}(u) = \\frac{\\sum_{i \\in \\text{topK}(u)} R_{u,i} * P_{u,i}}{K}
+        \\text{precision}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} R_{u,i}}{K}
 
     To get the final result, the sum of average precision over all users is taken.
 
@@ -34,14 +34,9 @@ class PrecisionK(ListwiseMetricK):
     def __init__(self, K):
         super().__init__(K)
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
 
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
-
-        scores = scipy.sparse.lil_matrix(y_pred.shape)
+        scores = scipy.sparse.lil_matrix(y_pred_top_K.shape)
 
         # Elementwise multiplication of top K predicts and true interactions
         scores[y_pred_top_K.multiply(y_true).astype(np.bool)] = 1

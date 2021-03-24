@@ -14,28 +14,22 @@ logger = logging.getLogger("recpack")
 class DCGK(ListwiseMetricK):
     """Discounted Cumulative Gain metric. Sum of cumulative gains.
 
-    Discounted Cumulative Gain is computed as follows,
+    Discounted Cumulative Gain is computed for every user as
 
     .. math::
 
-        DCG(u) = \\sum_{i \\in TopK(u)} \\frac{y^{true}_{u,i}}{\\log_2 (rank(u,i) + 1)}
+        DCG(u) = \\sum\\limits_{i \\in TopK(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
 
-    NDCG is then the sum of DG for the whole list.
+    A single value is computed by taking the average over all users.
 
-    :param ElementwiseMetricK: [description]
-    :type ElementwiseMetricK: [type]
+    :param K: Only topK of recommendations is used for calculate.
+    :type K: int
     """
 
     def __init__(self, K):
         super().__init__(K)
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
 
         denominator = y_pred_top_K.multiply(y_true)
         # Denominator: log2(rank_i + 1)
@@ -68,6 +62,16 @@ class NDCGK(ListwiseMetricK):
 
     Scores are always in the interval [0, 1]
 
+    .. math::
+
+        \\text{NDCG}(u) = \\frac{\\text{DCG}(u)}{\\text{IDCG}(u)}
+
+    where ideal DCG is
+
+    .. math::
+
+        \\text{IDCG}(u) = \\sum\\limits_{j=1}^{\\text{min}(K, |y^{true}_u|)} \\frac{1}{\\log_2 (j + 1)}
+
     :param K: How many of the top recommendations to consider.
     :type K: int
     """
@@ -82,13 +86,7 @@ class NDCGK(ListwiseMetricK):
             [1] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y))
         )
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
 
         # Correct predictions only
         denominator = y_pred_top_K.multiply(y_true)

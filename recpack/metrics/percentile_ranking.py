@@ -15,7 +15,7 @@ class PercentileRanking(GlobalMetricK):
 
     .. math::
 
-        \\text{perc_rank} = \\frac{\\sum_{u \\in U,i \\in I}y^{true}_{ui} * \\overline{\\text{rank}}_{ui}}{\\sum_{u \\in U,i \\in I} y^{true}_{ui}}
+        \\text{perc_rank} = \\frac{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{ui} * \\overline{\\text{rank}}_{ui}}{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{ui}}
 
     where
 
@@ -27,26 +27,29 @@ class PercentileRanking(GlobalMetricK):
             1 & \\text{otherwise}
         \\end{cases}
 
-    Lower values indicate
-    in the ordered prediction list (for user u in y_pred) is taken into account.
-    Lower values of this percentile-rank are more advisable,
-    because it will indicate that the highly rated items
-    are closer to the top of the recommendation list.
+    Lower values of this percentile-ranking are desirable,
+    because that indicates relevant items are shown at higher positions.
+
+    TODO: No K parameter?
+    TODO: No percent yet: need * 100
     """
 
     def __init__(self):
         super().__init__(None)
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """
-        Calculate the percentile ranking score for the particular y_true and y_pred matrices.
+        """Calculate the percentile ranking score for the particular
+        y_true and y_pred matrices.
+
         :param y_true: User-item matrix with the actual true rating values.
         :param y_pred: User-item matrix with all prediction rating scores.
         :return: None: The result will be saved in self.value.
         """
         self.num_users_, self.num_items_ = y_true.shape
+
+        # Dislike this, then it should not be a topK metric
         self.K = self.num_items_
-        self.verify_shape(y_true, y_pred)
+        self._verify_shape(y_true, y_pred)
 
         denominator = y_true.sum()
         ranking = get_top_K_ranks(y_pred, self.K)
@@ -67,4 +70,3 @@ class PercentileRanking(GlobalMetricK):
         numerator = ranking_mat.sum()
 
         self.value_ = numerator / denominator
-        return

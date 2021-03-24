@@ -22,15 +22,6 @@ class IPSMetric(FittedMetric):
     Each score per item is weighted by the inverse propensity
     of the user interacting with the item.
 
-    We make the very strong assumption that each user
-    has the same probability to rate an item.
-    If we have more data about users,
-    we could use classification to improve the probability.
-
-    For now::
-
-        pi(i) = # interactions with i / # interactions
-
     Before using an IPSMetric, it should be fitted to the data.
 
     :param ip_cap: used to avoid having an item that
@@ -45,6 +36,16 @@ class IPSMetric(FittedMetric):
 
     def fit(self, X: csr_matrix):
         """Fit the propensities for the X dataset
+
+        We make the strong assumption that each user
+        has the same probability to interact with an item.
+
+        .. math::
+
+            p(i|u) = p(i) = \\frac{|\\{u| u\\in U, X_{ui} > 0\\}|} {|X|}
+
+        Inverse propensity higher than the ``ip_cap``, are set to ``ip_cap``,
+        to avoid items seen almost never dominating the measure.
 
         :param X: The interactions to base the propensity computation on.
                     Suggested to use the labels you are trying to predict as value,
@@ -63,33 +64,20 @@ class IPSHitRateK(ElementwiseMetricK, IPSMetric):
     """Computes a weighted hits per user metric.
 
     Each hit is weighted with the item's inverse propensity.
+    Higher values are better, they indicate the algorithm is able to
+    recommend more long tail items for the user.
 
-    We make the very strong assumption that each user
-    has the same probability to rate an item.
-    If we have more data about users,
-    we could use classification to improve the probability.
-
-    For now::
-
-        pi(i) = # interactions with i / # interactions
-
-    The value is aggregated by summing per user, and taking the average
+    The value is aggregated by computing the average sum of IPS weighted hits per user.
     """
 
     def __init__(self, K):
         super().__init__(K)
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
         assert self.item_prob_ is not None
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-
-        # Per user get a set of the topK predicted items
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
 
         hits = compute_hits(y_true, y_pred_top_K)
 
         self.scores_ = hits.multiply(self.inverse_propensities)
 
-        self.value_ = self.scores_.sum() / (self.num_users)
+        self.value_ = self.scores_.sum() / (self._num_users)

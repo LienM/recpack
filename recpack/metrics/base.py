@@ -6,6 +6,8 @@ from scipy.sparse import csr_matrix
 import pandas as pd
 from sklearn.base import BaseEstimator
 
+from recpack.util import get_top_K_ranks
+
 logger = logging.getLogger("recpack")
 
 
@@ -27,6 +29,9 @@ class Metric:
         """Name of the metric."""
         return str(self.__class__).lower()
 
+    def _calculate(self, y_true, y_pred) -> None:
+        pass
+
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         """Calculates this Metric for all users.
 
@@ -35,7 +40,11 @@ class Metric:
         :param y_pred: Predicted affinity of users for items.
         :type y_pred: csr_matrix
         """
-        pass
+        y_true, y_pred = self._eliminate_empty_users(y_true, y_pred)
+        self._verify_shape(y_true, y_pred)
+        self._set_shape(y_true)
+
+        self._calculate(y_true, y_pred)
 
     @property
     def results(self) -> pd.DataFrame:
@@ -48,23 +57,23 @@ class Metric:
         return self.value_
 
     @property
-    def num_items(self) -> int:
+    def _num_items(self) -> int:
         """The number of items in the matrix used to calculate."""
         return self.num_items_
 
     @property
-    def num_users(self) -> int:
+    def _num_users(self) -> int:
         """The number of users items have been predicted."""
         return self.num_users_
 
     @property
-    def indices(self) -> Tuple[np.array, np.array]:
-        """?"""
+    def _indices(self) -> Tuple[np.array, np.array]:
+        """TODO"""
         row, col = np.indices((self.num_users_, self.num_items_))
 
         return row.flatten(), col.flatten()
 
-    def verify_shape(self, y_true: csr_matrix, y_pred: csr_matrix) -> bool:
+    def _verify_shape(self, y_true: csr_matrix, y_pred: csr_matrix) -> bool:
         """Make sure the dimensions of y_true and y_pred match.
 
         :param y_true: True user-item interactions.
@@ -76,18 +85,16 @@ class Metric:
         :rtype: bool
         """
         check = y_true.shape == y_pred.shape
-
         if not check:
             raise AssertionError(
                 f"Shape mismatch between y_true: {y_true.shape} and y_pred: {y_pred.shape}"
             )
-        else:
-            # TODO Maybe this should be a separate method?
-            self.num_users_, self.num_items_ = y_true.shape
-
         return check
 
-    def eliminate_empty_users(
+    def _set_shape(self, y_true):
+        self.num_users_, self.num_items_ = y_true.shape
+
+    def _eliminate_empty_users(
         self, y_true: csr_matrix, y_pred: csr_matrix
     ) -> Tuple[csr_matrix, csr_matrix]:
         """Eliminate users that have no interactions, so
@@ -106,8 +113,8 @@ class Metric:
 
         return y_true[nonzero_users, :], y_pred[nonzero_users, :]
 
-    def map_users(self, users):
-        """?"""
+    def _map_users(self, users):
+        """map the userids in input to their actual user ids in the metric."""
         if hasattr(self, "user_id_map_"):
             return self.user_id_map_[users]
         else:
@@ -127,10 +134,33 @@ class MetricTopK(Metric):
         return f"{super().name}_{self.K}"
 
     @property
-    def indices(self):
-        """?"""
+    def _indices(self):
+        """TODO"""
         row, col = self.y_pred_top_K_.nonzero()
         return row, col
+
+    def _calculate(self, y_true, y_pred_top_K):
+        pass
+
+    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
+        """Calculates this Metric for all users.
+
+        :param y_true: True user-item interactions.
+        :type y_true: csr_matrix
+        :param y_pred: Predicted affinity of users for items.
+        :type y_pred: csr_matrix
+        """
+        # Perform checks and cleaning
+        y_true, y_pred = self._eliminate_empty_users(y_true, y_pred)
+        self._verify_shape(y_true, y_pred)
+        self._set_shape(y_true)
+
+        # Compute the topK for the predicted affinities
+        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
+        self.y_pred_top_K_ = y_pred_top_K
+
+        # Compute the metric.
+        self._calculate(y_true, y_pred_top_K)
 
 
 class ElementwiseMetricK(MetricTopK):
@@ -139,7 +169,7 @@ class ElementwiseMetricK(MetricTopK):
 
     The ``results`` contains an entry for each user item pair.
 
-    Examples are: DCG, HR
+    Examples are: HitK, IPSHitRateK
     """
 
     @property
@@ -161,7 +191,7 @@ class ElementwiseMetricK(MetricTopK):
         scores = self.scores_.toarray()
 
         all_users = set(range(self.scores_.shape[0]))
-        int_users, items = self.indices
+        int_users, items = self._indices
         values = scores[int_users, items]
 
         # For all users in all_users but not in int_users,
@@ -175,7 +205,7 @@ class ElementwiseMetricK(MetricTopK):
                 values = np.append(values, 0)
                 items = np.append(items, np.nan)
 
-        users = self.map_users(int_users)
+        users = self._map_users(int_users)
 
         return pd.DataFrame(dict(zip(self.col_names, (users, items, values))))
 
@@ -201,7 +231,7 @@ class ListwiseMetricK(MetricTopK):
         return ["user_id", "score"]
 
     @property
-    def indices(self):
+    def _indices(self):
         """?"""
         row = np.arange(self.y_pred_top_K_.shape[0])
         col = np.zeros(self.y_pred_top_K_.shape[0], dtype=np.int32)
@@ -212,10 +242,10 @@ class ListwiseMetricK(MetricTopK):
         """Detailed results of the metric."""
         scores = self.scores_.toarray()
 
-        int_users, items = self.indices
+        int_users, items = self._indices
         values = scores[int_users, items]
 
-        users = self.map_users(int_users)
+        users = self._map_users(int_users)
 
         return pd.DataFrame(dict(zip(self.col_names, (users, values))))
 

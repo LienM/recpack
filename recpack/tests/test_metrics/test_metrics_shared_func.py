@@ -80,7 +80,7 @@ def test_results_listwise_topK(metric_cls, X_true, X_pred):
 def test_eliminate_zeros(X_true, X_pred):
     recall = RecallK(2)
 
-    X_true_aft, X_pred_aft = recall.eliminate_empty_users(X_true, X_pred)
+    X_true_aft, X_pred_aft = recall._eliminate_empty_users(X_true, X_pred)
 
     assert X_true.shape[1] == X_true_aft.shape[1]
     assert 2 == X_true_aft.shape[0]
@@ -148,7 +148,7 @@ def test_results_listwise_topK_no_reco(metric_cls, X_true_unrecommended_user, X_
 def test_eliminate_zeros_no_reco(X_true_unrecommended_user, X_pred):
     recall = RecallK(2)
 
-    X_true_aft, X_pred_aft = recall.eliminate_empty_users(
+    X_true_aft, X_pred_aft = recall._eliminate_empty_users(
         X_true_unrecommended_user, X_pred
     )
 

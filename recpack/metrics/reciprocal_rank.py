@@ -16,20 +16,13 @@ class ReciprocalRankK(ListwiseMetricK):
 
     .. math::
 
-        \\text{RR}(u) = \\frac{1}{min_{i \\in KNN(u)} \\text{rank}(u,i) * y^{True}_{u,i}}
+        \\text{RR}(u) = \\frac{1}{\\min\\limits_{i \\in KNN(u)} \\text{rank}(u,i) * y^{True}_{u,i}}
     """
 
     def __init__(self, K):
         super().__init__(K)
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-
-        # resolve top K items per user
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
-
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
         # compute hits
         hits = y_pred_top_K.multiply(y_true)
         # Invert hit ranks

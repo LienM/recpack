@@ -18,7 +18,7 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
 
     .. math::
 
-        \\frac{\\sum_{i \\in topK(u), j \\in topK(u) \\setdiff i} J(i,j)}{K(K-1)}
+        \\frac{\\sum\\limits_{i,j \\in topK(u) \\wedge i \\neq j} J(i,j)}{K(K-1)}
 
     """
 
@@ -53,13 +53,8 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
         ild = (2 / (len(recommended_items) * (len(recommended_items) - 1))) * t_distance
         return ild
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
         """Compute the diversity of the predicted user preferences."""
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-        # resolve top K items per user
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
 
         scores = csr_matrix(np.zeros((y_pred_top_K.shape[0], 1)))
 
