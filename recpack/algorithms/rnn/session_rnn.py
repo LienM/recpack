@@ -26,14 +26,14 @@ from recpack.algorithms.rnn.loss import (
     TOP1MaxLoss,
 )
 from recpack.algorithms.rnn.data import matrix_to_tensor
-from recpack.algorithms.rnn.model import SessionRNNTorch
+from recpack.algorithms.rnn.model import GRU4RecTorch
 
 
 logger = logging.getLogger("recpack")
 ITEM_IX = InteractionMatrix.ITEM_IX
 
 
-class SessionRNN(Algorithm):
+class GRU4Rec(Algorithm):
     """A recurrent neural network for session-based recommendations.
 
     The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
@@ -137,7 +137,7 @@ class SessionRNN(Algorithm):
         """
         num_items = train_data.shape[1]
 
-        self.model_ = SessionRNNTorch(
+        self.model_ = GRU4RecTorch(
             num_items=int(num_items),  # PyTorch 1.4 can't handle numpy ints
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
@@ -182,7 +182,7 @@ class SessionRNN(Algorithm):
         torch.save(self, file)
 
     @staticmethod
-    def load(file) -> SessionRNN:
+    def load(file) -> GRU4Rec:
         """Loads an algorithm previously stored with save().
 
         :param file: A file-like or string with the filepath of the algorithm
@@ -193,7 +193,7 @@ class SessionRNN(Algorithm):
         self,
         X: InteractionMatrix,
         validation_data: Tuple[InteractionMatrix, InteractionMatrix] = None,
-    ) -> SessionRNN:
+    ) -> GRU4Rec:
         """Fit the model on the X dataset.
 
         Model quality is evaluated after every epoch on validation_data using the

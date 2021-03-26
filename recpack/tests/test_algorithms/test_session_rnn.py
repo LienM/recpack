@@ -4,7 +4,7 @@ import pytest
 
 from scipy.sparse import csr_matrix
 from recpack.data.matrix import InteractionMatrix
-from recpack.algorithms.rnn.session_rnn import SessionRNN
+from recpack.algorithms.rnn.session_rnn import GRU4Rec
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 
@@ -42,7 +42,7 @@ def matrix_sessions() -> InteractionMatrix:
 
 @pytest.fixture(scope="function")
 def session_rnn():
-    rnn = SessionRNN(seed=42, batch_size=1, embedding_size=5, hidden_size=10)
+    rnn = GRU4Rec(seed=42, batch_size=1, embedding_size=5, hidden_size=10)
     return rnn
 
 
@@ -55,7 +55,9 @@ def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
 
     # Each training epoch should update the parameters
     for _ in range(5):
-        params = [np for np in session_rnn.model_.named_parameters() if np[1].requires_grad]
+        params = [
+            np for np in session_rnn.model_.named_parameters() if np[1].requires_grad
+        ]
         params_before = [(name, p.clone()) for (name, p) in params]
 
         session_rnn._train_epoch(matrix_sessions)
@@ -69,7 +71,9 @@ def test_session_rnn_evaluation_epoch(session_rnn, matrix_sessions):
 
     # Model evaluation should have no effect on parameters
     for _ in range(5):
-        params = [np for np in session_rnn.model_.named_parameters() if np[1].requires_grad]
+        params = [
+            np for np in session_rnn.model_.named_parameters() if np[1].requires_grad
+        ]
         params_before = [(name, p.clone()) for (name, p) in params]
 
         session_rnn._evaluate((matrix_sessions, matrix_sessions))

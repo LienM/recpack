@@ -8,7 +8,7 @@ from torch import Tensor
 from typing import Tuple, Optional
 
 
-class SessionRNNTorch(nn.Module):
+class GRU4RecTorch(nn.Module):
     """
     PyTorch definition of a basic recurrent neural network for session-based
     recommendations.
