@@ -19,8 +19,8 @@ class KUNN(Algorithm):
     as described in 'Unifying Nearest Neighbors Collaborative Filtering'
     Verstrepen et al. (10.1145/2645710.2645731)
 
-    During fit computes the item KNN model, and stores training interactions.
-    During prediction computes the user KNN model between test users and training users.
+    Computes the item KNN model and stores training interactions at fitting time.
+    Computes the user KNN model between test and training users at prediction time. 
 
     Scores are computed as a sum of item and user similarity.
 
@@ -30,7 +30,7 @@ class KUNN(Algorithm):
 
         sim(u,v) = \\sum_{i \\in I} { \\frac{ R_{ui} R_{vi}}{\\sqrt{c(u) c(v) c(i)}}}
 
-    item KNN is computed as
+    item KNN are computed as
 
 
     .. math::
