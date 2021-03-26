@@ -30,7 +30,7 @@ class Metric:
         return str(self.__class__).lower()
 
     def _calculate(self, y_true, y_pred) -> None:
-        pass
+        raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         """Calculates this Metric for all users.
@@ -47,9 +47,10 @@ class Metric:
         self._calculate(y_true, y_pred)
 
     @property
-    def results(self) -> pd.DataFrame:
+    def results(self):
         """Detailed results of the metric."""
-        pass
+
+        return pd.DataFrame({"score": self.value})
 
     @property
     def value(self) -> float:
@@ -57,18 +58,18 @@ class Metric:
         return self.value_
 
     @property
-    def _num_items(self) -> int:
+    def num_items(self) -> int:
         """The number of items in the matrix used to calculate."""
         return self.num_items_
 
     @property
-    def _num_users(self) -> int:
+    def num_users(self) -> int:
         """The number of users items have been predicted."""
         return self.num_users_
 
     @property
     def _indices(self) -> Tuple[np.array, np.array]:
-        """TODO"""
+        """Indices in the prediction matrix, for which scores were computed."""
         row, col = np.indices((self.num_users_, self.num_items_))
 
         return row.flatten(), col.flatten()
@@ -140,10 +141,21 @@ class MetricTopK(Metric):
         return row, col
 
     def _calculate(self, y_true, y_pred_top_K):
-        pass
+        """Calculate the metric value based on the expected interactions
+        and the ranks for topK recommendations.
+
+        :param y_true: Expected interactions per user.
+        :type y_true: csr_matrix
+        :param y_pred_top_K: Ranks for topK recommendations per user
+        :type y_pred_top_K: csr_matrix
+        """
+        raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """Calculates this Metric for all users.
+        """Compute the metric based on the expected labels, and the predicted affinities.
+
+        Detailed results of the metric can be retrieved with :attr:`results` property.
+        Single aggregate value with :attr:`value`.
 
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
@@ -266,11 +278,7 @@ class GlobalMetricK(MetricTopK):
     Examples are: Coverage.
     """
 
-    @property
-    def results(self):
-        """Dataframe with a single entry with the global score."""
-
-        return pd.DataFrame({"score": self.value})
+    pass
 
 
 class FittedMetric(Metric, BaseEstimator):

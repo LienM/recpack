@@ -28,7 +28,7 @@ def test_ndcgk_simple(X_pred, X_true_simplified):
         (1 / np.log2(2 + 1)) / IDCG + 1  # rank 1  # rank 0
     ) / 2  # 2 users
 
-    assert metric._num_users == 2
+    assert metric.num_users == 2
     np.testing.assert_almost_equal(metric.value, expected_value)
 
 
@@ -67,7 +67,7 @@ def test_ndcg(X_pred, X_true):
         + (1 + (1 / np.log2(2 + 1))) / IDCG2
     ) / 2  # 2 users
 
-    assert metric._num_users == 2
+    assert metric.num_users == 2
     np.testing.assert_almost_equal(metric.value, expected_value)
 
 
@@ -103,7 +103,7 @@ def test_ndcg_k3(X_pred, X_true):
         + (1 / np.log2(3) + 1 / np.log2(4)) / IDCG3  # user 2 rank 1  # user 2 rank 2
     ) / 2  # 2 users
 
-    assert metric._num_users == 2
+    assert metric.num_users == 2
     np.testing.assert_almost_equal(metric.value, expected_value)
 
 
@@ -142,7 +142,7 @@ def test_ndcg_empty_reco(X_pred, X_true_unrecommended_user):
         + (1 + (1 / np.log2(2 + 1))) / IDCG2
     ) / 3  # 3 users
 
-    assert metric._num_users == 3
+    assert metric.num_users == 3
     np.testing.assert_almost_equal(metric.value, expected_value)
 
 

@@ -80,4 +80,4 @@ class IPSHitRateK(ElementwiseMetricK, IPSMetric):
 
         self.scores_ = hits.multiply(self.inverse_propensities)
 
-        self.value_ = self.scores_.sum() / (self._num_users)
+        self.value_ = self.scores_.sum() / (self.num_users)

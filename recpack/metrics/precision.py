@@ -13,9 +13,11 @@ logger = logging.getLogger("recpack")
 class PrecisionK(ListwiseMetricK):
     """Computes precision@K: number of correct predictions in the top K.
 
-    Different than in the definition for some classification tasks,
-    the recommender is expected to return K items,
+    Different from the definition for classification tasks,
+    the recommender is expected to return always return K items,
     if it does not, the missing items are considered misses.
+
+    As such recommending fewer items is not beneficial for an algorithm.
 
     Precision is computed per user, as
 
@@ -25,11 +27,12 @@ class PrecisionK(ListwiseMetricK):
 
     To get the final result, the sum of average precision over all users is taken.
 
-    23/3: Changed base class from ElementwiseMetricK to ListwiseMetricK.
-    Precision is never considered per user item pair,
-    but usually per list of recommendations.
-    If you want to know which items were hits, we have the HitMetric available.
     """
+
+    # 23/3: Changed base class from ElementwiseMetricK to ListwiseMetricK.
+    # Precision is never considered per user item pair,
+    # but usually per list of recommendations.
+    # If you want to know which items were hits, we have the HitMetric available.
 
     def __init__(self, K):
         super().__init__(K)

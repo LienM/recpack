@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import numpy.random
-import scipy.sparse
+from scipy.sparse import csr_matrix
 
 from recpack.metrics import (
     NDCGK,
@@ -13,6 +13,8 @@ from recpack.metrics import (
     PrecisionK,
     IntraListDiversityK,
     HitK,
+    WeightedHitK,
+    DiscountedGainK,
 )
 
 from recpack.metrics.base import (
@@ -24,7 +26,9 @@ from recpack.metrics.base import (
 )
 
 
-@pytest.mark.parametrize("metric_cls", [HitK, IPSHitRateK])
+@pytest.mark.parametrize(
+    "metric_cls", [HitK, IPSHitRateK, WeightedHitK, DiscountedGainK]
+)
 def test_results_elementwise_topK(metric_cls, X_true, X_pred):
     K = 2
 
@@ -86,7 +90,9 @@ def test_eliminate_zeros(X_true, X_pred):
     assert 2 == X_true_aft.shape[0]
 
 
-@pytest.mark.parametrize("metric_cls", [HitK, IPSHitRateK])
+@pytest.mark.parametrize(
+    "metric_cls", [HitK, IPSHitRateK, WeightedHitK, DiscountedGainK]
+)
 def test_results_elementwise_topK_no_reco(
     metric_cls, X_true_unrecommended_user, X_pred
 ):
@@ -154,3 +160,13 @@ def test_eliminate_zeros_no_reco(X_true_unrecommended_user, X_pred):
 
     assert X_true_unrecommended_user.shape[1] == X_true_aft.shape[1]
     assert 3 == X_true_aft.shape[0]
+
+
+def test_verify_shapes():
+    m = DCGK(3)
+
+    y_pred = csr_matrix(np.ones((3, 2)))
+    y_true = csr_matrix(np.ones((2, 3)))
+
+    with pytest.raises(AssertionError):
+        m.calculate(y_true, y_pred)

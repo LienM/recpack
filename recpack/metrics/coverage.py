@@ -24,6 +24,6 @@ class CoverageK(GlobalMetricK):
 
         self.covered_items_ = set(y_pred_top_K.nonzero()[1])
 
-        self.value_ = len(self.covered_items_) / self._num_items
+        self.value_ = len(self.covered_items_) / self.num_items
 
         return

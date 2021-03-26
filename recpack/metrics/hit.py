@@ -13,10 +13,12 @@ logger = logging.getLogger("recpack")
 
 
 class HitK(ElementwiseMetricK):
-    """Metric computing the hits in a prediction list.
+    """Metric computing the average hits per user in a prediction list.
 
     Each user, item pair has score 0 or 1,
     1 if it is both in the topK of recommended scores and the true labels matrix.
+
+    To compute the value, the average over all users is taken.
 
     """
 
@@ -76,6 +78,8 @@ class DiscountedGainK(ElementwiseMetricK):
     .. math::
 
         \\frac{y^{true}_{u_i}}{\\log_2(\\text{rank}(u,i) + 1)}
+
+    An overall value is computed as the average of the sum per user.
     """
 
     def __init__(self, K):
