@@ -15,7 +15,7 @@ class Metric:
     """Metric Baseclass,
     computes metric given true labels and predicted scores.
 
-    A Metric object is stateful, i.e. after ``calculate`` 
+    A Metric object is stateful, i.e. after ``calculate``
     the results can be retrieved in one of two ways:
       - Detailed results are stored in ``metric_instance.results``,
       - Aggregated result value can be retrieved using ``metric_instance.value``
@@ -50,7 +50,6 @@ class Metric:
     @property
     def results(self):
         """Detailed results of the metric."""
-
         return pd.DataFrame({"score": self.value})
 
     @property
@@ -65,8 +64,10 @@ class Metric:
 
     @property
     def num_users(self) -> int:
-        """Dimension of the user-space in both ``y_true`` and ``y_pred`` 
-           after elimination of users without interactions in ``y_true``."""
+        """Dimension of the user-space in both ``y_true`` and ``y_pred``
+        after elimination of users without interactions in ``y_true``.
+        """
+        return self.num_users_
 
     @property
     def _indices(self) -> Tuple[np.array, np.array]:
@@ -100,7 +101,7 @@ class Metric:
         self, y_true: csr_matrix, y_pred: csr_matrix
     ) -> Tuple[csr_matrix, csr_matrix]:
         """Eliminate users that have no interactions in ``y_true``.
-           We cannot make accurate predictions of interactions for 
+           We cannot make accurate predictions of interactions for
            these users as there are none.
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix

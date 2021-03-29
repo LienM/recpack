@@ -113,7 +113,7 @@ class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
 
 
 def ndcg_k(y_true, y_pred, k=50):
-    """Wrapper function around ndcg class.
+    """Wrapper function around NormalizedDiscountedCumulativeGain class.
 
     :param y_true: True labels
     :type y_true: csr_matrix
