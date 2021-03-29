@@ -4,7 +4,7 @@ import numpy.random
 from scipy.sparse import csr_matrix
 
 from recpack.metrics import (
-    NDCGK,
+    NormalizedDiscountedCumulativeGainK,
     DCGK,
     RecallK,
     ReciprocalRankK,
@@ -56,7 +56,14 @@ def test_results_elementwise_topK(metric_cls, X_true, X_pred):
 
 @pytest.mark.parametrize(
     "metric_cls",
-    [DCGK, RecallK, PrecisionK, NDCGK, ReciprocalRankK, IntraListDiversityK],
+    [
+        DCGK,
+        RecallK,
+        PrecisionK,
+        NormalizedDiscountedCumulativeGainK,
+        ReciprocalRankK,
+        IntraListDiversityK,
+    ],
 )
 def test_results_listwise_topK(metric_cls, X_true, X_pred):
     K = 2
@@ -125,7 +132,14 @@ def test_results_elementwise_topK_no_reco(
 
 @pytest.mark.parametrize(
     "metric_cls",
-    [DCGK, RecallK, PrecisionK, NDCGK, ReciprocalRankK, IntraListDiversityK],
+    [
+        DCGK,
+        RecallK,
+        PrecisionK,
+        NormalizedDiscountedCumulativeGainK,
+        ReciprocalRankK,
+        IntraListDiversityK,
+    ],
 )
 def test_results_listwise_topK_no_reco(metric_cls, X_true_unrecommended_user, X_pred):
     K = 2

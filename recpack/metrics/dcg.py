@@ -52,10 +52,10 @@ def dcg_k(y_true, y_pred, k=50):
     return r.value
 
 
-class NDCGK(ListwiseMetricK):
+class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
     """Normalized Discounted Cumulative Gain metric.
 
-    NDCG is similar to DCG, but normalises by dividing with the optimal,
+    NormalizedDiscountedCumulativeGain is similar to DCG, but normalises by dividing with the optimal,
     possible DCG for the recommendation.
     Thus accounting for users where less than K items are available,
     and so the max score is lower than for other users.
@@ -64,7 +64,7 @@ class NDCGK(ListwiseMetricK):
 
     .. math::
 
-        \\text{NDCG}(u) = \\frac{\\text{DCG}(u)}{\\text{IDCG}(u)}
+        \\text{NormalizedDiscountedCumulativeGain}(u) = \\frac{\\text{DCG}(u)}{\\text{IDCG}(u)}
 
     where ideal DCG is
 
@@ -122,7 +122,7 @@ def ndcg_k(y_true, y_pred, k=50):
     :return: ndcg value
     :rtype: float
     """
-    r = NDCGK(K=k)
+    r = NormalizedDiscountedCumulativeGainK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value

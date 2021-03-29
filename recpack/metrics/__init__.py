@@ -32,7 +32,7 @@ which are then aggregated over all users to get a single value.
     :toctree: generated/
 
     DCGK
-    NDCGK
+    NormalizedDiscountedCumulativeGainK
     RecallK
     CalibratedRecallK
     PrecisionK
@@ -55,7 +55,7 @@ which are then aggregated over all recommendations to get a single value.
 
 
 from recpack.metrics.coverage import CoverageK
-from recpack.metrics.dcg import DCGK, NDCGK
+from recpack.metrics.dcg import DCGK, NormalizedDiscountedCumulativeGainK
 from recpack.metrics.diversity import IntraListDiversityK
 from recpack.metrics.hit import HitK, DiscountedGainK, WeightedByInteractionsHitK
 from recpack.metrics.ips import IPSHitRateK
@@ -66,7 +66,7 @@ from recpack.metrics.percentile_ranking import PercentileRanking
 
 METRICS = {
     "CoverageK": CoverageK,
-    "NDCGK": NDCGK,
+    "NormalizedDiscountedCumulativeGainK": NormalizedDiscountedCumulativeGainK,
     "DCGK": DCGK,
     "IntraListDiversityK": IntraListDiversityK,
     "IPSHitRateK": IPSHitRateK,

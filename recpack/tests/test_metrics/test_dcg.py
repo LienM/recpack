@@ -1,6 +1,6 @@
 import numpy as np
 
-from recpack.metrics.dcg import DCGK, NDCGK, dcg_k, ndcg_k
+from recpack.metrics.dcg import DCGK, NormalizedDiscountedCumulativeGainK, dcg_k, ndcg_k
 
 
 def test_dcgk_simple(X_pred, X_true_simplified):
@@ -17,7 +17,7 @@ def test_dcgk_simple(X_pred, X_true_simplified):
 
 def test_ndcgk_simple(X_pred, X_true_simplified):
     K = 2
-    metric = NDCGK(K)
+    metric = NormalizedDiscountedCumulativeGainK(K)
 
     metric.calculate(X_true_simplified, X_pred)
 
@@ -52,7 +52,7 @@ def test_dcgk(X_pred, X_true):
 
 def test_ndcg(X_pred, X_true):
     K = 2
-    metric = NDCGK(K)
+    metric = NormalizedDiscountedCumulativeGainK(K)
 
     metric.calculate(X_true, X_pred)
 
@@ -89,7 +89,7 @@ def test_dcgk_3(X_pred, X_true):
 
 def test_ndcg_k3(X_pred, X_true):
     K = 3
-    metric = NDCGK(K)
+    metric = NormalizedDiscountedCumulativeGainK(K)
 
     metric.calculate(X_true, X_pred)
 
@@ -127,7 +127,7 @@ def test_dcgk_empty_reco(X_pred, X_true_unrecommended_user):
 
 def test_ndcg_empty_reco(X_pred, X_true_unrecommended_user):
     K = 2
-    metric = NDCGK(K)
+    metric = NormalizedDiscountedCumulativeGainK(K)
 
     metric.calculate(X_true_unrecommended_user, X_pred)
 

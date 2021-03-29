@@ -76,7 +76,7 @@ class Pipeline(object):
         :type algorithms: `list(recpack.algorithms.Model)`
 
         :param metric_names: The names of metrics to compute in this pipeline.
-                            Allowed values are: `NDCG`, `Recall` and `MRR`
+                            Allowed values can be found in :ref:`recpack.metrics`
         :type metric_names: `list(string)`
 
         :param K_values: The K values for each of the metrics
