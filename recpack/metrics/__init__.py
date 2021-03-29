@@ -64,19 +64,20 @@ from recpack.metrics.recall import RecallK, CalibratedRecallK
 from recpack.metrics.reciprocal_rank import ReciprocalRankK
 from recpack.metrics.percentile_ranking import PercentileRanking
 
-
+# TODO: I would like to change this so it is the actual name,
+# rather than a different one
 METRICS = {
-    "Coverage": CoverageK,
-    "NDCG": NDCGK,
-    "DCG": DCGK,
-    "IntraListDiversity": IntraListDiversityK,
-    "IPSHitRate": IPSHitRateK,
-    "Hit": HitK,
-    "WeightedHit": WeightedHitK,
-    "DiscountedGain": DiscountedGainK,
-    "Precision": PrecisionK,
-    "Recall": RecallK,
-    "CalibratedRecall": CalibratedRecallK,
-    "RR": ReciprocalRankK,
+    "CoverageK": CoverageK,
+    "NDCGK": NDCGK,
+    "DCGK": DCGK,
+    "IntraListDiversityK": IntraListDiversityK,
+    "IPSHitRateK": IPSHitRateK,
+    "HitK": HitK,
+    "WeightedHitK": WeightedHitK,
+    "DiscountedGainK": DiscountedGainK,
+    "PrecisionK": PrecisionK,
+    "RecallK": RecallK,
+    "CalibratedRecallK": CalibratedRecallK,
+    "ReciprocalRankK": ReciprocalRankK,
     "PercentileRanking": PercentileRanking,
 }
