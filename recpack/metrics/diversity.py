@@ -66,5 +66,3 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
             scores[u, 0] = self._get_ild(recommended_items)
 
         self.scores_ = scores
-
-        self.value_ = self.scores_.sum() / self.scores_.shape[0]
