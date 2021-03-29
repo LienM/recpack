@@ -37,8 +37,7 @@ class HitK(ElementwiseMetricK):
         self.scores_ = scores
 
 
-# TODO: Tests
-class WeightedHitK(ElementwiseMetricK):
+class WeightedByInteractionsHitK(ElementwiseMetricK):
     """Hit metric, with each hit weighted by the number of interactions of that user.
 
     For users with more items it is "easier" to predict an item correctly,

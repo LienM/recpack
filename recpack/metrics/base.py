@@ -27,7 +27,7 @@ class Metric:
     @property
     def name(self):
         """Name of the metric."""
-        return str(self.__class__).lower()
+        return self.__class__.__name__.lower()
 
     def _calculate(self, y_true, y_pred) -> None:
         raise NotImplementedError()
@@ -136,7 +136,7 @@ class MetricTopK(Metric):
 
     @property
     def _indices(self):
-        """TODO"""
+        """Indices of the hits, used to created the dataframe"""
         row, col = self.y_pred_top_K_.nonzero()
         return row, col
 

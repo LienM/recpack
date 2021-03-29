@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from recpack.metrics import HitK, WeightedHitK, DiscountedGainK
+from recpack.metrics import HitK, WeightedByInteractionsHitK, DiscountedGainK
 
 
 def test_hit_K(X_true, X_pred):
@@ -22,7 +22,7 @@ def test_hit_K(X_true, X_pred):
 def test_weighted_hit_K(X_true, X_pred):
 
     K = 2
-    metric = WeightedHitK(K=K)
+    metric = WeightedByInteractionsHitK(K=K)
 
     metric.calculate(X_true, X_pred)
 

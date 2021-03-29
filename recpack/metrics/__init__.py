@@ -49,7 +49,7 @@ which are then aggregated over all recommendations to get a single value.
 
     HitK
     IPSHitRateK
-    WeightedHitK
+    WeightedByInteractionsHitK
     DiscountedGainK
 """
 
@@ -57,15 +57,13 @@ which are then aggregated over all recommendations to get a single value.
 from recpack.metrics.coverage import CoverageK
 from recpack.metrics.dcg import DCGK, NDCGK
 from recpack.metrics.diversity import IntraListDiversityK
-from recpack.metrics.hit import HitK, DiscountedGainK, WeightedHitK
+from recpack.metrics.hit import HitK, DiscountedGainK, WeightedByInteractionsHitK
 from recpack.metrics.ips import IPSHitRateK
 from recpack.metrics.precision import PrecisionK
 from recpack.metrics.recall import RecallK, CalibratedRecallK
 from recpack.metrics.reciprocal_rank import ReciprocalRankK
 from recpack.metrics.percentile_ranking import PercentileRanking
 
-# TODO: I would like to change this so it is the actual name,
-# rather than a different one
 METRICS = {
     "CoverageK": CoverageK,
     "NDCGK": NDCGK,
@@ -73,7 +71,7 @@ METRICS = {
     "IntraListDiversityK": IntraListDiversityK,
     "IPSHitRateK": IPSHitRateK,
     "HitK": HitK,
-    "WeightedHitK": WeightedHitK,
+    "WeightedByInteractionsHitK": WeightedByInteractionsHitK,
     "DiscountedGainK": DiscountedGainK,
     "PrecisionK": PrecisionK,
     "RecallK": RecallK,
