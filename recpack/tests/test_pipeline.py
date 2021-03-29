@@ -35,11 +35,11 @@ def test_pipeline():
 
     algo = recpack.algorithms.Popularity(K=2)
 
-    p = recpack.pipeline.Pipeline([algo], ["NDCG", "Recall"], [2])
+    p = recpack.pipeline.Pipeline([algo], ["NDCGK", "RecallK"], [2])
 
     p.run(scenario.training_data, scenario.test_data)
 
     metrics = p.get()
     assert algo.identifier in metrics
-    assert "NDCG_K_2" in metrics[algo.identifier]
-    assert "Recall_K_2" in metrics[algo.identifier]
+    assert "NDCGK_K_2" in metrics[algo.identifier]
+    assert "RecallK_K_2" in metrics[algo.identifier]
