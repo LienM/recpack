@@ -13,11 +13,12 @@ logger = logging.getLogger("recpack")
 
 class Metric:
     """Metric Baseclass,
-    computes metrics given true labels and predicted scores.
+    computes metric given true labels and predicted scores.
 
-    After ``calculate`` the results are stored in the object.
-    Detailed results can be retrieved using ``results`` attribute,
-    the aggregated results is retrieved with ``value``.
+    A Metric object is stateful, i.e. after ``calculate`` 
+    the results can be retrieved in one of two ways:
+      - Detailed results are stored in ``metric_instance.results``,
+      - Aggregated result value can be retrieved using ``metric_instance.value``
     """
 
     def __init__(self):
@@ -33,7 +34,7 @@ class Metric:
         raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """Calculates this Metric for all users.
+        """Calculates this Metric for all nonzero users in ``y_true``.
 
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
@@ -59,17 +60,17 @@ class Metric:
 
     @property
     def num_items(self) -> int:
-        """The number of items in the matrix used to calculate."""
+        """Dimension of the item-space in both ``y_true`` and ``y_pred``"""
         return self.num_items_
 
     @property
     def num_users(self) -> int:
-        """The number of users items have been predicted."""
-        return self.num_users_
+        """Dimension of the user-space in both ``y_true`` and ``y_pred`` 
+           after elimination of users without interactions in ``y_true``."""
 
     @property
     def _indices(self) -> Tuple[np.array, np.array]:
-        """Indices in the prediction matrix, for which scores were computed."""
+        """Indices in the prediction matrix for which scores were computed."""
         row, col = np.indices((self.num_users_, self.num_items_))
 
         return row.flatten(), col.flatten()
@@ -98,9 +99,9 @@ class Metric:
     def _eliminate_empty_users(
         self, y_true: csr_matrix, y_pred: csr_matrix
     ) -> Tuple[csr_matrix, csr_matrix]:
-        """Eliminate users that have no interactions, so
-        no prediction could ever be right.
-
+        """Eliminate users that have no interactions in ``y_true``.
+           We cannot make accurate predictions of interactions for 
+           these users as there are none.
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
         :param y_pred: Predicted affinity of users for items.
@@ -115,7 +116,7 @@ class Metric:
         return y_true[nonzero_users, :], y_pred[nonzero_users, :]
 
     def _map_users(self, users):
-        """map the userids in input to their actual user ids in the metric."""
+        """Map internal identifiers of users to actual user identifiers."""
         if hasattr(self, "user_id_map_"):
             return self.user_id_map_[users]
         else:
@@ -123,7 +124,7 @@ class Metric:
 
 
 class MetricTopK(Metric):
-    """Base class for any metric computed on the TopK items for a user."""
+    """Base class for any metric computed on the Top-K item predictions for a user."""
 
     def __init__(self, K):
         super().__init__()
@@ -136,7 +137,7 @@ class MetricTopK(Metric):
 
     @property
     def _indices(self):
-        """Indices of the hits, used to created the dataframe"""
+        """Indices in the prediction matrix for which scores were computed."""
         row, col = self.y_pred_top_K_.nonzero()
         return row, col
 
@@ -152,10 +153,10 @@ class MetricTopK(Metric):
         raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """Compute the metric based on the expected labels, and the predicted affinities.
+        """Compute metric value(s) as a function of ``y_true`` and ``y_pred``.
 
-        Detailed results of the metric can be retrieved with :attr:`results` property.
-        Single aggregate value with :attr:`value`.
+        Detailed metric results can be retrieved with :attr:`results`.
+        Global aggregate metric value is retrieved as :attr:`value`.
 
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
@@ -179,14 +180,14 @@ class ElementwiseMetricK(MetricTopK):
     """Base class for all metrics that can be calculated for
     each user-item pair.
 
-    The ``results`` contains an entry for each user item pair.
+    :attr:`results` contains an entry for each user-item pair.
 
     Examples are: HitK, IPSHitRateK
     """
 
     @property
     def col_names(self):
-        """Names of columns in the results table"""
+        """The names of the columns in the results DataFrame."""
         return ["user_id", "item_id", "score"]
 
     @property
@@ -197,7 +198,7 @@ class ElementwiseMetricK(MetricTopK):
         the output DataFrame will contain K rows for
         that user, with item NaN and score 0
 
-        :return: The results DataFrame. With columns user, item, score
+        :return: The results DataFrame. With columns user_id, item_id, score
         :rtype: pd.DataFrame
         """
         scores = self.scores_.toarray()
@@ -239,12 +240,12 @@ class ListwiseMetricK(MetricTopK):
 
     @property
     def col_names(self):
-        """The names of the columns in the results table."""
+        """The names of the columns in the results DataFrame."""
         return ["user_id", "score"]
 
     @property
     def _indices(self):
-        """?"""
+        """Indices in the prediction matrix for which scores were computed."""
         row = np.arange(self.y_pred_top_K_.shape[0])
         col = np.zeros(self.y_pred_top_K_.shape[0], dtype=np.int32)
         return row, col

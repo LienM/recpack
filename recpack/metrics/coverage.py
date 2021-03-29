@@ -5,7 +5,8 @@ from recpack.util import get_top_K_ranks
 
 
 class CoverageK(GlobalMetricK):
-    """Fraction of items present in the predictions.
+    """Fraction of all items in ``y_true``and ``y_pred``
+       that are ranked among the top-k predictions for any user.
 
     Computed as
 
