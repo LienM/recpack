@@ -234,7 +234,7 @@ class ListwiseMetricK(MetricTopK):
     """Base class for all metrics that can only be calculated
     at the list-level, i.e. one value for each user.
 
-    Examples are: Diversity, nDCG, RR, Recall
+    Examples are: Diversity, nDiscountedCumulativeGain, RR, Recall
     """
 
     @property

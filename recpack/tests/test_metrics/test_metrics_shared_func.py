@@ -5,7 +5,7 @@ from scipy.sparse import csr_matrix
 
 from recpack.metrics import (
     NormalizedDiscountedCumulativeGainK,
-    DCGK,
+    DiscountedCumulativeGainK,
     RecallK,
     ReciprocalRankK,
     CoverageK,
@@ -57,7 +57,7 @@ def test_results_elementwise_topK(metric_cls, X_true, X_pred):
 @pytest.mark.parametrize(
     "metric_cls",
     [
-        DCGK,
+        DiscountedCumulativeGainK,
         RecallK,
         PrecisionK,
         NormalizedDiscountedCumulativeGainK,
@@ -133,7 +133,7 @@ def test_results_elementwise_topK_no_reco(
 @pytest.mark.parametrize(
     "metric_cls",
     [
-        DCGK,
+        DiscountedCumulativeGainK,
         RecallK,
         PrecisionK,
         NormalizedDiscountedCumulativeGainK,
@@ -177,7 +177,7 @@ def test_eliminate_zeros_no_reco(X_true_unrecommended_user, X_pred):
 
 
 def test_verify_shapes():
-    m = DCGK(3)
+    m = DiscountedCumulativeGainK(3)
 
     y_pred = csr_matrix(np.ones((3, 2)))
     y_true = csr_matrix(np.ones((2, 3)))

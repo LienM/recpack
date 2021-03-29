@@ -11,14 +11,14 @@ from recpack.util import get_top_K_ranks
 logger = logging.getLogger("recpack")
 
 
-class DCGK(ListwiseMetricK):
+class DiscountedCumulativeGainK(ListwiseMetricK):
     """Discounted Cumulative Gain metric. Sum of cumulative gains.
 
     Discounted Cumulative Gain is computed for every user as
 
     .. math::
 
-        DCG(u) = \\sum\\limits_{i \\in TopK(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
+        DiscountedCumulativeGain(u) = \\sum\\limits_{i \\in TopK(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
 
     A single value is computed by taking the average over all users.
 
@@ -46,7 +46,7 @@ class DCGK(ListwiseMetricK):
 
 
 def dcg_k(y_true, y_pred, k=50):
-    r = DCGK(K=k)
+    r = DiscountedCumulativeGainK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value
@@ -55,8 +55,9 @@ def dcg_k(y_true, y_pred, k=50):
 class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
     """Normalized Discounted Cumulative Gain metric.
 
-    NormalizedDiscountedCumulativeGain is similar to DCG, but normalises by dividing with the optimal,
-    possible DCG for the recommendation.
+    NormalizedDiscountedCumulativeGain is similar to DiscountedCumulativeGain,
+    but normalises by dividing with the optimal,
+    possible DiscountedCumulativeGain for the recommendation.
     Thus accounting for users where less than K items are available,
     and so the max score is lower than for other users.
 
@@ -66,7 +67,7 @@ class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
 
         \\text{NormalizedDiscountedCumulativeGain}(u) = \\frac{\\text{DCG}(u)}{\\text{IDCG}(u)}
 
-    where ideal DCG is
+    where ideal DiscountedCumulativeGain is
 
     .. math::
 
@@ -104,7 +105,8 @@ class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
         hist_len[hist_len > self.K] = self.K
 
         self.scores_ = sparse_divide_nonzero(
-            csr_matrix(per_user_dcg), csr_matrix(self.IDCG_cache[hist_len])
+            csr_matrix(per_user_dcg),
+            csr_matrix(self.IDCG_cache[hist_len]),
         )
 
         return
