@@ -2,8 +2,6 @@ from recpack.metrics.base import FittedMetric, ElementwiseMetricK
 from scipy.sparse import csr_matrix
 import numpy as np
 
-from recpack.util import get_top_K_ranks
-
 
 def compute_hits(y_true, y_pred):
     # Compute hits matrix:
@@ -17,15 +15,15 @@ def compute_hits(y_true, y_pred):
 class IPSMetric(FittedMetric):
 
     """IPS metrics are a class of metrics,
-    where the user interaction probability is taken into account.
+    where the probability of a user interaction is taken into account.
 
-    Each score per item is weighted by the inverse propensity
+    Each score is weighted by the inverse propensity
     of the user interacting with the item.
 
     Before using an IPSMetric, it should be fitted to the data.
 
-    :param ip_cap: used to avoid having an item that
-        creates an incredible weight, any IP > ip_cap = ip_cap
+    :param ip_cap: Maximum value of an inverse propensity.
+    Used to avoid excessively large weights for items that are rarely interacted with.
     :type ip_cap: int
     """
 
@@ -35,7 +33,7 @@ class IPSMetric(FittedMetric):
         self.ip_cap = 10000
 
     def fit(self, X: csr_matrix):
-        """Fit the propensities for the X dataset
+        """Fit the propensities for the X dataset.
 
         We make the strong assumption that each user
         has the same probability to interact with an item.
@@ -45,7 +43,7 @@ class IPSMetric(FittedMetric):
             p(i|u) = p(i) = \\frac{|\\{u| u\\in U, X_{ui} > 0\\}|} {|X|}
 
         Inverse propensity higher than the ``ip_cap``, are set to ``ip_cap``,
-        to avoid items seen almost never dominating the measure.
+        to avoid that items that are never interacted with dominate the metric.
 
         :param X: The interactions to base the propensity computation on.
                     Suggested to use the labels you are trying to predict as value,
@@ -57,7 +55,8 @@ class IPSMetric(FittedMetric):
         self.inverse_propensities = 1 / self.item_prob_
         self.inverse_propensities[self.inverse_propensities == np.inf] = 0
 
-        self.inverse_propensities[self.inverse_propensities > self.ip_cap] = self.ip_cap
+        self.inverse_propensities[self.inverse_propensities >
+                                  self.ip_cap] = self.ip_cap
 
 
 class IPSHitRateK(ElementwiseMetricK, IPSMetric):
@@ -67,6 +66,8 @@ class IPSHitRateK(ElementwiseMetricK, IPSMetric):
     Higher values are better, they indicate the algorithm is able to
     recommend more long tail items for the user.
 
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     def __init__(self, K):

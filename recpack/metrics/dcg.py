@@ -13,14 +13,16 @@ logger = logging.getLogger("recpack")
 
 class DiscountedCumulativeGainK(ListwiseMetricK):
     """Computes the sum of gains of all items in a recommendation list.
-       Relevant items that are ranked higher have a higher gain.
+
+    Relevant items that are ranked higher in the Top-K recommendations have a higher gain.
+
     The Discounted Cumulative Gain (DCG) is computed for every user as
 
     .. math::
 
-        DiscountedCumulativeGain(u) = \\sum\\limits_{i \\in TopK(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
+        DiscountedCumulativeGain(u) = \\sum\\limits_{i \\in KNN(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
 
-    :param K: Only topK of recommendations is used for calculate.
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int
     """
 
@@ -50,7 +52,7 @@ def dcg_k(y_true, y_pred, k=50):
     :type y_true: csr_matrix
     :param y_pred: Predicted scores
     :type y_pred: csr_matrix
-    :param k: Top-k to use for prediction, defaults to 50.
+    :param k: Size of the recommendation list consisting of the Top-K item predictions.
     :type k: int, optional
     :return: global dcg value
     :rtype: float
@@ -81,7 +83,7 @@ class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
 
         \\text{IDCG}(u) = \\sum\\limits_{j=1}^{\\text{min}(K, |y^{true}_u|)} \\frac{1}{\\log_2 (j + 1)}
 
-    :param K: How many of the top recommendations to consider.
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int
     """
 
@@ -127,7 +129,7 @@ def ndcg_k(y_true, y_pred, k=50):
     :type y_true: csr_matrix
     :param y_pred: Predicted scores
     :type y_pred: csr_matrix
-    :param k: top k to use for prediction, defaults to 50.
+    :param k: Size of the recommendation list consisting of the Top-K item predictions.
     :type k: int, optional
     :return: ndcg value
     :rtype: float

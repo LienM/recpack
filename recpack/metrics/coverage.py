@@ -1,12 +1,11 @@
 from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import GlobalMetricK
-from recpack.util import get_top_K_ranks
 
 
 class CoverageK(GlobalMetricK):
-    """Fraction of all items in ``y_true``and ``y_pred``
-       that are ranked among the Top-K recommendations for any user.
+    """Fraction of all items that are ranked among the
+    Top-K recommendations for any user.
 
     Computed as
 
@@ -14,7 +13,7 @@ class CoverageK(GlobalMetricK):
 
         \\frac{|\\{i | \\exists u \\in U, i \\in \\text{TopK}(u) \\}|}{|I|}
 
-    :param K: How many recommendations to consider for the metric.
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int
     """
 

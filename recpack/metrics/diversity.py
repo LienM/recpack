@@ -7,18 +7,20 @@ from recpack.util import get_top_K_ranks
 
 
 class IntraListDiversityK(FittedMetric, ListwiseMetricK):
-    """Computes the diversity of items in a list of recommendations.
+    """Computes the diversity of items in a list of Top-K recommendations.
 
     To compute the intra-list diversity, the metric first needs
     to be fitted on a boolean item-feature matrix.
-    This matrix should have a row for each item and a column for each feature. 
+    This matrix should have a row for each item and a column for each feature.
 
     For each user u, the intra-list diversity is computed as
 
     .. math::
 
-        \\frac{\\sum\\limits_{i,j \\in topK(u) \\wedge i \\neq j} J(i,j)}{K(K-1)}
+        \\frac{\\sum\\limits_{i,j \\in KNN(u) \\\\ i \\neq j} J(i,j)}{K(K-1)}
 
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     def __init__(self, K):
@@ -28,7 +30,13 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
         self.results_per_list = []
 
     def fit(self, X: csr_matrix) -> None:
-        """X is an item to feature matrix, with features one hot encoded"""
+        """
+        Fit a item-feature matrix that is used to determine the diversity of the list
+        of Top-K recommendations. 
+
+        :param X: Item-feature matrix.
+        :type X: csr_matrix
+        """
         self.X = X
 
     def _get_distance(self, i, j):

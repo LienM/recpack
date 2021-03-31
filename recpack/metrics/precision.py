@@ -27,6 +27,8 @@ class PrecisionK(ListwiseMetricK):
 
         \\text{Precision}(u) = \\frac{\\sum\\limits_{i \\in \\text{KNN}(u)} y^{true}_{u,i}}{K}
 
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     def __init__(self, K):

@@ -8,17 +8,17 @@ from sklearn.base import BaseEstimator
 
 from recpack.util import get_top_K_ranks
 
+
 logger = logging.getLogger("recpack")
 
 
 class Metric:
-    """Metric Baseclass,
-    computes metric given true labels and predicted scores.
+    """Base class for all metrics.
 
     A Metric object is stateful, i.e. after ``calculate``
     the results can be retrieved in one of two ways:
-      - Detailed results are stored in ``metric_instance.results``,
-      - Aggregated result value can be retrieved using ``metric_instance.value``
+      - Detailed results are stored in :attr:`results`,
+      - Aggregated result value can be retrieved using :attr:`value`
     """
 
     def __init__(self):
@@ -34,7 +34,7 @@ class Metric:
         raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """Calculates this Metric for all nonzero users in ``y_true``.
+        """Calculates this metric for all nonzero users in ``y_true``, given true labels and predicted scores.
 
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
@@ -54,7 +54,7 @@ class Metric:
 
     @property
     def value(self) -> float:
-        """The value computed for the metric."""
+        """The global metric value."""
         return self.value_
 
     @property
@@ -101,8 +101,10 @@ class Metric:
         self, y_true: csr_matrix, y_pred: csr_matrix
     ) -> Tuple[csr_matrix, csr_matrix]:
         """Eliminate users that have no interactions in ``y_true``.
-           We cannot make accurate predictions of interactions for
-           these users as there are none.
+
+        We cannot make accurate predictions of interactions for
+        these users as there are none.
+
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
         :param y_pred: Predicted affinity of users for items.
@@ -125,7 +127,16 @@ class Metric:
 
 
 class MetricTopK(Metric):
-    """Base class for any metric computed on the Top-K recommendations for a user."""
+    """Base class for all metrics computed based on the Top-K recommendations for every user.
+
+    A MetricTopK object is stateful, i.e. after ``calculate``
+    the results can be retrieved in one of two ways:
+      - Detailed results are stored in :attr:`results`,
+      - Aggregated result value can be retrieved using :attr:`value`
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
+    """
 
     def __init__(self, K):
         super().__init__()
@@ -143,8 +154,9 @@ class MetricTopK(Metric):
         return row, col
 
     def _calculate(self, y_true, y_pred_top_K):
-        """Calculate the metric value based on the expected interactions
-        and the ranks for topK recommendations.
+        """Computes metric given true labels ``y_true`` and predicted scores ``y_pred``. Only Top-K recommendations are considered. 
+
+        To be implemented in the child class.
 
         :param y_true: Expected interactions per user.
         :type y_true: csr_matrix
@@ -154,7 +166,7 @@ class MetricTopK(Metric):
         raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """Compute metric value(s) as a function of ``y_true`` and ``y_pred``.
+        """Computes metric given true labels ``y_true`` and predicted scores ``y_pred``. Only Top-K recommendations are considered. 
 
         Detailed metric results can be retrieved with :attr:`results`.
         Global aggregate metric value is retrieved as :attr:`value`.
@@ -179,11 +191,14 @@ class MetricTopK(Metric):
 
 class ElementwiseMetricK(MetricTopK):
     """Base class for all metrics that can be calculated for
-    each user-item pair.
+    each user-item pair in the Top-K recommendations.
 
     :attr:`results` contains an entry for each user-item pair.
 
     Examples are: HitK, IPSHitRateK
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     @property
@@ -193,13 +208,15 @@ class ElementwiseMetricK(MetricTopK):
 
     @property
     def results(self) -> pd.DataFrame:
-        """Get the results for this metric.
+        """Get the detailed results for this metric.
 
-        If there is a user with 0 recommendations,
-        the output DataFrame will contain K rows for
-        that user, with item NaN and score 0
+        Contains an entry for every user-item pair in the Top-K recommendations list of every user.
 
-        :return: The results DataFrame. With columns user_id, item_id, score
+        If there is a user with no recommendations,
+        the results DataFrame will contain K rows for
+        that user with item_id = NaN and score = 0.
+
+        :return: The results DataFrame with columns: user_id, item_id, score
         :rtype: pd.DataFrame
         """
         scores = self.scores_.toarray()
@@ -225,7 +242,7 @@ class ElementwiseMetricK(MetricTopK):
 
     @property
     def value(self):
-        """Average over all users of the sum of the elementwise scores per user."""
+        """Global metric value obtained by summing up scores for every user then taking the average over all users."""
         if hasattr(self, "value_"):
             return self.value_
         else:
@@ -233,10 +250,13 @@ class ElementwiseMetricK(MetricTopK):
 
 
 class ListwiseMetricK(MetricTopK):
-    """Base class for all metrics that can only be calculated
-    at the list-level, i.e. one value for each user.
+    """Base class for all metrics that can be calculated for every Top-K recommendation list,
+    i.e. one value for each user.
 
     Examples are: Diversity, NormalizedDiscountedCumulativeGain, RR, Recall
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     @property
@@ -253,7 +273,13 @@ class ListwiseMetricK(MetricTopK):
 
     @property
     def results(self):
-        """Detailed results of the metric."""
+        """Get the detailed results for this metric.
+
+        Contains an entry for every user.
+
+        :return: The results DataFrame with columns: user_id, score
+        :rtype: pd.DataFrame
+        """
         scores = self.scores_.toarray()
 
         int_users, items = self._indices
@@ -265,7 +291,7 @@ class ListwiseMetricK(MetricTopK):
 
     @property
     def value(self):
-        """Average of the scores of all users."""
+        """Global metric value obtained by taking the average over all users."""
         if hasattr(self, "value_"):
             return self.value_
         else:
@@ -275,9 +301,12 @@ class ListwiseMetricK(MetricTopK):
 class GlobalMetricK(MetricTopK):
     """
     Base class for all metrics that can only be calculated
-    as a global number across all items and users.
+    as a global value across all items and users.
 
-    Examples are: Coverage.
+    Examples are: Coverage
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     pass
@@ -287,6 +316,8 @@ class FittedMetric(Metric, BaseEstimator):
     """
     Base class for all metrics that need to be fit on a training set
     before they can be used.
+
+    Examples are: IntraListDiversityK, IPSHitRateK
     """
 
     def fit(self, X: csr_matrix):

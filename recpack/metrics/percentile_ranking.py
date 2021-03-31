@@ -12,11 +12,11 @@ class PercentileRanking(Metric):
     "Collaborative filtering for implicit feedback datasets."
     2008 Eighth IEEE International Conference on Data Mining. Ieee, 2008.
 
-    Percentile ranking is calculated according the following forumula:
+    Percentile ranking is calculated according the following formula:
 
     .. math::
 
-        \\text{perc_rank} = \\frac{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{ui} * \\overline{\\text{rank}}_{ui}}{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{ui}}
+        \\text{perc_rank} = \\frac{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{u,i} * \\overline{\\text{rank}}_{ui}}{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{ui}}
 
     where
 
@@ -32,7 +32,6 @@ class PercentileRanking(Metric):
     get the average rank from all remaining items.
     As if these remaining items would be shown in random order.
 
-
     Lower values of this percentile-ranking are desirable,
     because that indicates relevant items are shown at higher positions.
     """
@@ -42,9 +41,9 @@ class PercentileRanking(Metric):
 
     def _calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
         """Calculate the percentile ranking score for the particular
-        y_true and y_pred matrices.
+        ``y_true`` and ``y_pred`` matrices.
 
-        Assumes a binary y_true matrix.
+        Assumes a binary ``y_true`` matrix.
 
         :param y_true: User-item matrix with the actual true rating values.
         :param y_pred: User-item matrix with all prediction rating scores.
@@ -56,8 +55,6 @@ class PercentileRanking(Metric):
         # This transformation can be quite expensive if the y_pred matrix is dense.
         K = self.num_items
         ranking = get_top_K_ranks(y_pred, K)
-
-        print(ranking)
 
         # Ranking starts at 0 for this metric
         # ranking.data -= 1

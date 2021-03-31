@@ -21,6 +21,8 @@ class RecallK(ListwiseMetricK):
 
         \\text{Recall}(u) = \\frac{\\sum\\limits_{i \\in \\text{KNN}(u)} y^{true}_{u,i} }{\\sum\\limits_{j \\in I} y^{true}_{u,j}}
 
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
     def __init__(self, K):
         super().__init__(K)
@@ -59,6 +61,8 @@ class CalibratedRecallK(ListwiseMetricK):
 
         \\text{CalibratedRecall}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} y^{true}_{u,i} }{\\text{min}(\\sum\\limits_{j \\in I} y^{true}_{u,j}, K)}
 
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     def __init__(self, K):

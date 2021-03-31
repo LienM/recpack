@@ -11,10 +11,15 @@ logger = logging.getLogger("recpack")
 
 
 class HitK(ElementwiseMetricK):
-    """Counts a hit when a recommended item in the top K for this user was interacted with.
+    """Computes the number of hits in a list of Top-K recommendations.
 
-    Detailed ::attr::`results` show which of the items in the list of top K recommended items
+    A hit is counted when a recommended item in the top K for this user was interacted with.
+
+    Detailed :attr:`results` show which of the items in the list of Top-K recommended items
     were hits and which were not.
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     def __init__(self, K):
@@ -32,47 +37,22 @@ class HitK(ElementwiseMetricK):
         self.scores_ = scores
 
 
-class WeightedByInteractionsHitK(ElementwiseMetricK):
-    """Hit metric, with each hit weighted by the number of interactions of that user.
-
-    For users with more items it is "easier" to predict an item correctly,
-    so in detailed analysis it is interesting to consider the weighted result.
-
-    For each item :math:`i \\in TopK(u)` the weighted hit score is computed as.
-
-    .. math::
-
-        \\frac{y^{true}_{u,i}}{\\sum_{j \\in I} y^{true}_{u,j}}
-
-    """
-
-    def __init__(self, K):
-        super().__init__(K)
-
-    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
-
-        scores = scipy.sparse.lil_matrix(y_pred_top_K.shape)
-
-        # Elementwise multiplication of top K predicts and true interactions
-        scores[y_pred_top_K.multiply(y_true).astype(np.bool)] = 1
-
-        scores = scores.tocsr()
-
-        self.scores_ = sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1)))
-
-
 class DiscountedGainK(ElementwiseMetricK):
-    """Discounted gain, hits weighted by the inverse of their rank.
+    """Computes the discounted gain of every item in the Top-K recommendations of a user.
 
-    Hits at lower positions have a higher chance of getting seen by users,
-    and as such are more important.
+    Relevant items that are ranked higher in the Top-K recommendations have a higher gain.
 
-    For each item :math:`i \\in \\text{TopK}(u)` the discounted gain is computed as.
+    Detailed :attr:`results` show the gain of each item in the
+    list of Top-K recommended items for every user.
+
+    For each item :math:`i \\in \\text{TopK}(u)` the discounted gain is computed as
 
     .. math::
 
-        \\frac{y^{true}_{u_i}}{\\log_2(\\text{rank}(u,i) + 1)}
+        \\text{DiscountedGain(u,i)} = \\frac{y^{true}_{u,i}}{\\log_2(\\text{rank}(u,i) + 1)}
 
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     def __init__(self, K):
