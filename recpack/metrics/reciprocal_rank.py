@@ -4,19 +4,27 @@ from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import ListwiseMetricK
 from recpack.metrics.util import sparse_inverse_nonzero
-from recpack.util import get_top_K_ranks
+
 
 logger = logging.getLogger("recpack")
 
 
 class ReciprocalRankK(ListwiseMetricK):
-    """Reciprocal Rank or the inverse of the lowest rank of a hit.
+    """Computes the inverse of the rank of the first hit
+    in the recommendation list.
 
-    Per user with a hit the reciprocal rank is computed as
+    Reciprocal Rank is calculated as:
 
     .. math::
 
-        \\text{RR}(u) = \\frac{1}{\\min\\limits_{i \\in KNN(u)} \\text{rank}(u,i) * y^{True}_{u,i}}
+       \\text{RR}(u) = \\frac{1}{\\text{rank}_{u,i}}
+
+    with
+
+    .. math::
+
+        \\text{rank}_{u,i} = \\min\\limits_{i \\in KNN(u), \\ i \\in y^{true}_u} rank(u,i)
+
     """
 
     def __init__(self, K):
