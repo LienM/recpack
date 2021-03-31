@@ -162,7 +162,7 @@ def sample_positives_and_negatives(
     # Need positive and negative pair.
     # Requires the existence of a positive for this item.
     # As a (num_interactions, 2) numpy array
-    if not positives:
+    if positives is None:
         positives = np.array(X.nonzero()).T
 
     num_positives = positives.shape[0]

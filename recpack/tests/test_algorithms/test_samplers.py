@@ -174,18 +174,19 @@ def test_sample_positives_and_negatives_warp(pageviews):
     assert total_interactions == pageviews.nnz
 
 
-def test_sample_positives_and_negatives_w_positives_arg(pageviews):
+def test_sample_positives_and_negatives_w_positives_arg(larger_matrix):
 
     # pageviews needs to be binary
-    pageviews = to_binary(pageviews)
+    pageviews = to_binary(larger_matrix)
 
     all_positives = np.array(pageviews.nonzero()).T
 
     # Select first 1000 samples
-    selected_positives = all_positives[0:1000, :]
+    selected_positives = all_positives[0:100, :]
+
     selected_positives_aslist = selected_positives.tolist()
 
-    batch_size = 120
+    batch_size = 12
     total_interactions = 0
 
     for users, positives_batch, negatives_batch in sample_positives_and_negatives(
@@ -194,6 +195,7 @@ def test_sample_positives_and_negatives_w_positives_arg(pageviews):
         U=1,
         replace=False,
         exact=True,
+        positives=selected_positives
     ):
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
