@@ -60,7 +60,6 @@ To obtain a global metric value, these scores are summed per user, then averaged
 
     HitK
     IPSHitRateK
-    WeightedByInteractionsHitK
     DiscountedGainK
 """
 
@@ -71,7 +70,7 @@ from recpack.metrics.dcg import (
     NormalizedDiscountedCumulativeGainK,
 )
 from recpack.metrics.diversity import IntraListDiversityK
-from recpack.metrics.hit import HitK, DiscountedGainK, WeightedByInteractionsHitK
+from recpack.metrics.hit import HitK, DiscountedGainK
 from recpack.metrics.ips import IPSHitRateK
 from recpack.metrics.precision import PrecisionK
 from recpack.metrics.recall import RecallK, CalibratedRecallK
@@ -85,7 +84,6 @@ METRICS = {
     "IntraListDiversityK": IntraListDiversityK,
     "IPSHitRateK": IPSHitRateK,
     "HitK": HitK,
-    "WeightedByInteractionsHitK": WeightedByInteractionsHitK,
     "DiscountedGainK": DiscountedGainK,
     "PrecisionK": PrecisionK,
     "RecallK": RecallK,
