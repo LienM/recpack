@@ -129,7 +129,8 @@ def warp_sample_pairs(
 
 
 def sample_positives_and_negatives(
-    X: csr_matrix, U=1, batch_size=100, sample_size=None, replace=True, exact=False
+    X: csr_matrix, U=1, batch_size=100, sample_size=None, replace=True, exact=False,
+    positives: np.array = None
 ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
     """Sample U negatives for each sampled user-item-pair (positive).
 
@@ -153,30 +154,35 @@ def sample_positives_and_negatives(
         If collisions should be avoided at all costs, use exact = True,
         but suffer decreased performance.
     :type exact: bool, optional
+    :param positives: Restrict positives samples to only samples in this np.array of dimension (num_samples, 2).
+    :type positives: np.array, optional
     :yield: Iterator of (user_batch, positive_samples_batch, negative_samples_batch)
     :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
     """
+    # Need positive and negative pair.
+    # Requires the existence of a positive for this item.
+    # As a (num_interactions, 2) numpy array
+    if positives is None:
+        positives = np.array(X.nonzero()).T
+
+    num_positives = positives.shape[0]
+
     if sample_size is None:
-        sample_size = X.nnz
+        sample_size = num_positives
 
     # Make sure we can actually sample the requested sample_size
-    # without replacement samplesize should <= X.nnz
-    if not replace and sample_size > X.nnz:
+    # without replacement samplesize should <= number of positives to choose from.
+    if not replace and sample_size > num_positives:
         raise RuntimeError(
             "Can't sample more samples than positive entries without replacement"
         )
 
-    # Need positive and negative pair.
-    # Requires the existence of a positive for this item.
-    # As a (num_interactions, 2) numpy array
-    positives = np.array(X.nonzero()).T
-    num_positives = positives.shape[0]
-
     # Pick interactions at random, with replacement
-    samples = np.random.choice(num_positives, size=(sample_size,), replace=replace)
+    samples = np.random.choice(
+        num_positives, size=(sample_size,), replace=replace)
 
     for start in range(0, sample_size, batch_size):
-        sample_batch = samples[start : start + batch_size]
+        sample_batch = samples[start: start + batch_size]
 
         batch = positives[sample_batch]
         users = batch[:, 0]
