@@ -37,10 +37,6 @@ class PercentileRanking(Metric):
     because that indicates relevant items are shown at higher positions.
     """
 
-    # 24/3: Updated this metric, such that it is no longer a topK metric
-    #       Also updated the code, such that it takes into account
-    #       if an expected output was not predicted
-
     def __init__(self):
         super().__init__()
 

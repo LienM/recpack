@@ -19,8 +19,6 @@ class DiscountedCumulativeGainK(ListwiseMetricK):
 
         DiscountedCumulativeGain(u) = \\sum\\limits_{i \\in TopK(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
 
-    A single value is computed by taking the average over all users.
-
     :param K: Only topK of recommendations is used for calculate.
     :type K: int
     """

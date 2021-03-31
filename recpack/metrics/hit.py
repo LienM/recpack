@@ -13,7 +13,6 @@ logger = logging.getLogger("recpack")
 class HitK(ElementwiseMetricK):
     """Counts a hit when a recommended item in the top K for this user was interacted with.
 
-    Global value is the average number of hits per user.
     Detailed ::attr::`results` show which of the items in the list of top K recommended items
     were hits and which were not.
     """
@@ -39,7 +38,7 @@ class WeightedByInteractionsHitK(ElementwiseMetricK):
     For users with more items it is "easier" to predict an item correctly,
     so in detailed analysis it is interesting to consider the weighted result.
 
-    For each item :math:`i \\in TopK(u)` the discounted gain is computed as.
+    For each item :math:`i \\in TopK(u)` the weighted hit score is computed as.
 
     .. math::
 
@@ -74,7 +73,6 @@ class DiscountedGainK(ElementwiseMetricK):
 
         \\frac{y^{true}_{u_i}}{\\log_2(\\text{rank}(u,i) + 1)}
 
-    An overall value is computed as the average of the sum per user.
     """
 
     def __init__(self, K):
