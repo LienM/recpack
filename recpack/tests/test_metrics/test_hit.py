@@ -25,8 +25,6 @@ def test_discounted_gain_K(X_true, X_pred):
     metric = DiscountedGainK(K=K)
 
     metric.calculate(X_true, X_pred)
-
-    print(metric.results)
     assert metric.value == (1 + (1 / np.log2(3)) + (1 / np.log2(3))) / 2
 
     # Row per user and prediction in top K
