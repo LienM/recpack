@@ -5,25 +5,27 @@ import scipy.sparse
 from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import ListwiseMetricK
-from recpack.util import get_top_K_ranks
+
 
 logger = logging.getLogger("recpack")
 
 
 class PrecisionK(ListwiseMetricK):
-    """Computes precision@K: number of correct predictions in the top K.
+    """Computes the fraction of top-K recommendations that correspond
+    to true interactions.
 
-    Different from the definition for classification tasks,
-    the recommender is expected to return always return K items,
-    if it does not, the missing items are considered misses.
+    Different from the definition for information retrieval
+    a recommendation algorithm is expected to always return K items
+    when the Top-K recommendations are requested.
+    When fewer than K items received scores, these are considered a miss.
+    As such recommending fewer items is not beneficial for a
+    recommendation algorithm.
 
-    As such recommending fewer items is not beneficial for an algorithm.
-
-    Precision is computed per user, as
+    Precision is computed per user as:
 
     .. math::
 
-        \\text{precision}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} R_{u,i}}{K}
+        \\text{Precision}(u) = \\frac{\\sum\\limits_{i \\in \\text{KNN}(u)} y^{true}_{u,i}}{K}
 
     """
 

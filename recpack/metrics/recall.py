@@ -19,7 +19,7 @@ class RecallK(ListwiseMetricK):
 
     .. math::
 
-        \\text{Recall}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} y^{true}_{u,i} }{\\sum\\limits_{j \\in I} y^{true}_{u,j}}
+        \\text{Recall}(u) = \\frac{\\sum\\limits_{i \\in \\text{KNN}(u)} y^{true}_{u,i} }{\\sum\\limits_{j \\in I} y^{true}_{u,j}}
 
     """
     def __init__(self, K):

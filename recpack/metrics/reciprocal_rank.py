@@ -13,11 +13,11 @@ class ReciprocalRankK(ListwiseMetricK):
     """Computes the inverse of the rank of the first hit
     in the recommendation list.
 
-    Reciprocal Rank is calculated as:
+    The reciprocal rank is calculated as:
 
     .. math::
 
-       \\text{RR}(u) = \\frac{1}{\\text{rank}_{u,i}}
+       \\text{ReciprocalRank}(u) = \\frac{1}{\\text{rank}_{u,i}}
 
     with
 
