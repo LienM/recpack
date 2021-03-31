@@ -66,10 +66,10 @@ class Scenario(ABC):
     def validation_data(
         self,
     ) -> Union[Tuple[InteractionMatrix, InteractionMatrix], None]:
-        """The validation input, expected output data tuple.
+        """The validation dataset. Consist of a fold-in and hold-out set of interactions.
 
-        Data is processed such that both matrices contain the same nonzero users.
-        Users that occured in one of the matrices, and not in the other are removed.
+        Data is processed such that both matrices contain the exact same users.
+        Users that were present in only one of the matrices and not in the other are removed.
 
         :return: Validation data matrices as
             InteractionMatrix in, InteractionMatrix out.
@@ -109,10 +109,10 @@ class Scenario(ABC):
 
     @property
     def test_data(self) -> Tuple[InteractionMatrix, InteractionMatrix]:
-        """The test input, test expected output data tuple.
+        """The test dataset. Consist of a fold-in and hold-out set of interactions.
 
-        Data is processed such that both matrices contain the same nonzero users.
-        Users that occured in one of the matrices, and not in the other are removed.
+        Data is processed such that both matrices contain the exact same users.
+        Users that were present in only one of the matrices and not in the other are removed.
 
         :return: Test data matrices as InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
@@ -131,9 +131,6 @@ class Scenario(ABC):
         """Checks that the splits have been done properly.
 
         Makes sure all expected attributes are set.
-
-        18/3: Renamed from validate to _check_split,
-        validate conflicted with validation data, and thus risked confusing users.
         """
         assert hasattr(self, "train_X") and self.train_X is not None
         if self.validation:
