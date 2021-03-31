@@ -6,13 +6,12 @@ import numpy as np
 
 from recpack.metrics.base import ListwiseMetricK
 from recpack.metrics.util import sparse_divide_nonzero
-from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
 
 class DiscountedCumulativeGainK(ListwiseMetricK):
-    """Computes the sum of gains of all items in a recommendation list. 
+    """Computes the sum of gains of all items in a recommendation list.
        Relevant items that are ranked higher have a higher gain.
     The Discounted Cumulative Gain (DCG) is computed for every user as
 
@@ -63,12 +62,14 @@ def dcg_k(y_true, y_pred, k=50):
     return r.value
 
 
+class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
+
     """Computes the normalized sum of gains of all items in a recommendation list.
 
     The normalized Discounted Cumulative Gain (nDCG) is similar to DCG,
     but normalizes by dividing the resulting sum of cumulative gains
     by the best possible discounted cumulative gain for a list of recommendations
-    of length K for a user with history length N. 
+    of length K for a user with history length N.
 
     Scores are always in the interval [0, 1]
 

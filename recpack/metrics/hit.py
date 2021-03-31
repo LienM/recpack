@@ -1,22 +1,21 @@
 import logging
 
 import numpy as np
-import pandas as pd
 import scipy.sparse
 from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import ElementwiseMetricK
 from recpack.metrics.util import sparse_divide_nonzero
-from recpack.util import get_top_K_ranks
 
 logger = logging.getLogger("recpack")
 
 
+class HitK(ElementwiseMetricK):
     """Counts a hit when a recommended item in the top K for this user was interacted with.
 
-       Global value is the average number of hits per user. 
-       Detailed ::attr::`results` show which of the items in the list of top K recommended items
-       were hits and which were not.
+    Global value is the average number of hits per user.
+    Detailed ::attr::`results` show which of the items in the list of top K recommended items
+    were hits and which were not.
     """
 
     def __init__(self, K):
