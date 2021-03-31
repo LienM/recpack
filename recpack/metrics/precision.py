@@ -29,7 +29,6 @@ class PrecisionK(ListwiseMetricK):
 
     """
 
-    # 23/3: Changed base class from ElementwiseMetricK to ListwiseMetricK.
     # Precision is never considered per user item pair,
     # but usually per list of recommendations.
     # If you want to know which items were hits, we have the HitMetric available.

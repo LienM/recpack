@@ -12,9 +12,9 @@ logger = logging.getLogger("recpack")
 
 
 class DiscountedCumulativeGainK(ListwiseMetricK):
-    """Discounted Cumulative Gain metric. Sum of cumulative gains.
-
-    Discounted Cumulative Gain is computed for every user as
+    """Computes the sum of gains of all items in a recommendation list. 
+       Relevant items that are ranked higher have a higher gain.
+    The Discounted Cumulative Gain (DCG) is computed for every user as
 
     .. math::
 
@@ -46,28 +46,36 @@ class DiscountedCumulativeGainK(ListwiseMetricK):
 
 
 def dcg_k(y_true, y_pred, k=50):
+    """Wrapper function around DiscountedCumulativeGain class.
+
+    :param y_true: True labels
+    :type y_true: csr_matrix
+    :param y_pred: Predicted scores
+    :type y_pred: csr_matrix
+    :param k: Top-k to use for prediction, defaults to 50.
+    :type k: int, optional
+    :return: global dcg value
+    :rtype: float
+    """
     r = DiscountedCumulativeGainK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value
 
 
-class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
-    """Normalized Discounted Cumulative Gain metric.
+    """Computes the normalized sum of gains of all items in a recommendation list.
 
-    NormalizedDiscountedCumulativeGain is similar to DiscountedCumulativeGain,
-    but normalises by dividing with the optimal,
-    possible DiscountedCumulativeGain for the recommendation.
-    Thus accounting for users where less than K items are available,
-    and so the max score is lower than for other users.
+    The normalized Discounted Cumulative Gain (nDCG) is similar to DCG,
+    but normalizes by dividing the resulting sum of cumulative gains
+    by the best possible discounted cumulative gain for a list of recommendations
+    of length K for a user with history length N. 
 
     Scores are always in the interval [0, 1]
 
     .. math::
 
         \\text{NormalizedDiscountedCumulativeGain}(u) = \\frac{\\text{DCG}(u)}{\\text{IDCG}(u)}
-
-    where ideal DiscountedCumulativeGain is
+    where IDCG stands for Ideal Discounted Cumulative Gain, computed as:
 
     .. math::
 

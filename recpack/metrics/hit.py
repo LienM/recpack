@@ -12,14 +12,11 @@ from recpack.util import get_top_K_ranks
 logger = logging.getLogger("recpack")
 
 
-class HitK(ElementwiseMetricK):
-    """Metric computing the average hits per user in a prediction list.
+    """Counts a hit when a recommended item in the top K for this user was interacted with.
 
-    Each user, item pair has score 0 or 1,
-    1 if it is both in the topK of recommended scores and the true labels matrix.
-
-    To compute the value, the average over all users is taken.
-
+       Global value is the average number of hits per user. 
+       Detailed ::attr::`results` show which of the items in the list of top K recommended items
+       were hits and which were not.
     """
 
     def __init__(self, K):

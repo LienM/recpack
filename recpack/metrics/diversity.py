@@ -9,12 +9,11 @@ from recpack.util import get_top_K_ranks
 class IntraListDiversityK(FittedMetric, ListwiseMetricK):
     """Computes the diversity of items in a list of recommendations.
 
-    Requires to be fit, to be used.
-    Fit typically happens on a boolean metadata association matrix.
-    Where each row is an item, and each column a metadata concept.
-    The distance between two items is then computed as their Jaccard distance.
+    To compute the intra-list diversity, the metric first needs
+    to be fitted on a boolean item-feature matrix.
+    This matrix should have a row for each item and a column for each feature. 
 
-    For each user u, the intra list diversity is computed as
+    For each user u, the intra-list diversity is computed as
 
     .. math::
 
