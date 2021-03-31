@@ -1,14 +1,10 @@
-from warnings import warn
-
 from recpack.data.matrix import InteractionMatrix
 from recpack.splitters.scenario_base import Scenario
 import recpack.splitters.splitter_base as splitter_base
 
-# TODO: add examples, these are very useful for understanding!
-
 
 class StrongGeneralization(Scenario):
-    """Strong generalization splits your data so that a user can only be in one of
+    """Splits your data so that a user can only be in one of
     training, validation or test.
 
     During splitting each user is randomly assigned to one of the three groups of users.
@@ -91,7 +87,7 @@ class StrongGeneralization(Scenario):
         else:
             self.train_X = train_val_data
 
-        self.test_data_in, self.test_data_out = self.interaction_split.split(test_data)
+        self._test_data_in, self._test_data_out = self.interaction_split.split(test_data)
 
 
 class WeakGeneralization(Scenario):
@@ -197,7 +193,7 @@ class WeakGeneralization(Scenario):
 
     def _split(self, data: InteractionMatrix):
 
-        train_val_data, self.test_data_out = self.interaction_split.split(data)
+        train_val_data, self._test_data_out = self.interaction_split.split(data)
 
         if self.validation:
             self.train_X, self._validation_data_out = self.validation_splitter.split(
@@ -207,7 +203,7 @@ class WeakGeneralization(Scenario):
         else:
             self.train_X = train_val_data
 
-        self.test_data_in = train_val_data.copy()
+        self._test_data_in = train_val_data.copy()
 
 
 class Timed(Scenario):
@@ -313,8 +309,8 @@ class Timed(Scenario):
         else:
             self.train_X = lt_t
 
-        self.test_data_in = lt_t
-        self.test_data_out = gt_t
+        self._test_data_in = lt_t
+        self._test_data_out = gt_t
 
 
 class StrongGeneralizationTimed(Scenario):
@@ -446,7 +442,7 @@ class StrongGeneralizationTimed(Scenario):
         else:
             self.train_X = tr_val_data
 
-        self.test_data_in, self.test_data_out = self.timestamp_spl.split(te_data)
+        self._test_data_in, self._test_data_out = self.timestamp_spl.split(te_data)
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
@@ -533,7 +529,7 @@ class StrongGeneralizationTimedMostRecent(Scenario):
     def _split(self, data):
         tr_val_data, te_data = self.user_splitter_test.split(data)
 
-        self.test_data_in, self.test_data_out = self.most_recent_splitter.split(te_data)
+        self._test_data_in, self._test_data_out = self.most_recent_splitter.split(te_data)
 
         if self.validation:
             self.train_X, val_data = self.user_splitter_val.split(tr_val_data)

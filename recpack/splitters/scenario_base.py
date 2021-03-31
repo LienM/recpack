@@ -7,36 +7,41 @@ from recpack.data.matrix import InteractionMatrix
 
 
 class Scenario(ABC):
-    """Base class for defining an evaluation "Scenario".
+    """Base class for defining an evaluation scenario.
 
     A scenario is a set of steps that splits data into training,
-    validation and test sets and creates the required data
-    folds for evaluation where a fold of the user's history is
-    used to predict another fold.
+    validation and test datasets.
+    Both validation and test dataset are made up of two components:
+    a fold-in set of interactions that is used to predict another held-out
+    set of interactions.
+
+    :param validation: Create a validation dataset when True, else split into training and test datasets.
+    :type validation: boolean, optional
     """
 
     def __init__(self, validation=False):
         self.validation = validation
         if validation:
-            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8)
+            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(
+                0.8)
 
     @abstractmethod
     def _split(self, data_m: InteractionMatrix) -> None:
         """Abstract method to be implemented by the scenarios.
 
-        Splits the data, and assigns data to ``self.train_X``,
-        ``self.test_data_in``, ``self.test_data_out``, ``self.validation_data_in``
-        and ``self.validation_data_out``
+        Splits the data and assigns to :attr:`self.train_X`,
+        :attr:`self.test_data_in, :attr:`self.test_data_out`, :attr:`self.validation_data_in`
+        and :attr:`self.validation_data_out`
 
         :param data_m: Interaction matrix to be split.
         :type data_m: InteractionMatrix
         """
 
     def split(self, data_m: InteractionMatrix) -> None:
-        """Split the provided interaction matrix according to the scenario.
+        """Splits ``data_m`` according to the scenario.
 
-        After splitting properties ``training_data``,
-        ``validation_data`` and ``test_data`` can be used to retrieve the splitted data.
+        After splitting properties :attr:`training_data`,
+        :attr:`validation_data` and :attr:`test_data` can be used to retrieve the splitted data.
 
         :param data_m: Interaction matrix that should be split.
         :type data: InteractionMatrix
@@ -47,11 +52,14 @@ class Scenario(ABC):
 
     @property
     def training_data(self) -> InteractionMatrix:
-        """The training data interactions.
+        """The training dataset.
 
         :return: Interaction Matrix of training interactions.
         :rtype: InteractionMatrix
         """
+        if not hasattr(self, "train_X"):
+            raise KeyError("Split before trying to access the training_data property.")
+
         return self.train_X
 
     @property
@@ -68,7 +76,10 @@ class Scenario(ABC):
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         if not hasattr(self, "_validation_data_in"):
-            return None
+            raise KeyError("Split before trying to access the validation_data property.")
+
+        if not self.validation:
+            raise KeyError("This scenario was created without validation_data.")
 
         # make sure users match both.
         in_users = self._validation_data_in.active_users
@@ -81,6 +92,22 @@ class Scenario(ABC):
         )
 
     @property
+    def validation_data_in(self):
+        return self.validation_data[0]
+
+    @property
+    def validation_data_out(self):
+        return self.validation_data[1]
+
+    @property
+    def test_data_in(self):
+        return self.test_data[0]
+
+    @property
+    def test_data_out(self):
+        return self.test_data[1]
+
+    @property
     def test_data(self) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """The test input, test expected output data tuple.
 
@@ -91,13 +118,13 @@ class Scenario(ABC):
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         # make sure users match.
-        in_users = self.test_data_in.active_users
-        out_users = self.test_data_out.active_users
+        in_users = self._test_data_in.active_users
+        out_users = self._test_data_out.active_users
 
         matching = list(in_users.intersection(out_users))
         return (
-            self.test_data_in.users_in(matching),
-            self.test_data_out.users_in(matching),
+            self._test_data_in.users_in(matching),
+            self._test_data_out.users_in(matching),
         )
 
     def _check_split(self):
@@ -119,8 +146,9 @@ class Scenario(ABC):
                 and self._validation_data_out is not None
             )
 
-        assert hasattr(self, "test_data_in") and self.test_data_in is not None
-        assert hasattr(self, "test_data_out") and self.test_data_out is not None
+        assert hasattr(self, "_test_data_in") and self._test_data_in is not None
+        assert hasattr(
+            self, "_test_data_out") and self._test_data_out is not None
 
         self._check_size()
 
@@ -129,8 +157,8 @@ class Scenario(ABC):
         Warns user if any of the sets is unusually small or empty
         """
         n_train = self.train_X.num_interactions
-        n_test_in = self.test_data_in.num_interactions
-        n_test_out = self.test_data_out.num_interactions
+        n_test_in = self._test_data_in.num_interactions
+        n_test_out = self._test_data_out.num_interactions
         n_test = n_test_in + n_test_out
         n_total = n_train + n_test
 
@@ -142,7 +170,8 @@ class Scenario(ABC):
 
         def check(name, count, total, threshold):
             if (count + 1e-9) / (total + 1e-9) < threshold:
-                warn(f"{name} resulting from {type(self).__name__} is unusually small.")
+                warn(
+                    f"{name} resulting from {type(self).__name__} is unusually small.")
 
         check("Training set", n_train, n_total, 0.05)
         check("Test set", n_test, n_total, 0.01)
