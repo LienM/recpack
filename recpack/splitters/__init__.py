@@ -1,9 +1,24 @@
-"""The splitter module is responsible for splitting data into train,
-validation and test data.
+"""
 
-Recpack provides preimplemented scenarios for well known splitting techniques.
-Should you want to implement a specific not yet implemented scenario,
-data splitters are provided to perform frequently used splits.
+The splitters module contains many of the most commonly encountered evaluation
+scenarios in recommendation.
+
+A scenario consists of a training and test dataset, and sometimes
+also a validation dataset.
+Both validation and test dataset are made up of two components:
+a fold-in set of interactions that is used to predict another held-out
+set of interactions.
+
+A scenario is usually built up out of one or more low-level splitters.
+A scenario describes a complex situation, e.g. "Train on all user
+interactions before time T, predict interactions after T+10 using interactions
+from T+5 until T+10". 
+A splitter on the other hand performs a simple split into two InteractionMatrices
+according to one, simple criterion, e.g. "Fold in is all interactions before T,
+hold out all interactions after T".
+
+Should you want to implement a new scenario that is not yet supported,
+you can use these splitters to help you build it from the ground up.
 
 .. currentmodule:: recpack.splitters
 
@@ -12,10 +27,6 @@ data splitters are provided to perform frequently used splits.
 
 Scenarios
 ------------------
-A scenario splits data, into a training dataset, 
-a validation dataset split into two folds (input and expected output)
-and a test dataset split into two folds (input and expected output) 
-used to split data into the train, validation and test sub datasets.
 
 .. autosummary::
     :toctree: generated/
