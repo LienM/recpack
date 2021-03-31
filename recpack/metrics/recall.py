@@ -20,15 +20,7 @@ class RecallK(ListwiseMetricK):
 
         \\text{Recall}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} y^{true}_{u,i} }{\\sum\\limits_{j \\in I} y^{true}_{u,j}}
 
-
-    To get a single result, the mean of recall per user is computed.
     """
-
-    # 23/3: Changed from ElementwiseMetricK to ListwiseMetricK,
-    # recall is always discussed per user.
-    # Because it is still interesting to get a weighted hit value,
-    # with the number of items seen by the user,
-    # added a new metric WeightedHitMetric.
 
     def __init__(self, K):
         super().__init__(K)

@@ -67,7 +67,6 @@ class IPSHitRateK(ElementwiseMetricK, IPSMetric):
     Higher values are better, they indicate the algorithm is able to
     recommend more long tail items for the user.
 
-    The value is aggregated by computing the average sum of IPS weighted hits per user.
     """
 
     def __init__(self, K):

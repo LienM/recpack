@@ -54,7 +54,7 @@ class Metric:
 
     @property
     def value(self) -> float:
-        """The aggregated value of the metric."""
+        """The value computed for the metric."""
         return self.value_
 
     @property
@@ -225,7 +225,7 @@ class ElementwiseMetricK(MetricTopK):
 
     @property
     def value(self):
-        """Aggregated value of the metric."""
+        """Average over all users of the sum of the elementwise scores per user."""
         if hasattr(self, "value_"):
             return self.value_
         else:
@@ -265,7 +265,7 @@ class ListwiseMetricK(MetricTopK):
 
     @property
     def value(self):
-        """Aggregated result."""
+        """Average of the scores of all users."""
         if hasattr(self, "value_"):
             return self.value_
         else:

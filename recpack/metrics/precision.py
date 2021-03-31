@@ -25,13 +25,7 @@ class PrecisionK(ListwiseMetricK):
 
         \\text{precision}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} R_{u,i}}{K}
 
-    To get the final result, the sum of average precision over all users is taken.
-
     """
-
-    # Precision is never considered per user item pair,
-    # but usually per list of recommendations.
-    # If you want to know which items were hits, we have the HitMetric available.
 
     def __init__(self, K):
         super().__init__(K)
