@@ -13,7 +13,6 @@ from recpack.metrics import (
     PrecisionK,
     IntraListDiversityK,
     HitK,
-    WeightedByInteractionsHitK,
     DiscountedGainK,
 )
 
@@ -27,7 +26,7 @@ from recpack.metrics.base import (
 
 
 @pytest.mark.parametrize(
-    "metric_cls", [HitK, IPSHitRateK, WeightedByInteractionsHitK, DiscountedGainK]
+    "metric_cls", [HitK, IPSHitRateK, DiscountedGainK]
 )
 def test_results_elementwise_topK(metric_cls, X_true, X_pred):
     K = 2
@@ -98,7 +97,7 @@ def test_eliminate_zeros(X_true, X_pred):
 
 
 @pytest.mark.parametrize(
-    "metric_cls", [HitK, IPSHitRateK, WeightedByInteractionsHitK, DiscountedGainK]
+    "metric_cls", [HitK, IPSHitRateK, DiscountedGainK]
 )
 def test_results_elementwise_topK_no_reco(
     metric_cls, X_true_unrecommended_user, X_pred
