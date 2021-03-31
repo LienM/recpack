@@ -180,8 +180,7 @@ def test_sample_positives_and_negatives_w_positives_arg(larger_matrix):
     pageviews = to_binary(larger_matrix)
 
     all_positives = np.array(pageviews.nonzero()).T
-
-    # Select first 1000 samples
+    # Select first 100 entries as positives to sample from
     selected_positives = all_positives[0:100, :]
 
     selected_positives_aslist = selected_positives.tolist()
