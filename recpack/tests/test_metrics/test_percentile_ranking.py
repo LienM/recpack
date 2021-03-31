@@ -68,8 +68,6 @@ def test_perc_ranking_sparse(seed):
         numerator += ranks[u][i] * 100 / num_items
         denominator += 1
 
-    print(numerator, denominator)
-
     m = PercentileRanking()
     m.calculate(y_true, y_pred)
 
