@@ -6,30 +6,22 @@ from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import ListwiseMetricK
 from recpack.metrics.util import sparse_divide_nonzero
-from recpack.util import get_top_K_ranks
+
 
 logger = logging.getLogger("recpack")
 
 
 class RecallK(ListwiseMetricK):
-    """Recall, as the fraction of relevant items retrieved in top K.
+    """Computes the fraction of true interactions that made it into
+    the Top-K recommendations.
 
-    Recall per user computed as
+    Recall per user is computed as:
 
     .. math::
 
         \\text{Recall}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} y^{true}_{u,i} }{\\sum\\limits_{j \\in I} y^{true}_{u,j}}
 
-
-    To get a single result, the mean of recall per user is computed.
     """
-
-    # 23/3: Changed from ElementwiseMetricK to ListwiseMetricK,
-    # recall is always discussed per user.
-    # Because it is still interesting to get a weighted hit value,
-    # with the number of items seen by the user,
-    # added a new metric WeightedHitMetric.
-
     def __init__(self, K):
         super().__init__(K)
 
@@ -57,16 +49,16 @@ def recall_k(y_true, y_pred, k=50):
 
 
 class CalibratedRecallK(ListwiseMetricK):
-    """Recall as the number of retrieved positives divided
-    by the minimum of K and number of relevant items for the user.
+    """Computes number of Top-K recommendations that were hits, divided
+    by the minimum of K and number of true interactions of the user.
+
+    This differs from recall as we know it in that it accounts for when K < #true,
+    because we can't expect a list of K recommendations to cover more than K true interactions.
 
     .. math::
 
-        \\text{Recall}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} y^{true}_{u,i} }{\\text{min}(\\sum\\limits_{j \\in I} y^{true}_{u,j}, K)}
+        \\text{CalibratedRecall}(u) = \\frac{\\sum\\limits_{i \\in \\text{topK}(u)} y^{true}_{u,i} }{\\text{min}(\\sum\\limits_{j \\in I} y^{true}_{u,j}, K)}
 
-
-    This differs from normal recall in that it accounts for when K < #relevant,
-    because we can't expect a list of K items to cover more than K items.
     """
 
     def __init__(self, K):
