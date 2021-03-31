@@ -7,6 +7,7 @@ import numpy as np
 from recpack.metrics.base import ListwiseMetricK
 from recpack.metrics.util import sparse_divide_nonzero
 
+
 logger = logging.getLogger("recpack")
 
 

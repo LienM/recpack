@@ -49,7 +49,7 @@ def recall_k(y_true, y_pred, k=50):
 
 
 class CalibratedRecallK(ListwiseMetricK):
-    """Computes number of Top-K recommendations that were hits, divided
+    """Computes number of Top-K recommendations that were hits divided
     by the minimum of K and number of true interactions of the user.
 
     This differs from recall as we know it in that it accounts for when K < #true,

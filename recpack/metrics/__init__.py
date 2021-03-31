@@ -6,12 +6,12 @@ commonly used to evaluate recommendation algorithms.
 All metrics assume that we have access to a set ``y_true`` of true
 user interactions that we are trying to predict and a set of
 recommendation scores ``y_pred``.
-We can then evaluate how well our algorithm was able to predict 
+We can then evaluate how well our algorithm was able to predict
 these interactions in ``y_true``.
 
-Most metrics are "Top-K Metrics": they consider 
-only the top-K best scoring item predictions, as the number of
- recommendations that can be shown in a realistic setting
+Most metrics are "Top-K Metrics": they consider
+only the Top-K best scoring item predictions, as the number of
+recommendations that can be shown in a realistic setting
 is limited.
 
 .. currentmodule:: recpack.metrics
@@ -52,7 +52,7 @@ To obtain a global metric value, these per-user scores are averaged.
 Elementwise Metric
 ------------------
 
-An elementwise metric reports a score for every user-item pair (in the top-K).
+An elementwise metric reports a score for every user-item pair in the Top-K.
 To obtain a global metric value, these scores are summed per user, then averaged.
 
 .. autosummary::

@@ -125,7 +125,7 @@ class Metric:
 
 
 class MetricTopK(Metric):
-    """Base class for any metric computed on the Top-K item predictions for a user."""
+    """Base class for any metric computed on the Top-K recommendations for a user."""
 
     def __init__(self, K):
         super().__init__()
