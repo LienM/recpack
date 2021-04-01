@@ -243,7 +243,7 @@ class ElementwiseMetricK(MetricTopK):
     @property
     def value(self):
         """Global metric value obtained by summing up scores for every user then taking the average over all users."""
-            return self.scores_.sum(axis=1).mean()
+        return self.scores_.sum(axis=1).mean()
 
 
 class ListwiseMetricK(MetricTopK):
