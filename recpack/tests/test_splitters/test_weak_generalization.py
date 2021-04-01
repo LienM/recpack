@@ -21,7 +21,8 @@ def test_weak_generalization_split(data_m, frac_interactions_train):
     te_data_in, te_data_out = scenario.test_data
 
     # Test no validation data
-    assert not scenario.validation_data
+    with pytest.raises(KeyError):
+        scenario.validation_data
     # Test approximately correct split
     perc_interactions_test = 1 - frac_interactions_train
 
