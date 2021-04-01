@@ -337,48 +337,39 @@ class Timed(Scenario):
 
 
 class StrongGeneralizationTimed(Scenario):
-    """Splits data into non overlapping train, validation and test user sets,
-    and uses temporal information to split in and out folds.
+    """Splits data into non overlapping train, validation and test user sets
+    and uses temporal information to split validation and test into in and out folds.
 
     A scenario is stateful. After calling ``split`` on your dataset,
     the training, validation and test dataset can be retrieved under
     :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
     and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
-    **Train Data**
-    Training data contains a ``frac_users_in`` fraction of the users
-    if no validation is requested.
-    If validation is requested, 80% of these users are used as training users,
-    and the remaining 20% as validation users.
-    Training data is constructed by using all events from those users whose timestamps
-    are in the interval ``t - alpha, t[``. Or if validation is requested,
-    with timestamps in ``[t_validation - alpha, t_validation [``
+    :attr:`training_data` contains ``frac_users_in`` of the users
+    if no validation data is requested.
+    Training data is constructed by using all interactions of training users whose timestamps
+    are in the interval ``t - alpha, t[``.
 
-    **Validation data**
-    If ``validation == True``,
-    validation users are the 20% of users from the training split.
-    Validation data is constructed from the events of these users split on
-    their interaction timestamps.
+    If validation data is requested, 80% of ``frac_users_in`` users are used as training users,
+    and the remaining 20% as validation users:
+    - :attr:`validation_data_in` contains all interactions of the validation users
+    with timestamps in ``[t_validation - alpha, t_validation[``.
+    - :attr:`validation_data_out` are the interactions of the validation users,
+    with timestamps in ``[t_validation, min(t, t_validation + delta)[``
 
-    - Validation input are the events whose timestamps are in
-      ``[t_validation - alpha, t_validation [``
-    - Validation expected output are the events from the validation users,
-      whose timestamps are in [t_validation, min(t, t_validation + delta) [``
-
-    **Test Data**
-    Test users are the remaining ``1-frac_users_in`` fraction of the users.
+    Test users are the remaining ``1-frac_users_in`` of users.
     Similar to validation data the input and output folds are constructed
-    based on the timestamp split.
+    based on the timestamp split:
 
-    - Test input contains events from the test users
-      whose timestamps are in ``[t - alpha, t[``
-    - Test expected output contains events from test users
+    - :attr:`test_data_in`: contains interactions of the test users
+    with timestamps in ``[t - alpha, t[``.
+    - :attr:`test_data_out` contains interactions of the test users
       with timestamps in ``[t, t + delta [``
 
     **Example**
 
-    As an example, splitting following data with ``t = 2``,
-    ``delta = 2``, ``alpha = inf`` and ``validation=False``::
+    As an example, we split this data with ``t = 2``,
+    ``delta = 2``, ``alpha = None (infinity)`` and ``validation=False``::
 
         time    0   1   2   3   4   5
         user1   X   X
@@ -406,15 +397,17 @@ class StrongGeneralizationTimed(Scenario):
     :param frac_users_in: The fraction of users to use
         for the training(_validation) dataset.
     :type frac_users_in: float
-    :param t: Timestamp (in seconds since epoch) to split the data on.
+    :param t: Timestamp to split on in seconds since epoch.
     :type t: int
-    :param t_delta: Bound on the timestamps of expected output of the test data,
-        default is inf.
+    :param t_delta: Seconds past t. Upper bound on the timestamp
+        of interactions in :attr:`test_data_out`. Defaults to None (infinity).
     :type t_delta: int, optional
-    :param t_alpha: Bound on the timestamps of training data, default is inf.
+    :param t_alpha: Seconds before t. Lower bound on the timestamp
+        of interactions in :attr:`training_data`. Defaults to None (infinity).
     :type t_alpha: int, optional
-    :param t_validation: the timestamp to split training data from validation data.
-        Is required if validation is True
+    :param t_validation: Timestamp to split on in seconds since epoch. Interactions in [t, t_validation]
+        are added to the :attr:`validation_data_out` dataset.
+        Is required if validation is True.
     :type t_validation: int, optional
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
@@ -454,8 +447,9 @@ class StrongGeneralizationTimed(Scenario):
             )
 
     def _split(self, data):
-        """Splits your data so that a user can only be in one of
-            training, validation or test set.
+        """Splits data into non overlapping train, validation and test user sets
+            and uses temporal information to split 
+            validation and test into in and out folds.
 
         :param data: Interaction matrix to be split. Must contain timestamps.
         :type data: InteractionMatrix
@@ -484,32 +478,30 @@ class StrongGeneralizationTimed(Scenario):
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
-    """Splits users into non overlapping train,
+    """Split users into non-overlapping training,
     validation and test user sets based on the time of
-    their most recent action.
+    their most recent interaction.
 
     A scenario is stateful. After calling ``split`` on your dataset,
     the training, validation and test dataset can be retrieved under
     :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
     and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
-    **Train Data**
-    If validation is enabled, the train data contains users
+
+    Test data contains all users whose most recent interactions was after ``t``:
+    - :attr:`test_data_out` contains the ``n`` most recent interactions of
+    a user whose most recent interactions was after ``t``.
+    - :attr:`test_data_in` contains all earlier interactions of the test users.
+
+    If validation is True, the training data contains users
     whose most recent interaction happened before ``t_validation``.
     Otherwise it contains users whose most recent interaction happened before ``t``.
 
-    **Validation Data**
-    If validation is requested, contains users with their most recent interaction
-    in the interval ``[t_validation, t[``.
-
-    - Validation expected output are the ``n`` most recent events for each user
-    - Validation input are the remaining events for each user.
-
-    **Test Data**
-    Test data contains all users whose most recent interactions was after ``t``.
-
-    - Test expected output (test_data_out) contains the ``n`` most recent events
-    - Test input (test_data_in) contains all earlier events for the test users.
+    In the case where validation is True, the validation data contains all 
+    users whose most recent interaction was in the interval ``[t_validation, t[``:
+    - :attr:`validation_data_out` contains the ``n`` most recent interactions of
+    a user whose most recent interactions was in the interval ``[t_validation, t[``.
+    - :attr:`validaton_data_in` contains all earlier interactions of the validation users.
 
     **Example**
 
@@ -572,8 +564,9 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         self.most_recent_splitter = splitter_base.MostRecentSplitter(n)
 
     def _split(self, data):
-        """Splits your data so that a user can only be in one of
-            training, validation or test set.
+        """Splits users into non-overlapping training,
+            validation and test user sets based on the time of
+            their most recent interaction.
 
         :param data: Interaction matrix to be split. Must contain timestamps.
         :type data: InteractionMatrix
