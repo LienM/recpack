@@ -20,7 +20,7 @@ class DiscountedCumulativeGainK(ListwiseMetricK):
 
     .. math::
 
-        \\text{DiscountedCumulativeGain}(u) = \\sum\\limits_{i \\in KNN(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
+        \\text{DiscountedCumulativeGain}(u) = \\sum\\limits_{i \\in Top-K(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
 
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int

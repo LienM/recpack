@@ -17,7 +17,7 @@ class IntraListDiversityK(FittedMetric, ListwiseMetricK):
 
     .. math::
 
-        \\frac{\\sum\\limits_{i,j \\in KNN(u) \\\\ i \\neq j} J(i,j)}{K(K-1)}
+        \\frac{\\sum\\limits_{i,j \\in Top-K(u) \\\\ i \\neq j} J(i,j)}{K(K-1)}
 
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int

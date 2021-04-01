@@ -23,7 +23,7 @@ class ReciprocalRankK(ListwiseMetricK):
 
     .. math::
 
-        \\text{rank}_{u,i} = \\min\\limits_{i \\in KNN(u), \\\\ i \\in y^{true}_u} rank(u,i)
+        \\text{rank}_{u,i} = \\min\\limits_{i \\in Top-K(u), \\\\ i \\in y^{true}_u} rank(u,i)
 
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int

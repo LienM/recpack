@@ -243,9 +243,6 @@ class ElementwiseMetricK(MetricTopK):
     @property
     def value(self):
         """Global metric value obtained by summing up scores for every user then taking the average over all users."""
-        if hasattr(self, "value_"):
-            return self.value_
-        else:
             return self.scores_.sum(axis=1).mean()
 
 
@@ -291,10 +288,7 @@ class ListwiseMetricK(MetricTopK):
     @property
     def value(self):
         """Global metric value obtained by taking the average over all users."""
-        if hasattr(self, "value_"):
-            return self.value_
-        else:
-            return self.scores_.mean()
+        return self.scores_.mean()
 
 
 class GlobalMetricK(MetricTopK):
