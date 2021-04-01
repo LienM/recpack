@@ -15,7 +15,8 @@ def compute_hits(y_true, y_pred):
 class IPSMetric(FittedMetric):
 
     """IPS metrics are a class of metrics,
-    where the probability of a user interaction is taken into account.
+    where the probability of a user interacting with an item
+    (propensity) is taken into account.
 
     Each score is weighted by the inverse propensity
     of the user interacting with the item.
