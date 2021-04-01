@@ -11,7 +11,7 @@ class CoverageK(GlobalMetricK):
 
     .. math::
 
-        \\frac{|\\{i | \\exists u \\in U, i \\in \\text{TopK}(u) \\}|}{|I|}
+        \\frac{|\\{i \\in I | (\\exists u \\in U) [i \\in \\text{TopK}(u)] \\}|}{|I|}
 
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int
