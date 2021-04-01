@@ -252,8 +252,7 @@ class ElementwiseMetricK(MetricTopK):
 class ListwiseMetricK(MetricTopK):
     """Base class for all metrics that can be calculated for every Top-K recommendation list,
     i.e. one value for each user.
-
-    Examples are: Diversity, NormalizedDiscountedCumulativeGain, RR, Recall
+    Examples are: DiversityK, NormalizedDiscountedCumulativeGainK, ReciprocalRankK, RecallK
 
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int
