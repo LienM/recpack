@@ -29,9 +29,9 @@ class Scenario(ABC):
     def _split(self, data_m: InteractionMatrix) -> None:
         """Abstract method to be implemented by the scenarios.
 
-        Splits the data and assigns to :attr:`self.train_X`,
-        :attr:`self.test_data_in, :attr:`self.test_data_out`, :attr:`self.validation_data_in`
-        and :attr:`self.validation_data_out`
+        Splits the data and assigns to :attr:`train_X`,
+        :attr:`test_data_in, :attr:`test_data_out`, :attr:`validation_data_in`
+        and :attr:`validation_data_out`
 
         :param data_m: Interaction matrix to be split.
         :type data_m: InteractionMatrix

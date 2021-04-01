@@ -9,8 +9,7 @@ Both validation and test dataset are made up of two components:
 a fold-in set of interactions that is used to predict another held-out
 set of interactions.
 
-A scenario is usually built up out of one or more low-level splitters.
-A scenario describes a complex situation, e.g. "Train on all user
+Each scenario describes a complex situation, e.g. "Train on all user
 interactions before time T, predict interactions after T+10 using interactions
 from T+5 until T+10".
 A splitter on the other hand performs a simple split into two InteractionMatrices

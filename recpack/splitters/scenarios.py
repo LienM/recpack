@@ -18,7 +18,7 @@ class StrongGeneralization(Scenario):
     If validation data is requested training data contains ``frac_users_train`` * 0.8
     of the users, the remaining 20% is assigned to validation data.
 
-    Test and validation users interactions' are split into a `data_in` (fold-in) and `data_out` (held-out) set.
+    Test and validation users' interactions are split into a `data_in` (fold-in) and `data_out` (held-out) set.
     ``frac_interactions_in`` of interactions are assigned to fold-in, the remainder
     to the held-out set.
 
@@ -193,7 +193,7 @@ class WeakGeneralization(Scenario):
         assert (frac_interactions_train + frac_interactions_validation) < 1
 
         if frac_interactions_validation > 0 and not validation:
-            raise KeyError(
+            raise ValueError(
                 "If validation=False, frac_interactions_validation should be zero.")
 
         if validation:
@@ -405,7 +405,8 @@ class StrongGeneralizationTimed(Scenario):
     :param t_alpha: Seconds before t. Lower bound on the timestamp
         of interactions in :attr:`training_data`. Defaults to None (infinity).
     :type t_alpha: int, optional
-    :param t_validation: Timestamp to split on in seconds since epoch. Interactions in [t, t_validation]
+    :param t_validation: Timestamp to split on in seconds since epoch. 
+        Validation interactions in [t, t_validation]
         are added to the :attr:`validation_data_out` dataset.
         Is required if validation is True.
     :type t_validation: int, optional
