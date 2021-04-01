@@ -59,11 +59,12 @@ class IPSMetric(FittedMetric):
 
 
 class IPSHitRateK(ElementwiseMetricK, IPSMetric):
-    """Computes a weighted hits per user metric.
+    """Computes a weighted hits metric, with hits weighted by the user, item propensity.
 
-    Each hit is weighted with the item's inverse propensity.
+    Each hit is weighted with the item's inverse propensity for the user.
+
     Higher values are better, they indicate the algorithm is able to
-    recommend more long tail items for the user.
+    recommend more long-tail items for the user.
 
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int
