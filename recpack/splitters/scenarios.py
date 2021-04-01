@@ -4,25 +4,30 @@ import recpack.splitters.splitter_base as splitter_base
 
 
 class StrongGeneralization(Scenario):
-    """Splits your data so that a user can only be in one of
-    training, validation or test.
+    """Split your data so that a user can only be in one of
+    training, validation or test set.
+
+    A scenario is stateful. After calling ``split`` on your dataset,
+    the training, validation and test dataset can be retrieved under
+    :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
+    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
     During splitting each user is randomly assigned to one of the three groups of users.
-    Training data will contain ``frac_users_train``
-    fraction of the users, without validation.
-    If validation is requested the Training data
-    is split into 80% training data, and 20% validation data.
+    When no validation data is required, training data contains ``frac_users_train``
+    of the users.
+    If validation data is requested training data contains ``frac_users_train`` * 0.8
+    of the users, the remaining 20% is assigned to validation data.
 
-    Test and validation users have their interactions split over an
-    input and output matrix,
-    based on the ``frac_interactions_in`` parameter.
+    Test and validation users interactions' are split into a `data_in` (fold-in) and `data_out` (held-out) set.
+    ``frac_interactions_in`` of interactions are assigned to fold-in, the remainder
+    to the held-out set.
 
     Strong generalization is considered more robust, harder and more realistic than
     :class:`class recpack.splitters.scenarios.WeakGeneralization`
 
     **Example**
 
-    As an example, splitting following data with ``frac_users_train = 0.5``,
+    As an example, we split this interaction matrix with ``frac_users_train = 0.5``,
     ``frac_interactions_in = 0.75`` and ``validation=False``::
 
         item    0   1   2   3   4   5
@@ -47,12 +52,13 @@ class StrongGeneralization(Scenario):
         user1
         user2           X
 
-    :param frac_users_train: Fraction of users used for training, between 0 and 1.
+    :param frac_users_train: Fraction of users assigned to the training dataset. Between 0 and 1.
     :type frac_users_train: float
-    :param frac_interactions_in: Fraction of the user's
-        interactions to be used as history.
+    :param frac_interactions_in: Fraction of the users'
+        interactions to be used as fold-in set (user history). Between 0 and 1.
     :type frac_interactions_in: float
-    :param validation: Split
+    :param validation: Assign a portion of the training dataset to validation data if True,
+        else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
     """
 
@@ -63,13 +69,15 @@ class StrongGeneralization(Scenario):
         self.frac_users_train = frac_users_train
         self.frac_interactions_in = frac_interactions_in
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_train)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            frac_users_train)
         self.interaction_split = splitter_base.FractionInteractionSplitter(
             frac_interactions_in
         )
 
     def _split(self, data: InteractionMatrix) -> None:
-        """Split the data and make ready for use.
+        """Splits your data so that a user can only be in one of
+            training, validation or test set.
 
         :param data: Interaction matrix to be split.
         :type data: InteractionMatrix
@@ -87,32 +95,35 @@ class StrongGeneralization(Scenario):
         else:
             self.train_X = train_val_data
 
-        self._test_data_in, self._test_data_out = self.interaction_split.split(test_data)
+        self._test_data_in, self._test_data_out = self.interaction_split.split(
+            test_data)
 
 
 class WeakGeneralization(Scenario):
-    """Weak generalization splits the data by
-    dividing the interactions of a user over the three splits.
+    """Split your data so that a user has interactions in all of
+    training, validation and test set.
 
-    Interactions are split per user into three splits,
-    such that training dataset contains ``frac_interactions_train``
-    fraction of the interactions,
-    validation contains ``frac_interactions_validation`` fraction
-    of the interactions, and test contains the remaining interactions.
+    A scenario is stateful. After calling ``split`` on your dataset,
+    the training, validation and test dataset can be retrieved under
+    :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
+    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
-    ``frac_interactions_train + frac_interactions_validation``
-    is required to be less than 1.
+    ! Note ! This scenario duplicates interactions across training, validation
+    and test datasets:
+
+    - Training interactions are also used as :attr:`validation_data_in` to predict :attr:`validation_data_out`.
+    - The union of training and validation interactions is used as :attr:`test_data_in` to predict
+    :attr:`test_data_out`.
+
+    The training dataset contains ``frac_interactions_train``
+    of a user's interactions.
+    The validation_data_out dataset contains ``frac_interactions_validation``
+    of a user's interactions.
+    The test_data_out dataset contains the remaining interactions.
+
+    This requires ``frac_interactions_train + frac_interactions_validation`` < 1.
 
     If ``validation == False``, ``frac_interactions_validation`` is 0.
-
-    **Validation data**
-    The training dataset is used as input set for the validation data.
-    The validation output dataset are the events sampled in the previous step.
-
-    **Test Data**
-    The union of train samples and validation samples are
-    used as test input dataset.
-    The test output dataset are the test samples.
 
     **Example**
 
@@ -154,13 +165,14 @@ class WeakGeneralization(Scenario):
         user1           X
         user2               X
 
-    :param frac_interactions_train: Percentage of interactions per user used for
+    :param frac_interactions_train: Fraction of interactions per user used for
         training. The interactions are randomly chosen.
     :type frac_interactions_train: float
-    :param frac_interactions_validation: Percentage of interactions per user used
-        for validation. The interactions are randomly chosen.
+    :param frac_interactions_validation: Fraction of interactions per user used
+        for validation_data_out. The interactions are randomly chosen.
     :type frac_interactions_validation: float, optional
-    :param validation: Split includes validation sets as well
+    :param validation: Assign a portion of the training dataset to validation data if True,
+        else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
     """
 
@@ -180,9 +192,9 @@ class WeakGeneralization(Scenario):
 
         assert (frac_interactions_train + frac_interactions_validation) < 1
 
-        if frac_interactions_validation > 0:
-            # TODO Maybe I should raise errors instead?
-            assert validation
+        if frac_interactions_validation > 0 and not validation:
+            raise KeyError(
+                "If validation=False, frac_interactions_validation should be zero.")
 
         if validation:
             self.frac_interactions_validation = frac_interactions_validation
@@ -192,8 +204,14 @@ class WeakGeneralization(Scenario):
             )
 
     def _split(self, data: InteractionMatrix):
+        """Splits your data so that a user has interactions in all of
+            training, validation and test set.
 
-        train_val_data, self._test_data_out = self.interaction_split.split(data)
+        :param data: Interaction matrix to be split.
+        :type data: InteractionMatrix
+        """
+        train_val_data, self._test_data_out = self.interaction_split.split(
+            data)
 
         if self.validation:
             self.train_X, self._validation_data_out = self.validation_splitter.split(
@@ -207,35 +225,31 @@ class WeakGeneralization(Scenario):
 
 
 class Timed(Scenario):
-    """Splits the data on temporal information.
+    """Split your dataset into a training, validation and test dataset
+        based on the timestamp of the interaction.
 
-    **Training Data**
-    Training data is constructed by using all events whose timestamps
-    are in the interval ``[t - alpha, t[``.
-    Or if validation is requested, with timestamps in
-    ``[t_validation - alpha, t_validation [``
+    A scenario is stateful. After calling ``split`` on your dataset,
+    the training, validation and test dataset can be retrieved under
+    :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
+    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
+    ! Note ! This scenario duplicates interactions across training, validation
+    and test datasets:
 
-    **Validation data**
-    If ``validation == True`` validation data is constructed based
-    on the timestamps of events,
-    and split arround ``t_validation``.
-
-    - Validation input is data with timestamps in
-      ``[t_validation - alpha, t_validation [``
-    - Validation expected output is data with timestamps in
-      ``[t_validation, min(t, t_validation + delta) [``
-
-    **Test Data**
-    The test data contains all events, split on timestamp ``t``.
-
-    - Test input are those events with timestamps in  ``[t - alpha, t[``
-    - Test expected output are events with timestamps in ``[t, t + delta[``,
+    - Training data is constructed by using all interactions whose timestamps
+    are in the interval ``[t - alpha, t[`` or when validation is True, with timestamps in
+    ``[t_validation - alpha, t_validation[``.
+    - Validation in data are interactions with timestamps in
+      ``[t_validation - alpha, t_validation[``.
+    - Validation out data are interactions with timestamps in
+      ``[t_validation, min(t, t_validation + delta)[``.
+    - Test data in are those events with timestamps in  ``[t - alpha, t[``.
+    - Test data out are events with timestamps in ``[t, t + delta[``.
 
     **Example**
 
-    As an example, splitting following data with ``t = 2``,
-    ``delta = 2``, ``alpha = inf`` and ``validation=False``::
+    As an example, we split this data with ``t = 2``,
+    ``delta = 2``, ``alpha = None (infinity)`` and ``validation=False``::
 
         time    0   1   2   3   4   5
         user1   X   X
@@ -260,18 +274,20 @@ class Timed(Scenario):
         user2           X   X
 
 
-    :param t: Timestamp (as seconds since epoch) to split
-        training data from test data.
+    :param t: Timestamp to split on in seconds since epoch.
     :type t: int
-    :param t_delta: Bound on the timestamps of expected output in the test data,
-        default is inf.
+    :param t_delta: Seconds past t. Upper bound on the timestamp
+        of interactions in the test dataset. Defaults to None (infinity).
     :type t_delta: int, optional
-    :param t_alpha: Bound on the timestamps of the training data, default is inf.
+    :param t_alpha: Seconds before t. Lower bound on the timestamp
+        of interactions in the training dataset. Defaults to None (infinity).
     :type t_alpha: int, optional
-    :param t_validation: the timestamp to split training data from validation data.
-        Is required if validation is True
+    :param t_validation: Timestamp to split on in seconds since epoch. Interactions in [t, t_validation]
+        are added to the validation_data_out dataset.
+        Is required if validation is True.
     :type t_validation: int, optional
-    :param validation: If true validation data will be generated, otherwise it won't
+    :param validation: Assign a portion of the training dataset to validation data if True,
+        else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
     """
 
@@ -285,10 +301,11 @@ class Timed(Scenario):
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
             raise Exception(
-                "t_validation should be provided when using validation split."
+                "t_validation should be provided when requesting a validation dataset."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, t_delta, t_alpha)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -298,6 +315,12 @@ class Timed(Scenario):
             )
 
     def _split(self, data):
+        """Splits your dataset into a training, validation and test dataset
+            based on the timestamp of the interaction.
+
+        :param data: Interaction matrix to be split. Must contain timestamps.
+        :type data: InteractionMatrix
+        """
         lt_t, gt_t = self.timestamp_spl.split(data)
 
         if self.validation:
@@ -316,6 +339,11 @@ class Timed(Scenario):
 class StrongGeneralizationTimed(Scenario):
     """Splits data into non overlapping train, validation and test user sets,
     and uses temporal information to split in and out folds.
+
+    A scenario is stateful. After calling ``split`` on your dataset,
+    the training, validation and test dataset can be retrieved under
+    :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
+    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
     **Train Data**
     Training data contains a ``frac_users_in`` fraction of the users
@@ -388,9 +416,9 @@ class StrongGeneralizationTimed(Scenario):
     :param t_validation: the timestamp to split training data from validation data.
         Is required if validation is True
     :type t_validation: int, optional
-    :param validation: Split
+    :param validation: Assign a portion of the training dataset to validation data if True,
+        else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
-
     """
 
     def __init__(
@@ -413,9 +441,11 @@ class StrongGeneralizationTimed(Scenario):
                 "t_validation should be provided when using validation split."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, t_delta, t_alpha)
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_in)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            frac_users_in)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -424,6 +454,12 @@ class StrongGeneralizationTimed(Scenario):
             )
 
     def _split(self, data):
+        """Splits your data so that a user can only be in one of
+            training, validation or test set.
+
+        :param data: Interaction matrix to be split. Must contain timestamps.
+        :type data: InteractionMatrix
+        """
         # Split across user dimension
         tr_val_data, te_data = self.strong_gen.split(data)
         # Make sure only interactions before t are used for training /
@@ -431,7 +467,8 @@ class StrongGeneralizationTimed(Scenario):
         tr_val_data, _ = self.timestamp_spl.split(tr_val_data)
 
         if self.validation:
-            train_data, validation_data = self.validation_splitter.split(tr_val_data)
+            train_data, validation_data = self.validation_splitter.split(
+                tr_val_data)
             # Split validation data into input and output on t_validation
             (
                 self._validation_data_in,
@@ -442,13 +479,19 @@ class StrongGeneralizationTimed(Scenario):
         else:
             self.train_X = tr_val_data
 
-        self._test_data_in, self._test_data_out = self.timestamp_spl.split(te_data)
+        self._test_data_in, self._test_data_out = self.timestamp_spl.split(
+            te_data)
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
     """Splits users into non overlapping train,
     validation and test user sets based on the time of
     their most recent action.
+
+    A scenario is stateful. After calling ``split`` on your dataset,
+    the training, validation and test dataset can be retrieved under
+    :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
+    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
     **Train Data**
     If validation is enabled, the train data contains users
@@ -503,7 +546,9 @@ class StrongGeneralizationTimedMostRecent(Scenario):
                          Only required if validation is True.
     :param n: The n most recent user actions to split off. If a negative number,
               split off all but the ``n`` earliest actions.
-    :param validation: Create validation sets
+    :param validation: Assign a portion of the training dataset to validation data if True,
+        else split without validation data into only a training and test dataset.
+    :type validation: boolean, optional
     """
 
     def __init__(
@@ -527,9 +572,16 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         self.most_recent_splitter = splitter_base.MostRecentSplitter(n)
 
     def _split(self, data):
+        """Splits your data so that a user can only be in one of
+            training, validation or test set.
+
+        :param data: Interaction matrix to be split. Must contain timestamps.
+        :type data: InteractionMatrix
+        """
         tr_val_data, te_data = self.user_splitter_test.split(data)
 
-        self._test_data_in, self._test_data_out = self.most_recent_splitter.split(te_data)
+        self._test_data_in, self._test_data_out = self.most_recent_splitter.split(
+            te_data)
 
         if self.validation:
             self.train_X, val_data = self.user_splitter_val.split(tr_val_data)
