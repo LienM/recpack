@@ -17,21 +17,21 @@ class PercentileRanking(Metric):
 
     .. math::
 
-        \\text{perc_rank} = \\frac{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{u,i} * \\overline{\\text{rank}}_{ui}}{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{ui}}
+        \\text{perc_rank} = \\frac{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{u,i} * \\overline{\\text{rank}}_{u,i}}{\\sum\\limits_{u \\in U,i \\in I} y^{true}_{u,i}}
 
     where
 
     .. math::
 
-        \\overline{rank}_{ui} =
+        \\overline{rank}_{u,i} =
         \\begin{cases}
-            \\frac{\\text{rank}_{ui} - 1}{|I|} & \\text{if } i \\in y^{pred}(u) \\\\
+            \\frac{\\text{rank}_{u,i} - 1}{|I|} & \\text{if } i \\in y^{pred}(u) \\\\
             \\frac{\\max\\limits_{j} (\\text{rank}_{uj}) + |I|}{2|I|} & \\text{otherwise}
         \\end{cases}
 
     Non predicted items in the :math:`y^{true}` matrix,
-    get the average rank from all remaining items.
-    As if these remaining items would be shown in random order.
+    get the average rank from all remaining items per user.
+    As if these remaining items would be ordered randomly.
 
     Lower values of this percentile-ranking are desirable,
     because that indicates relevant items are shown at higher positions.

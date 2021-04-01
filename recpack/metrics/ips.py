@@ -40,7 +40,7 @@ class IPSMetric(FittedMetric):
 
         .. math::
 
-            p(i|u) = p(i) = \\frac{|\\{u| u\\in U, X_{ui} > 0\\}|} {|X|}
+            p(i|u) = p(i) = \\frac{|\\{u| u\\in U, X_{u,i} > 0\\}|} {|X|}
 
         Inverse propensity higher than the ``ip_cap``, are set to ``ip_cap``,
         to avoid that items that are never interacted with dominate the metric.
@@ -55,8 +55,7 @@ class IPSMetric(FittedMetric):
         self.inverse_propensities = 1 / self.item_prob_
         self.inverse_propensities[self.inverse_propensities == np.inf] = 0
 
-        self.inverse_propensities[self.inverse_propensities >
-                                  self.ip_cap] = self.ip_cap
+        self.inverse_propensities[self.inverse_propensities > self.ip_cap] = self.ip_cap
 
 
 class IPSHitRateK(ElementwiseMetricK, IPSMetric):
