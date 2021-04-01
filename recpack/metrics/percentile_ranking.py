@@ -11,8 +11,9 @@ class PercentileRanking(Metric):
     Metric as described in Hu, Yifan, Yehuda Koren, and Chris Volinsky.
     "Collaborative filtering for implicit feedback datasets."
     2008 Eighth IEEE International Conference on Data Mining. Ieee, 2008.
+    With a change to account for items that receive no recommendation score for a user.
 
-    Percentile ranking is calculated according the following formula:
+    Percentile ranking is calculated according to the following formula:
 
     .. math::
 

@@ -77,6 +77,7 @@ class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
     .. math::
 
         \\text{NormalizedDiscountedCumulativeGain}(u) = \\frac{\\text{DCG}(u)}{\\text{IDCG}(u)}
+
     where IDCG stands for Ideal Discounted Cumulative Gain, computed as:
 
     .. math::
