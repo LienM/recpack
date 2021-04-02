@@ -58,10 +58,10 @@ class KUNN(Algorithm):
 
 
     :param Ku: How many neighbours to keep in the user similarity matrix.
-        Defaults to 100
+        Defaults to 100.
     :type Ku: int, optional
-    :param Ki: How many items to keep as neighbours in the item similarity matrix
-        Defaults to 100
+    :param Ki: How many items to keep as neighbours in the item similarity matrix.
+        Defaults to 100.
     :type Ki: int, optional
 
     """
@@ -96,7 +96,7 @@ class KUNN(Algorithm):
         :rtype: csr_matrix
         """
 
-        knn_u = self._fit_user_knn(X)
+        knn_u = self._fit_user_knn(X)  # Memoized training interactions are used in `_fit_user_knn`
 
         users_to_predict = get_users(X)
 
