@@ -86,7 +86,7 @@ class UserSplitter(Splitter):
 
 class StrongGeneralizationSplitter(Splitter):
     """Randomly splits the users into two sets so that
-        interactions for a user will always occur only in one split.
+    interactions for a user will always occur only in one split.
 
     :param in_frac: The fraction of interactions that are assigned
         to the first value in the output tuple. Defaults to 0.7.
@@ -225,7 +225,7 @@ class FractionInteractionSplitter(Splitter):
         self, data: InteractionMatrix
     ) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """Splits data randomly, such that ``in_fraction``
-            of interactions are assigned to ``data_in`` and the remainder to ``data_out``.
+        of interactions are assigned to ``data_in`` and the remainder to ``data_out``.
 
 
         :param data: Interaction matrix to be split.
@@ -283,7 +283,7 @@ class TimestampSplitter(Splitter):
         self, data: InteractionMatrix
     ) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """Splits data so that ``data_in`` contains interactions in ``[t-delta_in, t[``,
-            and ``data_out`` those in ``[t, t+delta_out[``.
+        and ``data_out`` those in ``[t, t+delta_out[``.
 
         :param data: Interaction matrix to be split. Must contain timestamps.
         :type data: InteractionMatrix
@@ -315,7 +315,7 @@ class TimestampSplitter(Splitter):
 
 class MostRecentSplitter(Splitter):
     """Splits the n most recent interactions of a user into the second return value,
-        and earlier interactions into the first.
+    and earlier interactions into the first.
 
     :param n: Number of most recent actions to assign to the second return value.
         If ``n`` is negative, all but the ``n`` earliest

@@ -22,8 +22,7 @@ class Scenario(ABC):
     def __init__(self, validation=False):
         self.validation = validation
         if validation:
-            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(
-                0.8)
+            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8)
 
     @abstractmethod
     def _split(self, data_m: InteractionMatrix) -> None:
@@ -76,7 +75,9 @@ class Scenario(ABC):
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         if not hasattr(self, "_validation_data_in"):
-            raise KeyError("Split before trying to access the validation_data property.")
+            raise KeyError(
+                "Split before trying to access the validation_data property."
+            )
 
         if not self.validation:
             raise KeyError("This scenario was created without validation_data.")
@@ -93,18 +94,22 @@ class Scenario(ABC):
 
     @property
     def validation_data_in(self):
+        """Fold-in part of the validation dataset"""
         return self.validation_data[0]
 
     @property
     def validation_data_out(self):
+        """Held-out part of the validation dataset"""
         return self.validation_data[1]
 
     @property
     def test_data_in(self):
+        """Fold-in part of the test dataset"""
         return self.test_data[0]
 
     @property
     def test_data_out(self):
+        """Held-out part of the test dataset"""
         return self.test_data[1]
 
     @property
@@ -144,8 +149,7 @@ class Scenario(ABC):
             )
 
         assert hasattr(self, "_test_data_in") and self._test_data_in is not None
-        assert hasattr(
-            self, "_test_data_out") and self._test_data_out is not None
+        assert hasattr(self, "_test_data_out") and self._test_data_out is not None
 
         self._check_size()
 
@@ -167,8 +171,7 @@ class Scenario(ABC):
 
         def check(name, count, total, threshold):
             if (count + 1e-9) / (total + 1e-9) < threshold:
-                warn(
-                    f"{name} resulting from {type(self).__name__} is unusually small.")
+                warn(f"{name} resulting from {type(self).__name__} is unusually small.")
 
         check("Training set", n_train, n_total, 0.05)
         check("Test set", n_test, n_total, 0.01)

@@ -108,12 +108,13 @@ class WeakGeneralization(Scenario):
     :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
     and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
-    ! Note ! This scenario duplicates interactions across training, validation
-    and test datasets:
+    .. note::
+        This scenario duplicates interactions across training, validation
+        and test datasets:
 
     - Training interactions are also used as :attr:`validation_data_in` to predict :attr:`validation_data_out`.
     - The union of training and validation interactions is used as :attr:`test_data_in` to predict
-    :attr:`test_data_out`.
+      :attr:`test_data_out`.
 
     The training dataset contains ``frac_interactions_train``
     of a user's interactions.
@@ -233,12 +234,13 @@ class Timed(Scenario):
     :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
     and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
 
-    ! Note ! This scenario duplicates interactions across training, validation
-    and test datasets:
+    .. note::
+        This scenario duplicates interactions across training, validation
+        and test datasets:
 
     - Training data is constructed by using all interactions whose timestamps
-    are in the interval ``[t - delta_in, t[`` or when validation is True, with timestamps in
-    ``[t_validation - delta_in, t_validation[``.
+      are in the interval ``[t - delta_in, t[`` or when validation is True, with timestamps in
+      ``[t_validation - delta_in, t_validation[``.
     - Validation in data are interactions with timestamps in
       ``[t_validation - delta_in, t_validation[``.
     - Validation out data are interactions with timestamps in
@@ -352,17 +354,18 @@ class StrongGeneralizationTimed(Scenario):
 
     If validation data is requested, 80% of ``frac_users_in`` users are used as training users,
     and the remaining 20% as validation users:
+
     - :attr:`validation_data_in` contains all interactions of the validation users
-    with timestamps in ``[t_validation - delta_in, t_validation[``.
+      with timestamps in ``[t_validation - delta_in, t_validation[``.
     - :attr:`validation_data_out` are the interactions of the validation users,
-    with timestamps in ``[t_validation, min(t, t_validation + delta_out)[``
+      with timestamps in ``[t_validation, min(t, t_validation + delta_out)[``
 
     Test users are the remaining ``1-frac_users_in`` of users.
     Similar to validation data the input and output folds are constructed
     based on the timestamp split:
 
     - :attr:`test_data_in`: contains interactions of the test users
-    with timestamps in ``[t - delta_in, t[``.
+      with timestamps in ``[t - delta_in, t[``.
     - :attr:`test_data_out` contains interactions of the test users
       with timestamps in ``[t, t + delta_out [``
 
@@ -486,8 +489,9 @@ class StrongGeneralizationTimedMostRecent(Scenario):
 
 
     Test data contains all users whose most recent interactions was after ``t``:
+
     - :attr:`test_data_out` contains the ``n`` most recent interactions of
-    a user whose most recent interactions was after ``t``.
+      a user whose most recent interactions was after ``t``.
     - :attr:`test_data_in` contains all earlier interactions of the test users.
 
     If validation is True, the training data contains users
@@ -496,8 +500,9 @@ class StrongGeneralizationTimedMostRecent(Scenario):
 
     In the case where validation is True, the validation data contains all
     users whose most recent interaction was in the interval ``[t_validation, t[``:
+
     - :attr:`validation_data_out` contains the ``n`` most recent interactions of
-    a user whose most recent interactions was in the interval ``[t_validation, t[``.
+      a user whose most recent interactions was in the interval ``[t_validation, t[``.
     - :attr:`validaton_data_in` contains all earlier interactions of the validation users.
 
     **Example**
