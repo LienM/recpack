@@ -191,44 +191,44 @@ def test_timestamp_splitter_no_limit_w_dups(data_m_w_dups, t):
     check_values_timestamps_match(te)
 
 
-@pytest.mark.parametrize("t, t_delta", [(20, 10), (20, 3)])
-def test_timestamp_splitter_windowed_t_delta(data_m_w_timestamps, t, t_delta):
-    splitter = splitter_base.TimestampSplitter(t, t_delta=t_delta)
+@pytest.mark.parametrize("t, delta_out", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_delta_out(data_m_w_timestamps, t, delta_out):
+    splitter = splitter_base.TimestampSplitter(t, delta_out=delta_out)
 
     tr, te = splitter.split(data_m_w_timestamps)
 
     assert (tr.timestamps < t).all()
 
-    assert (te.timestamps <= t + t_delta).all()
+    assert (te.timestamps <= t + delta_out).all()
     assert (te.timestamps >= t).all()
 
     check_values_timestamps_match(tr)
     check_values_timestamps_match(te)
 
 
-@pytest.mark.parametrize("t, t_delta", [(20, 10), (20, 3)])
-def test_timestamp_splitter_windowed_t_delta_w_dups(data_m_w_dups, t, t_delta):
-    splitter = splitter_base.TimestampSplitter(t, t_delta=t_delta)
+@pytest.mark.parametrize("t, delta_out", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_delta_out_w_dups(data_m_w_dups, t, delta_out):
+    splitter = splitter_base.TimestampSplitter(t, delta_out=delta_out)
 
     tr, te = splitter.split(data_m_w_dups)
 
     assert (tr.timestamps < t).all()
 
-    assert (te.timestamps <= t + t_delta).all()
+    assert (te.timestamps <= t + delta_out).all()
     assert (te.timestamps >= t).all()
 
     check_values_timestamps_match(tr)
     check_values_timestamps_match(te)
 
 
-@pytest.mark.parametrize("t, t_alpha", [(20, 10), (20, 3)])
-def test_timestamp_splitter_windowed_alpha(data_m_w_timestamps, t, t_alpha):
-    splitter = splitter_base.TimestampSplitter(t, t_alpha=t_alpha)
+@pytest.mark.parametrize("t, delta_in", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_alpha(data_m_w_timestamps, t, delta_in):
+    splitter = splitter_base.TimestampSplitter(t, delta_in=delta_in)
 
     tr, te = splitter.split(data_m_w_timestamps)
 
     assert (tr.timestamps < t).all()
-    assert (tr.timestamps >= t - t_alpha).all()
+    assert (tr.timestamps >= t - delta_in).all()
 
     assert (te.timestamps >= t).all()
 
@@ -236,14 +236,14 @@ def test_timestamp_splitter_windowed_alpha(data_m_w_timestamps, t, t_alpha):
     check_values_timestamps_match(te)
 
 
-@pytest.mark.parametrize("t, t_alpha", [(20, 10), (20, 3)])
-def test_timestamp_splitter_windowed_alpha_w_dups(data_m_w_dups, t, t_alpha):
-    splitter = splitter_base.TimestampSplitter(t, t_alpha=t_alpha)
+@pytest.mark.parametrize("t, delta_in", [(20, 10), (20, 3)])
+def test_timestamp_splitter_windowed_alpha_w_dups(data_m_w_dups, t, delta_in):
+    splitter = splitter_base.TimestampSplitter(t, delta_in=delta_in)
 
     tr, te = splitter.split(data_m_w_dups)
 
     assert (tr.timestamps < t).all()
-    assert (tr.timestamps >= t - t_alpha).all()
+    assert (tr.timestamps >= t - delta_in).all()
 
     assert (te.timestamps >= t).all()
 

@@ -69,8 +69,7 @@ class StrongGeneralization(Scenario):
         self.frac_users_train = frac_users_train
         self.frac_interactions_in = frac_interactions_in
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
-            frac_users_train)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_train)
         self.interaction_split = splitter_base.FractionInteractionSplitter(
             frac_interactions_in
         )
@@ -96,7 +95,8 @@ class StrongGeneralization(Scenario):
             self.train_X = train_val_data
 
         self._test_data_in, self._test_data_out = self.interaction_split.split(
-            test_data)
+            test_data
+        )
 
 
 class WeakGeneralization(Scenario):
@@ -194,7 +194,8 @@ class WeakGeneralization(Scenario):
 
         if frac_interactions_validation > 0 and not validation:
             raise ValueError(
-                "If validation=False, frac_interactions_validation should be zero.")
+                "If validation=False, frac_interactions_validation should be zero."
+            )
 
         if validation:
             self.frac_interactions_validation = frac_interactions_validation
@@ -210,8 +211,7 @@ class WeakGeneralization(Scenario):
         :param data: Interaction matrix to be split.
         :type data: InteractionMatrix
         """
-        train_val_data, self._test_data_out = self.interaction_split.split(
-            data)
+        train_val_data, self._test_data_out = self.interaction_split.split(data)
 
         if self.validation:
             self.train_X, self._validation_data_out = self.validation_splitter.split(
@@ -237,19 +237,19 @@ class Timed(Scenario):
     and test datasets:
 
     - Training data is constructed by using all interactions whose timestamps
-    are in the interval ``[t - alpha, t[`` or when validation is True, with timestamps in
-    ``[t_validation - alpha, t_validation[``.
+    are in the interval ``[t - delta_in, t[`` or when validation is True, with timestamps in
+    ``[t_validation - delta_in, t_validation[``.
     - Validation in data are interactions with timestamps in
-      ``[t_validation - alpha, t_validation[``.
+      ``[t_validation - delta_in, t_validation[``.
     - Validation out data are interactions with timestamps in
-      ``[t_validation, min(t, t_validation + delta)[``.
-    - Test data in are those events with timestamps in  ``[t - alpha, t[``.
-    - Test data out are events with timestamps in ``[t, t + delta[``.
+      ``[t_validation, min(t, t_validation + delta_out)[``.
+    - Test data in are those events with timestamps in  ``[t - delta_in, t[``.
+    - Test data out are events with timestamps in ``[t, t + delta_out[``.
 
     **Example**
 
     As an example, we split this data with ``t = 2``,
-    ``delta = 2``, ``alpha = None (infinity)`` and ``validation=False``::
+    ````delta_in = None (infinity)``, delta_out = 2``, and ``validation=False``::
 
         time    0   1   2   3   4   5
         user1   X   X
@@ -276,13 +276,14 @@ class Timed(Scenario):
 
     :param t: Timestamp to split on in seconds since epoch.
     :type t: int
-    :param t_delta: Seconds past t. Upper bound on the timestamp
-        of interactions in the test dataset. Defaults to None (infinity).
-    :type t_delta: int, optional
-    :param t_alpha: Seconds before t. Lower bound on the timestamp
-        of interactions in the training dataset. Defaults to None (infinity).
-    :type t_alpha: int, optional
-    :param t_validation: Timestamp to split on in seconds since epoch. Interactions in [t, t_validation]
+    :param delta_out: Seconds past splitting timestamp to use for hold-out datasets.
+        Defaults to None (infinity).
+    :type delta_out: int, optional
+    :param delta_in: Seconds before splitting timestamp to use for training or fold-in datasets.
+        Defaults to None (infinity).
+    :type delta_in: int, optional
+    :param t_validation: Timestamp to split on in seconds since epoch.
+        Validation interactions in [t, min(t_validation, t+delta_out)]
         are added to the validation_data_out dataset.
         Is required if validation is True.
     :type t_validation: int, optional
@@ -292,26 +293,25 @@ class Timed(Scenario):
     """
 
     def __init__(
-        self, t, t_validation=None, t_delta=None, t_alpha=None, validation=False
+        self, t, t_validation=None, delta_out=None, delta_in=None, validation=False
     ):
         super().__init__(validation=validation)
         self.t = t
-        self.t_delta = t_delta
-        self.t_alpha = t_alpha
+        self.delta_out = delta_out
+        self.delta_in = delta_in
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
             raise Exception(
                 "t_validation should be provided when requesting a validation dataset."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
 
         if self.validation:
             assert self.t_validation < self.t
             # Override the validation splitter to a timed splitter.
             self.validation_time_splitter = splitter_base.TimestampSplitter(
-                t_validation, t_delta, t_alpha
+                t_validation, delta_out, delta_in
             )
 
     def _split(self, data):
@@ -348,28 +348,28 @@ class StrongGeneralizationTimed(Scenario):
     :attr:`training_data` contains ``frac_users_in`` of the users
     if no validation data is requested.
     Training data is constructed by using all interactions of training users whose timestamps
-    are in the interval ``t - alpha, t[``.
+    are in the interval ``t - delta_in, t[``.
 
     If validation data is requested, 80% of ``frac_users_in`` users are used as training users,
     and the remaining 20% as validation users:
     - :attr:`validation_data_in` contains all interactions of the validation users
-    with timestamps in ``[t_validation - alpha, t_validation[``.
+    with timestamps in ``[t_validation - delta_in, t_validation[``.
     - :attr:`validation_data_out` are the interactions of the validation users,
-    with timestamps in ``[t_validation, min(t, t_validation + delta)[``
+    with timestamps in ``[t_validation, min(t, t_validation + delta_out)[``
 
     Test users are the remaining ``1-frac_users_in`` of users.
     Similar to validation data the input and output folds are constructed
     based on the timestamp split:
 
     - :attr:`test_data_in`: contains interactions of the test users
-    with timestamps in ``[t - alpha, t[``.
+    with timestamps in ``[t - delta_in, t[``.
     - :attr:`test_data_out` contains interactions of the test users
-      with timestamps in ``[t, t + delta [``
+      with timestamps in ``[t, t + delta_out [``
 
     **Example**
 
     As an example, we split this data with ``t = 2``,
-    ``delta = 2``, ``alpha = None (infinity)`` and ``validation=False``::
+    ``delta_in = None (infinity)``, ``delta_out = 2`` and ``validation=False``::
 
         time    0   1   2   3   4   5
         user1   X   X
@@ -399,14 +399,14 @@ class StrongGeneralizationTimed(Scenario):
     :type frac_users_in: float
     :param t: Timestamp to split on in seconds since epoch.
     :type t: int
-    :param t_delta: Seconds past t. Upper bound on the timestamp
-        of interactions in :attr:`test_data_out`. Defaults to None (infinity).
-    :type t_delta: int, optional
-    :param t_alpha: Seconds before t. Lower bound on the timestamp
-        of interactions in :attr:`training_data`. Defaults to None (infinity).
-    :type t_alpha: int, optional
-    :param t_validation: Timestamp to split on in seconds since epoch. 
-        Validation interactions in [t, t_validation]
+    :param delta_out: Seconds past splitting timestamp to use for hold-out datasets.
+        Defaults to None (infinity).
+    :type delta_out: int, optional
+    :param delta_in: Seconds before splitting timestamp to use for training or fold-in datasets.
+        Defaults to None (infinity).
+    :type delta_in: int, optional
+    :param t_validation: Timestamp to split on in seconds since epoch.
+        Validation interactions in [t, min(t_validation, t+delta_out)]
         are added to the :attr:`validation_data_out` dataset.
         Is required if validation is True.
     :type t_validation: int, optional
@@ -420,36 +420,34 @@ class StrongGeneralizationTimed(Scenario):
         frac_users_in,
         t,
         t_validation=None,
-        t_delta=None,
-        t_alpha=None,
+        delta_out=None,
+        delta_in=None,
         validation=False,
     ):
         super().__init__(validation=validation)
         self.frac_users_in = frac_users_in
         self.t = t
-        self.t_delta = t_delta
-        self.t_alpha = t_alpha
+        self.delta_out = delta_out
+        self.delta_in = delta_in
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
             raise Exception(
                 "t_validation should be provided when using validation split."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, t_delta, t_alpha)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
-            frac_users_in)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_in)
 
         if self.validation:
             assert self.t_validation < self.t
             self.validation_time_splitter = splitter_base.TimestampSplitter(
-                t_validation, t_delta, t_alpha
+                t_validation, delta_out, delta_in
             )
 
     def _split(self, data):
         """Splits data into non overlapping train, validation and test user sets
-            and uses temporal information to split 
+            and uses temporal information to split
             validation and test into in and out folds.
 
         :param data: Interaction matrix to be split. Must contain timestamps.
@@ -462,8 +460,7 @@ class StrongGeneralizationTimed(Scenario):
         tr_val_data, _ = self.timestamp_spl.split(tr_val_data)
 
         if self.validation:
-            train_data, validation_data = self.validation_splitter.split(
-                tr_val_data)
+            train_data, validation_data = self.validation_splitter.split(tr_val_data)
             # Split validation data into input and output on t_validation
             (
                 self._validation_data_in,
@@ -474,8 +471,7 @@ class StrongGeneralizationTimed(Scenario):
         else:
             self.train_X = tr_val_data
 
-        self._test_data_in, self._test_data_out = self.timestamp_spl.split(
-            te_data)
+        self._test_data_in, self._test_data_out = self.timestamp_spl.split(te_data)
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
@@ -498,7 +494,7 @@ class StrongGeneralizationTimedMostRecent(Scenario):
     whose most recent interaction happened before ``t_validation``.
     Otherwise it contains users whose most recent interaction happened before ``t``.
 
-    In the case where validation is True, the validation data contains all 
+    In the case where validation is True, the validation data contains all
     users whose most recent interaction was in the interval ``[t_validation, t[``:
     - :attr:`validation_data_out` contains the ``n`` most recent interactions of
     a user whose most recent interactions was in the interval ``[t_validation, t[``.
@@ -575,7 +571,8 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         tr_val_data, te_data = self.user_splitter_test.split(data)
 
         self._test_data_in, self._test_data_out = self.most_recent_splitter.split(
-            te_data)
+            te_data
+        )
 
         if self.validation:
             self.train_X, val_data = self.user_splitter_val.split(tr_val_data)

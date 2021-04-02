@@ -139,16 +139,13 @@ class StrongGeneralizationSplitter(Splitter):
 
             real_frac = data_in_cnt / total_interactions
 
-            within_margin = np.isclose(
-                real_frac, self.in_frac, atol=self.error_margin)
+            within_margin = np.isclose(real_frac, self.in_frac, atol=self.error_margin)
 
             if within_margin:
-                logger.debug(
-                    f"{self.identifier} - Iteration {i} - Within margin")
+                logger.debug(f"{self.identifier} - Iteration {i} - Within margin")
                 break
             else:
-                logger.debug(
-                    f"{self.identifier} - Iteration {i} - Not within margin")
+                logger.debug(f"{self.identifier} - Iteration {i} - Not within margin")
 
         u_splitter = UserSplitter(users_in, users_out)
         ret = u_splitter.split(data)
@@ -260,33 +257,33 @@ class FractionInteractionSplitter(Splitter):
 
 
 class TimestampSplitter(Splitter):
-    """Split data so that the first return value contains interactions in ``[t-t_alpha, t[``,
-    and the second those in ``[t, t+t_delta[``.
+    """Split data so that the first return value contains interactions in ``[t-delta_in, t[``,
+    and the second those in ``[t, t+delta_out[``.
 
-    If ``t_alpha`` or ``t_delta`` are omitted, they are assumed to have a value of infinity.
+    If ``delta_in`` or ``delta_out`` are omitted, they are assumed to have a value of infinity.
     A user can occur in both return values.
 
     :param t: Timestamp to split on in seconds since epoch.
     :type t: int
-    :param t_delta: Seconds past t. Upper bound on the timestamp
+    :param delta_out: Seconds past t. Upper bound on the timestamp
         of interactions in the second return value. Defaults to None (infinity).
-    :type t_delta: int, optional
-    :param t_alpha: Seconds before t. Lower bound on the timestamp
+    :type delta_out: int, optional
+    :param delta_in: Seconds before t. Lower bound on the timestamp
         of interactions in the first return value. Defaults to None (infinity).
-    :type t_alpha: int, optional
+    :type delta_in: int, optional
     """
 
-    def __init__(self, t, t_delta=None, t_alpha=None):
+    def __init__(self, t, delta_out=None, delta_in=None):
         super().__init__()
         self.t = t
-        self.t_delta = t_delta
-        self.t_alpha = t_alpha
+        self.delta_out = delta_out
+        self.delta_in = delta_in
 
     def split(
         self, data: InteractionMatrix
     ) -> Tuple[InteractionMatrix, InteractionMatrix]:
-        """Splits data so that ``data_in`` contains interactions in ``[t-t_alpha, t[``,
-            and ``data_out`` those in ``[t, t+t_delta[``.
+        """Splits data so that ``data_in`` contains interactions in ``[t-delta_in, t[``,
+            and ``data_out`` those in ``[t, t+delta_out[``.
 
         :param data: Interaction matrix to be split. Must contain timestamps.
         :type data: InteractionMatrix
@@ -295,21 +292,21 @@ class TimestampSplitter(Splitter):
         """
         assert data.has_timestamps
 
-        if self.t_alpha is None:
+        if self.delta_in is None:
             # timestamp < t
             data_in = data.timestamps_lt(self.t)
         else:
-            # t-t_alpha =< timestamp < t
-            data_in = data.timestamps_lt(
-                self.t).timestamps_gte(self.t - self.t_alpha)
+            # t-delta_in =< timestamp < t
+            data_in = data.timestamps_lt(self.t).timestamps_gte(self.t - self.delta_in)
 
-        if self.t_delta is None:
+        if self.delta_out is None:
             # timestamp >= t
             data_out = data.timestamps_gte(self.t)
         else:
-            # timestamp >= t and timestamp < t + t_delta
-            data_out = data.timestamps_gte(
-                self.t).timestamps_lt(self.t + self.t_delta)
+            # timestamp >= t and timestamp < t + delta_out
+            data_out = data.timestamps_gte(self.t).timestamps_lt(
+                self.t + self.delta_out
+            )
 
         logger.debug(f"{self.identifier} - Split successful")
 
@@ -349,7 +346,7 @@ class MostRecentSplitter(Splitter):
         for u, interaction_history in tqdm(data.sorted_interaction_history):
 
             in_interactions.extend(interaction_history[: -self.n])
-            out_interactions.extend(interaction_history[-self.n:])
+            out_interactions.extend(interaction_history[-self.n :])
 
         data_in = data.interactions_in(in_interactions)
         data_out = data.interactions_in(out_interactions)
@@ -371,15 +368,14 @@ def yield_batches(iterable, n=1):
     """
     l = len(iterable)
     for ndx in range(0, l, n):
-        yield iterable[ndx: min(ndx + n, l)]
+        yield iterable[ndx : min(ndx + n, l)]
 
 
 def csr_row_set_nz_to_val(csr: csr_matrix, row, value=0):
-    """Set all nonzero elements to the given value. Useful to set to 0 mostly.
-    """
+    """Set all nonzero elements to the given value. Useful to set to 0 mostly."""
     if not isinstance(csr, csr_matrix):
         raise ValueError("Matrix given must be of CSR format.")
-    csr.data[csr.indptr[row]: csr.indptr[row + 1]] = value
+    csr.data[csr.indptr[row] : csr.indptr[row + 1]] = value
 
 
 class FoldIterator:
