@@ -406,10 +406,13 @@ class StrongGeneralizationTimed(Scenario):
     :type frac_users_in: float
     :param t: Timestamp to split the interactions of the test users into
          :attr:`test_data_out` and :attr:`test_data_in`; and select
-         :attr:`training_data` out of all interactions of the training users.
+         :attr:`training_data` out of all interactions of the training users
+         if validation is False.
     :type t: int
     :param t_validation: Timestamp to split the interactions of the validation users
-        into :attr:`validation_data_out` and :attr:`validation_data_in`.
+        into :attr:`validation_data_out` and :attr:`validation_data_in`; and select
+         :attr:`training_data` out of all interactions of the training users
+         if validation is True.
         Required if validation is True.
     :type t_validation: int, optional
     :param delta_out: Size of interval in seconds for
