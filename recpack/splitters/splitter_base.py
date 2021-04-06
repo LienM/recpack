@@ -1,93 +1,119 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import List, Set, Tuple, Union
 import math
 
 import numpy as np
-import scipy.sparse
-
+from scipy.sparse import csr_matrix
 from tqdm.auto import tqdm
 
 from recpack.data.matrix import InteractionMatrix
+
 
 logger = logging.getLogger("recpack")
 
 
 class Splitter(ABC):
-    def __init__(self):
-        pass
+    """Base class for defining a splitter.
+
+    Each splitter implements a split method, which splits data into two outputs.
+    """
 
     @abstractmethod
-    def split(self, data):
-        pass
+    def split(self, data: InteractionMatrix):
+        """Abstract method to be implemented by the child class.
+
+        Splits dataset into two based on a splitting condition.
+
+        :param data: Interactions to split
+        :type data: InteractionMatrix
+        """
+        raise NotImplementedError()
 
     @property
     def name(self):
-        return None
+        """The name of the splitter."""
+        return self.__class__.__name__
+
+    @property
+    def identifier(self):
+        """String identifier of the splitter object,
+        contains name and parameter values."""
+        paramstring = ",".join((f"{k}={v}" for k, v in self.__dict__.items()))
+        return self.name + f"({paramstring})"
 
 
 class UserSplitter(Splitter):
-    def __init__(self, users_in, users_out):
+    """Split data by the user identifiers of the interactions.
+
+    Users in ``users_in`` are assigned to the first return value,
+    users in ``users_out`` are assigned to the second return value.
+
+    :param users_in: Users for whom the events are assigned to the `in_matrix`
+    :type users_in: Union[Set[int], List[int]]
+    :param users_out: Users for whom the events are assigned to the `out_matrix`
+    :type users_out: Union[Set[int], List[int]]
+    """
+
+    def __init__(
+        self,
+        users_in: Union[Set[int], List[int]],
+        users_out: Union[Set[int], List[int]],
+    ):
         super().__init__()
         self.users_in = users_in
         self.users_out = users_out
 
-    def name(self):
-        return f"user_splitter"
+    def split(
+        self, data: InteractionMatrix
+    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        """Splits data by the user identifiers of the interactions.
 
-    def split(self, data):
+        :param data: Interaction matrix to be split.
+        :type data: InteractionMatrix
+        :return: A 2-tuple: the first value contains
+            the interactions of ``users_in``,
+            the second the interactions of ``users_out``.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
-        Splits a user-interaction matrix by the user indices.
+        data_in = data.users_in(self.users_in)
+        data_out = data.users_in(self.users_out)
 
-        :param data: recpack.InteractionMatrix containing the data values matrix
-                     and potentially timestamp matrix which will be split.
-        :type data: class:`recpack.InteractionMatrix`
-        :return: A tuple containing the training, validation and test data objects in that order.
-        :rtype: tuple(class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`)
-        """
-        tr_data = data.users_in(self.users_in)
-        te_data = data.users_in(self.users_out)
+        logger.debug(f"{self.identifier} - Split successful")
 
-        logger.debug(f"{self.name} - Split successful")
-
-        return tr_data, te_data
+        return data_in, data_out
 
 
 class StrongGeneralizationSplitter(Splitter):
+    """Randomly splits the users into two sets so that
+    interactions for a user will always occur only in one split.
+
+    :param in_frac: The fraction of interactions that are assigned
+        to the first value in the output tuple. Defaults to 0.7.
+    :type in_frac: float, optional
+    :param seed: Seed the random generator. Set this value
+        if you require reproducible results.
+    :type seed: int, optional
+    :param error_margin: The allowed error between ``in_frac``
+        and the actual split fraction. Defaults to 0.01.
+    :type error_margin: float, optional
     """
-    Implementation of strong generalization split. All events for a user will always occur only in the same split.
 
-    :param in_perc: The percentage of the data to make training data.
-    :type in_perc: `float`
-
-    :param seed: Seed for randomisation in function, set this to a specified value in order to get expected results.
-    :type seed: `int`
-
-    :param error_margin: The allowed difference between in_perc and the actual split percentage.
-    :type error_margin: `float`
-    """
-
-    def __init__(self, in_perc=0.7, seed=None, error_margin=0.01):
+    def __init__(self, in_frac=0.7, seed=None, error_margin=0.01):
         super().__init__()
-        self.in_perc = in_perc
-        self.out_perc = 1 - in_perc
+        self.in_frac = in_frac
+        self.out_frac = 1 - in_frac
         self.seed = seed
         self.error_margin = error_margin
 
-    @property
-    def name(self):
-        return f"strong_generalization_tr_{self.in_perc*100}_te_{(self.out_perc)*100}"
-
     def split(self, data):
-        """
-        Splits a user-interaction matrix by randomly shuffling users,
-        and filling up the different data slices with the right percentages of data.
+        """Randomly splits the users into two sets so that
+            interactions for a user will always occur only in one split.
 
-        :param data: recpack.InteractionMatrix containing the data values matrix
-                     and potentially timestamp matrix which will be split.
-        :type data: class:`recpack.InteractionMatrix`
-        :return: A tuple containing the training, validation and test data objects in that order.
-        :rtype: tuple(class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`)
+        :param data: Interaction matrix to be split.
+        :type data: InteractionMatrix
+        :return: A 2-tuple containing the ``data_in`` and ``data_out`` matrices.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         sp_mat = data.values
 
@@ -99,64 +125,65 @@ class StrongGeneralizationSplitter(Splitter):
         if self.seed is not None:
             np.random.seed(self.seed)
 
+        # Try five times
         for i in range(0, 5):
-            # Try five times
             np.random.shuffle(users)
 
-            tr_cut = int(np.floor(nr_users * self.in_perc))
+            in_cut = int(np.floor(nr_users * self.in_frac))
 
-            users_in = users[:tr_cut]
-            users_out = users[tr_cut:]
+            users_in = users[:in_cut]
+            users_out = users[in_cut:]
 
             total_interactions = sp_mat.nnz
             data_in_cnt = sp_mat[users_in, :].nnz
 
-            real_perc = data_in_cnt / total_interactions
+            real_frac = data_in_cnt / total_interactions
 
-            within_margin = np.isclose(
-                real_perc, self.in_perc, atol=self.error_margin)
+            within_margin = np.isclose(real_frac, self.in_frac, atol=self.error_margin)
 
             if within_margin:
-                logger.debug(f"{self.name} - Iteration {i} - Within margin")
+                logger.debug(f"{self.identifier} - Iteration {i} - Within margin")
                 break
             else:
-                logger.debug(
-                    f"{self.name} - Iteration {i} - Not within margin")
+                logger.debug(f"{self.identifier} - Iteration {i} - Not within margin")
 
         u_splitter = UserSplitter(users_in, users_out)
+        ret = u_splitter.split(data)
 
-        logger.debug(f"{self.name} - Split successful")
-
-        return u_splitter.split(data)
+        logger.debug(f"{self.identifier} - Split successful")
+        return ret
 
 
 class UserInteractionTimeSplitter(Splitter):
-    """
-    Users are split based on the time of their interactions. A user's interactions will 
-    all be placed in one of the two sets, never in both.
+    """Split users based on the time of their most recent interactions.
 
-    :param t: Timestamp to split on. By default, users whose last interaction has 
-              time < t are placed in the first set, other users in the second.
+    Interactions of users whose last interaction occurred before ``t``
+    are assigned to the first return value.
+    Interactions of all the other users are assigned to the second return
+    value.
+
+    A user can only occur in one of both sets.
+
+    :param t: Timestamp to split on in seconds since epoch.
+    :type t: int
     """
 
     def __init__(self, t: float):
         super().__init__()
         self.t = t
 
-    @property
-    def name(self):
-        return f"user_interaction_time_split_t={self.t}"
+    def split(
+        self, data: InteractionMatrix
+    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        """Splits users based on the time of their most recent interactions.
 
-    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        :param data: Interaction matrix to be split. Must contain timestamps.
+        :type data: InteractionMatrix
+        :return: A 2-tuple containing the ``data_in`` and ``data_out`` matrices.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
-        Splits the users into two sets based on the time of their interactions.
-
-        :param data: Data matrix to be split. Must contain timestamps.
-        :return: A tuple containing a matrix with all users whose last interaction occured strictly before time `t`, and a matrix 
-                 with users that have at least one interaction at or after time `t`.
-        """
-        tr_u = []
-        te_u = []
+        in_users = []
+        out_users = []
 
         for uid, user_history in tqdm(data.sorted_interaction_history):
 
@@ -165,183 +192,190 @@ class UserInteractionTimeSplitter(Splitter):
             last_interaction_time = data.get_timestamp(last_interaction)
 
             if last_interaction_time < self.t:
-                tr_u.append(uid)
+                in_users.append(uid)
 
             else:
-                te_u.append(uid)
+                out_users.append(uid)
 
-        tr_data = data.users_in(tr_u)
-        te_data = data.users_in(te_u)
+        data_in = data.users_in(in_users)
+        data_out = data.users_in(out_users)
 
-        logger.debug(f"{self.name} - Split successful")
-        return tr_data, te_data
-
-
-class ItemSplitter(Splitter):
-    pass
+        logger.debug(f"{self.identifier} - Split successful")
+        return data_in, data_out
 
 
-class InteractionSplitter(Splitter):
-    pass
+class FractionInteractionSplitter(Splitter):
+    """Split data randomly, such that ``in_fraction``
+    of interactions are assigned to the first return value and the remainder to the second.
 
+    :param in_frac: Fraction of events to end up in the first return value.
+    :type in_frac: float
+    :param seed: Seed the random generator. Set this value
+        if you require reproducible results. Defaults to 42.
+    :type seed: int, optional
+    """
 
-class PercentageInteractionSplitter(Splitter):
-    # TODO Add documentation
-    def __init__(self, in_perc, seed: int = 42):
+    def __init__(self, in_frac, seed: int = 42):
         super().__init__()
-        self.in_perc = in_perc
+        self.in_frac = in_frac
 
         self.seed = seed
 
-    def split(self, data):
-        """
-        Split the input data based on the parameters set at construction.
-        Returns 2 sparse matrices in and out
+    def split(
+        self, data: InteractionMatrix
+    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        """Splits data randomly, such that ``in_fraction``
+        of interactions are assigned to ``data_in`` and the remainder to ``data_out``.
+
+
+        :param data: Interaction matrix to be split.
+        :type data: InteractionMatrix
+        :return: A 2-tuple containing the ``data_in`` and ``data_out`` matrices.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
 
-        tr_interactions = []
-        te_interactions = []
+        in_interactions = []
+        out_interactions = []
 
-        for u, interaction_history in tqdm(
-                data.interaction_history):
+        for u, interaction_history in tqdm(data.interaction_history):
 
             rstate = np.random.RandomState(self.seed + u)
 
             rstate.shuffle(interaction_history)
             hist_len = len(interaction_history)
-            cut = int(np.ceil(hist_len * self.in_perc))
+            cut = int(np.ceil(hist_len * self.in_frac))
 
-            tr_interactions.extend(interaction_history[:cut])
-            te_interactions.extend(interaction_history[cut:])
+            in_interactions.extend(interaction_history[:cut])
+            out_interactions.extend(interaction_history[cut:])
 
-        tr_data = data.interactions_in(tr_interactions)
-        te_data = data.interactions_in(te_interactions)
+        data_in = data.interactions_in(in_interactions)
+        data_out = data.interactions_in(out_interactions)
 
-        logger.debug(f"{self.name} - Split successful")
+        logger.debug(f"{self.identifier} - Split successful")
 
-        return tr_data, te_data
+        return data_in, data_out
 
 
 class TimestampSplitter(Splitter):
-    """
-    Use this class if you want to split your data on a timestamp.
-    Training data will be all data in the interval [t-t_alpha, t),
-    the test data will be the data in the interval [t, t+t_delta).
-    If t_alpha or t_delta are omitted, all data before/after t is used.
+    """Split data so that the first return value contains interactions in ``[t-delta_in, t[``,
+    and the second those in ``[t, t+delta_out[``.
 
-    :param t: epoch timestamp to split on
+    If ``delta_in`` or ``delta_out`` are omitted, they are assumed to have a value of infinity.
+    A user can occur in both return values.
+
+    :param t: Timestamp to split on in seconds since epoch.
     :type t: int
-    :param t_delta: seconds past t to consider as test data (default is None, all data >= t is considered)
-    :type t_delta: int
-    :param t_alpha: seconds before t to use as training data (default is None -> all data < t is considered)
-    :type t_alpha: int
+    :param delta_out: Seconds past t. Upper bound on the timestamp
+        of interactions in the second return value. Defaults to None (infinity).
+    :type delta_out: int, optional
+    :param delta_in: Seconds before t. Lower bound on the timestamp
+        of interactions in the first return value. Defaults to None (infinity).
+    :type delta_in: int, optional
     """
 
-    def __init__(self, t, t_delta=None, t_alpha=None):
+    def __init__(self, t, delta_out=None, delta_in=None):
         super().__init__()
         self.t = t
-        self.t_delta = t_delta
-        self.t_alpha = t_alpha
+        self.delta_out = delta_out
+        self.delta_in = delta_in
 
-    @property
-    def name(self):
-        base_name = f"timed_split_t{self.t}"
-        if self.t_delta:
-            base_name += f"_t_delta_{self.t_delta}"
-        if self.t_alpha:
-            base_name += f"_t_alpha_{self.t_alpha}"
+    def split(
+        self, data: InteractionMatrix
+    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        """Splits data so that ``data_in`` contains interactions in ``[t-delta_in, t[``,
+        and ``data_out`` those in ``[t, t+delta_out[``.
 
-        return base_name
-
-    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        :param data: Interaction matrix to be split. Must contain timestamps.
+        :type data: InteractionMatrix
+        :return: A 2-tuple containing the ``data_in`` and ``data_out`` matrices.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
-        Split the input data by using the timestamps provided in the timestamp field of data.
+        assert data.has_timestamps
 
-        :param data: recpack.InteractionMatrix containing the data values matrix
-                     and potentially timestamp matrix which will be split.
-        :type data: class:`recpack.InteractionMatrix`
-        :return: A tuple containing the training and test data objects, in that order.
-        :rtype: tuple(class:`recpack.InteractionMatrix`, class:`recpack.InteractionMatrix`)
-        """
-
-        if self.t_alpha is None:
-            # Holds indices where timestamp < t
-            tr_data = data.timestamps_lt(self.t)
+        if self.delta_in is None:
+            # timestamp < t
+            data_in = data.timestamps_lt(self.t)
         else:
-            # Holds indices in interval: t-t_alpha =< timestamp < t
-            tr_data = data.timestamps_lt(
-                self.t).timestamps_gte(
-                self.t - self.t_alpha)
+            # t-delta_in =< timestamp < t
+            data_in = data.timestamps_lt(self.t).timestamps_gte(self.t - self.delta_in)
 
-        if self.t_delta is None:
-            # Holds indices where timestamp >= t
-            te_data = data.timestamps_gte(self.t)
+        if self.delta_out is None:
+            # timestamp >= t
+            data_out = data.timestamps_gte(self.t)
         else:
-            # Get indices where timestamp >= t and timestamp < t + t_delta
-            te_data = data.timestamps_gte(
-                self.t).timestamps_lt(
-                self.t + self.t_delta)
+            # timestamp >= t and timestamp < t + delta_out
+            data_out = data.timestamps_gte(self.t).timestamps_lt(
+                self.t + self.delta_out
+            )
 
-        logger.debug(f"{self.name} - Split successful")
+        logger.debug(f"{self.identifier} - Split successful")
 
-        return tr_data, te_data
+        return data_in, data_out
 
 
 class MostRecentSplitter(Splitter):
-    """
-    Splits the n most recent actions of each user into a separate set.
+    """Splits the n most recent interactions of a user into the second return value,
+    and earlier interactions into the first.
 
-    :param n: Number of most recent actions. If negative, all but the |n| earliest 
-              actions are split off.
+    :param n: Number of most recent actions to assign to the second return value.
+        If ``n`` is negative, all but the ``n`` earliest
+        interactions are assigned to the second return value.
+    :type n: int
     """
 
     def __init__(self, n: int):
         super().__init__()
         self.n = n
 
-    @property
-    def name(self):
-        return f"most_recent_split_n{self.n}"
+    def split(
+        self, data: InteractionMatrix
+    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        """Splits the n most recent interactions of a user into ``data_out``,
+        and earlier interactions into ``data_in``.
 
-    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
+        :param data: Interaction matrix to be split. Must contain timestamps.
+        :type data: InteractionMatrix
+        :return: A 2-tuple containing the ``data_in`` and ``data_out`` matrices.
+        :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
-        Returns a data matrix with all but the n most recent actions of each user 
-        and a data matrix with the n most recent actions of each user.
+        assert data.has_timestamps
 
-        :param data: Data matrix to be split. Must contain timestamps.
-        :return: A tuple containing a matrix with all but n most recent and matrix 
-                 with n most recent actions of each user.
-        """
-        tr_interactions = []
-        te_interactions = []
+        in_interactions = []
+        out_interactions = []
 
-        for u, interaction_history in tqdm(
-                data.sorted_interaction_history):
+        for u, interaction_history in tqdm(data.sorted_interaction_history):
 
-            tr_interactions.extend(interaction_history[:-self.n])
-            te_interactions.extend(interaction_history[-self.n:])
+            in_interactions.extend(interaction_history[: -self.n])
+            out_interactions.extend(interaction_history[-self.n :])
 
-        tr_data = data.interactions_in(tr_interactions)
-        te_data = data.interactions_in(te_interactions)
+        data_in = data.interactions_in(in_interactions)
+        data_out = data.interactions_in(out_interactions)
 
-        logger.debug(f"{self.name} - Split successful")
+        logger.debug(f"{self.identifier} - Split successful")
 
-        return tr_data, te_data
+        return data_in, data_out
 
 
-def batch(iterable, n=1):
+def yield_batches(iterable, n=1):
+    """Helper to generate batches from an iterable.
+
+    :param iterable: Iterable to chunk ito batches.
+    :type iterable: Iterable
+    :param n: Size of batch, defaults to 1
+    :type n: int, optional
+    :yield: Batch of length n of the iterable values
+    :rtype: Iterator[Any]
+    """
     l = len(iterable)
     for ndx in range(0, l, n):
-        yield iterable[ndx:min(ndx + n, l)]
+        yield iterable[ndx : min(ndx + n, l)]
 
 
-def csr_row_set_nz_to_val(csr, row, value=0):
-    """Set all nonzero elements (elements currently in the sparsity pattern)
-    to the given value. Useful to set to 0 mostly.
-    """
-    if not isinstance(csr, scipy.sparse.csr_matrix):
+def csr_row_set_nz_to_val(csr: csr_matrix, row, value=0):
+    """Set all nonzero elements to the given value. Useful to set to 0 mostly."""
+    if not isinstance(csr, csr_matrix):
         raise ValueError("Matrix given must be of CSR format.")
-    csr.data[csr.indptr[row]: csr.indptr[row + 1]] = value
+    csr.data[csr.indptr[row] : csr.indptr[row + 1]] = value
 
 
 class FoldIterator:
@@ -359,7 +393,7 @@ class FoldIterator:
         self.users = list(sorted(set(self.data_m_in.indices[0])))
 
     def __iter__(self):
-        self.batch_generator = batch(self.users, self.batch_size)
+        self.batch_generator = yield_batches(self.users, self.batch_size)
         return self
 
     def __next__(self):

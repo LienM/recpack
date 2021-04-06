@@ -12,7 +12,7 @@ from scipy.sparse import csr_matrix
 
 from copy import deepcopy
 
-from recpack.splitters.splitter_base import batch
+from recpack.splitters.splitter_base import yield_batches
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.util import (
     swish,
@@ -249,7 +249,7 @@ class RecVAE(TorchMLAlgorithm):
         losses = []
         np.random.shuffle(users)
 
-        for batch_idx, user_batch in enumerate(batch(users, self.batch_size)):
+        for batch_idx, user_batch in enumerate(yield_batches(users, self.batch_size)):
             X = naive_sparse2tensor(train_data[user_batch, :]).to(self.device)
 
             # Clear gradients

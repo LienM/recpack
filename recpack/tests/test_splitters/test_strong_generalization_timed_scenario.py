@@ -4,10 +4,10 @@ import numpy as np
 import recpack.splitters.scenarios as scenarios
 
 
-@pytest.mark.parametrize("perc_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
-def test_strong_generalization_timed_split(data_m, perc_users_in, t):
+@pytest.mark.parametrize("frac_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
+def test_strong_generalization_timed_split(data_m, frac_users_in, t):
 
-    scenario = scenarios.StrongGeneralizationTimed(perc_users_in, t)
+    scenario = scenarios.StrongGeneralizationTimed(frac_users_in, t)
     scenario.split(data_m)
 
     tr = scenario.training_data
@@ -22,27 +22,31 @@ def test_strong_generalization_timed_split(data_m, perc_users_in, t):
     assert te_data_out.active_users == te_data_in.active_users
 
 
-@pytest.mark.parametrize("perc_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
-def test_strong_generalization_timed_split_w_validation_no_validation_t(data_m, perc_users_in, t):
+@pytest.mark.parametrize("frac_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
+def test_strong_generalization_timed_split_w_validation_no_validation_t(
+    data_m, frac_users_in, t
+):
     # Make sure exception is thrown if the validation timestamp is not provided
     with pytest.raises(Exception):
-        scenarios.StrongGeneralizationTimed(perc_users_in, t, validation=True)
+        scenarios.StrongGeneralizationTimed(frac_users_in, t, validation=True)
 
 
-@pytest.mark.parametrize("perc_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
-def test_strong_generalization_timed_split_w_validation_validation_t_too_large(data_m, perc_users_in, t):
+@pytest.mark.parametrize("frac_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
+def test_strong_generalization_timed_split_w_validation_validation_t_too_large(
+    data_m, frac_users_in, t
+):
     # Make sure t_validation < t
     with pytest.raises(AssertionError):
         scenarios.StrongGeneralizationTimed(
-            perc_users_in, t, t_validation=t, validation=True
+            frac_users_in, t, t_validation=t, validation=True
         )
 
 
-@pytest.mark.parametrize("perc_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
-def test_strong_generalization_timed_split_w_validation(data_m, perc_users_in, t):
+@pytest.mark.parametrize("frac_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
+def test_strong_generalization_timed_split_w_validation(data_m, frac_users_in, t):
     t_validation = t - 10
     scenario = scenarios.StrongGeneralizationTimed(
-        perc_users_in, t, t_validation=t_validation, validation=True
+        frac_users_in, t, t_validation=t_validation, validation=True
     )
     scenario.split(data_m)
 
@@ -64,11 +68,13 @@ def test_strong_generalization_timed_split_w_validation(data_m, perc_users_in, t
     assert te_data_out.active_users == te_data_in.active_users
 
 
-@pytest.mark.parametrize("perc_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
-def test_strong_generalization_timed_split_w_validation_has_validation_users(data_m, perc_users_in, t):
+@pytest.mark.parametrize("frac_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
+def test_strong_generalization_timed_split_w_validation_has_validation_users(
+    data_m, frac_users_in, t
+):
     t_validation = t - 10
     scenario = scenarios.StrongGeneralizationTimed(
-        perc_users_in, t, t_validation=t_validation, validation=True
+        frac_users_in, t, t_validation=t_validation, validation=True
     )
     scenario.split(data_m)
 
