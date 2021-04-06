@@ -182,7 +182,7 @@ class StoppingCriterion:
         based on the name of the loss function.
 
         BPR and WARP loss will minimize a loss function,
-        Recall and NDCG will optimise a ranking metric,
+        Recall and NormalizedDiscountedCumulativeGain will optimise a ranking metric,
         with default @K=50
 
         keyword arguments of the criteria can be set by passing
@@ -217,8 +217,7 @@ class StoppingCriterion:
         """
 
         if criterion_name not in cls.FUNCTIONS:
-            raise ValueError(
-                f"stopping criterion {criterion_name} not supported")
+            raise ValueError(f"stopping criterion {criterion_name} not supported")
 
         # We will combine the two dicts, with kwargs getting precendence.
         return StoppingCriterion(**{**cls.FUNCTIONS[criterion_name], **kwargs})

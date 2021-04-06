@@ -8,6 +8,7 @@ Welcome to Recpack's documentation!
    recpack.preprocessing
    recpack.algorithms
    recpack.splitters
+   recpack.metrics
    guides
 
 Indices and tables

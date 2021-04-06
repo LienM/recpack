@@ -1,10 +1,6 @@
 from recpack.metrics.base import FittedMetric, ElementwiseMetricK
-import pandas as pd
-import scipy.sparse
 from scipy.sparse import csr_matrix
 import numpy as np
-
-from recpack.util import get_top_K_ranks
 
 
 def compute_hits(y_true, y_pred):
@@ -18,10 +14,17 @@ def compute_hits(y_true, y_pred):
 
 class IPSMetric(FittedMetric):
 
-    """IPS metrics are a class of metrics, where the user interaction probability is taken into account.
+    """IPS metrics are a class of metrics,
+    where the probability of a user interacting with an item
+    (propensity) is taken into account.
 
-    Each score per item is weighted by the inverse propensity of the user interacting with the item.
-    :param ip_cap: used to avoid having an item that creates an incredible weight, any IP > ip_cap = ip_cap
+    Each score is weighted by the inverse propensity
+    of the user interacting with the item.
+
+    Before using an IPSMetric, it should be fitted to the data.
+
+    :param ip_cap: Maximum value of an inverse propensity.
+    Used to avoid excessively large weights for items that are rarely interacted with.
     :type ip_cap: int
     """
 
@@ -31,16 +34,21 @@ class IPSMetric(FittedMetric):
         self.ip_cap = 10000
 
     def fit(self, X: csr_matrix):
-        """Fit the propensities for the X dataset
+        """Fit the propensities for the X dataset.
 
-        We make the very strong assumption that each user has the same probability to rate an item.
-        If we have more data about users, we could use classification to improve the probability.
+        We make the strong assumption that each user
+        has the same probability to interact with an item.
 
-        For now
-        pi(i) = # interactions with i / # interactions
+        .. math::
+
+            p(i|u) = p(i) = \\frac{|\\{u| u\\in U, X_{u,i} > 0\\}|} {|X|}
+
+        Inverse propensity higher than the ``ip_cap``, are set to ``ip_cap``,
+        to avoid that items that are never interacted with dominate the metric.
 
         :param X: The interactions to base the propensity computation on.
-                    Suggested to use X_true as value for this, since that is the target.
+                    Suggested to use the labels you are trying to predict as value,
+                    since that is the target.
         :type X: scipy.sparse.csr_matrix
         """
         # Compute vector with propensities
@@ -48,76 +56,27 @@ class IPSMetric(FittedMetric):
         self.inverse_propensities = 1 / self.item_prob_
         self.inverse_propensities[self.inverse_propensities == np.inf] = 0
 
-        self.inverse_propensities[self.inverse_propensities >
-                                  self.ip_cap] = self.ip_cap
+        self.inverse_propensities[self.inverse_propensities > self.ip_cap] = self.ip_cap
 
 
 class IPSHitRateK(ElementwiseMetricK, IPSMetric):
-    """
-    Computes a weighted hits per user metric.
+    """Computes a weighted hits metric, with hits weighted by the user, item propensity.
 
-    Each hit is weighted with the item's inverse propensity.
-    The value is aggregated by summing per user, and taking the average
+    Each hit is weighted with the item's inverse propensity for the user.
+
+    Higher values are better, they indicate the algorithm is able to
+    recommend more long-tail items for the user.
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
     """
 
     def __init__(self, K):
         super().__init__(K)
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
         assert self.item_prob_ is not None
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-
-        # Per user get a set of the topK predicted items
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
 
         hits = compute_hits(y_true, y_pred_top_K)
 
         self.scores_ = hits.multiply(self.inverse_propensities)
-
-        self.value_ = self.scores_.sum() / (self.num_users)
-
-# TODO: check implementation, to make sure implemented correctly.
-# class SNIPSHitRateK(IPSHitRateK):
-#     """
-#     Self Normalizing IPS hit rate.
-
-# each weight per item is normalised by the maximal possible score for the
-# user.
-
-#     The reason this is done,
-#     is that the IPS metric can create a bias towards infrequently shown items,
-#     by normalizing this bias can be removed.
-#     """
-
-#     def __init__(self, K):
-#         super().__init__(K)
-
-#     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-#         assert self.item_prob_ is not None
-#         y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-#         self.verify_shape(y_true, y_pred)
-
-#         # Per user get a set of the topK predicted items
-#         y_pred_top_K = self.get_top_K_ranks(y_pred)
-
-#         hits = compute_hits(y_true, y_pred_top_K)
-
-#         # Compute max possible score per user, to normalise
-#         propensities_per_hit = y_true.multiply(
-#             self.inverse_propensities).tocsr()
-
-#         top_k_mask = self.get_top_K_ranks(propensities_per_hit)
-#         top_k_mask[top_k_mask > 0] = 1
-
-#         max_prop_possible = propensities_per_hit.multiply(top_k_mask)
-
-#         m = max_prop_possible.sum(axis=1)
-
-#         # We can safely take the inverse,
-#         # because none of the hits should ever have propensity 0 if properly
-#         # computed
-#         self.scores_ = hits.multiply(self.inverse_propensities).multiply(1 / m)
-
-#         self.value_ = self.scores_.sum() / (self.num_users)

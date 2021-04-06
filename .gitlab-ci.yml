@@ -51,6 +51,7 @@ pages:
     - cd doc
     - sphinx-autogen -o source/generated/ source/recpack.algorithms.rst -t source/_templates/
     - sphinx-autogen -o source/generated/ source/recpack.splitters.rst -t source/_templates/
+    - sphinx-autogen -o source/generated/ source/recpack.metrics.rst -t source/_templates/
     - make html
     - mv build/html/ ../public/
   artifacts:
