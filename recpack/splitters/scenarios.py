@@ -275,20 +275,25 @@ class Timed(Scenario):
         user1
         user2           X   X
 
-
-    :param t: Timestamp to split on in seconds since epoch.
+    :param t: Timestamp to split target dataset :attr:`test_data_out`
+        from the remainder of the data.
     :type t: int
-    :param delta_out: Seconds past splitting timestamp to use for hold-out datasets.
-        Defaults to None (infinity).
-    :type delta_out: int, optional
-    :param delta_in: Seconds before splitting timestamp to use for training or fold-in datasets.
-        Defaults to None (infinity).
-    :type delta_in: int, optional
-    :param t_validation: Timestamp to split on in seconds since epoch.
-        Validation interactions in [t, min(t_validation, t+delta_out)]
-        are added to the validation_data_out dataset.
-        Is required if validation is True.
+    :param t_validation: Timestamp to split :attr:`validation_data_out`
+        from :attr:`training_data`.
+        Required if validation is True.
     :type t_validation: int, optional
+    :param delta_out: Size of interval in seconds for
+        both :attr:`validation_data_out` and :attr:`test_data_out`.
+        Both sets will contain interactions that occurred within `delta_out` seconds
+        after the splitting timestamp.
+        Defaults to None (all interactions past the splitting timestamp).
+    :type delta_out: int, optional
+    :param delta_in: Size of interval in seconds for
+        :attr:`training_data`, :attr:`validation_data_in` and :attr:`test_data_in`.
+        All sets will contain interactions that occurred within `delta_out` seconds
+        before the splitting timestamp.
+        Defaults to None (all interactions past the splitting timestamp).
+    :type delta_in: int, optional
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
@@ -396,23 +401,29 @@ class StrongGeneralizationTimed(Scenario):
         user1
         user2           X   X
 
-
     :param frac_users_in: The fraction of users to use
         for the training(_validation) dataset.
     :type frac_users_in: float
-    :param t: Timestamp to split on in seconds since epoch.
+    :param t: Timestamp to split the interactions of the test users into
+         :attr:`test_data_out` and :attr:`test_data_in`; and select
+         :attr:`training_data` out of all interactions of the training users.
     :type t: int
-    :param delta_out: Seconds past splitting timestamp to use for hold-out datasets.
-        Defaults to None (infinity).
-    :type delta_out: int, optional
-    :param delta_in: Seconds before splitting timestamp to use for training or fold-in datasets.
-        Defaults to None (infinity).
-    :type delta_in: int, optional
-    :param t_validation: Timestamp to split on in seconds since epoch.
-        Validation interactions in [t, min(t_validation, t+delta_out)]
-        are added to the :attr:`validation_data_out` dataset.
-        Is required if validation is True.
+    :param t_validation: Timestamp to split the interactions of the validation users
+        into :attr:`validation_data_out` and :attr:`validation_data_in`.
+        Required if validation is True.
     :type t_validation: int, optional
+    :param delta_out: Size of interval in seconds for
+        both :attr:`validation_data_out` and :attr:`test_data_out`.
+        Both sets will contain interactions that occurred within `delta_out` seconds
+        after the splitting timestamp.
+        Defaults to None (all interactions past the splitting timestamp).
+    :type delta_out: int, optional
+    :param delta_in: Size of interval in seconds for
+        :attr:`training_data`, :attr:`validation_data_in` and :attr:`test_data_in`.
+        All sets will contain interactions that occurred within `delta_out` seconds
+        before the splitting timestamp.
+        Defaults to None (all interactions past the splitting timestamp).
+    :type delta_in: int, optional
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
