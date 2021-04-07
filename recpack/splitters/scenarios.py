@@ -490,6 +490,49 @@ class StrongGeneralizationTimed(Scenario):
 
         self._test_data_in, self._test_data_out = self.timestamp_spl.split(te_data)
 
+class NextItemPrediction(Scenario):
+    def __init__(self, validation=False):
+        """
+        Next item prediction fits the model on the first n-1 elements of each user sequence.
+        The nth item of each user sequence is used for evaluation (the target).
+        The n-1th item is used as the query item, this item is used to recommend the most similar product.
+        This means that the data is split such that all users in the test set are also in the training set.
+
+        Optionally, the validation parameter can be set to true. This will return a validation set that is a subset of the larger dataset.
+        This validation set is meant to be used for hyperparameter tuning.
+
+        Note: This scenario was designed for Word2Vec type algorithms.
+        """
+        super().__init__(validation=validation)
+        self.most_recent_splitter = splitter_base.MostRecentSplitter(1)
+
+    def _split(self, data):
+        """
+        Return a split of training and test data.
+        self.train_X holds items up to n-1 (including).
+        self.test_data_in holds the n-1th item.
+        self.test_data_out holds the nth item.
+
+        As an example, given one sequence of items (by iid): [1, 5, 6, 3, 9, 2]
+        Without validation, train_X will hold: [1, 5, 6, 3, 9]
+        Without validation, test_data_in will hold: [9]
+        Without validation, test_data_out will hold: [2]
+
+        With validation, train_x will hold: [1, 5, 6, 3, 9]
+        With validation, test_data_in will hold: [9]
+        With validation, test_data_out will hold: [2]
+        With validation, val_data will hold: [1, 5, 6, 3]
+        With validation, validation_data_in will hold: [3]
+        With validation, validation_data_out will hold: [9]
+
+        Note: Real case has many sequences, same logic applies.
+        """
+        train_val_data, self._test_data_out = self.most_recent_splitter.split(data)
+        if self.validation:
+            val_data, self._validation_data_out = self.most_recent_splitter.split(train_val_data)
+            _, self._validation_data_in = self.most_recent_splitter.split(val_data)
+        _, self._test_data_in = self.most_recent_splitter.split(train_val_data)
+        self.train_X = train_val_data
 
 class StrongGeneralizationTimedMostRecent(Scenario):
     """Split users into non-overlapping training,

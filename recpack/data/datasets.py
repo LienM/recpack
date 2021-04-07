@@ -128,6 +128,121 @@ class Dataset:
         return self.preprocessor.process(df)
 
 
+class ThirtyMusicSessionsSmall(Dataset):
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the 30MusicSessions dataset
+
+        Filters users and items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinItemsPerUser(1, self.ITEM_IX, self.USER_IX),
+            MinUsersPerItem(1, self.ITEM_IX, self.USER_IX),
+        ]
+
+    def _download_dataset(self):
+        # TODO Implement Download
+        pass
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return as a Pandas DataFrame.
+
+        Downloads the data file if it is not yet present.
+        The output will contain a dataframe with a user_id and item_id column.
+        Each interaction is stored in a separate row.
+
+        :return: The interactions as a dataframe, with a row for each interaction.
+        :rtype: pandas.DataFrame
+        """
+        df = pd.read_csv(
+            "/Users/jenselin/PycharmProjects/recpack-project-jens/recpack/data/datasets/30Music_sessions_medium.csv",
+            dtype=str)
+        df.drop(columns=['numtracks', 'playtime', 'uid'], inplace=True)
+        df.columns = [self.USER_IX, self.TIMESTAMP_IX, self.ITEM_IX]
+        df = df.astype({self.TIMESTAMP_IX: 'int32'})
+        return df
+
+
+class ThirtyMusicSessionsMedium(Dataset):
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the 30MusicSessions dataset
+
+        Filters users and items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinItemsPerUser(5, self.ITEM_IX, self.USER_IX),
+            MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
+        ]
+
+    def _download_dataset(self):
+        # TODO Implement Download
+        pass
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return as a Pandas DataFrame.
+
+        Downloads the data file if it is not yet present.
+        The output will contain a dataframe with a user_id and item_id column.
+        Each interaction is stored in a separate row.
+
+        :return: The interactions as a dataframe, with a row for each interaction.
+        :rtype: pandas.DataFrame
+        """
+        df = pd.read_csv(
+            "/Users/jenselin/PycharmProjects/recpack-project-jens/recpack/data/datasets/30Music_sessions_3M_users_unfiltered.csv",
+            dtype=str)
+        df.drop(columns=['numtracks', 'playtime', 'uid'], inplace=True)
+        df.columns = [self.USER_IX, self.TIMESTAMP_IX, self.ITEM_IX]
+        df = df.astype({self.TIMESTAMP_IX: 'int32'})
+        return df
+
+
+class ThirtyMusicSessions(Dataset):
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the 30MusicSessions dataset
+
+        Filters users and items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinItemsPerUser(5, self.ITEM_IX, self.USER_IX),
+            MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
+        ]
+
+    def _download_dataset(self):
+        # TODO Implement Download
+        # TODO parse idomaar files?
+        pass
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return as a Pandas DataFrame.
+
+        Downloads the data file if it is not yet present.
+        The output will contain a dataframe with a user_id and item_id column.
+        Each interaction is stored in a separate row.
+
+        :return: The interactions as a dataframe, with a row for each interaction.
+        :rtype: pandas.DataFrame
+        """
+        df = pd.read_csv(
+            "/Users/jenselin/PycharmProjects/recpack-project-jens/recpack/data/datasets/30Music_sessions.csv",
+            dtype=str)
+        df.drop(columns=['numtracks', 'playtime', 'uid'], inplace=True)
+        df.columns = [self.USER_IX, self.TIMESTAMP_IX, self.ITEM_IX]
+        df = df.astype({self.TIMESTAMP_IX: 'int32'})
+        return df
+
+
 class CiteULike(Dataset):
     """Dataset class for the CiteULike dataset.
 
@@ -370,7 +485,7 @@ class RecsysChallenge2015(Dataset):
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
         df[self.TIMESTAMP_IX] = (
-            df[self.TIMESTAMP_IX].astype(int) / 1e9
+                df[self.TIMESTAMP_IX].astype(int) / 1e9
         )  # pandas datetime -> seconds from epoch
 
         return df
