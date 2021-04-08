@@ -1,18 +1,18 @@
+import torch
+import scipy
+import time
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
+from scipy.sparse import csr_matrix
+from sklearn.metrics.pairwise import cosine_similarity
 from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import InteractionMatrix
 from recpack.data.matrix import to_csr_matrix
 from recpack.data.matrix import to_binary
 from recpack.metrics.precision import PrecisionK
 from recpack.algorithms.samplers import sample_positives_and_negatives
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
-import scipy
-from scipy.sparse import csr_matrix
-from sklearn.metrics.pairwise import cosine_similarity
-import time
 
 
 class Prod2Vec(ItemSimilarityMatrixAlgorithm):
