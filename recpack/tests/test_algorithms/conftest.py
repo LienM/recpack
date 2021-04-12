@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+import torch
 import scipy.sparse as sp
 
 
@@ -121,3 +122,25 @@ def data():
     pred = sp.csr_matrix((pred_values, (pred_users, pred_items)), shape=(10, 5))
 
     return pred
+
+@pytest.fixture(scope="function")
+def p2v_embedding():
+    # the target values for our predictions
+    # we have five users, the target is the last item the user bought
+    values = [1] * 5
+    users = [0, 1, 2, 3, 4]
+    items = [0, 1, 2, 3, 4]
+    target = sp.csr_matrix((values, (users, items)))
+    target = InteractionMatrix.from_csr_matrix(target)
+
+    # pre-defined embedding vectors
+    embedding = [[0.5, 0.5, 0.0, 0.0, 0.0],
+                 [0.4, 0.4, 0.1, 0.0, 0.0],
+                 [0.0, 0.0, 0.0, 0.5, 0.5],
+                 [0.0, 0.0, 0.5, 0.5, 0.0],
+                 [1.0, 0.0, 0.0, 0.0, 0.0]]
+    embedding = np.array(embedding)
+    embedding = torch.from_numpy(embedding)
+    embedding = torch.nn.Embedding.from_pretrained(embedding)
+    return target, embedding
+

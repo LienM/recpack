@@ -11,26 +11,24 @@ im = sessions_dataset.load_interaction_matrix()
 scenario = NextItemPrediction(validation=True)
 scenario.split(im)
 train = scenario.train_X
-test = to_csr_matrix(train).toarray()
 test_data_in = scenario.test_data_in
 test_data_out = scenario.test_data_out
 
 val_data_in = scenario._validation_data_in
 val_data_out = scenario._validation_data_out
-# Specify how much validation data you really want to use:
-val_data_in = to_csr_matrix(val_data_in)[:1000, :]
-val_data_out = to_csr_matrix(val_data_out)[:1000, :]
+val_data_in = to_csr_matrix(val_data_in)
+val_data_out = to_csr_matrix(val_data_out)
 
 # Initialize the model
-prod2vec = Prod2Vec(vector_size=50, item_vocabulary=im.shape[1])
+prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="averaged_precision", batch_size=500, max_epochs=3, prints_every_epoch=1, min_improvement=0.00001)
 # Fit the model on training data
-embedding = prod2vec.fit(train, learning_rate=0.01, num_epochs=1, validation_in=val_data_in, validation_out=val_data_out, negative_samples=5, window=2, prints_every_epoch=1, batch=500)
+prod2vec.fit(train, (val_data_in, val_data_out))
 
 test_data_in = to_csr_matrix(test_data_in)
 test_data_out = to_csr_matrix(test_data_out)
 
 # Generate predictions
-predictions = prod2vec.predict(10, test_data_in, embedding)
+predictions = prod2vec.predict(test_data_in)
 
 # Save the model for further usage later
 prod2vec.save()

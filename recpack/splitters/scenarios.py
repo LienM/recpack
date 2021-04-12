@@ -518,10 +518,9 @@ class NextItemPrediction(Scenario):
         Without validation, test_data_in will hold: [9]
         Without validation, test_data_out will hold: [2]
 
-        With validation, train_x will hold: [1, 5, 6, 3, 9]
+        With validation, train_x will hold: [1, 5, 6, 3]
         With validation, test_data_in will hold: [9]
         With validation, test_data_out will hold: [2]
-        With validation, val_data will hold: [1, 5, 6, 3]
         With validation, validation_data_in will hold: [3]
         With validation, validation_data_out will hold: [9]
 
@@ -529,8 +528,8 @@ class NextItemPrediction(Scenario):
         """
         train_val_data, self._test_data_out = self.most_recent_splitter.split(data)
         if self.validation:
-            val_data, self._validation_data_out = self.most_recent_splitter.split(train_val_data)
-            _, self._validation_data_in = self.most_recent_splitter.split(val_data)
+            train_val_data, self._validation_data_out = self.most_recent_splitter.split(train_val_data)
+            _, self._validation_data_in = self.most_recent_splitter.split(train_val_data)
         _, self._test_data_in = self.most_recent_splitter.split(train_val_data)
         self.train_X = train_val_data
 

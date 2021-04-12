@@ -7,6 +7,7 @@ from scipy.sparse import csr_matrix
 from recpack.algorithms.loss_functions import bpr_loss_wrapper, warp_loss_wrapper
 from recpack.metrics.dcg import ndcg_k
 from recpack.metrics.recall import recall_k
+from recpack.metrics.precision import precision_k_averaged
 
 logger = logging.getLogger("recpack")
 
@@ -87,6 +88,7 @@ class StoppingCriterion:
         "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
         "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
         "warp": {"loss_function": warp_loss_wrapper, "minimize": True},
+        "averaged_precision": {"loss_function": precision_k_averaged, "minimize": False},
     }
     """Available loss function options.
 

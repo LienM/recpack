@@ -1,146 +1,138 @@
-from recpack.data.datasets import ThirtyMusicSessionsSmall
-from recpack.algorithms.p2v import Prod2Vec
-from recpack.data.matrix import InteractionMatrix
-from recpack.metrics.precision import PrecisionK
 import pytest
 import numpy as np
 import scipy
 import os
+import pandas as pd
+from recpack.algorithms.p2v import Prod2Vec
+from recpack.data.matrix import InteractionMatrix
+from recpack.metrics.precision import PrecisionK
+from recpack.splitters.scenarios import NextItemPrediction
+from recpack.data.matrix import to_csr_matrix
 
 
-class TestProd2Vec():
-    @pytest.fixture()
-    def thirty_music_small(self):
-        dataset = ThirtyMusicSessionsSmall("")
-        df = dataset.load_dataframe()
-        im = dataset.load_interaction_matrix()
-        prod2vec = Prod2Vec(vector_size=50, item_vocabulary=im.shape[1])
-        return df, im, prod2vec
-
-    def test_predict(self):
-        # the target values for our predictions
-        # we have five users, the target is the last item the user bought
-        values = [1] * 5
-        users = [0, 1, 2, 3, 4]
-        items = [0, 1, 2, 3, 4]
-        target = scipy.sparse.csr_matrix((values, (users, items)))
-        target = InteractionMatrix.from_csr_matrix(target)
-
-        # embedding vectors for each item
-        embedding = [[0.5, 0.5, 0.0, 0.0, 0.0],
-                     [0.4, 0.4, 0.1, 0.0, 0.0],
-                     [0.0, 0.0, 0.0, 0.5, 0.5],
-                     [0.0, 0.0, 0.5, 0.5, 0.0],
-                     [1.0, 0.0, 0.0, 0.0, 0.0]]
-        embedding = np.array(embedding)
-
-        prod2vec = Prod2Vec(vector_size=5, item_vocabulary=5)
-        # get the most similar item to each item
-        predictions = prod2vec.predict(1, target, embedding, batch_size=2)
-        similarity_matrix = prod2vec.similarity_matrix_.toarray()
-        # get the most similar item for each item
-        max_similarity_items = list(np.argmax(similarity_matrix, axis=1))
-        assert max_similarity_items == [1, 0, 3, 2, 0]
-        # cosine similarities can be calculated by hand easily
-        # only get the most similar item using max
-        assert max(similarity_matrix[0]) == pytest.approx(0.98473, 0.00005)
-        assert max(similarity_matrix[2]) == pytest.approx(0.5, 0.00005)
-        assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
-
-        # let's create some truth values:
-        # the truth values are equal to the most similar product according to the similarity matrix
-        # this means the following should hold:
-        # - each prediction should be present in the top 2 (k=2)
-        # - a value of 1/2 (1/k) is added when we have a prediction is present
-        # - the final score is the sum of all values divided by the number of predictions
-        # i.e. 0.5*5/5 = 0.5
-
-        values = [1] * 5
-        users = [0, 1, 2, 3, 4]
-        items = [1, 0, 3, 2, 0]
-        truth = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 5))
-
-        preck = PrecisionK(2)
-        preck.calculate(truth, predictions)
-        sum = preck.scores_.sum()
-        score = sum / 5
-        assert score == 0.5
-
-        # what if we miss a value?
-        # i.e. 0.5 * 4 / 5 = 0.4
-
-        values = [1] * 5
-        users = [0, 1, 2, 3, 4]
-        items = [1, 0, 3, 2, 3]
-        truth = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 5))
-
-        preck = PrecisionK(2)
-        preck.calculate(truth, predictions)
-        sum = preck.scores_.sum()
-        score = sum / 5
-        assert score == 0.4
+def test__window():
+    # todo what about the error for small values?
+    prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="averaged_precision",
+                        batch_size=500, max_epochs=10, prints_every_epoch=1)
+    sequence = [
+        ['computer', 'artificial', 'intelligence', 'dog', 'trees'],
+        ['human', 'intelligence', 'cpu', 'graph'],
+        ['intelligence'],
+        ['artificial', 'intelligence', 'system']
+    ]
+    # Create a window of size 3:
+    # sequence 1: 5 windows
+    # sequence 2: 4 windows
+    # sequence 3: 1 window
+    # sequence 4: 3 window
+    # => 13 windows
+    windowed_seq = prod2vec._window(sequence, 1)
+    row, col = windowed_seq.shape
+    assert row == 13
+    assert col == 3
 
 
-    def test_train_predict(self, thirty_music_small):
-        # create some training data
-        users = [0, 0, 0, 1, 1, 1, 2, 2, 2]
-        items = [0, 1, 2, 0, 1, 2, 3, 4, 5]
-        values = [1] * len(users)
-        train = scipy.sparse.csr_matrix((values, (users, items)))
-        train = InteractionMatrix.from_csr_matrix(train)
+def test_predict(p2v_embedding):
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+                        K=2)
+    target, embedding = p2v_embedding
+    prod2vec._init_model(target)
+    # replace the model's embedding by a pre-defined embedding
+    prod2vec.model_.embeddings = embedding
+    predictions = prod2vec.predict(target)
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+    # get the most similar item for each item
+    max_similarity_items = list(np.argmax(similarity_matrix, axis=1))
+    assert max_similarity_items == [1, 0, 3, 2, 0]
+    # cosine similarities can be calculated by hand easily
+    # only get the most similar item using max
+    assert max(similarity_matrix[0]) == pytest.approx(0.98473, 0.00005)
+    assert max(similarity_matrix[2]) == pytest.approx(0.5, 0.00005)
+    assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
 
-        # predict the closest item to each of the items
-        values = [1] * 6
-        users = [0, 1, 2, 3, 4, 5]
-        items = [0, 1, 2, 3, 4, 5]
-        target = scipy.sparse.csr_matrix((values, (users, items)))
-        target = InteractionMatrix.from_csr_matrix(target)
+    # let's create some truth values:
+    # the truth values are equal to the most similar product according to the similarity matrix
+    # this means the following should hold:
+    # - each prediction should be present in the top 2 (k=2)
+    # - a value of 1/2 (1/k) is added when we a hit
+    # - the final score is the sum of all values divided by the number of predictions
+    # i.e. 0.5*5/5 = 0.5
 
-        prod2vec = Prod2Vec(vector_size=5, item_vocabulary=6)
-        # Note: overfitting to make sure we get "deterministic" results
-        embedding = prod2vec.fit(train, 2, 1, num_epochs=200, batch=20)
-        # get the most similar item to each item
-        predictions = prod2vec.predict(1, target, embedding, batch_size=2)
-        similarity_matrix = prod2vec.similarity_matrix_.toarray()
-        # get the most similar item for each item
-        max_similarity_items = list(np.argmax(similarity_matrix, axis=1))
-        # Note: 3,4,5 should be close together in the vectors space -> 0,1,2 shouldn't be the most similar to either 3,4,5
-        assert 0 not in max_similarity_items[3:]
-        assert 1 not in max_similarity_items[3:]
-        assert 2 not in max_similarity_items[3:]
-        # Note: 0,1,2 should be close together in the vectors space -> 3,4,5 shouldn't be the most similar to either 0,1,2
-        assert 3 not in max_similarity_items[:3]
-        assert 4 not in max_similarity_items[:3]
-        assert 5 not in max_similarity_items[:3]
+    values = [1] * 5
+    users = [0, 1, 2, 3, 4]
+    items = [1, 0, 3, 2, 0]
+    truth = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 5))
 
-    def test__group_by_user(self, thirty_music_small):
-        df, im, prod2vec = thirty_music_small
-        unique_users = df[['user_id']].nunique()[0]
-        user_list = prod2vec._sorted_item_history(im)
-        assert len(user_list) == unique_users
-        for index, user in enumerate(user_list):
-            len_user_sequence_df = len(im._df[im._df['uid'] == index])
-            len_user_sequence_dict = len(user)
-            assert len_user_sequence_dict == len_user_sequence_df
+    preck = PrecisionK(2)
+    preck.calculate(truth, predictions)
+    sum = preck.scores_.sum()
+    score = sum / 5
+    assert score == 0.5
 
-    def test__window(self, thirty_music_small):
-        prod2vec = Prod2Vec(vector_size=50, item_vocabulary=5)
-        sequence = [
-            ['computer', 'artificial', 'intelligence', 'dog', 'trees'],
-            ['human', 'intelligence', 'cpu', 'graph'],
-            ['intelligence'],
-            ['artificial', 'intelligence', 'system']
-        ]
-        # create a window of size 3: sequence 1: 3 windows, sequence 2: 2 windows, sequence 4: 1 window => 6 windows
-        windowed_seq = prod2vec._window(sequence, 3)
-        row, col = windowed_seq.shape
-        assert row == 6
-        assert col == 3
+    # what if we miss a value?
+    # i.e. 0.5 * 4 / 5 = 0.4
 
-    def test_save_load(self, thirty_music_small):
-        df, im, prod2vec = thirty_music_small
-        model_path = './save_model_test.pt'
-        matrix_path = './save_matrix_test.npy'
-        prod2vec.save(model_path, matrix_path)
-        prod2vec.load(model_path)
-        os.remove(model_path)
+    values = [1] * 5
+    users = [0, 1, 2, 3, 4]
+    items = [1, 0, 3, 2, 3]
+    truth = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 5))
+
+    preck = PrecisionK(2)
+    preck.calculate(truth, predictions)
+    sum = preck.scores_.sum()
+    score = sum / 5
+    assert score == 0.4
+
+
+def test_predict_warning(p2v_embedding):
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+                        K=6)
+    target, embedding = p2v_embedding
+    prod2vec._init_model(target)
+    prod2vec.model_.embeddings = embedding
+    with pytest.warns(UserWarning, match='K is larger than the number of items.'):
+        prod2vec.predict(target)
+
+
+def test_train_predict():
+    data = {
+        "user": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+        "item": [0, 1, 2, 0, 1, 0, 1, 2, 0, 1, 3, 4, 5, 3, 4],
+        "timestamp": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    }
+    df = pd.DataFrame.from_dict(data)
+    im = InteractionMatrix(df, "item", "user", timestamp_ix="timestamp")
+    scenario = NextItemPrediction(validation=True)
+    scenario.split(im)
+    train = scenario.train_X
+    val_data_in = to_csr_matrix(scenario._validation_data_in)
+    val_data_out = to_csr_matrix(scenario._validation_data_out)
+
+    # overfitting to make sure we get "deterministic" results
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+                        batch_size=2, max_epochs=200, prints_every_epoch=1, K=2)
+    prod2vec.fit(train, (val_data_in, val_data_out))
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+    # get the most similar item for each item
+    max_similarity_items = list(np.argmax(similarity_matrix, axis=1))
+    # 3,4,5 should be close together in the vectors space -> 0,1,2 shouldn't be the most similar to either 3,4,5
+    assert 0 not in max_similarity_items[3:]
+    assert 1 not in max_similarity_items[3:]
+    assert 2 not in max_similarity_items[3:]
+    # 0,1,2 should be close together in the vectors space -> 3,4,5 shouldn't be the most similar to either 0,1,2
+    assert 3 not in max_similarity_items[:3]
+    assert 4 not in max_similarity_items[:3]
+    assert 5 not in max_similarity_items[:3]
+
+
+def test_save_load(p2v_embedding):
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+                        K=2)
+    target, embedding = p2v_embedding
+    prod2vec._init_model(target)
+    prod2vec.model_.embeddings = embedding
+    # saving and loading should work
+    prod2vec.save()
+    prod2vec.load(prod2vec.filename)
+    prod2vec.predict(target)
+    os.remove(prod2vec.filename)

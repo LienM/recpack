@@ -46,3 +46,12 @@ class PrecisionK(ListwiseMetricK):
         self.scores_ = csr_matrix(scores.sum(axis=1)) / self.K
 
         return
+
+def precision_k_averaged(y_true, y_pred, k=10):
+    '''
+    Sum precision values and average over users.
+    '''
+    p = PrecisionK(k)
+    p.calculate(y_true, y_pred)
+    score = p.scores_.sum() / y_true.shape[0]
+    return score
