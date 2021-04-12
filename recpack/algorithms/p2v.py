@@ -15,6 +15,7 @@ from recpack.data.matrix import InteractionMatrix
 from recpack.data.matrix import Matrix
 from recpack.data.matrix import to_binary
 from recpack.algorithms.samplers import sample_positives_and_negatives
+from recpack.data.matrix import to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -26,7 +27,7 @@ class Prod2Vec(TorchMLAlgorithm):
                  stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.01, seed=None,
                  save_best_to_file=False):
         super(Prod2Vec, self).__init__(batch_size, max_epochs, learning_rate, stopping_criterion, stop_early,
-                                  max_iter_no_change, min_improvement, seed, save_best_to_file)
+                                       max_iter_no_change, min_improvement, seed, save_best_to_file)
         self.embedding_size = embedding_size
         self.negative_samples = negative_samples
         self.window_size = window_size
@@ -180,6 +181,9 @@ class Prod2Vec(TorchMLAlgorithm):
         co_occurrence = co_occurrence.tocsr()
         yield from sample_positives_and_negatives(X=co_occurrence, U=negative_samples, batch_size=batch, replace=True,
                                                   exact=True, positives=positives)
+
+    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
+        return X, to_csr_matrix(validation_data, binary=True)
 
 
 class SkipGram(nn.Module):

@@ -607,9 +607,7 @@ class TorchMLAlgorithm(Algorithm):
         assert X.shape == validation_data[1].shape
 
         # Transform training and validation data to the expected types
-        # Todo (!!!) this part makes large part of p2v incompatible with interface
-        # -> Need access to Interaction matrix (for ._df) in sorted_item_history
-        # X, validation_data = self._transform_fit_input(X, validation_data)
+        X, validation_data = self._transform_fit_input(X, validation_data)
 
         # Construct variable which will maintain the best model through training
         self.best_model = tempfile.NamedTemporaryFile()
