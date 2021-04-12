@@ -25,7 +25,7 @@ class Prod2Vec(TorchMLAlgorithm):
                  prints_every_epoch=1,
                  stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.01, seed=None,
                  save_best_to_file=False):
-        TorchMLAlgorithm.__init__(self, batch_size, max_epochs, learning_rate, stopping_criterion, stop_early,
+        super(Prod2Vec, self).__init__(batch_size, max_epochs, learning_rate, stopping_criterion, stop_early,
                                   max_iter_no_change, min_improvement, seed, save_best_to_file)
         self.embedding_size = embedding_size
         self.negative_samples = negative_samples
