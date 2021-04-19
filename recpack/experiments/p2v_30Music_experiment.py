@@ -20,7 +20,7 @@ val_data_in = to_csr_matrix(val_data_in)
 val_data_out = to_csr_matrix(val_data_out)
 
 # Initialize the model
-prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="averaged_precision", batch_size=500, max_epochs=3, prints_every_epoch=1, min_improvement=0.00001)
+prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="precision", batch_size=500, max_epochs=3, prints_every_epoch=1, min_improvement=0.00001)
 # Fit the model on training data
 prod2vec.fit(train, (val_data_in, val_data_out))
 

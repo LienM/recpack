@@ -12,7 +12,7 @@ from recpack.data.matrix import to_csr_matrix
 
 def test__window():
     # todo what about the error for small values?
-    prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="averaged_precision",
+    prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="precision",
                         batch_size=500, max_epochs=10, prints_every_epoch=1)
     sequence = [
         ['computer', 'artificial', 'intelligence', 'dog', 'trees'],
@@ -33,7 +33,7 @@ def test__window():
 
 
 def test_predict(p2v_embedding):
-    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
                         K=2)
     target, embedding = p2v_embedding
     prod2vec._init_model(target)
@@ -65,9 +65,7 @@ def test_predict(p2v_embedding):
 
     preck = PrecisionK(2)
     preck.calculate(truth, predictions)
-    sum = preck.scores_.sum()
-    score = sum / 5
-    assert score == 0.5
+    assert preck.value == 0.5
 
     # what if we miss a value?
     # i.e. 0.5 * 4 / 5 = 0.4
@@ -79,13 +77,11 @@ def test_predict(p2v_embedding):
 
     preck = PrecisionK(2)
     preck.calculate(truth, predictions)
-    sum = preck.scores_.sum()
-    score = sum / 5
-    assert score == 0.4
+    assert preck.value == 0.4
 
 
 def test_predict_warning(p2v_embedding):
-    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
                         K=6)
     target, embedding = p2v_embedding
     prod2vec._init_model(target)
@@ -109,7 +105,7 @@ def test_train_predict():
     val_data_out = to_csr_matrix(scenario._validation_data_out)
 
     # overfitting to make sure we get "deterministic" results
-    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
                         batch_size=2, max_epochs=200, prints_every_epoch=1, K=2)
     prod2vec.fit(train, (val_data_in, val_data_out))
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
@@ -126,7 +122,7 @@ def test_train_predict():
 
 
 def test_save_load(p2v_embedding):
-    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="averaged_precision",
+    prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
                         K=2)
     target, embedding = p2v_embedding
     prod2vec._init_model(target)

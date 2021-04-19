@@ -6,7 +6,6 @@ from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import ListwiseMetricK
 
-
 logger = logging.getLogger("recpack")
 
 
@@ -35,7 +34,6 @@ class PrecisionK(ListwiseMetricK):
         super().__init__(K)
 
     def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
-
         scores = scipy.sparse.lil_matrix(y_pred_top_K.shape)
 
         # Elementwise multiplication of top K predicts and true interactions
@@ -47,11 +45,8 @@ class PrecisionK(ListwiseMetricK):
 
         return
 
-def precision_k_averaged(y_true, y_pred, k=10):
-    '''
-    Sum precision values and average over users.
-    '''
+
+def precision_k(y_true, y_pred, k=10):
     p = PrecisionK(k)
     p.calculate(y_true, y_pred)
-    score = p.scores_.sum() / y_true.shape[0]
-    return score
+    return p.value
