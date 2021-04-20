@@ -152,10 +152,10 @@ def test_raises(dataframe):
     )
 
     with pytest.raises(RuntimeError):
-        processor.map_users(dataframe)
+        processor._map_users(dataframe)
 
     with pytest.raises(RuntimeError):
-        processor.map_items(dataframe)
+        processor._map_items(dataframe)
 
 
 def test_dataframe_preprocessor_w_filter_no_duplicates(dataframe):
