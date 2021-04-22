@@ -158,8 +158,8 @@ class BPRMF(TorchMLAlgorithm):
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
-        self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
-        self.steps = 0
+        self.optimizer = optim.SGD(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
         """Predict scores for matrix X, given the selected users.
@@ -192,7 +192,6 @@ class BPRMF(TorchMLAlgorithm):
         :type train_data: csr_matrix
         """
         losses = []
-        self.model_.train()
 
         # For each positive item sample a single negative item.
         for users, target_items, mnar_items in tqdm(
@@ -218,15 +217,13 @@ class BPRMF(TorchMLAlgorithm):
             mnar_sim = self.model_.forward(users, mnar_items).diag()
 
             # Checks to make sure the shapes are correct.
-            assert mnar_sim.shape == target_sim.shape
-            assert target_sim.shape[0] == users.shape[0]
+            if not (mnar_sim.shape == target_sim.shape) or (target_sim.shape[0] == users.shape[0]):
+                raise ValueError("Shapes should match")
 
             loss = self._compute_loss(target_sim, mnar_sim)
             loss.backward()
             losses.append(loss.item())
             self.optimizer.step()
-
-            self.steps += 1
 
     def _compute_loss(self, positive_sim, negative_sim):
 
@@ -257,8 +254,10 @@ class MFModule(nn.Module):
         self.num_users = num_users
         self.num_items = num_items
 
-        self.user_embedding_ = nn.Embedding(num_users, num_components)  # User embedding
-        self.item_embedding_ = nn.Embedding(num_items, num_components)  # Item embedding
+        self.user_embedding_ = nn.Embedding(
+            num_users, num_components)  # User embedding
+        self.item_embedding_ = nn.Embedding(
+            num_items, num_components)  # Item embedding
 
         self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
