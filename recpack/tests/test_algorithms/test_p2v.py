@@ -13,7 +13,7 @@ from recpack.data.matrix import to_csr_matrix
 def test__window():
     # todo what about the error for small values?
     prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="precision",
-                        batch_size=500, max_epochs=10, prints_every_epoch=1)
+                        batch_size=500, max_epochs=10)
     sequence = [
         ['computer', 'artificial', 'intelligence', 'dog', 'trees'],
         ['human', 'intelligence', 'cpu', 'graph'],
@@ -106,7 +106,7 @@ def test_train_predict():
 
     # overfitting to make sure we get "deterministic" results
     prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
-                        batch_size=2, max_epochs=200, prints_every_epoch=1, K=2)
+                        batch_size=2, max_epochs=200, K=2)
     prod2vec.fit(train, (val_data_in, val_data_out))
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
     # get the most similar item for each item

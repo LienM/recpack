@@ -15,6 +15,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.data.matrix import InteractionMatrix, Matrix, to_binary, to_csr_matrix
 from recpack.algorithms.samplers import sample_positives_and_negatives
+from recpack.algorithms.util import sample_rows
+
 
 logger = logging.getLogger("recpack")
 
@@ -67,8 +69,6 @@ class Prod2Vec(TorchMLAlgorithm):
     :type save_best_to_file: bool, optional
     :param K: for top-K most similar items
     :rtype k: int
-    :param prints_every_epoch: when to print epoch loss
-    :rtype prints_every_epoch: int
     :param replace: sample with or without replacement (see sample_positives_and_negatives)
     :rtype replace: bool
     :param exact: If False (default) negatives are checked against the corresponding positive sample only, allowing for (rare) collisions.
@@ -78,7 +78,6 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def __init__(self, embedding_size: int, negative_samples: int,
                  window_size: int, stopping_criterion: str, K=10, batch_size=1000, learning_rate=0.01, max_epochs=10,
-                 prints_every_epoch=1,
                  stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.01, seed=None,
                  save_best_to_file=False, replace=False, exact=False):
 
@@ -87,7 +86,6 @@ class Prod2Vec(TorchMLAlgorithm):
         self.embedding_size = embedding_size
         self.negative_samples = negative_samples
         self.window_size = window_size
-        self.prints_every_epoch = prints_every_epoch
         self.similarity_matrix_ = None
         self.K = K
         self.replace = replace
@@ -99,8 +97,11 @@ class Prod2Vec(TorchMLAlgorithm):
             self.model_.parameters(), lr=self.learning_rate)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
-        predictions = self._batch_predict(val_in)
-        better = self.stopping_criterion.update(val_out, predictions)
+        val_in_selection, val_out_selection = sample_rows(
+            val_in, val_out, sample_size=1000)
+        predictions = self._batch_predict(val_in_selection)
+        better = self.stopping_criterion.update(val_out_selection, predictions)
+
         if better:
             logger.info("Model improved. Storing better model.")
             self._save_best()
