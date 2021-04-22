@@ -1,21 +1,20 @@
 import logging
-import torch
-import scipy
 import time
+from typing import Tuple
 import warnings
-import torch.nn as nn
-import torch.optim as optim
+
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
+import scipy
 from scipy.sparse import csr_matrix
+import torch
+import torch.nn as nn
+import torch.optim as optim
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import Tuple
+
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.data.matrix import InteractionMatrix
-from recpack.data.matrix import Matrix
-from recpack.data.matrix import to_binary
+from recpack.data.matrix import InteractionMatrix, Matrix, to_binary, to_csr_matrix
 from recpack.algorithms.samplers import sample_positives_and_negatives
-from recpack.data.matrix import to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -95,7 +94,8 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size)
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model_.parameters(), lr=self.learning_rate)
         self.epoch = 0
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
@@ -111,12 +111,14 @@ class Prod2Vec(TorchMLAlgorithm):
         epoch_loss = 0.0
         n_batches = 0
         # generator will just be restarted for each epoch.
-        generator = self._training_generator(X, self.negative_samples, self.window_size, batch=self.batch_size)
+        generator = self._training_generator(
+            X, self.negative_samples, self.window_size, batch=self.batch_size)
         for focus_batch, positives_batch, negatives_batch in generator:
             focus_vectors = self.model_.get_embeddings(focus_batch)
             positives_vectors = self.model_.get_embeddings(positives_batch)
             negatives_vectors = self.model_.get_embeddings(negatives_batch)
-            loss = self.model_.negative_sampling_loss(focus_vectors, positives_vectors, negatives_vectors)
+            loss = self.model_.negative_sampling_loss(
+                focus_vectors, positives_vectors, negatives_vectors)
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -139,10 +141,12 @@ class Prod2Vec(TorchMLAlgorithm):
         if K > num_items:
             K = num_items
             warnings.warn("K is larger than the number of items.", UserWarning)
-        item_cosine_similarity_ = scipy.sparse.lil_matrix((num_items, num_items))
+        item_cosine_similarity_ = scipy.sparse.lil_matrix(
+            (num_items, num_items))
         for batch in range(0, num_items, self.batch_size):
             Y = embedding[batch:batch + self.batch_size]
-            item_cosine_similarity_batch = csr_matrix(cosine_similarity(Y, embedding))
+            item_cosine_similarity_batch = csr_matrix(
+                cosine_similarity(Y, embedding))
 
             indices = [(i, j) for i, best_items_row in
                        enumerate(np.argpartition(item_cosine_similarity_batch.toarray(), -K)) for j in
@@ -151,8 +155,10 @@ class Prod2Vec(TorchMLAlgorithm):
             mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))),
                                            shape=(Y.shape[0], num_items))
 
-            item_cosine_similarity_batch = item_cosine_similarity_batch.multiply(mask)
-            item_cosine_similarity_[batch:batch + self.batch_size] = item_cosine_similarity_batch
+            item_cosine_similarity_batch = item_cosine_similarity_batch.multiply(
+                mask)
+            item_cosine_similarity_[
+                batch:batch + self.batch_size] = item_cosine_similarity_batch
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
@@ -195,7 +201,8 @@ class Prod2Vec(TorchMLAlgorithm):
         :returns: windowed sequences
         :rtype: numpy.ndarray
         '''
-        padded_sequences = [[np.NAN] * window_size + s + [np.NAN] * window_size for s in sequences]
+        padded_sequences = [[np.NAN] * window_size +
+                            s + [np.NAN] * window_size for s in sequences]
         w = [w.tolist() for sequence in padded_sequences if len(sequence) >= window_size for w in
              sliding_window_view(sequence, 2 * window_size + 1)]
         return np.array(w)
@@ -219,7 +226,8 @@ class Prod2Vec(TorchMLAlgorithm):
         # group and window
         sequences = self._sorted_item_history(X)
         windowed_sequences = self._window(sequences, window_size)
-        context = np.hstack((windowed_sequences[:, :window_size], windowed_sequences[:, window_size + 1:]))
+        context = np.hstack(
+            (windowed_sequences[:, :window_size], windowed_sequences[:, window_size + 1:]))
         focus = windowed_sequences[:, window_size]
         # stack
         positives = np.empty((0, 2), dtype=int)
@@ -232,7 +240,8 @@ class Prod2Vec(TorchMLAlgorithm):
         focus_items = positives[:, 0]
         pos_items = positives[:, 1]
         values = [1] * len(focus_items)
-        positives_csr = scipy.sparse.csr_matrix((values, (focus_items, pos_items)), shape=(X.shape[1], X.shape[1]))
+        positives_csr = scipy.sparse.csr_matrix(
+            (values, (focus_items, pos_items)), shape=(X.shape[1], X.shape[1]))
         co_occurrence = to_binary(positives_csr + positives_csr.T)
         co_occurrence = scipy.sparse.lil_matrix(co_occurrence)
         co_occurrence.setdiag(1)
@@ -260,6 +269,7 @@ class SkipGram(nn.Module):
         # Focus vector and positive vector calculation:
         loss = torch.bmm(positive_vectors, focus_vectors).sigmoid().log()
         # Focus vector and negative vectors calculation:
-        neg_loss = torch.bmm(negative_vectors.neg(), focus_vectors).sigmoid().log()
+        neg_loss = torch.bmm(negative_vectors.neg(),
+                             focus_vectors).sigmoid().log()
         neg_loss = neg_loss.squeeze().sum(1)
         return -(loss + neg_loss).mean()
