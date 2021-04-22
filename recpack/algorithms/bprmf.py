@@ -217,13 +217,15 @@ class BPRMF(TorchMLAlgorithm):
             mnar_sim = self.model_.forward(users, mnar_items).diag()
 
             # Checks to make sure the shapes are correct.
-            if not (mnar_sim.shape == target_sim.shape) or (target_sim.shape[0] == users.shape[0]):
-                raise ValueError("Shapes should match")
+            if not ((mnar_sim.shape == target_sim.shape) or (target_sim.shape[0] == users.shape[0])):
+                raise AssertionError("Shapes should match")
 
             loss = self._compute_loss(target_sim, mnar_sim)
             loss.backward()
             losses.append(loss.item())
             self.optimizer.step()
+
+        return losses
 
     def _compute_loss(self, positive_sim, negative_sim):
 

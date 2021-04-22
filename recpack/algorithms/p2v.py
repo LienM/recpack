@@ -20,69 +20,70 @@ logger = logging.getLogger("recpack")
 
 
 class Prod2Vec(TorchMLAlgorithm):
+    """
+    Prod2Vec algorithm from the paper: "E-commerce in Your Inbox: Product Recommendations at Scale". (https://arxiv.org/abs/1606.07154)
+
+    Extends the TorchMLAlgorithm class.
+
+    :param embedding_size: size of the embedding vectors
+    :type embedding_size: int
+    :param negative_samples: number of negative samples per positive sample
+    :rtype negative_samples: int
+    :param window_size: number of elements to the left and right of the target
+    :rtype: int
+    :param batch_size: How many samples to use in each update step.
+    Higher batch sizes make each epoch more efficient,
+    but increases the amount of epochs needed to converge to the optimum,
+    by reducing the amount of updates per epoch.
+    :type batch_size: int
+    :param max_epochs: The max number of epochs to train.
+        If the stopping criterion uses early stopping, less epochs could be used.
+    :type max_epochs: int
+    :param learning_rate: How much to update the weights at each update.
+    :type learning_rate: float
+    :param stopping_criterion: Name of the stopping criterion to use for training.
+        For available values,
+        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
+    :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
+        Defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.01
+    :type min_improvement: float, optional
+    :param seed: Seed to the randomizers, useful for reproducible results,
+        defaults to None
+    :type seed: int, optional
+    :param save_best_to_file: If true, the best model will be saved after training,
+        defaults to False
+    :type save_best_to_file: bool, optional
+    :param K: for top-K most similar items
+    :rtype k: int
+    :param prints_every_epoch: when to print epoch loss
+    :rtype prints_every_epoch: int
+    :param replace: sample with or without replacement (see sample_positives_and_negatives)
+    :rtype replace: bool
+    :param exact: If False (default) negatives are checked against the corresponding positive sample only, allowing for (rare) collisions.
+    If collisions should be avoided at all costs, use exact = True, but suffer decreased performance. (see sample_positives_and_negatives)
+    :rtype exact: bool
+    """
+
     def __init__(self, embedding_size: int, negative_samples: int,
                  window_size: int, stopping_criterion: str, K=10, batch_size=1000, learning_rate=0.01, max_epochs=10,
                  prints_every_epoch=1,
                  stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.01, seed=None,
                  save_best_to_file=False, replace=False, exact=False):
-        '''
-        Prod2Vec algorithm from the paper: "E-commerce in Your Inbox: Product Recommendations at Scale". (https://arxiv.org/abs/1606.07154)
 
-        Extends the TorchMLAlgorithm class.
-
-        :param embedding_size: size of the embedding vectors
-        :type embedding_size: int
-        :param negative_samples: number of negative samples per positive sample
-        :rtype negative_samples: int
-        :param window_size: number of elements to the left and right of the target
-        :rtype: int
-        :param batch_size: How many samples to use in each update step.
-        Higher batch sizes make each epoch more efficient,
-        but increases the amount of epochs needed to converge to the optimum,
-        by reducing the amount of updates per epoch.
-        :type batch_size: int
-        :param max_epochs: The max number of epochs to train.
-            If the stopping criterion uses early stopping, less epochs could be used.
-        :type max_epochs: int
-        :param learning_rate: How much to update the weights at each update.
-        :type learning_rate: float
-        :param stopping_criterion: Name of the stopping criterion to use for training.
-            For available values,
-            check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
-        :type stopping_criterion: str
-        :param stop_early: If True, early stopping is enabled,
-            and after ``max_iter_no_change`` iterations where improvement of loss function
-            is below ``min_improvement`` the optimisation is stopped,
-            even if max_epochs is not reached.
-            Defaults to False
-        :type stop_early: bool, optional
-        :param max_iter_no_change: If early stopping is enabled,
-            stop after this amount of iterations without change.
-            Defaults to 5
-        :type max_iter_no_change: int, optional
-        :param min_improvement: If early stopping is enabled, no change is detected,
-            if the improvement is below this value.
-            Defaults to 0.01
-        :type min_improvement: float, optional
-        :param seed: Seed to the randomizers, useful for reproducible results,
-            defaults to None
-        :type seed: int, optional
-        :param save_best_to_file: If true, the best model will be saved after training,
-            defaults to False
-        :type save_best_to_file: bool, optional
-        :param K: for top-K most similar items
-        :rtype k: int
-        :param prints_every_epoch: when to print epoch loss
-        :rtype prints_every_epoch: int
-        :param replace: sample with or without replacement (see sample_positives_and_negatives)
-        :rtype replace: bool
-        :param exact: If False (default) negatives are checked against the corresponding positive sample only, allowing for (rare) collisions.
-        If collisions should be avoided at all costs, use exact = True, but suffer decreased performance. (see sample_positives_and_negatives)
-        :rtype exact: bool
-        '''
-
-        super(Prod2Vec, self).__init__(batch_size, max_epochs, learning_rate, stopping_criterion, stop_early,
-                                       max_iter_no_change, min_improvement, seed, save_best_to_file)
+        super().__init__(batch_size, max_epochs, learning_rate, stopping_criterion, stop_early,
+                         max_iter_no_change, min_improvement, seed, save_best_to_file)
         self.embedding_size = embedding_size
         self.negative_samples = negative_samples
         self.window_size = window_size
@@ -96,7 +97,6 @@ class Prod2Vec(TorchMLAlgorithm):
         self.model_ = SkipGram(X.shape[1], self.embedding_size)
         self.optimizer = optim.Adam(
             self.model_.parameters(), lr=self.learning_rate)
-        self.epoch = 0
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
         predictions = self._batch_predict(val_in)
@@ -107,9 +107,7 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _train_epoch(self, X: csr_matrix) -> None:
         assert self.model_ is not None
-        start = time.time()
-        epoch_loss = 0.0
-        n_batches = 0
+        losses = []
         # generator will just be restarted for each epoch.
         generator = self._training_generator(
             X, self.negative_samples, self.window_size, batch=self.batch_size)
@@ -122,16 +120,9 @@ class Prod2Vec(TorchMLAlgorithm):
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
-            epoch_loss += loss.item()
-            n_batches += 1
-        # the epoch loss with averaging over number of batches
-        epoch_loss = epoch_loss / n_batches
-        end = time.time()
-        self.epoch += 1
-        # Note: would it be cleaner to have a printing option in TorchMLAlgorithm fit?
-        if self.epoch % self.prints_every_epoch == 0:
-            print(
-                f'Epoch [{self.epoch}/{self.max_epochs}] (in {int((end - start))}s) Epoch Loss: {epoch_loss:.4f}')
+            losses.append(loss.item())
+
+        return losses
 
     def _batch_predict(self, X: csr_matrix):
         # need K+1 since we set diagonal to zero after calculating top-K
