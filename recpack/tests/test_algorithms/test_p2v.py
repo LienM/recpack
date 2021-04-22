@@ -15,10 +15,10 @@ def test__window():
     prod2vec = Prod2Vec(embedding_size=50, negative_samples=5, window_size=2, stopping_criterion="precision",
                         batch_size=500, max_epochs=10)
     sequence = [
-        ['computer', 'artificial', 'intelligence', 'dog', 'trees'],
-        ['human', 'intelligence', 'cpu', 'graph'],
-        ['intelligence'],
-        ['artificial', 'intelligence', 'system']
+        (123, ['computer', 'artificial', 'intelligence', 'dog', 'trees']),
+        (145, ['human', 'intelligence', 'cpu', 'graph']),
+        (1, ['intelligence']),
+        (3, ['artificial', 'intelligence', 'system'])
     ]
     # Create a window of size 3:
     # sequence 1: 5 windows

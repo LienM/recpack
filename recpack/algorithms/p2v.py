@@ -106,7 +106,7 @@ class Prod2Vec(TorchMLAlgorithm):
             logger.info("Model improved. Storing better model.")
             self._save_best()
 
-    def _train_epoch(self, X: csr_matrix) -> None:
+    def _train_epoch(self, X: csr_matrix) -> list:
         assert self.model_ is not None
         losses = []
         # generator will just be restarted for each epoch.
@@ -165,23 +165,6 @@ class Prod2Vec(TorchMLAlgorithm):
         logger.debug(f"shape of response ({results.shape})")
         return results.tocsr()
 
-    def _sorted_item_history(self, X: InteractionMatrix) -> list:
-        # TODO don't think there is a sorted_item_history in recpack
-        # Note: this is not a generator as similar methods in InteractionMatrix
-        """
-        Group sessions (products) by user.
-
-        Returns a list of lists.
-        Each list represents a user's sequence of purchased products.
-        Each product is designated by it's iid.
-
-        :param: X: InteractionMatrix
-        :returns: list of lists
-        """
-        df = X._df[['iid', 'uid']]
-        grouped_df = df.groupby(['uid'])['iid'].apply(list)
-        return grouped_df.values.tolist()
-
     def _window(self, sequences, window_size):
         '''
         Will apply a windowing operation to a sequence of item sequences.
@@ -194,7 +177,7 @@ class Prod2Vec(TorchMLAlgorithm):
         :rtype: numpy.ndarray
         '''
         padded_sequences = [[np.NAN] * window_size +
-                            s + [np.NAN] * window_size for s in sequences]
+                            list(s) + [np.NAN] * window_size for uid, s in sequences]
         w = [w.tolist() for sequence in padded_sequences if len(sequence) >= window_size for w in
              sliding_window_view(sequence, 2 * window_size + 1)]
         return np.array(w)
@@ -216,8 +199,7 @@ class Prod2Vec(TorchMLAlgorithm):
         :rtype: Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]
         '''
         # group and window
-        sequences = self._sorted_item_history(X)
-        windowed_sequences = self._window(sequences, window_size)
+        windowed_sequences = self._window(X.sorted_item_history, window_size)
         context = np.hstack(
             (windowed_sequences[:, :window_size], windowed_sequences[:, window_size + 1:]))
         focus = windowed_sequences[:, window_size]
