@@ -5,8 +5,7 @@ import warnings
 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
-import scipy
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -16,6 +15,7 @@ from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.data.matrix import InteractionMatrix, Matrix, to_binary, to_csr_matrix
 from recpack.algorithms.samplers import sample_positives_and_negatives
 from recpack.algorithms.util import sample_rows
+from recpack.util import get_top_K_values
 
 
 logger = logging.getLogger("recpack")
@@ -99,6 +99,7 @@ class Prod2Vec(TorchMLAlgorithm):
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
         val_in_selection, val_out_selection = sample_rows(
             val_in, val_out, sample_size=1000)
+        self._create_similarity_matrix()
         predictions = self._batch_predict(val_in_selection)
         better = self.stopping_criterion.update(val_out_selection, predictions)
 
@@ -125,35 +126,40 @@ class Prod2Vec(TorchMLAlgorithm):
 
         return losses
 
-    def _batch_predict(self, X: csr_matrix):
-        # need K+1 since we set diagonal to zero after calculating top-K
+    def fit(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]) -> "TorchMLAlgorithm":
+        super().fit(X, validation_data)
+
+        self._create_similarity_matrix()
+
+        return self
+
+    def _create_similarity_matrix(self):
+        # K similar items + self-similarity
         K = self.K + 1
+        batch_size = 1000
+
         embedding = self.model_.embeddings.weight.detach().numpy()
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
             warnings.warn("K is larger than the number of items.", UserWarning)
-        item_cosine_similarity_ = scipy.sparse.lil_matrix(
+
+        item_cosine_similarity_ = lil_matrix(
             (num_items, num_items))
-        for batch in range(0, num_items, self.batch_size):
-            Y = embedding[batch:batch + self.batch_size]
-            item_cosine_similarity_batch = csr_matrix(
-                cosine_similarity(Y, embedding))
 
-            indices = [(i, j) for i, best_items_row in
-                       enumerate(np.argpartition(item_cosine_similarity_batch.toarray(), -K)) for j in
-                       best_items_row[-K:]]
+        for batch in range(0, num_items, batch_size):
+            Y = embedding[batch:batch + batch_size]
 
-            mask = scipy.sparse.csr_matrix(([1 for i in range(len(indices))], (list(zip(*indices)))),
-                                           shape=(Y.shape[0], num_items))
+            item_cosine_similarity_batch = csr_matrix(cosine_similarity(
+                Y, embedding))
 
-            item_cosine_similarity_batch = item_cosine_similarity_batch.multiply(
-                mask)
             item_cosine_similarity_[
-                batch:batch + self.batch_size] = item_cosine_similarity_batch
+                batch:batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
+
+    def _batch_predict(self, X: csr_matrix):
         scores = X @ self.similarity_matrix_
         if not isinstance(scores, csr_matrix):
             scores = csr_matrix(scores)
@@ -214,10 +220,10 @@ class Prod2Vec(TorchMLAlgorithm):
         focus_items = positives[:, 0]
         pos_items = positives[:, 1]
         values = [1] * len(focus_items)
-        positives_csr = scipy.sparse.csr_matrix(
+        positives_csr = csr_matrix(
             (values, (focus_items, pos_items)), shape=(X.shape[1], X.shape[1]))
         co_occurrence = to_binary(positives_csr + positives_csr.T)
-        co_occurrence = scipy.sparse.lil_matrix(co_occurrence)
+        co_occurrence = lil_matrix(co_occurrence)
         co_occurrence.setdiag(1)
         co_occurrence = co_occurrence.tocsr()
         yield from sample_positives_and_negatives(X=co_occurrence, U=negative_samples, batch_size=batch, replace=self.replace,

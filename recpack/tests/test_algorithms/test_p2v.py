@@ -1,8 +1,10 @@
+import os
+
 import pytest
 import numpy as np
-import scipy
-import os
 import pandas as pd
+from scipy.sparse import csr_matrix
+
 from recpack.algorithms.p2v import Prod2Vec
 from recpack.data.matrix import InteractionMatrix
 from recpack.metrics.precision import PrecisionK
@@ -39,6 +41,7 @@ def test_predict(p2v_embedding):
     prod2vec._init_model(target)
     # replace the model's embedding by a pre-defined embedding
     prod2vec.model_.embeddings = embedding
+    prod2vec._create_similarity_matrix()
     predictions = prod2vec.predict(target)
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
     # get the most similar item for each item
@@ -61,7 +64,7 @@ def test_predict(p2v_embedding):
     values = [1] * 5
     users = [0, 1, 2, 3, 4]
     items = [1, 0, 3, 2, 0]
-    truth = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 5))
+    truth = csr_matrix((values, (users, items)), shape=(5, 5))
 
     preck = PrecisionK(2)
     preck.calculate(truth, predictions)
@@ -73,7 +76,7 @@ def test_predict(p2v_embedding):
     values = [1] * 5
     users = [0, 1, 2, 3, 4]
     items = [1, 0, 3, 2, 3]
-    truth = scipy.sparse.csr_matrix((values, (users, items)), shape=(5, 5))
+    truth = csr_matrix((values, (users, items)), shape=(5, 5))
 
     preck = PrecisionK(2)
     preck.calculate(truth, predictions)
@@ -87,7 +90,8 @@ def test_predict_warning(p2v_embedding):
     prod2vec._init_model(target)
     prod2vec.model_.embeddings = embedding
     with pytest.warns(UserWarning, match='K is larger than the number of items.'):
-        prod2vec.predict(target)
+        prod2vec._create_similarity_matrix()
+
 
 
 def test_train_predict():
@@ -130,5 +134,4 @@ def test_save_load(p2v_embedding):
     # saving and loading should work
     prod2vec.save()
     prod2vec.load(prod2vec.filename)
-    prod2vec.predict(target)
     os.remove(prod2vec.filename)
