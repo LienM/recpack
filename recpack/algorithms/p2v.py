@@ -166,9 +166,7 @@ class Prod2Vec(TorchMLAlgorithm):
         return scores
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
-        # todo currently there's no user batching implemented
         results = self._batch_predict(X)
-        logger.debug(f"shape of response ({results.shape})")
         return results.tocsr()
 
     def _window(self, sequences, window_size):
