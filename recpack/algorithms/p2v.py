@@ -176,23 +176,6 @@ class Prod2Vec(TorchMLAlgorithm):
         results = self._batch_predict(X)
         return results.tocsr()
 
-    def _window(self, sequences, window_size):
-        '''
-        Will apply a windowing operation to a sequence of item sequences.
-
-        Note: pads the sequences to make sure edge cases are also accounted for.
-
-        :param sequences: iterable of iterables
-        :param window_size: the size of the window
-        :returns: windowed sequences
-        :rtype: numpy.ndarray
-        '''
-        padded_sequences = [[np.NAN] * window_size +
-                            list(s) + [np.NAN] * window_size for uid, s in sequences]
-        w = [w.tolist() for sequence in padded_sequences if len(sequence) >= window_size for w in
-             sliding_window_view(sequence, 2 * window_size + 1)]
-        return np.array(w)
-
     def _training_generator(self, X: InteractionMatrix, negative_samples: int, window_size: int, batch=1000):
         ''' Creates a training dataset using the skipgrams and negative sampling method.
 
@@ -210,7 +193,7 @@ class Prod2Vec(TorchMLAlgorithm):
         :rtype: Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]
         '''
         # group and window
-        windowed_sequences = self._window(X.sorted_item_history, window_size)
+        windowed_sequences = window(X.sorted_item_history, window_size)
         context = np.hstack(
             (windowed_sequences[:, :window_size], windowed_sequences[:, window_size + 1:]))
         focus = windowed_sequences[:, window_size]
@@ -249,3 +232,21 @@ class SkipGram(nn.Module):
         # Expected of size (batch_size, 1, embedding_dim)
         context_vectors = self.embeddings(context_items_batch)
         return torch.bmm(context_vectors, focus_vector).squeeze(-1)
+
+
+def window(sequences, window_size):
+    '''
+    Will apply a windowing operation to a sequence of item sequences.
+
+    Note: pads the sequences to make sure edge cases are also accounted for.
+
+    :param sequences: iterable of iterables
+    :param window_size: the size of the window
+    :returns: windowed sequences
+    :rtype: numpy.ndarray
+    '''
+    padded_sequences = [[np.NAN] * window_size +
+                        list(s) + [np.NAN] * window_size for uid, s in sequences]
+    w = [w.tolist() for sequence in padded_sequences if len(sequence) >= window_size for w in
+         sliding_window_view(sequence, 2 * window_size + 1)]
+    return np.array(w)

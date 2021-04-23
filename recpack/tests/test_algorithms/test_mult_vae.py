@@ -19,26 +19,6 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 # https://medium.com/@keeper6928/how-to-unit-test-machine-learning-code-57cf6fd81765
 
 
-INPUT_SIZE = 1000
-
-
-@pytest.fixture(scope="function")
-def input_size():
-    return INPUT_SIZE
-
-
-@pytest.fixture(scope="function")
-def inputs():
-    torch.manual_seed(400)
-    return Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
-
-
-@pytest.fixture(scope="function")
-def targets():
-    torch.manual_seed(400)
-    return Variable(torch.randint(0, 2, (INPUT_SIZE,))).long()
-
-
 @pytest.fixture(scope="function")
 def mult_vae():
     mult = MultVAE(
