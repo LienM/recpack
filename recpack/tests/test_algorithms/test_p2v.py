@@ -111,7 +111,6 @@ def test_create_similarity_matrix(prod2vec):
     prod2vec._create_similarity_matrix()
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
 
-    print(similarity_matrix)
     # Get the most similar item for each item
     np.testing.assert_array_equal(
         np.argmax(similarity_matrix, axis=1), [1, 0, 3, 2, 0])
@@ -121,6 +120,18 @@ def test_create_similarity_matrix(prod2vec):
     assert max(similarity_matrix[0]) == pytest.approx(0.98473, 0.00005)
     assert max(similarity_matrix[2]) == pytest.approx(0.5, 0.00005)
     assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
+
+
+def test_batch_predict(prod2vec, mat):
+    prod2vec._create_similarity_matrix()
+    predictions = prod2vec._batch_predict(to_csr_matrix(mat))
+
+    np.testing.assert_array_almost_equal(
+        predictions.toarray(),
+        np.array([[0.98473193, 1.10782342, 0.5, 0.62309149, 1.40341741],
+                  [0.98473193, 0.98473193, 0., 0.62309149, 1.40341741],
+                  [1.69183871, 1.68104255, 0., 0.62309149, 1.40341741]]))
+
 
 #     # let's create some truth values:
 #     # the truth values are equal to the most similar product according to the similarity matrix

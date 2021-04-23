@@ -167,6 +167,7 @@ class Prod2Vec(TorchMLAlgorithm):
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
     def _batch_predict(self, X: csr_matrix):
+        # TODO Do we even need a separate batch_predict method?
         scores = X @ self.similarity_matrix_
         if not isinstance(scores, csr_matrix):
             scores = csr_matrix(scores)

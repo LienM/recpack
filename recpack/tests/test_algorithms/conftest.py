@@ -35,7 +35,7 @@ def targets():
 @pytest.fixture(scope="function")
 def mat():
     data = {TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2], ITEM_IX: [
-        0, 1, 2, 3, 0, 1, 2, 4, 5, 6, 7], USER_IX: [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2]}
+        0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2], USER_IX: [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2]}
     df = pd.DataFrame.from_dict(data)
 
     return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
