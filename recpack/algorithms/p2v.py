@@ -14,6 +14,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.data.matrix import InteractionMatrix, Matrix, to_binary, to_csr_matrix
 from recpack.algorithms.samplers import sample_positives_and_negatives
+from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
 from recpack.algorithms.util import sample_rows
 from recpack.util import get_top_K_values
 
@@ -113,16 +114,19 @@ class Prod2Vec(TorchMLAlgorithm):
         # generator will just be restarted for each epoch.
         generator = self._training_generator(
             X, self.negative_samples, self.window_size, batch=self.batch_size)
+
         for focus_batch, positives_batch, negatives_batch in generator:
-            focus_vectors = self.model_.get_embeddings(focus_batch)
-            positives_vectors = self.model_.get_embeddings(positives_batch)
-            negatives_vectors = self.model_.get_embeddings(negatives_batch)
-            loss = self.model_.negative_sampling_loss(
-                focus_vectors, positives_vectors, negatives_vectors)
-            loss.backward()
-            self.optimizer.step()
             self.optimizer.zero_grad()
+
+            positive_sim = self.model_(
+                focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1))
+            negative_sim = self.model_(
+                focus_batch.unsqueeze(-1), negatives_batch)
+
+            loss = self._compute_loss(positive_sim, negative_sim)
+            loss.backward()
             losses.append(loss.item())
+            self.optimizer.step()
 
         return losses
 
@@ -132,6 +136,9 @@ class Prod2Vec(TorchMLAlgorithm):
         self._create_similarity_matrix()
 
         return self
+
+    def _compute_loss(self, positive_sim, negative_sim):
+        return skipgram_negative_sampling_loss(positive_sim, negative_sim)
 
     def _create_similarity_matrix(self):
         # K similar items + self-similarity
@@ -236,18 +243,9 @@ class SkipGram(nn.Module):
         super(SkipGram, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, vector_size)
 
-    def get_embeddings(self, inputs):
-        vectors = self.embeddings(inputs)
-        return vectors
-
-    def negative_sampling_loss(self, focus_vectors, positive_vectors, negative_vectors):
-        embedding_dim = self.embeddings.embedding_dim
-        focus_vectors = focus_vectors.reshape(-1, embedding_dim, 1)
-        positive_vectors = positive_vectors.reshape(-1, 1, embedding_dim)
-        # Focus vector and positive vector calculation:
-        loss = torch.bmm(positive_vectors, focus_vectors).sigmoid().log()
-        # Focus vector and negative vectors calculation:
-        neg_loss = torch.bmm(negative_vectors.neg(),
-                             focus_vectors).sigmoid().log()
-        neg_loss = neg_loss.squeeze().sum(1)
-        return -(loss + neg_loss).mean()
+    def forward(self, focus_item_batch, context_items_batch):
+        # Create a (batch_size, embedding_dim, 1) tensor
+        focus_vector = torch.movedim(self.embeddings(focus_item_batch), 1, 2)
+        # Expected of size (batch_size, 1, embedding_dim)
+        context_vectors = self.embeddings(context_items_batch)
+        return torch.bmm(context_vectors, focus_vector).squeeze(-1)

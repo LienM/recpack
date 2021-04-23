@@ -93,7 +93,6 @@ def test_predict_warning(p2v_embedding):
         prod2vec._create_similarity_matrix()
 
 
-
 def test_train_predict():
     data = {
         "user": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
@@ -105,12 +104,12 @@ def test_train_predict():
     scenario = NextItemPrediction(validation=True)
     scenario.split(im)
     train = scenario.train_X
-    val_data_in = to_csr_matrix(scenario._validation_data_in)
-    val_data_out = to_csr_matrix(scenario._validation_data_out)
+    val_data_in = scenario._validation_data_in
+    val_data_out = scenario._validation_data_out
 
     # overfitting to make sure we get "deterministic" results
     prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
-                        batch_size=2, max_epochs=200, K=2)
+                        batch_size=2, max_epochs=50, K=2)
     prod2vec.fit(train, (val_data_in, val_data_out))
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
     # get the most similar item for each item

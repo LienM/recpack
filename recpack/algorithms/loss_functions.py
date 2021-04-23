@@ -135,7 +135,6 @@ def skipgram_negative_sampling_loss(positive_sim: torch.Tensor, negative_sim: to
     pos_loss = positive_sim.sigmoid().log()
     neg_loss = negative_sim.neg().sigmoid().log().sum(-1)
 
-
     return - (pos_loss + neg_loss).mean()
 
 
