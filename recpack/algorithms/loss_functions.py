@@ -69,7 +69,8 @@ def vae_loss(reconstructed_X, mu, logvar, X, anneal=1.0):
     """
 
     BCE = -torch.mean(torch.sum(F.log_softmax(reconstructed_X, 1) * X, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
+                                      mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD
 
@@ -130,7 +131,15 @@ def warp_loss(
     return loss
 
 
-def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor):
+def skipgram_negative_sampling_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
+    pos_loss = positive_sim.sigmoid().log()
+    neg_loss = negative_sim.neg().sigmoid().log().sum(-1)
+
+
+    return - (pos_loss + neg_loss).mean()
+
+
+def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
     """Implementation of the Bayesian Personalized Ranking loss.
 
     BPR loss as defined in Rendle, Steffen, et al.
@@ -270,9 +279,11 @@ def warp_loss_wrapper(
             .tolist(),
         ]
 
-        dist_pos_interaction = torch.tensor(dist_pos_interaction.A[0]).unsqueeze(-1)
+        dist_pos_interaction = torch.tensor(
+            dist_pos_interaction.A[0]).unsqueeze(-1)
         dist_neg_interaction_flat = torch.tensor(dist_neg_interaction.A[0])
-        dist_neg_interaction = dist_neg_interaction_flat.reshape(current_batch_size, -1)
+        dist_neg_interaction = dist_neg_interaction_flat.reshape(
+            current_batch_size, -1)
 
         losses.append(
             warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U)
