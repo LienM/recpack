@@ -3,6 +3,7 @@ import scipy.sparse
 import tempfile
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.autograd import Variable
 
 from typing import Callable
@@ -41,7 +42,7 @@ def mult_vae():
 def _training_step(
     model: nn.Module,
     loss_fn: Callable,
-    optim: torch.optim.Optimizer,
+    optim: optim.Optimizer,
     inputs: Variable,
     targets: Variable,
     device: torch.device,
@@ -70,7 +71,8 @@ def _training_step(
 def test_training_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix)
 
-    params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
+    params = [np for np in mult_vae.model_.named_parameters()
+              if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -86,7 +88,8 @@ def test_training_epoch(mult_vae, larger_matrix):
 def test_evaluation_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix)
 
-    params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
+    params = [np for np in mult_vae.model_.named_parameters()
+              if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -124,7 +127,7 @@ def test_multi_vae_forward(input_size, inputs, targets):
     _training_step(
         mult_vae,
         vae_loss,
-        torch.optim.Adam(mult_vae.parameters()),
+        optim.Adam(mult_vae.parameters()),
         inputs,
         targets,
         device,

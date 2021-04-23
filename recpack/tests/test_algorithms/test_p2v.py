@@ -17,7 +17,7 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 
 @pytest.fixture(scope="function")
-def prod2vec():
+def prod2vec(p2v_embedding, mat):
     prod = Prod2Vec(
         embedding_size=50,
         negative_samples=5,
@@ -34,6 +34,8 @@ def prod2vec():
         replace=False,
         exact=False,
     )
+    prod._init_model(mat)
+    prod.model_.embeddings = p2v_embedding
 
     prod.save = MagicMock(return_value=True)
     return prod
@@ -97,24 +99,28 @@ def test_evaluation_epoch(prod2vec, mat):
     assert_same(params_before, params, device)
     prod2vec.best_model.close()
 
-# def test_predict(p2v_embedding):
-#     prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
-#                         K=2)
-#     target, embedding = p2v_embedding
-#     prod2vec._init_model(target)
-#     # replace the model's embedding by a pre-defined embedding
-#     prod2vec.model_.embeddings = embedding
-#     prod2vec._create_similarity_matrix()
-#     predictions = prod2vec.predict(target)
-#     similarity_matrix = prod2vec.similarity_matrix_.toarray()
-#     # get the most similar item for each item
-#     max_similarity_items = list(np.argmax(similarity_matrix, axis=1))
-#     assert max_similarity_items == [1, 0, 3, 2, 0]
-#     # cosine similarities can be calculated by hand easily
-#     # only get the most similar item using max
-#     assert max(similarity_matrix[0]) == pytest.approx(0.98473, 0.00005)
-#     assert max(similarity_matrix[2]) == pytest.approx(0.5, 0.00005)
-#     assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
+
+def test_predict_warning(prod2vec, p2v_embedding, mat):
+
+    with pytest.warns(UserWarning, match='K is larger than the number of items.'):
+        prod2vec._create_similarity_matrix()
+
+
+def test_create_similarity_matrix(prod2vec):
+
+    prod2vec._create_similarity_matrix()
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+
+    print(similarity_matrix)
+    # Get the most similar item for each item
+    np.testing.assert_array_equal(
+        np.argmax(similarity_matrix, axis=1), [1, 0, 3, 2, 0])
+
+    # Cosine similarities can be calculated by hand easily
+    # Only get the most similar item using max
+    assert max(similarity_matrix[0]) == pytest.approx(0.98473, 0.00005)
+    assert max(similarity_matrix[2]) == pytest.approx(0.5, 0.00005)
+    assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
 
 #     # let's create some truth values:
 #     # the truth values are equal to the most similar product according to the similarity matrix
@@ -144,16 +150,6 @@ def test_evaluation_epoch(prod2vec, mat):
 #     preck = PrecisionK(2)
 #     preck.calculate(truth, predictions)
 #     assert preck.value == 0.4
-
-
-# def test_predict_warning(p2v_embedding):
-#     prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
-#                         K=6)
-#     target, embedding = p2v_embedding
-#     prod2vec._init_model(target)
-#     prod2vec.model_.embeddings = embedding
-#     with pytest.warns(UserWarning, match='K is larger than the number of items.'):
-#         prod2vec._create_similarity_matrix()
 
 
 # def test_train_predict():

@@ -124,11 +124,11 @@ def data():
 def p2v_embedding():
     # the target values for our predictions
     # we have five users, the target is the last item the user bought
-    values = [1] * 5
-    users = [0, 1, 2, 3, 4]
-    items = [0, 1, 2, 3, 4]
-    target = sp.csr_matrix((values, (users, items)))
-    target = InteractionMatrix.from_csr_matrix(target)
+    # values = [1] * 5
+    # users = [0, 1, 2, 3, 4]
+    # items = [0, 1, 2, 3, 4]
+    # target = sp.csr_matrix((values, (users, items)))
+    # target = InteractionMatrix.from_csr_matrix(target)
 
     # pre-defined embedding vectors
     embedding = [[0.5, 0.5, 0.0, 0.0, 0.0],
@@ -139,4 +139,4 @@ def p2v_embedding():
     embedding = np.array(embedding)
     embedding = torch.from_numpy(embedding)
     embedding = nn.Embedding.from_pretrained(embedding)
-    return target, embedding
+    return embedding
