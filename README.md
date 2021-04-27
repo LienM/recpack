@@ -6,6 +6,10 @@ Python package for easy experimentation with recsys algorithms.
 1. Clone repository
 2. In repository run `pip install .`
 
+
+## documentation
+Documentation and tutorials can be found at https://adrem-recommenders.gitlab.io/recpack/
+
 ## Usage
 RecPack provides a framework for experimentation with recommendation algorithms. 
 It comes pre-packed with a number of commonly used evaluation scenarios (splitters),
@@ -13,9 +17,8 @@ evaluation metrics (metrics) and state-of-the-art algorithm implementations (alg
 New algorithms and evaluation scenarios can be added easily, by subclassing the appropriate base classes. 
 A number of lower level data splitters are provided that can be used to build up more complex evaluation scenarios.
 
-Users can choose between the Experiment and Pipeline interface for running experiments. 
-Use Experiment if you want full control over hyperparameters and want to optimize a single algorithm. 
-Pipelines then allow easy comparison between algorithms. 
+Users can choose between the Pipeline interface, and manually connecting components for running experiments. 
+Pipelines are easier to set up comparisons between algorithms, for full control manual linking is available.
 
 
 ### Load and preprocess data
@@ -40,7 +43,7 @@ pv_frame = pd.read_csv("pageviews.csv")
 pur_frame = pd.read_csv("purchases.csv")
 
 prep = DataFramePreprocessor("itemId", "userId")
-pv_m, pur_m = prep.process(pv_frame, pur_frame) # Transform to InteractionMatrix objects.
+pv_m, pur_m = prep.process_many(pv_frame, pur_frame) # Transform to InteractionMatrix objects.
 
 ```
 
@@ -50,27 +53,21 @@ Important to note is that when you use multiple data inputs as in the example ab
 
 RecPack provides a number of state-of-the-art algorithm implementations. 
 
-To get the list of all algorithms use:
-```python
-import recpack.algorithms
-recpack.algorithms.algorithm_registry.list()
-```
-This will give you a list of algorithms available for immediate use.
+To get the list of all algorithms see [algorithms documentation page](https://adrem-recommenders.gitlab.io/recpack/recpack.algorithms.html):
 
-To create an algorithm instance use one of:
+To create an algorithm instance use:
 
 ```python
 import recpack.algorithms
 from recpack.algorithms import EASE
 
-ease1 = recpack.algorithms.algorithm_registry.get('ease')(lambda=1000)
-
-ease2 = EASE(lambda=1000)
+algo = EASE(lambda=1000)
 ```
-For information on which parameters can be used for which algorithm see their individual docstrings.
+For information on which parameters can be used for which algorithm see their individual documentation pages.
 
 #### Implementing a new algorithm
-Should you want to implement a new algorithm which we do not yet support you should create a subclass of the `Algorithm` base class
+Should you want to implement a new algorithm which we do not yet support you should create a subclass of the `Algorithm` base class,
+or use one of the more detailed base classes.
 
 Here is the code for a popularity algorithm
 
@@ -103,8 +100,7 @@ class Popularity(Algorithm):
         return f"popularity_{self.K}"
 ```
 
-// TODO Elaborate on conventions when developing new algorithms 
-
+For a full tutorial on creating your own algorithm check out the [documentation](https://adrem-recommenders.gitlab.io/recpack/guides.create_algorithm.html)
 ### Selecting a scenario
 To evaluate the merits of your algorithms, you use them in specific evaluation scenarios: This is what Scenarios are used for. 
 RecPack has implementations for the most commonly used evaluation scenarios:
@@ -123,10 +119,8 @@ scenario.split(pur_m)
 
 scenario.training_data.binary_values  # Training Data, as binary values csr_matrix
 validation_data_in, validation_data_out = scenario.validation_data  # Validation Data: Split across historical interactions -> interactions to predict
-test_data_in, test_data_Out = scenario.test_data  # Test Data: Split across historical interactions -> interactions to predict
+test_data_in, test_data_out = scenario.test_data  # Test Data: Split across historical interactions -> interactions to predict
 ```
-
-// TODO Write about metrics
 
 ### Creating the pipeline
 When creating the pipeline you will connect all the components and select metrics which the pipeline will compute.
@@ -135,11 +129,12 @@ When creating the pipeline you will connect all the components and select metric
 import recpack.pipelines
 # Construct a pipeline which computes NDCG and Recall @ 10, 20, 50 and 100
 # Only a single algorithm is evaluated, but you could select multiple algorithms to be evaluated at the same time.
-p = recpack.pipelines.Pipeline(splitter, [algo], evaluator, ['NDCG', 'Recall'], [10,20,50,100])
+p = recpack.pipelines.Pipeline([algo], ['NDCG', 'Recall'], [10,20,50,100])
+
+p.run(scenario.training_data, scenario.test_data)
 
 # Get the metric results.
 # This will be a dict with the results of the run.
-p.get()
+# Turning it into a dataframe makes reading easier
+pd.DataFrame.from_dict(p.get()) 
 ```
-
-Draw a new diagram
