@@ -60,7 +60,7 @@ class Prod2Vec(TorchMLAlgorithm):
     :type max_iter_no_change: int, optional
     :param min_improvement: If early stopping is enabled, no change is detected,
         if the improvement is below this value.
-        Defaults to 0.01
+        Defaults to 0.0
     :type min_improvement: float, optional
     :param seed: Seed to the randomizers, useful for reproducible results,
         defaults to None
@@ -75,15 +75,28 @@ class Prod2Vec(TorchMLAlgorithm):
     :param exact: If False (default) negatives are checked against the corresponding positive sample only, allowing for (rare) collisions.
     If collisions should be avoided at all costs, use exact = True, but suffer decreased performance. (see sample_positives_and_negatives)
     :rtype exact: bool
+    :param keep_last: Retain last model,
+        rather than best (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
     """
 
     def __init__(self, embedding_size: int, num_neg_samples: int,
                  window_size: int, stopping_criterion: str, K=10, batch_size=1000, learning_rate=0.01, max_epochs=10,
-                 stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.01, seed=None,
-                 save_best_to_file=False, replace=False, exact=False):
+                 stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.0, seed=None,
+                 save_best_to_file=False, replace=False, exact=False, keep_last=False):
 
-        super().__init__(batch_size, max_epochs, learning_rate, stopping_criterion, stop_early,
-                         max_iter_no_change, min_improvement, seed, save_best_to_file)
+        super().__init__(
+            batch_size,
+            max_epochs,
+            learning_rate,
+            stopping_criterion,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+            seed=seed,
+            save_best_to_file=save_best_to_file,
+            keep_last=keep_last)
+
         self.embedding_size = embedding_size
         self.num_neg_samples = num_neg_samples
         self.window_size = window_size
@@ -217,9 +230,19 @@ class Prod2Vec(TorchMLAlgorithm):
 
 
 class SkipGram(nn.Module):
-    def __init__(self, vocab_size, vector_size):
+    def __init__(self, vocab_size, embedding_size):
         super(SkipGram, self).__init__()
-        self.embeddings = nn.Embedding(vocab_size, vector_size)
+        self.vocab_size = vocab_size
+        self.embedding_size = embedding_size
+        self.embeddings = nn.Embedding(vocab_size, embedding_size)
+
+        # self.input_embedding = nn.Embedding(vocab_size, vector_size)
+        # self.output_embedding = nn.Embedding(vocab_size, vector_size)
+
+        self.std = 1 / embedding_size ** 0.5
+        # Initialise embeddings to a random start
+        nn.init.normal_(self.embeddings.weight, std=self.std)
+        # nn.init.normal_(self.output_embedding.weight, std=self.std)
 
     def forward(self, focus_item_batch, context_items_batch):
         # Create a (batch_size, embedding_dim, 1) tensor
