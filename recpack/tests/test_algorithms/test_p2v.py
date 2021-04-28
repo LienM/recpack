@@ -1,6 +1,7 @@
 import os
+from recpack.tests.test_algorithms.conftest import ITEM_IX, TIMESTAMP_IX, USER_IX
 import tempfile
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import numpy as np
@@ -11,7 +12,7 @@ from recpack.algorithms.p2v import Prod2Vec, window
 from recpack.data.matrix import InteractionMatrix
 from recpack.metrics.precision import PrecisionK
 from recpack.splitters.scenarios import NextItemPrediction
-from recpack.data.matrix import to_csr_matrix
+from recpack.data.matrix import to_csr_matrix, to_binary
 
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
@@ -20,11 +21,11 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 def prod2vec(p2v_embedding, mat):
     prod = Prod2Vec(
         embedding_size=50,
-        negative_samples=5,
+        num_neg_samples=2,
         window_size=2,
         stopping_criterion="precision",
         K=5,
-        batch_size=500,
+        batch_size=5,
         learning_rate=0.01,
         max_epochs=10,
         stop_early=False,
@@ -32,7 +33,7 @@ def prod2vec(p2v_embedding, mat):
         min_improvement=0.0001,
         save_best_to_file=False,
         replace=False,
-        exact=False,
+        exact=True,
     )
     prod._init_model(mat)
     prod.model_.embeddings = p2v_embedding
@@ -100,7 +101,7 @@ def test_evaluation_epoch(prod2vec, mat):
     prod2vec.best_model.close()
 
 
-def test_predict_warning(prod2vec, p2v_embedding, mat):
+def test_predict_warning(prod2vec):
 
     with pytest.warns(UserWarning, match='K is larger than the number of items.'):
         prod2vec._create_similarity_matrix()
@@ -122,85 +123,133 @@ def test_create_similarity_matrix(prod2vec):
     assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
 
 
-def test_batch_predict(prod2vec, mat):
+def test_batch_predict(prod2vec):
+    # Rewrite with different matrix
+    matrix = csr_matrix((6, 5))
+    matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
+
     prod2vec._create_similarity_matrix()
-    predictions = prod2vec._batch_predict(to_csr_matrix(mat))
+    predictions = prod2vec._batch_predict(matrix)
 
     np.testing.assert_array_almost_equal(
         predictions.toarray(),
-        np.array([[0.98473193, 1.10782342, 0.5, 0.62309149, 1.40341741],
-                  [0.98473193, 0.98473193, 0., 0.62309149, 1.40341741],
-                  [1.69183871, 1.68104255, 0., 0.62309149, 1.40341741]]))
+        np.array(
+            [
+                [0., 0.98473193, 0., 0., 0.70710678],
+                [0.98473193, 0., 0., 0.12309149, 0.69631062],
+                [0., 0., 0., 0.5, 0.],
+                [0., 0.12309149, 0.5, 0., 0.],
+                [0.70710678, 0.69631062, 0., 0., 0.],
+                [0., 0., 0., 0., 0.]
+            ]))
 
 
-#     # let's create some truth values:
-#     # the truth values are equal to the most similar product according to the similarity matrix
-#     # this means the following should hold:
-#     # - each prediction should be present in the top 2 (k=2)
-#     # - a value of 1/2 (1/k) is added when we a hit
-#     # - the final score is the sum of all values divided by the number of predictions
-#     # i.e. 0.5*5/5 = 0.5
+def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
 
-#     values = [1] * 5
-#     users = [0, 1, 2, 3, 4]
-#     items = [1, 0, 3, 2, 0]
-#     truth = csr_matrix((values, (users, items)), shape=(5, 5))
+    prod2vec._init_model(larger_mat)
 
-#     preck = PrecisionK(2)
-#     preck.calculate(truth, predictions)
-#     assert preck.value == 0.5
+    U = prod2vec.num_neg_samples
 
-#     # what if we miss a value?
-#     # i.e. 0.5 * 4 / 5 = 0.4
+    for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
+        larger_mat
+    ):
 
-#     values = [1] * 5
-#     users = [0, 1, 2, 3, 4]
-#     items = [1, 0, 3, 2, 3]
-#     truth = csr_matrix((values, (users, items)), shape=(5, 5))
+        assert item_1.shape[0] == item_2.shape[0]
+        assert item_1.shape[0] == neg_items.shape[0]
+        assert neg_items.shape[1] == U
 
-#     preck = PrecisionK(2)
-#     preck.calculate(truth, predictions)
-#     assert preck.value == 0.4
+        # There should be no collisions between columns of negative samples
+        for i in range(U):
+            for j in range(i):
+
+                overlap = (
+                    neg_items[:, j].numpy(
+                    ) == neg_items[:, i].numpy()
+                )
+
+                np.testing.assert_array_equal(overlap, False)
 
 
-# def test_train_predict():
-#     data = {
-#         "user": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
-#         "item": [0, 1, 2, 0, 1, 0, 1, 2, 0, 1, 3, 4, 5, 3, 4],
-#         "timestamp": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-#     }
-#     df = pd.DataFrame.from_dict(data)
-#     im = InteractionMatrix(df, "item", "user", timestamp_ix="timestamp")
-#     scenario = NextItemPrediction(validation=True)
-#     scenario.split(im)
-#     train = scenario.train_X
-#     val_data_in = scenario._validation_data_in
-#     val_data_out = scenario._validation_data_out
+def test_skipgram_sample_pairs_error(prod2vec):
 
-#     # overfitting to make sure we get "deterministic" results
-#     prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
-#                         batch_size=2, max_epochs=50, K=2)
-#     prod2vec.fit(train, (val_data_in, val_data_out))
-#     similarity_matrix = prod2vec.similarity_matrix_.toarray()
-#     # get the most similar item for each item
-#     max_similarity_items = list(np.argmax(similarity_matrix, axis=1))
-#     # 3,4,5 should be close together in the vectors space -> 0,1,2 shouldn't be the most similar to either 3,4,5
-#     assert 0 not in max_similarity_items[3:]
-#     assert 1 not in max_similarity_items[3:]
-#     assert 2 not in max_similarity_items[3:]
-#     # 0,1,2 should be close together in the vectors space -> 3,4,5 shouldn't be the most similar to either 0,1,2
-#     assert 3 not in max_similarity_items[:3]
-#     assert 4 not in max_similarity_items[:3]
-#     assert 5 not in max_similarity_items[:3]
+    data = {TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2], ITEM_IX: [
+        0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2], USER_IX: [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]}
+    df = pd.DataFrame.from_dict(data)
+
+    matrix = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    prod2vec._init_model(matrix)
+
+    # Too few possible negatives
+    with pytest.raises(ValueError):
+        for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
+            matrix
+        ):
+            pass
 
 
-# def test_save_load(p2v_embedding):
-#     prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
-#                         K=2)
-#     target, embedding = p2v_embedding
-#     prod2vec._init_model(target)
-#     prod2vec.model_.embeddings = embedding
-#     # saving and loading should work
-#     prod2vec.save()
-#     prod2vec.load(prod2vec.filename)
-#     os.remove(prod2vec.filename)
+def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
+
+    prod2vec._init_model(mat)
+
+    all_item_1 = np.array([], dtype=int)
+    all_item_2 = np.array([], dtype=int)
+    all_neg_items = None
+
+    for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
+        mat
+    ):
+        all_item_1 = np.append(all_item_1, item_1)
+        all_item_2 = np.append(all_item_2, item_2)
+
+        if all_neg_items is None:
+            all_neg_items = neg_items
+        else:
+            all_neg_items = np.vstack([all_neg_items, neg_items])
+
+    generated_positive_pairs = np.column_stack([all_item_1, all_item_2])
+
+    expected_positive_pairs = np.array(
+        [
+            [1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [
+                0, 1], [4, 2], [2, 4], [0, 1], [1, 0]
+        ])
+
+    sorted_generated_positive_pairs = generated_positive_pairs[generated_positive_pairs[:, 0].argsort(
+    )]
+    sorted_expected_positive_pairs = expected_positive_pairs[expected_positive_pairs[:, 0].argsort(
+    )]
+
+    np.testing.assert_array_equal(
+        sorted_generated_positive_pairs, sorted_expected_positive_pairs)
+
+
+    # def test_overfit():
+    #     data = {
+    #         "user": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+    #         "item": [0, 1, 2, 0, 1, 0, 1, 2, 0, 1, 3, 4, 5, 3, 4],
+    #         "timestamp": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    #     }
+    #     df = pd.DataFrame.from_dict(data)
+    #     im = InteractionMatrix(df, "item", "user", timestamp_ix="timestamp")
+    #     scenario = NextItemPrediction(validation=True)
+    #     scenario.split(im)
+    #     train = scenario.train_X
+    #     val_data_in = scenario._validation_data_in
+    #     val_data_out = scenario._validation_data_out
+
+    #     # Overfitting to make sure we get "deterministic" results
+    #     prod2vec = Prod2Vec(embedding_size=5, negative_samples=2, window_size=2, stopping_criterion="precision",
+    #                         batch_size=2, max_epochs=50, K=2, learning_rate=0.001, exact=True)
+    #     prod2vec.fit(train, (val_data_in, val_data_out))
+    #     similarity_matrix = prod2vec.similarity_matrix_.toarray()
+    #     # Get the most similar item for each item
+    #     max_similarity_items = np.argmax(similarity_matrix, axis=1)
+    #     # 3,4,5 should be close together in the vectors space -> 0,1,2 shouldn't be the most similar to either 3,4,5
+    #     assert 0 not in max_similarity_items[3:]
+    #     assert 1 not in max_similarity_items[3:]
+    #     assert 2 not in max_similarity_items[3:]
+    #     # 0,1,2 should be close together in the vectors space -> 3,4,5 shouldn't be the most similar to either 0,1,2
+    #     assert 3 not in max_similarity_items[:3]
+    #     assert 4 not in max_similarity_items[:3]
+    #     assert 5 not in max_similarity_items[:3]

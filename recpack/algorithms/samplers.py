@@ -170,6 +170,8 @@ def sample_positives_and_negatives(
     if sample_size is None:
         sample_size = num_positives
 
+    X = to_binary(X)
+
     # Make sure we can actually sample the requested sample_size
     # without replacement samplesize should <= number of positives to choose from.
     if not replace and sample_size > num_positives:
@@ -212,6 +214,11 @@ def sample_positives_and_negatives(
                     # Exit the while loop
                     break
         else:
+            num_nonzeros = X.shape[1] - X.sum(axis=1)
+            if (num_nonzeros < U).any():
+                raise ValueError(
+                    "Cannot request more negative samples than are possible.")
+
             negatives_batch = np.zeros((true_batch_size, U))
             for i in range(0, U):
                 # Construct column i in the negatives matrix

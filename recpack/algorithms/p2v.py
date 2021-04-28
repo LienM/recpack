@@ -30,8 +30,8 @@ class Prod2Vec(TorchMLAlgorithm):
 
     :param embedding_size: size of the embedding vectors
     :type embedding_size: int
-    :param negative_samples: number of negative samples per positive sample
-    :rtype negative_samples: int
+    :param num_neg_samples: number of negative samples per positive sample
+    :rtype num_neg_samples: int
     :param window_size: number of elements to the left and right of the target
     :rtype: int
     :param batch_size: How many samples to use in each update step.
@@ -77,7 +77,7 @@ class Prod2Vec(TorchMLAlgorithm):
     :rtype exact: bool
     """
 
-    def __init__(self, embedding_size: int, negative_samples: int,
+    def __init__(self, embedding_size: int, num_neg_samples: int,
                  window_size: int, stopping_criterion: str, K=10, batch_size=1000, learning_rate=0.01, max_epochs=10,
                  stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.01, seed=None,
                  save_best_to_file=False, replace=False, exact=False):
@@ -85,7 +85,7 @@ class Prod2Vec(TorchMLAlgorithm):
         super().__init__(batch_size, max_epochs, learning_rate, stopping_criterion, stop_early,
                          max_iter_no_change, min_improvement, seed, save_best_to_file)
         self.embedding_size = embedding_size
-        self.negative_samples = negative_samples
+        self.num_neg_samples = num_neg_samples
         self.window_size = window_size
         self.similarity_matrix_ = None
         self.K = K
@@ -108,15 +108,14 @@ class Prod2Vec(TorchMLAlgorithm):
             logger.info("Model improved. Storing better model.")
             self._save_best()
 
-    def _train_epoch(self, X: csr_matrix) -> list:
+    def _train_epoch(self, X: InteractionMatrix) -> list:
         assert self.model_ is not None
         losses = []
         # generator will just be restarted for each epoch.
-        generator = self._training_generator(
-            X, self.negative_samples, self.window_size, batch=self.batch_size)
-
-        for focus_batch, positives_batch, negatives_batch in generator:
+        for focus_batch, positives_batch, negatives_batch in self._skipgram_sample_pairs(X):
             self.optimizer.zero_grad()
+
+            print("Processing batch")
 
             positive_sim = self.model_(
                 focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1))
@@ -177,8 +176,8 @@ class Prod2Vec(TorchMLAlgorithm):
         results = self._batch_predict(X)
         return results.tocsr()
 
-    def _training_generator(self, X: InteractionMatrix, negative_samples: int, window_size: int, batch=1000):
-        ''' Creates a training dataset using the skipgrams and negative sampling method.
+    def _skipgram_sample_pairs(self, X: InteractionMatrix):
+        """ Creates a training dataset using the skipgrams and negative sampling method.
 
         First, the sequences of items (iid) are grouped per user (uid).
         Next, a windowing operation is applied over each seperate item sequence.
@@ -187,35 +186,30 @@ class Prod2Vec(TorchMLAlgorithm):
         This unigram distribution is used for creating the negative samples.
 
         :param X: InteractionMatrix
-        :param negative_samples: number of negative samples per positive sample
-        :param window_size: the window size
-        :param batch: the batch size
         :yield: focus_batch, positive_samples_batch, negative_samples_batch
         :rtype: Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]
-        '''
-        # group and window
-        windowed_sequences = window(X.sorted_item_history, window_size)
+        """
+        # Window, then extract focus (middle element) and context (all other elements).
+        windowed_sequences = window(X.sorted_item_history, self.window_size)
         context = np.hstack(
-            (windowed_sequences[:, :window_size], windowed_sequences[:, window_size + 1:]))
-        focus = windowed_sequences[:, window_size]
-        # stack
-        positives = np.empty((0, 2), dtype=int)
-        for col in range(context.shape[1]):
-            stacked = np.column_stack((focus, context[:, col]))
-            positives = np.vstack([positives, stacked])
-        # remove any NaN valued rows (consequence of windowing)
+            (windowed_sequences[:, :self.window_size], windowed_sequences[:, self.window_size + 1:]))
+        focus = windowed_sequences[:, self.window_size]
+        # Apply np.repeat to focus to turn [0,1,2,3] into [0, 0, 1, 1, ...]
+        # where number of repetitions is self.window_size
+        # Squeeze final dimension from context so they line up neatly.
+        positives = np.column_stack(
+            [focus.repeat(self.window_size * 2), context.reshape(-1)])
+        # Remove any NaN valued rows (consequence of windowing)
         positives = positives[~np.isnan(positives).any(axis=1)].astype(int)
-        # create csr matrix from numpy array
-        focus_items = positives[:, 0]
-        pos_items = positives[:, 1]
-        values = [1] * len(focus_items)
-        positives_csr = csr_matrix(
-            (values, (focus_items, pos_items)), shape=(X.shape[1], X.shape[1]))
-        co_occurrence = to_binary(positives_csr + positives_csr.T)
-        co_occurrence = lil_matrix(co_occurrence)
-        co_occurrence.setdiag(1)
-        co_occurrence = co_occurrence.tocsr()
-        yield from sample_positives_and_negatives(X=co_occurrence, U=negative_samples, batch_size=batch, replace=self.replace,
+
+        coocc = lil_matrix((X.shape[1], X.shape[1]), dtype=int)
+        coocc[positives[:, 0], positives[:, 1]] = 1
+        # TODO I don't think this is necessary anymore, it's a result of windowing.
+        # coocc = to_binary(coocc + coocc.T)
+        coocc.setdiag(1)
+        coocc = coocc.tocsr()
+
+        yield from sample_positives_and_negatives(X=coocc, U=self.num_neg_samples, batch_size=self.batch_size, replace=self.replace,
                                                   exact=self.exact, positives=positives)
 
     def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):

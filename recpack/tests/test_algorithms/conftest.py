@@ -35,7 +35,16 @@ def targets():
 @pytest.fixture(scope="function")
 def mat():
     data = {TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2], ITEM_IX: [
-        0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2], USER_IX: [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2]}
+        0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2], USER_IX: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5]}
+    df = pd.DataFrame.from_dict(data)
+
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+
+@pytest.fixture(scope="function")
+def larger_mat():
+    data = {TIMESTAMP_IX: np.random.randint(0, 100, size=100), ITEM_IX: np.random.randint(
+        0, 25, size=100), USER_IX: np.random.randint(0, 100, size=100)}
     df = pd.DataFrame.from_dict(data)
 
     return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
