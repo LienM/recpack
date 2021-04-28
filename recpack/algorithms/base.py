@@ -408,7 +408,9 @@ class TorchMLAlgorithm(Algorithm):
     :param save_best_to_file: If true, the best model will be saved after training,
         defaults to False
     :type save_best_to_file: bool, optional
-
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
     """
 
     def __init__(
@@ -422,6 +424,7 @@ class TorchMLAlgorithm(Algorithm):
         min_improvement: float = 0.01,
         seed=None,
         save_best_to_file=False,
+        keep_last=False
     ):
         # TODO batch_size * torch.cuda.device_count() if cuda else batch_size
         #   -> Multi GPU
@@ -450,6 +453,8 @@ class TorchMLAlgorithm(Algorithm):
 
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
+
+        self.keep_last = keep_last
 
     def _init_model(self, X: Matrix) -> None:
         """Initialise the torch model that will learn the weights
@@ -635,8 +640,8 @@ class TorchMLAlgorithm(Algorithm):
                 losses = self._train_epoch(X)
                 end_time = time.time()
                 logger.info(
-                    f"Processed epoch {epoch} in {end_time-start_time} s."
-                    f"Batch Training Loss = {np.mean(losses)}"
+                    f"Processed epoch {epoch} in {end_time-start_time :.2f} s."
+                    f"Batch Training Loss = {np.mean(losses) :.4f}"
                 )
                 # Make sure no grads are computed while evaluating
                 self.model_.eval()
@@ -645,7 +650,8 @@ class TorchMLAlgorithm(Algorithm):
         except EarlyStoppingException:
             pass
 
-        self._load_best()
+        if not self.keep_last:
+            self._load_best()
 
         if self.save_best_to_file:
             self.save()
