@@ -231,7 +231,7 @@ class Prod2Vec(TorchMLAlgorithm):
 
 class SkipGram(nn.Module):
     def __init__(self, vocab_size, embedding_size):
-        super(SkipGram, self).__init__()
+        super().__init__()
         self.vocab_size = vocab_size
         self.embedding_size = embedding_size
         self.embeddings = nn.Embedding(vocab_size, embedding_size)
@@ -249,6 +249,31 @@ class SkipGram(nn.Module):
         focus_vector = torch.movedim(self.embeddings(focus_item_batch), 1, 2)
         # Expected of size (batch_size, 1, embedding_dim)
         context_vectors = self.embeddings(context_items_batch)
+        return torch.bmm(context_vectors, focus_vector).squeeze(-1)
+
+
+class SkipGramInOut(nn.Module):
+    def __init__(self, vocab_size, embedding_size):
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.embedding_size = embedding_size
+        self.input_embeddings = nn.Embedding(vocab_size, embedding_size)
+        self.output_embeddings = nn.Embedding(vocab_size, embedding_size)
+
+        # self.input_embedding = nn.Embedding(vocab_size, vector_size)
+        # self.output_embedding = nn.Embedding(vocab_size, vector_size)
+
+        self.std = 1 / embedding_size ** 0.5
+        # Initialise embeddings to a random start
+        nn.init.normal_(self.input_embeddings.weight, std=self.std)
+        nn.init.normal_(self.output_embeddings.weight, std=self.std)
+
+    def forward(self, focus_item_batch, context_items_batch):
+        # Create a (batch_size, embedding_dim, 1) tensor
+        focus_vector = torch.movedim(
+            self.input_embeddings(focus_item_batch), 1, 2)
+        # Expected of size (batch_size, 1, embedding_dim)
+        context_vectors = self.output_embeddings(context_items_batch)
         return torch.bmm(context_vectors, focus_vector).squeeze(-1)
 
 

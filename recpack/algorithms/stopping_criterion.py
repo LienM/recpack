@@ -109,7 +109,7 @@ class StoppingCriterion:
         minimize: bool = False,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: float = 0.01,
+        min_improvement: float = 0.0,
         **kwargs,
     ):
 
@@ -147,12 +147,12 @@ class StoppingCriterion:
 
         if self.minimize:
             # If we try to minimize, smaller values of loss are better.
-            better = loss < self.best_value and (
+            better = loss <= self.best_value and (
                 abs(loss - self.best_value) > self.min_improvement
             )
         else:
             # If we try to maximize, larger values of loss are better.
-            better = loss > self.best_value and (
+            better = loss >= self.best_value and (
                 abs(loss - self.best_value) > self.min_improvement
             )
 
