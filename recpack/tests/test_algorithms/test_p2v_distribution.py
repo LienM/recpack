@@ -1,24 +1,21 @@
-import os
 from recpack.tests.test_algorithms.conftest import ITEM_IX, TIMESTAMP_IX, USER_IX
-import tempfile
-from unittest.mock import MagicMock, patch
+
+from unittest.mock import MagicMock
 
 import pytest
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix
 
-from recpack.algorithms.p2v import Prod2Vec, window
 from recpack.data.matrix import InteractionMatrix
 from recpack.splitters.scenarios import NextItemPrediction
-from recpack.data.matrix import to_csr_matrix
-
-from recpack.tests.test_algorithms.util import assert_changed, assert_same
+from recpack.algorithms.p2v_distribution_sampling import Prod2VecDistributionSampling
+from recpack.algorithms.samplers import _sample_positives_and_negatives_from_distribution, \
+    _sample_negatives_from_distribution
 
 
 @pytest.fixture(scope="function")
 def prod2vec(p2v_embedding, mat):
-    prod = Prod2Vec(
+    prod = Prod2VecDistributionSampling(
         embedding_size=50,
         num_neg_samples=2,
         window_size=2,
@@ -42,116 +39,38 @@ def prod2vec(p2v_embedding, mat):
     return prod
 
 
-def test_window():
-    # todo what about the error for small values?
-
-    sequence = [
-        (123, ['computer', 'artificial', 'intelligence', 'dog', 'trees']),
-        (145, ['human', 'intelligence', 'cpu', 'graph']),
-        (1, ['intelligence']),
-        (3, ['artificial', 'intelligence', 'system'])
-    ]
-    # Create a window of size 3:
-    # sequence 1: 5 windows
-    # sequence 2: 4 windows
-    # sequence 3: 1 window
-    # sequence 4: 3 window
-    # => 13 windows
-    windowed_seq = window(sequence, 1)
-
-    row, col = windowed_seq.shape
-    assert row == 13
-    assert col == 3
+def test__unigram_distribution(prod2vec, larger_mat):
+    distribution = prod2vec._unigram_distribution(larger_mat)
+    assert type(distribution) is dict
+    assert sum(distribution.values()) == pytest.approx(1.0, 1e-9)
+    assert distribution.__len__() == 25
 
 
-def test_training_epoch(prod2vec, mat):
-
-    prod2vec._init_model(mat)
-
-    params = [o for o in prod2vec.model_.named_parameters()
-              if o[1].requires_grad]
-
-    # take a copy
-    params_before = [(name, p.clone()) for (name, p) in params]
-
-    # run a training step
-    prod2vec._train_epoch(mat)
-
-    device = prod2vec.device
-
-    assert_changed(params_before, params, device)
-
-
-def test_evaluation_epoch(prod2vec, mat):
-    prod2vec._init_model(mat)
-
-    params = [o for o in prod2vec.model_.named_parameters()
-              if o[1].requires_grad]
-
-    # take a copy
-    params_before = [(name, p.clone()) for (name, p) in params]
-
-    prod2vec.best_model = tempfile.NamedTemporaryFile()
-    # run a training step
-    prod2vec._evaluate(to_csr_matrix(mat), to_csr_matrix(mat))
-
-    device = prod2vec.device
-
-    assert_same(params_before, params, device)
-    prod2vec.best_model.close()
-
-
-def test_predict_warning(prod2vec):
-
-    with pytest.warns(UserWarning, match='K is larger than the number of items.'):
-        prod2vec._create_similarity_matrix()
-
-
-def test_create_similarity_matrix(prod2vec):
-
-    prod2vec._create_similarity_matrix()
-    similarity_matrix = prod2vec.similarity_matrix_.toarray()
-
-    # Get the most similar item for each item
-    np.testing.assert_array_equal(
-        np.argmax(similarity_matrix, axis=1), [1, 0, 3, 2, 0])
-
-    # Cosine similarities can be calculated by hand easily
-    # Only get the most similar item using max
-    assert max(similarity_matrix[0]) == pytest.approx(0.98473, 0.00005)
-    assert max(similarity_matrix[2]) == pytest.approx(0.5, 0.00005)
-    assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
-
-
-def test_batch_predict(prod2vec):
-    # Rewrite with different matrix
-    matrix = csr_matrix((6, 5))
-    matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
-
-    prod2vec._create_similarity_matrix()
-    predictions = prod2vec._batch_predict(matrix)
-
-    np.testing.assert_array_almost_equal(
-        predictions.toarray(),
-        np.array(
-            [
-                [0., 0.98473193, 0., 0., 0.70710678],
-                [0.98473193, 0., 0., 0.12309149, 0.69631062],
-                [0., 0., 0., 0.5, 0.],
-                [0., 0.12309149, 0.5, 0., 0.],
-                [0.70710678, 0.69631062, 0., 0., 0.],
-                [0., 0., 0., 0., 0.]
-            ]))
+def test__sample_negatives_from_distribution(prod2vec, small_mat_unigram):
+    distribution = prod2vec._unigram_distribution(small_mat_unigram)
+    negatives_batch = _sample_negatives_from_distribution(distribution, 10, 1000, True)
+    # draw 10000 samples
+    assert negatives_batch.shape == (1000, 10)
+    unique, counts = np.unique(negatives_batch, return_counts=True)
+    counts = dict(zip(unique, counts))
+    # A lenient test to see whether the samples really follow the distribution
+    # the number 0 should be drawn about 40% of the time
+    assert (3000 <= counts[0] <= 5000)
+    # the other numbers should be drawn about 12% of the time
+    assert (counts[1] <= 2000)
+    assert (counts[2] <= 2000)
+    assert (counts[3] <= 2000)
+    assert (counts[4] <= 2000)
+    assert (counts[5] <= 2000)
 
 
 def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
-
     prod2vec._init_model(larger_mat)
 
     U = prod2vec.num_neg_samples
 
     for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
-        larger_mat
+            larger_mat
     ):
 
         assert item_1.shape[0] == item_2.shape[0]
@@ -161,17 +80,15 @@ def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
         # There should be no collisions between columns of negative samples
         for i in range(U):
             for j in range(i):
-
                 overlap = (
-                    neg_items[:, j].numpy(
-                    ) == neg_items[:, i].numpy()
+                        neg_items[:, j].numpy(
+                        ) == neg_items[:, i].numpy()
                 )
 
                 np.testing.assert_array_equal(overlap, False)
 
 
 def test_skipgram_sample_pairs_error(prod2vec):
-
     data = {TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2], ITEM_IX: [
         0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2], USER_IX: [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]}
     df = pd.DataFrame.from_dict(data)
@@ -183,13 +100,12 @@ def test_skipgram_sample_pairs_error(prod2vec):
     # Too few possible negatives
     with pytest.raises(ValueError):
         for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
-            matrix
+                matrix
         ):
             pass
 
 
 def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
-
     prod2vec._init_model(mat)
 
     all_item_1 = np.array([], dtype=int)
@@ -197,7 +113,7 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
     all_neg_items = None
 
     for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
-        mat
+            mat
     ):
         all_item_1 = np.append(all_item_1, item_1)
         all_item_2 = np.append(all_item_2, item_2)
@@ -212,7 +128,7 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
     expected_positive_pairs = np.array(
         [
             [1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [
-                0, 1], [4, 2], [2, 4], [0, 1], [1, 0]
+            0, 1], [4, 2], [2, 4], [0, 1], [1, 0]
         ])
 
     sorted_generated_positive_pairs = list(map(tuple, generated_positive_pairs))

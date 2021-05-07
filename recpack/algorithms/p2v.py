@@ -18,7 +18,6 @@ from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
 from recpack.algorithms.util import sample_rows
 from recpack.util import get_top_K_values
 
-
 logger = logging.getLogger("recpack")
 
 
@@ -44,6 +43,8 @@ class Prod2Vec(TorchMLAlgorithm):
     :type max_epochs: int
     :param learning_rate: How much to update the weights at each update.
     :type learning_rate: float
+    :param clipnorm: Clips gradient norm. The norm is computed over all gradients together, as if they were concatenated into a single vector.
+    :type clipnorm: int, optional
     :param stopping_criterion: Name of the stopping criterion to use for training.
         For available values,
         check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
@@ -81,7 +82,8 @@ class Prod2Vec(TorchMLAlgorithm):
     """
 
     def __init__(self, embedding_size: int, num_neg_samples: int,
-                 window_size: int, stopping_criterion: str, K=10, batch_size=1000, learning_rate=0.01, max_epochs=10,
+                 window_size: int, stopping_criterion: str, K=10, batch_size=1000, learning_rate=0.01, clipnorm=1,
+                 max_epochs=10,
                  stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.0, seed=None,
                  save_best_to_file=False, replace=False, exact=False, keep_last=False):
 
@@ -104,6 +106,7 @@ class Prod2Vec(TorchMLAlgorithm):
         self.K = K
         self.replace = replace
         self.exact = exact
+        self.clipnorm = clipnorm
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size)
@@ -128,8 +131,6 @@ class Prod2Vec(TorchMLAlgorithm):
         for focus_batch, positives_batch, negatives_batch in self._skipgram_sample_pairs(X):
             self.optimizer.zero_grad()
 
-            print("Processing batch")
-
             positive_sim = self.model_(
                 focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1))
             negative_sim = self.model_(
@@ -138,11 +139,13 @@ class Prod2Vec(TorchMLAlgorithm):
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
             losses.append(loss.item())
+            nn.utils.clip_grad_norm_(self.model_.parameters(), self.clipnorm)
             self.optimizer.step()
 
         return losses
 
-    def fit(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]) -> "TorchMLAlgorithm":
+    def fit(self, X: InteractionMatrix,
+            validation_data: Tuple[InteractionMatrix, InteractionMatrix]) -> "TorchMLAlgorithm":
         super().fit(X, validation_data)
 
         self._create_similarity_matrix()
@@ -157,7 +160,7 @@ class Prod2Vec(TorchMLAlgorithm):
         K = self.K + 1
         batch_size = 1000
 
-        embedding = self.model_.embeddings.weight.detach().numpy()
+        embedding = self.model_.input_embeddings.weight.detach().numpy()
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
@@ -168,12 +171,11 @@ class Prod2Vec(TorchMLAlgorithm):
 
         for batch in range(0, num_items, batch_size):
             Y = embedding[batch:batch + batch_size]
-
             item_cosine_similarity_batch = csr_matrix(cosine_similarity(
                 Y, embedding))
 
             item_cosine_similarity_[
-                batch:batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
+            batch:batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
@@ -222,7 +224,8 @@ class Prod2Vec(TorchMLAlgorithm):
         coocc.setdiag(1)
         coocc = coocc.tocsr()
 
-        yield from sample_positives_and_negatives(X=coocc, U=self.num_neg_samples, batch_size=self.batch_size, replace=self.replace,
+        yield from sample_positives_and_negatives(X=coocc, U=self.num_neg_samples, batch_size=self.batch_size,
+                                                  replace=self.replace,
                                                   exact=self.exact, positives=positives)
 
     def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
@@ -234,34 +237,8 @@ class SkipGram(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.embedding_size = embedding_size
-        self.embeddings = nn.Embedding(vocab_size, embedding_size)
-
-        # self.input_embedding = nn.Embedding(vocab_size, vector_size)
-        # self.output_embedding = nn.Embedding(vocab_size, vector_size)
-
-        self.std = 1 / embedding_size ** 0.5
-        # Initialise embeddings to a random start
-        nn.init.normal_(self.embeddings.weight, std=self.std)
-        # nn.init.normal_(self.output_embedding.weight, std=self.std)
-
-    def forward(self, focus_item_batch, context_items_batch):
-        # Create a (batch_size, embedding_dim, 1) tensor
-        focus_vector = torch.movedim(self.embeddings(focus_item_batch), 1, 2)
-        # Expected of size (batch_size, 1, embedding_dim)
-        context_vectors = self.embeddings(context_items_batch)
-        return torch.bmm(context_vectors, focus_vector).squeeze(-1)
-
-
-class SkipGramInOut(nn.Module):
-    def __init__(self, vocab_size, embedding_size):
-        super().__init__()
-        self.vocab_size = vocab_size
-        self.embedding_size = embedding_size
         self.input_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.output_embeddings = nn.Embedding(vocab_size, embedding_size)
-
-        # self.input_embedding = nn.Embedding(vocab_size, vector_size)
-        # self.output_embedding = nn.Embedding(vocab_size, vector_size)
 
         self.std = 1 / embedding_size ** 0.5
         # Initialise embeddings to a random start

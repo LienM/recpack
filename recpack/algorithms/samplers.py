@@ -259,3 +259,114 @@ def sample_positives_and_negatives(
         yield torch.LongTensor(users), torch.LongTensor(
             positives_batch
         ), torch.LongTensor(negatives_batch)
+
+
+def _sample_positives_and_negatives_from_distribution(X: csr_matrix, distribution: dict, U=1, batch_size=100,
+                                                      sample_size=None, replace=True,
+                                                      exact=False,
+                                                      positives: np.array = None
+                                                      ) -> Iterator[
+    Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
+    # Need positive and negative pair.
+    # Requires the existence of a positive for this item.
+    # As a (num_interactions, 2) numpy array
+    if positives is None:
+        positives = np.array(X.nonzero()).T
+
+    num_positives = positives.shape[0]
+
+    if sample_size is None:
+        sample_size = num_positives
+
+    X = to_binary(X)
+
+    # Make sure we can actually sample the requested sample_size
+    # without replacement samplesize should <= number of positives to choose from.
+    if not replace and sample_size > num_positives:
+        raise RuntimeError(
+            "Can't sample more samples than positive entries without replacement"
+        )
+
+    # Pick interactions at random, with replacement
+    samples = np.random.choice(
+        num_positives, size=(sample_size,), replace=replace)
+
+    for start in range(0, sample_size, batch_size):
+        sample_batch = samples[start: start + batch_size]
+
+        batch = positives[sample_batch]
+        target = batch[:, 0]
+        positives_batch = batch[:, 1]
+        # Important only for final batch, if smaller than batch_size
+        true_batch_size = min(batch_size, sample_size - start)
+        if not exact:
+            negatives_batch = _sample_negatives_from_distribution(distribution, U, true_batch_size, replace)
+            while True:
+                # Approximately fix the negatives that are equal to the positives,
+                # if there are any, assumes collisions are rare
+                mask = np.apply_along_axis(
+                    lambda col: col == positives_batch, 0, negatives_batch
+                )
+                num_incorrect = np.sum(mask)
+
+                if num_incorrect > 0:
+                    new_negatives = _sample_negatives_from_distribution(distribution, 1, num_incorrect, replace)
+                    negatives_batch[mask] = new_negatives
+                else:
+                    # Exit the while loop
+                    break
+        else:
+            num_nonzeros = X.shape[1] - X.sum(axis=1)
+            if (num_nonzeros < U).any():
+                raise ValueError(
+                    "Cannot request more negative samples than are possible.")
+
+            negatives_batch = np.zeros((true_batch_size, U))
+            for i in range(0, U):
+                # Construct column i in the negatives matrix
+
+                # 1st try true random
+                # We will fix collisions in while loop
+                negatives_batch_col_i = _sample_negatives_from_distribution(distribution, 1, true_batch_size, replace)
+                while True:
+
+                    num_incorrect, negatives_mask = _spot_collisions(
+                        target, negatives_batch_col_i, X
+                    )
+
+                    # Check column against previous columns
+                    additional_mask = np.zeros(true_batch_size, dtype=bool)
+                    for j in range(0, i):
+                        additional_mask += (
+                                negatives_batch_col_i == negatives_batch[:, j]
+                        )
+
+                    total_mask = negatives_mask + additional_mask
+                    num_incorrect = total_mask.sum()
+
+                    if num_incorrect > 0:
+                        new_negatives = _sample_negatives_from_distribution(distribution, 1, num_incorrect, replace)
+                        negatives_batch_col_i[total_mask] = new_negatives
+
+                    else:
+                        # Exit the while(True) loop
+                        break
+
+                negatives_batch[:, i] = negatives_batch_col_i
+        yield torch.LongTensor(target), torch.LongTensor(positives_batch), torch.LongTensor(negatives_batch)
+
+
+def _sample_negatives_from_distribution(distribution, U, batch, replace):
+    '''
+    Takes as input a product distribution (for example the unigram distribution).
+    Probabilities must sum to one, the keys are the products. The values are the probabilities.
+
+    :param distribution: dict
+    :param batch: batch size
+    :return: batch of negatives
+    '''
+    negatives_batch = np.random.choice(list(distribution.keys()), size=U * batch, replace=replace,
+                                       p=list(distribution.values()))
+    if U == 1:
+        return negatives_batch
+    return negatives_batch.reshape((batch, U))
