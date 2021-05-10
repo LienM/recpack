@@ -14,7 +14,7 @@ logger = logging.getLogger("recpack")
 
 class Prod2VecDistributionSampling(Prod2Vec):
     '''
-    Implements the sampling method outlined in: Distributed Representations ofWords and Phrases and their Compositionality (https://arxiv.org/abs/1310.4546).
+    Implements the sampling method outlined in: Distributed Representations of Words and Phrases and their Compositionality (https://arxiv.org/abs/1310.4546).
 
     A unigram noise distribution (to the power 3/4) is used for sampling.
     '''
