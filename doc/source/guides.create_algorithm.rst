@@ -230,10 +230,10 @@ We then scale this to the interval [0, 1] using minmax normalisation.
 ::
 
     def _fit(self, X:InteractionMatrix):
-        # data.timestamps gives a pandas MultiIndex object, indexed by user and item,
+        # X.timestamps gives a pandas MultiIndex object, indexed by user and item,
         # we drop the index, and group by just the item index
         # then we select the maximal timestamp from this groupby
-        max_ts_per_item = data.timestamps.reset_index().groupby('iid')['ts'].max()
+        max_ts_per_item = X.timestamps.reset_index().groupby('iid')['ts'].max()
 
         # apply min_max normalisation
         recency = np.zeros(X.shape[1])
