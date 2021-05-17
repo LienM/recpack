@@ -1,4 +1,5 @@
 import logging
+import sys
 from typing import Tuple
 import warnings
 
@@ -114,23 +115,23 @@ class Prod2VecClustered(Prod2Vec):
         '''
         items = range(num_items)
         items_as_clusters = self._map_to_cluster(items, self.item_to_cluster_mapping)
-        mask = np.zeros((num_items, num_items))
+        mask = csr_matrix((num_items, num_items))
         for item in items:
             item_cluster = self.item_to_cluster_mapping[item]
-            mask_row = np.zeros(items_as_clusters.shape)
+            mask_item = np.zeros(items_as_clusters.shape)
             for cluster in self.cluster_ranking[item_cluster]:
                 try:
                     indexes = np.where(items_as_clusters == cluster)
-                    mask_row[indexes] = 1
+                    mask_item[indexes] = 1
                 except ValueError:
                     pass
-            mask[item] = mask_row
+            mask[item] = csr_matrix(mask_item)
         # check the minimum amount of items: we create a mask over the similarity matrix, it's possible that this mask leads to less than K items in the similarity matrix (for a particular item)
         min_K = mask.sum(axis=1).min()
         if self.K > min_K:
             warnings.warn("An item mask has less values than K.", UserWarning)
         # need to fill the diagonal with 1 values here to be able to remove them efficiently later on
-        np.fill_diagonal(mask, 1)
+        mask.setdiag(1)
         return mask
 
     def _create_clustered_ranking(self, X: InteractionMatrix):
