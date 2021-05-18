@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import Tuple
 import warnings
 
@@ -12,7 +11,7 @@ import torch.optim as optim
 from sklearn.metrics.pairwise import cosine_similarity
 
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.data.matrix import InteractionMatrix, Matrix, to_binary, to_csr_matrix
+from recpack.data.matrix import InteractionMatrix, Matrix, to_csr_matrix
 from recpack.algorithms.samplers import sample_positives_and_negatives
 from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
 from recpack.algorithms.util import sample_rows
@@ -175,7 +174,7 @@ class Prod2Vec(TorchMLAlgorithm):
                 Y, embedding))
 
             item_cosine_similarity_[
-            batch:batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
+                batch:batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
