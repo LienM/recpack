@@ -238,3 +238,25 @@ def test_sample_positives_and_negatives_w_unigram(mat):
     np.testing.assert_almost_equal(negatives_perc[0], negatives_perc[1], decimal=2)
     np.testing.assert_almost_equal(negatives_perc[0], negatives_perc[2], decimal=2)
     np.testing.assert_almost_equal(negatives_perc[3], negatives_perc[4], decimal=2)
+
+
+def test_unigram_distribution(pageviews):
+    # needs to be binary
+    pageviews = to_binary(pageviews)
+
+    batch_size = 1000
+    sampler = PositiveNegativeSampler(
+        U=1, batch_size=batch_size, replace=True, exact=False, distribution="unigram"
+    )
+
+    distr = sampler._get_distribution(pageviews)
+
+    np.testing.assert_almost_equal(distr.sum(), 1)
+
+    # 2 seen twice, rest once
+    denum = (2 ** 0.75) + 4
+    np.testing.assert_almost_equal(distr[0], 1 / denum)
+    np.testing.assert_almost_equal(distr[1], 1 / denum)
+    np.testing.assert_almost_equal(distr[2], 1 / denum)
+    np.testing.assert_almost_equal(distr[3], 2 ** 0.75 / denum)
+    np.testing.assert_almost_equal(distr[4], 1 / denum)

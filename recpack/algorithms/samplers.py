@@ -113,8 +113,6 @@ class PositiveNegativeSampler(Sampler):
 
         num_positives = positives.shape[0]
 
-        # Using local variables, so that class variable
-        # don't get overwritten between sampling calls.
         if sample_size is None:
             sample_size = num_positives
 

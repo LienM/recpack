@@ -37,11 +37,11 @@ def prod2vec(p2v_embedding, mat):
     return prod
 
 
-def test__unigram_distribution(prod2vec, larger_mat):
-    distribution = prod2vec._unigram_distribution(larger_mat)
-    assert type(distribution) is dict
-    assert sum(distribution.values()) == pytest.approx(1.0, 1e-9)
-    assert distribution.__len__() == 25
+# def test__unigram_distribution(prod2vec, larger_mat):
+#     distribution = prod2vec._unigram_distribution(larger_mat)
+#     assert type(distribution) is dict
+#     assert sum(distribution.values()) == pytest.approx(1.0, 1e-9)
+#     assert distribution.__len__() == 25
 
 
 # def test__sample_negatives_from_distribution(prod2vec, small_mat_unigram):
