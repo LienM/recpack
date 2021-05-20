@@ -78,6 +78,10 @@ class Prod2Vec(TorchMLAlgorithm):
     :param keep_last: Retain last model,
         rather than best (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
+    :param distribution: Which distribution to use to sample negatives. Options are `["uniform", "unigram"]`.
+        defaults to `'uniform'`. Uniform distribution will sample all items equally likely.
+        The unigram distribution puts more weight on popular items.
+    :type distribution: string, optional
     """
 
     def __init__(
@@ -99,6 +103,7 @@ class Prod2Vec(TorchMLAlgorithm):
         replace=False,
         exact=False,
         keep_last=False,
+        distribution="uniform",
     ):
 
         super().__init__(
@@ -122,6 +127,17 @@ class Prod2Vec(TorchMLAlgorithm):
         self.replace = replace
         self.exact = exact
         self.clipnorm = clipnorm
+
+        self.distribution = distribution
+
+        # Initialise sampler
+        self.sampler = PositiveNegativeSampler(
+            U=self.num_neg_samples,
+            batch_size=self.batch_size,
+            replace=self.replace,
+            exact=self.exact,
+            distribution=self.distribution,
+        )
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size)
@@ -250,14 +266,7 @@ class Prod2Vec(TorchMLAlgorithm):
         coocc.setdiag(1)
         coocc = coocc.tocsr()
 
-        sampler = PositiveNegativeSampler(
-            U=self.num_neg_samples,
-            batch_size=self.batch_size,
-            replace=self.replace,
-            exact=self.exact,
-        )
-
-        yield from sampler.sample(
+        yield from self.sampler.sample(
             X=coocc,
             positives=positives,
         )

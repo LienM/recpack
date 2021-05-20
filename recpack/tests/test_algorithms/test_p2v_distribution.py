@@ -8,12 +8,12 @@ import pandas as pd
 
 from recpack.data.matrix import InteractionMatrix
 from recpack.splitters.scenarios import NextItemPrediction
-from recpack.algorithms.p2v_distribution_sampling import Prod2VecDistributionSampling
+from recpack.algorithms.p2v import Prod2Vec
 
 
 @pytest.fixture(scope="function")
 def prod2vec(p2v_embedding, mat):
-    prod = Prod2VecDistributionSampling(
+    prod = Prod2Vec(
         embedding_size=50,
         num_neg_samples=2,
         window_size=2,
@@ -29,37 +29,13 @@ def prod2vec(p2v_embedding, mat):
         replace=False,
         exact=True,
         keep_last=True,
+        distribution="unigram",
     )
     prod._init_model(mat)
     prod.model_.input_embeddings = p2v_embedding
 
     prod.save = MagicMock(return_value=True)
     return prod
-
-
-# def test__unigram_distribution(prod2vec, larger_mat):
-#     distribution = prod2vec._unigram_distribution(larger_mat)
-#     assert type(distribution) is dict
-#     assert sum(distribution.values()) == pytest.approx(1.0, 1e-9)
-#     assert distribution.__len__() == 25
-
-
-# def test__sample_negatives_from_distribution(prod2vec, small_mat_unigram):
-#     distribution = prod2vec._unigram_distribution(small_mat_unigram)
-#     negatives_batch = _sample_negatives_from_distribution(distribution, 10, 1000, True)
-#     # draw 10000 samples
-#     assert negatives_batch.shape == (1000, 10)
-#     unique, counts = np.unique(negatives_batch, return_counts=True)
-#     counts = dict(zip(unique, counts))
-#     # A lenient test to see whether the samples really follow the distribution
-#     # the number 0 should be drawn about 40% of the time
-#     assert (3000 <= counts[0] <= 5000)
-#     # the other numbers should be drawn about 12% of the time
-#     assert (counts[1] <= 2000)
-#     assert (counts[2] <= 2000)
-#     assert (counts[3] <= 2000)
-#     assert (counts[4] <= 2000)
-#     assert (counts[5] <= 2000)
 
 
 def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):

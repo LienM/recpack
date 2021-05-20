@@ -6,14 +6,18 @@ import torch
 from recpack.data.matrix import to_binary
 
 
-class Sampler:
-    def sample(
-        self, X: csr_matrix
-    ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
-        raise NotImplementedError("Need to overwrite the sample method")
+def unigram_distribution(X: csr_matrix) -> np.array:
+    """Creates a unigram distribution based on the item frequency.
+
+    Follows the advice outlined in https://arxiv.org/abs/1310.4546 to create this noise distribution:
+    the noise distribution is taken to be the unigram distribution to the power (3/4).
+    Note: this is a heuristic based on the original Word2Vec paper.
+    """
+    item_counts_powered = np.power(X.sum(axis=0).A[0], 3 / 4)
+    return item_counts_powered / item_counts_powered.sum()
 
 
-class PositiveNegativeSampler(Sampler):
+class PositiveNegativeSampler:
     def __init__(
         self,
         U=1,
@@ -60,22 +64,12 @@ class PositiveNegativeSampler(Sampler):
 
         self.distribution = distribution  # TODO: Enum style value, to avoid mismatches?
 
-    def _unigram_distribution(self, X: csr_matrix) -> np.array:
-        """Creates a unigram distribution based on the item frequency.
-
-        Follows the advice outlined in https://arxiv.org/abs/1310.4546 to create this noise distribution:
-        the noise distribution is taken to be the unigram distribution to the power (3/4).
-        Note: this is a heuristic based on the original Word2Vec paper.
-        """
-        item_counts_powered = np.power(X.sum(axis=0).A[0], 3 / 4)
-        return item_counts_powered / item_counts_powered.sum()
-
     def _get_distribution(self, X: csr_matrix) -> Union[None, np.array]:
         if self.distribution == "uniform":
             # passing None as probabilities is the default for np.random.choice
             return None
-        else:
-            return self._unigram_distribution(X)
+        elif self.distribution == "unigram":
+            return unigram_distribution(X)
 
         raise ValueError("The requested distribution is unknown")
 

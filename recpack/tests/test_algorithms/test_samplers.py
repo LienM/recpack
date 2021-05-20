@@ -6,6 +6,7 @@ from recpack.algorithms.samplers import (
     BootstrapSampler,
     WarpSampler,
     PositiveNegativeSampler,
+    unigram_distribution,
 )
 from recpack.data.matrix import to_binary
 
@@ -244,12 +245,7 @@ def test_unigram_distribution(pageviews):
     # needs to be binary
     pageviews = to_binary(pageviews)
 
-    batch_size = 1000
-    sampler = PositiveNegativeSampler(
-        U=1, batch_size=batch_size, replace=True, exact=False, distribution="unigram"
-    )
-
-    distr = sampler._get_distribution(pageviews)
+    distr = unigram_distribution(pageviews)
 
     np.testing.assert_almost_equal(distr.sum(), 1)
 
