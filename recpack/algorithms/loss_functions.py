@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from tqdm import tqdm
 
-from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
+from recpack.algorithms.samplers import BootstrapSampler, WarpSampler
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
@@ -69,8 +69,7 @@ def vae_loss(reconstructed_X, mu, logvar, X, anneal=1.0):
     """
 
     BCE = -torch.mean(torch.sum(F.log_softmax(reconstructed_X, 1) * X, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
-                                      mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD
 
@@ -131,11 +130,13 @@ def warp_loss(
     return loss
 
 
-def skipgram_negative_sampling_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
+def skipgram_negative_sampling_loss(
+    positive_sim: torch.Tensor, negative_sim: torch.Tensor
+) -> torch.Tensor:
     pos_loss = positive_sim.sigmoid().log()
     neg_loss = negative_sim.neg().sigmoid().log().sum(-1)
 
-    return - (pos_loss + neg_loss).mean()
+    return -(pos_loss + neg_loss).mean()
 
 
 def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
@@ -177,7 +178,7 @@ def bpr_loss_wrapper(
     :class:`recpack.algorithms.stopping_criterion.StoppingCriterion`.
 
     Positive and negative items are sampled using
-    :func:`recpack.algorithms.samplers.bootstrap_sample_pairs`.
+    :func:`recpack.algorithms.samplers.BootstrapSampler`.
     Scores are then extracted from the X_pred,
     and these positive and negative predictions are passed to the
     :func:`bpr_loss` function.
@@ -204,12 +205,10 @@ def bpr_loss_wrapper(
 
     losses = []
 
-    for users, target_items, negative_items in bootstrap_sample_pairs(
-        X_true,
-        U=1,
-        batch_size=batch_size,
-        sample_size=sample_size,
-        exact=exact,
+    sampler = BootstrapSampler(U=1, batch_size=batch_size, exact=exact)
+
+    for users, target_items, negative_items in sampler.sample(
+        X_true, sample_size=sample_size
     ):
         # Needed to do copy, to use as index in the predidction matrix
         users = users.numpy().copy()
@@ -236,7 +235,7 @@ def warp_loss_wrapper(
     """Metric wrapper around the :func:`warp_loss` function.
 
     Positives and negatives are sampled from the X_true matrix using
-    :func:`recpack.algorithms.samplers.warp_sample_pairs`.
+    :func:`recpack.algorithms.samplers.WarpSampler`.
     Their scores are fetched from the X_pred matrix.
 
     :param X_true: True interactions expected for the users
@@ -260,9 +259,9 @@ def warp_loss_wrapper(
     losses = []
     J = X_true.shape[1]
 
-    for users, positives_batch, negatives_batch in tqdm(
-        warp_sample_pairs(X_true, U=U, batch_size=batch_size, exact=exact)
-    ):
+    sampler = WarpSampler(U=U, batch_size=batch_size, exact=exact)
+
+    for users, positives_batch, negatives_batch in tqdm(sampler.sample(X_true)):
 
         current_batch_size = users.shape[0]
 
@@ -278,11 +277,9 @@ def warp_loss_wrapper(
             .tolist(),
         ]
 
-        dist_pos_interaction = torch.tensor(
-            dist_pos_interaction.A[0]).unsqueeze(-1)
+        dist_pos_interaction = torch.tensor(dist_pos_interaction.A[0]).unsqueeze(-1)
         dist_neg_interaction_flat = torch.tensor(dist_neg_interaction.A[0])
-        dist_neg_interaction = dist_neg_interaction_flat.reshape(
-            current_batch_size, -1)
+        dist_neg_interaction = dist_neg_interaction_flat.reshape(current_batch_size, -1)
 
         losses.append(
             warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U)

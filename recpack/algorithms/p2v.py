@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.data.matrix import InteractionMatrix, Matrix, to_csr_matrix
-from recpack.algorithms.samplers import sample_positives_and_negatives
+from recpack.algorithms.samplers import PositiveNegativeSampler
 from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
 from recpack.algorithms.util import sample_rows
 from recpack.util import get_top_K_values
@@ -70,21 +70,36 @@ class Prod2Vec(TorchMLAlgorithm):
     :type save_best_to_file: bool, optional
     :param K: for top-K most similar items
     :rtype k: int
-    :param replace: sample with or without replacement (see sample_positives_and_negatives)
+    :param replace: sample with or without replacement (see PositiveNegativeSampler)
     :rtype replace: bool
     :param exact: If False (default) negatives are checked against the corresponding positive sample only, allowing for (rare) collisions.
-    If collisions should be avoided at all costs, use exact = True, but suffer decreased performance. (see sample_positives_and_negatives)
+    If collisions should be avoided at all costs, use exact = True, but suffer decreased performance. (see PositiveNegativeSampler)
     :rtype exact: bool
     :param keep_last: Retain last model,
         rather than best (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
     """
 
-    def __init__(self, embedding_size: int, num_neg_samples: int,
-                 window_size: int, stopping_criterion: str, K=10, batch_size=1000, learning_rate=0.01, clipnorm=1,
-                 max_epochs=10,
-                 stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.0, seed=None,
-                 save_best_to_file=False, replace=False, exact=False, keep_last=False):
+    def __init__(
+        self,
+        embedding_size: int,
+        num_neg_samples: int,
+        window_size: int,
+        stopping_criterion: str,
+        K=10,
+        batch_size=1000,
+        learning_rate=0.01,
+        clipnorm=1,
+        max_epochs=10,
+        stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: float = 0.0,
+        seed=None,
+        save_best_to_file=False,
+        replace=False,
+        exact=False,
+        keep_last=False,
+    ):
 
         super().__init__(
             batch_size,
@@ -96,7 +111,8 @@ class Prod2Vec(TorchMLAlgorithm):
             min_improvement=min_improvement,
             seed=seed,
             save_best_to_file=save_best_to_file,
-            keep_last=keep_last)
+            keep_last=keep_last,
+        )
 
         self.embedding_size = embedding_size
         self.num_neg_samples = num_neg_samples
@@ -109,12 +125,12 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size)
-        self.optimizer = optim.Adam(
-            self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
         val_in_selection, val_out_selection = sample_rows(
-            val_in, val_out, sample_size=1000)
+            val_in, val_out, sample_size=1000
+        )
         self._create_similarity_matrix()
         predictions = self._batch_predict(val_in_selection)
         better = self.stopping_criterion.update(val_out_selection, predictions)
@@ -127,13 +143,17 @@ class Prod2Vec(TorchMLAlgorithm):
         assert self.model_ is not None
         losses = []
         # generator will just be restarted for each epoch.
-        for focus_batch, positives_batch, negatives_batch in self._skipgram_sample_pairs(X):
+        for (
+            focus_batch,
+            positives_batch,
+            negatives_batch,
+        ) in self._skipgram_sample_pairs(X):
             self.optimizer.zero_grad()
 
             positive_sim = self.model_(
-                focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1))
-            negative_sim = self.model_(
-                focus_batch.unsqueeze(-1), negatives_batch)
+                focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1)
+            )
+            negative_sim = self.model_(focus_batch.unsqueeze(-1), negatives_batch)
 
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
@@ -143,8 +163,11 @@ class Prod2Vec(TorchMLAlgorithm):
 
         return losses
 
-    def fit(self, X: InteractionMatrix,
-            validation_data: Tuple[InteractionMatrix, InteractionMatrix]) -> "TorchMLAlgorithm":
+    def fit(
+        self,
+        X: InteractionMatrix,
+        validation_data: Tuple[InteractionMatrix, InteractionMatrix],
+    ) -> "TorchMLAlgorithm":
         super().fit(X, validation_data)
 
         self._create_similarity_matrix()
@@ -165,16 +188,15 @@ class Prod2Vec(TorchMLAlgorithm):
             K = num_items
             warnings.warn("K is larger than the number of items.", UserWarning)
 
-        item_cosine_similarity_ = lil_matrix(
-            (num_items, num_items))
+        item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
         for batch in range(0, num_items, batch_size):
-            Y = embedding[batch:batch + batch_size]
-            item_cosine_similarity_batch = csr_matrix(cosine_similarity(
-                Y, embedding))
+            Y = embedding[batch : batch + batch_size]
+            item_cosine_similarity_batch = csr_matrix(cosine_similarity(Y, embedding))
 
-            item_cosine_similarity_[
-                batch:batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
+            item_cosine_similarity_[batch : batch + batch_size] = get_top_K_values(
+                item_cosine_similarity_batch, K
+            )
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
@@ -191,7 +213,7 @@ class Prod2Vec(TorchMLAlgorithm):
         return results.tocsr()
 
     def _skipgram_sample_pairs(self, X: InteractionMatrix):
-        """ Creates a training dataset using the skipgrams and negative sampling method.
+        """Creates a training dataset using the skipgrams and negative sampling method.
 
         First, the sequences of items (iid) are grouped per user (uid).
         Next, a windowing operation is applied over each seperate item sequence.
@@ -206,13 +228,18 @@ class Prod2Vec(TorchMLAlgorithm):
         # Window, then extract focus (middle element) and context (all other elements).
         windowed_sequences = window(X.sorted_item_history, self.window_size)
         context = np.hstack(
-            (windowed_sequences[:, :self.window_size], windowed_sequences[:, self.window_size + 1:]))
+            (
+                windowed_sequences[:, : self.window_size],
+                windowed_sequences[:, self.window_size + 1 :],
+            )
+        )
         focus = windowed_sequences[:, self.window_size]
         # Apply np.repeat to focus to turn [0,1,2,3] into [0, 0, 1, 1, ...]
         # where number of repetitions is self.window_size
         # Squeeze final dimension from context so they line up neatly.
         positives = np.column_stack(
-            [focus.repeat(self.window_size * 2), context.reshape(-1)])
+            [focus.repeat(self.window_size * 2), context.reshape(-1)]
+        )
         # Remove any NaN valued rows (consequence of windowing)
         positives = positives[~np.isnan(positives).any(axis=1)].astype(int)
 
@@ -223,9 +250,17 @@ class Prod2Vec(TorchMLAlgorithm):
         coocc.setdiag(1)
         coocc = coocc.tocsr()
 
-        yield from sample_positives_and_negatives(X=coocc, U=self.num_neg_samples, batch_size=self.batch_size,
-                                                  replace=self.replace,
-                                                  exact=self.exact, positives=positives)
+        sampler = PositiveNegativeSampler(
+            U=self.num_neg_samples,
+            batch_size=self.batch_size,
+            replace=self.replace,
+            exact=self.exact,
+        )
+
+        yield from sampler.sample(
+            X=coocc,
+            positives=positives,
+        )
 
     def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
         return X, to_csr_matrix(validation_data, binary=True)
@@ -246,15 +281,14 @@ class SkipGram(nn.Module):
 
     def forward(self, focus_item_batch, context_items_batch):
         # Create a (batch_size, embedding_dim, 1) tensor
-        focus_vector = torch.movedim(
-            self.input_embeddings(focus_item_batch), 1, 2)
+        focus_vector = torch.movedim(self.input_embeddings(focus_item_batch), 1, 2)
         # Expected of size (batch_size, 1, embedding_dim)
         context_vectors = self.output_embeddings(context_items_batch)
         return torch.bmm(context_vectors, focus_vector).squeeze(-1)
 
 
 def window(sequences, window_size):
-    '''
+    """
     Will apply a windowing operation to a sequence of item sequences.
 
     Note: pads the sequences to make sure edge cases are also accounted for.
@@ -263,9 +297,15 @@ def window(sequences, window_size):
     :param window_size: the size of the window
     :returns: windowed sequences
     :rtype: numpy.ndarray
-    '''
-    padded_sequences = [[np.NAN] * window_size +
-                        list(s) + [np.NAN] * window_size for uid, s in sequences]
-    w = [w.tolist() for sequence in padded_sequences if len(sequence) >= window_size for w in
-         sliding_window_view(sequence, 2 * window_size + 1)]
+    """
+    padded_sequences = [
+        [np.NAN] * window_size + list(s) + [np.NAN] * window_size
+        for uid, s in sequences
+    ]
+    w = [
+        w.tolist()
+        for sequence in padded_sequences
+        if len(sequence) >= window_size
+        for w in sliding_window_view(sequence, 2 * window_size + 1)
+    ]
     return np.array(w)

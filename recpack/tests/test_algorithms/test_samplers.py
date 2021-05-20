@@ -1,11 +1,11 @@
+from collections import defaultdict
 import numpy as np
-import pytest
 from scipy.sparse import csr_matrix
 
 from recpack.algorithms.samplers import (
-    bootstrap_sample_pairs,
-    warp_sample_pairs,
-    sample_positives_and_negatives,
+    BootstrapSampler,
+    WarpSampler,
+    PositiveNegativeSampler,
 )
 from recpack.data.matrix import to_binary
 
@@ -20,10 +20,10 @@ def test_warp_sampling_exact():
     batch_size = 100
     U = 10
 
+    sampler = WarpSampler(U=U, batch_size=batch_size, exact=True)
+
     total_interactions = 0
-    for users, pos_interactions, neg_interactions in warp_sample_pairs(
-        pageviews, U=U, batch_size=batch_size, exact=True
-    ):
+    for users, pos_interactions, neg_interactions in sampler.sample(pageviews):
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
         assert users.shape[0] == pos_interactions.shape[0]
@@ -54,11 +54,11 @@ def test_warp_sampling(pageviews):
     batch_size = 4
     U = 10
 
-    total_interactions = 0
+    sampler = WarpSampler(U=U, batch_size=batch_size, exact=False)
 
-    for users, pos_interactions, neg_interactions in warp_sample_pairs(
-        pageviews, U=U, batch_size=batch_size
-    ):
+    total_interactions = 0
+    for users, pos_interactions, neg_interactions in sampler.sample(pageviews):
+
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
         assert users.shape[0] == pos_interactions.shape[0]
@@ -76,10 +76,12 @@ def test_bootstrap_sampling_exact(pageviews):
 
     batch_size = 1000
     sample_size = 10000
-    total_interactions = 0
 
-    for users, positives_batch, negatives_batch in bootstrap_sample_pairs(
-        pageviews, batch_size=batch_size, exact=True, sample_size=sample_size
+    sampler = BootstrapSampler(batch_size=batch_size, exact=True)
+
+    total_interactions = 0
+    for users, positives_batch, negatives_batch in sampler.sample(
+        pageviews, sample_size=sample_size
     ):
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
@@ -96,11 +98,10 @@ def test_bootstrap_sampling_exact(pageviews):
 def test_bootstrap_sampling(pageviews):
     batch_size = 4
 
-    total_interactions = 0
+    sampler = BootstrapSampler(batch_size=batch_size)
 
-    for users, positives_batch, negatives_batch in bootstrap_sample_pairs(
-        pageviews, batch_size=batch_size
-    ):
+    total_interactions = 0
+    for users, positives_batch, negatives_batch in sampler.sample(pageviews):
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
 
@@ -112,11 +113,11 @@ def test_bootstrap_sampling(pageviews):
 def test_sample_positives_and_negatives_bootstrap(pageviews):
     batch_size = 4
 
-    total_interactions = 0
+    sampler = PositiveNegativeSampler(U=1, batch_size=batch_size, replace=True)
 
-    for users, positives_batch, negatives_batch in sample_positives_and_negatives(
-        pageviews, batch_size=batch_size, U=1, replace=True
-    ):
+    total_interactions = 0
+    for users, positives_batch, negatives_batch in sampler.sample(pageviews):
+
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
 
@@ -132,16 +133,15 @@ def test_sample_positives_and_negatives_bootstrap_exact(pageviews):
 
     batch_size = 1000
     sample_size = 10000
-    total_interactions = 0
+    sampler = PositiveNegativeSampler(
+        U=1, batch_size=batch_size, replace=True, exact=True
+    )
 
-    for users, positives_batch, negatives_batch in sample_positives_and_negatives(
-        pageviews,
-        sample_size=sample_size,
-        batch_size=batch_size,
-        U=1,
-        replace=True,
-        exact=True,
+    total_interactions = 0
+    for users, positives_batch, negatives_batch in sampler.sample(
+        pageviews, sample_size=sample_size
     ):
+
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
 
@@ -159,11 +159,11 @@ def test_sample_positives_and_negatives_warp(pageviews):
     batch_size = 4
     U = 10
 
-    total_interactions = 0
+    sampler = PositiveNegativeSampler(U=U, batch_size=batch_size, replace=False)
 
-    for users, positives_batch, negatives_batch in sample_positives_and_negatives(
-        pageviews, batch_size=batch_size, U=U, replace=False
-    ):
+    total_interactions = 0
+    for users, positives_batch, negatives_batch in sampler.sample(pageviews):
+
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
         assert users.shape[0] == positives_batch.shape[0]
@@ -186,15 +186,14 @@ def test_sample_positives_and_negatives_w_positives_arg(larger_matrix):
     selected_positives_aslist = selected_positives.tolist()
 
     batch_size = 12
-    total_interactions = 0
 
-    for users, positives_batch, negatives_batch in sample_positives_and_negatives(
-        pageviews,
-        batch_size=batch_size,
-        U=1,
-        replace=False,
-        exact=True,
-        positives=selected_positives
+    sampler = PositiveNegativeSampler(
+        U=1, batch_size=batch_size, replace=False, exact=True
+    )
+
+    total_interactions = 0
+    for users, positives_batch, negatives_batch in sampler.sample(
+        pageviews, positives=selected_positives
     ):
         b = users.shape[0]
         assert (b == batch_size) or (b == pageviews.nnz % batch_size)
@@ -212,3 +211,30 @@ def test_sample_positives_and_negatives_w_positives_arg(larger_matrix):
             assert [user, positive] in selected_positives_aslist
 
     assert total_interactions == selected_positives.shape[0]
+
+
+def test_sample_positives_and_negatives_w_unigram(mat):
+    # needs to be binary
+    pageviews = mat.binary_values
+
+    batch_size = 1000
+    sample_size = 10000
+    sampler = PositiveNegativeSampler(
+        U=1, batch_size=batch_size, replace=True, exact=False, distribution="unigram"
+    )
+
+    negatives_counts = np.zeros(5)
+    for users, positives_batch, negatives_batch in sampler.sample(
+        pageviews, sample_size=sample_size
+    ):
+        for n in negatives_batch.numpy():
+            negatives_counts[n[0]] += 1
+
+    negatives_perc = negatives_counts / negatives_counts.sum()
+    # Items visited in pageviews: [0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2]
+    assert negatives_perc[0] > negatives_perc[3]
+    assert negatives_perc[0] > negatives_perc[4]
+
+    np.testing.assert_almost_equal(negatives_perc[0], negatives_perc[1], decimal=2)
+    np.testing.assert_almost_equal(negatives_perc[0], negatives_perc[2], decimal=2)
+    np.testing.assert_almost_equal(negatives_perc[3], negatives_perc[4], decimal=2)
