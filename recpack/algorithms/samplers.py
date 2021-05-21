@@ -237,7 +237,7 @@ class BootstrapSampler(PositiveNegativeSampler):
 
     def __init__(self, U=1, batch_size=100, exact=False):
         #  Bootstrap sampling is samping with replacement.
-        super().__init__(U, batch_size, True, exact)
+        super().__init__(U=U, batch_size=batch_size, replace=True, exact=exact)
 
 
 class WarpSampler(PositiveNegativeSampler):
@@ -258,7 +258,7 @@ class WarpSampler(PositiveNegativeSampler):
     """
 
     def __init__(self, U=10, batch_size=100, exact=False):
-        super().__init__(U, batch_size, False, exact)
+        super().__init__(U=U, batch_size=batch_size, replace=False, exact=exact)
 
 
 def _spot_collisions(

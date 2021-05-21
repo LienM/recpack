@@ -12,14 +12,14 @@ from recpack.data.matrix import to_binary
 
 
 def test_warp_sampling_exact():
-    users = [np.random.randint(0, 100) for i in range(1000)]
-    items = [np.random.randint(0, 25) for i in range(1000)]
-    values = [1 for i in range(1000)]
+    users = [np.random.randint(0, 100) for i in range(500)]
+    items = [np.random.randint(0, 25) for i in range(500)]
+    values = [1 for i in range(500)]
     pageviews = csr_matrix((values, (users, items)), shape=(100, 25))
     pageviews = to_binary(pageviews)
 
     batch_size = 100
-    U = 10
+    U = 5
 
     sampler = WarpSampler(U=U, batch_size=batch_size, exact=True)
 
