@@ -46,13 +46,6 @@ def prod2vec(p2v_embedding, mat):
     return prod
 
 
-# def test__create_clustered_ranking(prod2vec, larger_mat):
-#     prod2vec._init_model(larger_mat)
-#     prod2vec._create_clustered_ranking(larger_mat)
-#     assert prod2vec.cluster_to_cluster.shape == (prod2vec.num_clusters, prod2vec.num_clusters)
-#     assert prod2vec.cluster_ranking.shape == (prod2vec.num_clusters, prod2vec.Kcl)
-
-
 def test__predict(prod2vec, larger_mat):
     prod2vec._init_model(larger_mat)
     matrix = csr_matrix((6, 25))
@@ -142,12 +135,6 @@ def test_cluster_similarity_computation():
     np.testing.assert_array_equal(c2c[c_1].nonzero()[1], np.array(sorted([c_1, c_2])))
     np.testing.assert_array_equal(c2c[c_2].nonzero()[1], np.array(sorted([c_2, c_3])))
     np.testing.assert_array_equal(c2c[c_3].nonzero()[1], np.array(sorted([c_3, c_0])))
-
-
-# def test_mask_warning(prod2vec, mat):
-#     prod2vec.K = 4
-#     with pytest.warns(UserWarning, match='An item mask has less values than K.'):
-#         prod2vec._create_similarity_matrix(mat)
 
 
 def test_training_epoch(prod2vec, mat):
