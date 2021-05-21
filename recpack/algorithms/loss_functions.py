@@ -187,10 +187,10 @@ def bpr_loss_wrapper(
     :type X_true: csr_matrix
     :param X_pred: The predicted scores for users
     :type X_pred: csr_matrix
-    :param batch_size: size of the batches to sample
-    :type batch_size: The size of the batches to sample, defaults to 1000
-    :param sample_size: int, optional
-    :type sample_size: How many samples to construct
+    :param batch_size: size of the batches to sample, defaults to 1000
+    :type batch_size: int, optional
+    :param sample_size: How many samples to construct
+    :type sample_size: int, optional
     :param exact: If True sampling happens exact,
         otherwise sampling assumes high sparsity of data,
         accepting a minimal amount of false negatives,
@@ -230,6 +230,7 @@ def warp_loss_wrapper(
     batch_size: int = 1000,
     U: int = 20,
     margin: float = 1.9,
+    sample_size=None,
     exact=False,
 ):
     """Metric wrapper around the :func:`warp_loss` function.
@@ -248,6 +249,8 @@ def warp_loss_wrapper(
     :type U: int, optional
     :param margin: required margin between positives and negatives, defaults to 1.9
     :type margin: float, optional
+    :param sample_size: How many samples to construct
+    :type sample_size: int, optional
     :param exact: If True sampling happens exact,
         otherwise sampling assumes high sparsity of data,
         accepting a minimal amount of false negatives.
@@ -261,7 +264,9 @@ def warp_loss_wrapper(
 
     sampler = WarpSampler(U=U, batch_size=batch_size, exact=exact)
 
-    for users, positives_batch, negatives_batch in tqdm(sampler.sample(X_true)):
+    for users, positives_batch, negatives_batch in tqdm(
+        sampler.sample(X_true, sample_size=sample_size)
+    ):
 
         current_batch_size = users.shape[0]
 

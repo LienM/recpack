@@ -33,7 +33,7 @@ def prod2vec(p2v_embedding, mat):
         save_best_to_file=False,
         replace=False,
         exact=True,
-        keep_last=True
+        keep_last=True,
     )
     prod._init_model(mat)
     prod.model_.input_embeddings = p2v_embedding
@@ -46,10 +46,10 @@ def test_window():
     # todo what about the error for small values?
 
     sequence = [
-        (123, ['computer', 'artificial', 'intelligence', 'dog', 'trees']),
-        (145, ['human', 'intelligence', 'cpu', 'graph']),
-        (1, ['intelligence']),
-        (3, ['artificial', 'intelligence', 'system'])
+        (123, ["computer", "artificial", "intelligence", "dog", "trees"]),
+        (145, ["human", "intelligence", "cpu", "graph"]),
+        (1, ["intelligence"]),
+        (3, ["artificial", "intelligence", "system"]),
     ]
     # Create a window of size 3:
     # sequence 1: 5 windows
@@ -68,8 +68,7 @@ def test_training_epoch(prod2vec, mat):
 
     prod2vec._init_model(mat)
 
-    params = [o for o in prod2vec.model_.named_parameters()
-              if o[1].requires_grad]
+    params = [o for o in prod2vec.model_.named_parameters() if o[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -85,13 +84,13 @@ def test_training_epoch(prod2vec, mat):
 def test_evaluation_epoch(prod2vec, mat):
     prod2vec._init_model(mat)
 
-    params = [o for o in prod2vec.model_.named_parameters()
-              if o[1].requires_grad]
+    params = [o for o in prod2vec.model_.named_parameters() if o[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
 
     prod2vec.best_model = tempfile.NamedTemporaryFile()
+    prod2vec._create_similarity_matrix(None)
     # run a training step
     prod2vec._evaluate(to_csr_matrix(mat), to_csr_matrix(mat))
 
@@ -103,18 +102,23 @@ def test_evaluation_epoch(prod2vec, mat):
 
 def test_predict_warning(prod2vec):
 
-    with pytest.warns(UserWarning, match='K is larger than the number of items.'):
-        prod2vec._create_similarity_matrix()
+    with pytest.warns(UserWarning, match="K is larger than the number of items."):
+        # NOTE: the create_similarity_matrix func expects the interaction matrix X
+        # Which is used for subclasses of this one,
+        # but is unused by the based model, so we can use None.
+        prod2vec._create_similarity_matrix(None)
 
 
 def test_create_similarity_matrix(prod2vec):
 
-    prod2vec._create_similarity_matrix()
+    # NOTE: the create_similarity_matrix func expects the interaction matrix X
+    # Which is used for subclasses of this one,
+    # but is unused by the based model, so we can use None.
+    prod2vec._create_similarity_matrix(None)
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
 
     # Get the most similar item for each item
-    np.testing.assert_array_equal(
-        np.argmax(similarity_matrix, axis=1), [1, 0, 3, 2, 0])
+    np.testing.assert_array_equal(np.argmax(similarity_matrix, axis=1), [1, 0, 3, 2, 0])
 
     # Cosine similarities can be calculated by hand easily
     # Only get the most similar item using max
@@ -128,20 +132,25 @@ def test_batch_predict(prod2vec):
     matrix = csr_matrix((6, 5))
     matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
 
-    prod2vec._create_similarity_matrix()
+    # NOTE: the create_similarity_matrix func expects the interaction matrix X
+    # Which is used for subclasses of this one,
+    # but is unused by the based model, so we can use None.
+    prod2vec._create_similarity_matrix(None)
     predictions = prod2vec._batch_predict(matrix)
 
     np.testing.assert_array_almost_equal(
         predictions.toarray(),
         np.array(
             [
-                [0., 0.98473193, 0., 0., 0.70710678],
-                [0.98473193, 0., 0., 0.12309149, 0.69631062],
-                [0., 0., 0., 0.5, 0.],
-                [0., 0.12309149, 0.5, 0., 0.],
-                [0.70710678, 0.69631062, 0., 0., 0.],
-                [0., 0., 0., 0., 0.]
-            ]))
+                [0.0, 0.98473193, 0.0, 0.0, 0.70710678],
+                [0.98473193, 0.0, 0.0, 0.12309149, 0.69631062],
+                [0.0, 0.0, 0.0, 0.5, 0.0],
+                [0.0, 0.12309149, 0.5, 0.0, 0.0],
+                [0.70710678, 0.69631062, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0],
+            ]
+        ),
+    )
 
 
 def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
@@ -150,9 +159,7 @@ def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
 
     U = prod2vec.num_neg_samples
 
-    for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
-        larger_mat
-    ):
+    for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(larger_mat):
 
         assert item_1.shape[0] == item_2.shape[0]
         assert item_1.shape[0] == neg_items.shape[0]
@@ -162,18 +169,18 @@ def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
         for i in range(U):
             for j in range(i):
 
-                overlap = (
-                    neg_items[:, j].numpy(
-                    ) == neg_items[:, i].numpy()
-                )
+                overlap = neg_items[:, j].numpy() == neg_items[:, i].numpy()
 
                 np.testing.assert_array_equal(overlap, False)
 
 
 def test_skipgram_sample_pairs_error(prod2vec):
 
-    data = {TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2], ITEM_IX: [
-        0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2], USER_IX: [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2]}
+    data = {
+        TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2],
+        ITEM_IX: [0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2],
+        USER_IX: [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2],
+    }
     df = pd.DataFrame.from_dict(data)
 
     matrix = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
@@ -182,9 +189,7 @@ def test_skipgram_sample_pairs_error(prod2vec):
 
     # Too few possible negatives
     with pytest.raises(ValueError):
-        for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
-            matrix
-        ):
+        for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(matrix):
             pass
 
 
@@ -196,9 +201,7 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
     all_item_2 = np.array([], dtype=int)
     all_neg_items = None
 
-    for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(
-        mat
-    ):
+    for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(mat):
         all_item_1 = np.append(all_item_1, item_1)
         all_item_2 = np.append(all_item_2, item_2)
 
@@ -210,10 +213,8 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
     generated_positive_pairs = np.column_stack([all_item_1, all_item_2])
 
     expected_positive_pairs = np.array(
-        [
-            [1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [
-                0, 1], [4, 2], [2, 4], [0, 1], [1, 0]
-        ])
+        [[1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [0, 1], [4, 2], [2, 4], [0, 1], [1, 0]]
+    )
 
     sorted_generated_positive_pairs = list(map(tuple, generated_positive_pairs))
     sorted_generated_positive_pairs.sort()
@@ -221,7 +222,8 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
     sorted_expected_positive_pairs.sort()
 
     np.testing.assert_array_equal(
-        sorted_generated_positive_pairs, sorted_expected_positive_pairs)
+        sorted_generated_positive_pairs, sorted_expected_positive_pairs
+    )
 
 
 def test_overfit(prod2vec):
@@ -229,7 +231,7 @@ def test_overfit(prod2vec):
     data = {
         "user": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3],
         "item": [0, 1, 2, 0, 1, 0, 1, 2, 0, 2, 3, 4, 5, 3, 4, 3, 4, 5, 3, 5],
-        "timestamp": list(range(0, 20))
+        "timestamp": list(range(0, 20)),
     }
     df = pd.DataFrame.from_dict(data)
     im = InteractionMatrix(df, "item", "user", timestamp_ix="timestamp")

@@ -1,5 +1,4 @@
 import logging
-import sys
 from typing import Tuple
 import warnings
 
@@ -19,154 +18,168 @@ logger = logging.getLogger("recpack")
 
 
 class Prod2VecClustered(Prod2Vec):
-    '''
-    Clustered Prod2Vec implementation outlined in: E-commerce in Your Inbox: Product Recommendations at Scale (https://arxiv.org/abs/1606.07154)
+    """
+    Clustered Prod2Vec implementation outlined in:
+    E-commerce in Your Inbox: Product Recommendations at Scale
+    (https://arxiv.org/abs/1606.07154)
 
-    Similar products are grouped into clusters, products are recommended based on the top related clusters.
-    Uses a Kmeans clustering algorithm. Clusters are ranked based on the probability that a purchase from cluster ci is followed
-    by a purchase from cluster cj. Products from the top clusters are sorted by their cosine similarity, top-K are returned as recommendations.
+    Similar products are grouped into clusters,
+    products are recommended based on the top related clusters.
+    Uses a Kmeans clustering algorithm.
+    Clusters are ranked based on the probability
+    that a purchase from cluster ci is followed by a purchase from cluster cj.
+    Products from the top clusters are sorted by their cosine similarity,
+    top-K are returned as recommendations.
 
 
     :param num_clusters: number of clusters for Kmeans clustering
     :type num_clusters: int
     :param Kcl: top-K clusters
     :rtype Kcl: int
-    '''
-    def __init__(self, embedding_size: int, num_neg_samples: int,
-                 window_size: int, stopping_criterion: str, K=10, num_clusters=5, Kcl=2, batch_size=1000, learning_rate=0.01,
-                 max_epochs=10,
-                 stop_early: bool = False, max_iter_no_change: int = 5, min_improvement: float = 0.01, seed=None,
-                 save_best_to_file=False, replace=False, exact=False, keep_last=False):
-        super().__init__(embedding_size, num_neg_samples,
-                         window_size, stopping_criterion, K=K, batch_size=batch_size, learning_rate=learning_rate,
-                         max_epochs=max_epochs,
-                         stop_early=stop_early, max_iter_no_change=max_iter_no_change, min_improvement=min_improvement,
-                         seed=seed,
-                         save_best_to_file=save_best_to_file, replace=replace, exact=exact, keep_last=keep_last)
+    """
+
+    def __init__(
+        self,
+        embedding_size: int,
+        num_neg_samples: int,
+        window_size: int,
+        stopping_criterion: str,
+        K=10,
+        num_clusters=5,
+        Kcl=2,
+        batch_size=1000,
+        learning_rate=0.01,
+        max_epochs=10,
+        stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: float = 0.01,
+        seed=None,
+        save_best_to_file=False,
+        replace=False,
+        exact=False,
+        keep_last=False,
+    ):
+        super().__init__(
+            embedding_size,
+            num_neg_samples,
+            window_size,
+            stopping_criterion,
+            K=K,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            max_epochs=max_epochs,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+            seed=seed,
+            save_best_to_file=save_best_to_file,
+            replace=replace,
+            exact=exact,
+            keep_last=keep_last,
+        )
         self.num_clusters = num_clusters
         self.Kcl = Kcl
 
-    def _train_epoch(self, X: InteractionMatrix) -> list:
-        assert self.model_ is not None
-        losses = []
-        # generator will just be restarted for each epoch.
-        for focus_batch, positives_batch, negatives_batch in self._skipgram_sample_pairs(X):
-            self.optimizer.zero_grad()
-
-            positive_sim = self.model_(
-                focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1))
-            negative_sim = self.model_(
-                focus_batch.unsqueeze(-1), negatives_batch)
-
-            loss = self._compute_loss(positive_sim, negative_sim)
-            loss.backward()
-            losses.append(loss.item())
-            nn.utils.clip_grad_norm_(self.model_.parameters(), self.clipnorm)
-            self.optimizer.step()
-
-        # Note: had to be moved here in order to work. Reason is embedding + X are needed to create a similarity matrix -> _evaluate doesn't have access to X so can't create it there
-        self._create_similarity_matrix(X)
-        return losses
-
-    def fit(self, X: InteractionMatrix,
-            validation_data: Tuple[InteractionMatrix, InteractionMatrix]) -> "TorchMLAlgorithm":
-        super(Prod2Vec, self).fit(X, validation_data)
-        return self
-
-    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
-        assert self.similarity_matrix_ is not None
-        val_in_selection, val_out_selection = sample_rows(val_in, val_out, sample_size=1000)
-        predictions = self._batch_predict(val_in_selection)
-        better = self.stopping_criterion.update(val_out_selection, predictions)
-        if better:
-            logger.info("Model improved. Storing better model.")
-            self._save_best()
-
     def _create_similarity_matrix(self, X: InteractionMatrix):
         # K similar items + self-similarity
+        # While self similarity is not guaranteed in this case,
+        # this is not enough of a problem to add more complex solutions.
         K = self.K + 1
-        batch_size = 1000
 
         embedding = self.model_.input_embeddings.weight.detach().numpy()
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
             warnings.warn("K is larger than the number of items.", UserWarning)
-        # create a ranking of top clusters
-        self._create_clustered_ranking(X)
-        # create a mask for the similarity matrix
-        mask = self._create_cluster_mask(num_items)
+
+        # empty easily updated sparse matrix
+        # Will be filled in per row
         item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
-        for batch in range(0, num_items, batch_size):
-            Y = embedding[batch:batch + batch_size]
-            item_cosine_similarity_batch = csr_matrix(cosine_similarity(
-                Y, embedding))
-            item_cosine_similarity_batch = item_cosine_similarity_batch.multiply(mask[batch:batch + batch_size]).tocsr()
-            item_cosine_similarity_batch.eliminate_zeros()
-            item_cosine_similarity_[batch:batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
+        # Cluster the items in the embedding space:
+        item_to_cluster = self._create_item_to_cluster_array()
+
+        # Compute cluster to cluster similarities
+        cluster_to_cluster_neighbours = self._create_cluster_to_cluster_neighborhoods(
+            X, item_to_cluster
+        )
+
+        # Compute similarities per cluster
+        for cluster in np.arange(self.num_clusters):
+            # Get clusters that are neighbours of the cluster
+            # whose item similarities we are computing
+            cluster_neighbours = cluster_to_cluster_neighbours[cluster, :].nonzero()[1]
+            cluster_items = (item_to_cluster == cluster).nonzero()[0]
+
+            context = embedding[cluster_items, :]
+
+            # Set embeddings of items not in cluster to 0
+            # Similarities will only be computed with nonzero items.
+            # The [:, np.newaxis] turns a 1d vector into a column vector
+            # needed for pointwise multiplication as mask
+            target = np.multiply(
+                embedding, (np.isin(item_to_cluster, cluster_neighbours))[:, np.newaxis]
+            )
+
+            item_cosine_similarity_[cluster_items] = get_top_K_values(
+                csr_matrix(cosine_similarity(context, target)), K
+            )
+
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
-    def _create_cluster_mask(self, num_items):
-        '''
-        Creates a mask for the similarity matrix based on cluster ranking.
-        '''
-        items = range(num_items)
-        items_as_clusters = self._map_to_cluster(items, self.item_to_cluster_mapping)
-        mask = csr_matrix((num_items, num_items))
-        for item in items:
-            item_cluster = self.item_to_cluster_mapping[item]
-            mask_item = np.zeros(items_as_clusters.shape)
-            for cluster in self.cluster_ranking[item_cluster]:
-                try:
-                    indexes = np.where(items_as_clusters == cluster)
-                    mask_item[indexes] = 1
-                except ValueError:
-                    pass
-            mask[item] = csr_matrix(mask_item)
-        # check the minimum amount of items: we create a mask over the similarity matrix, it's possible that this mask leads to less than K items in the similarity matrix (for a particular item)
-        min_K = mask.sum(axis=1).min()
-        if self.K > min_K:
-            warnings.warn("An item mask has less values than K.", UserWarning)
-        # need to fill the diagonal with 1 values here to be able to remove them efficiently later on
-        mask.setdiag(1)
-        return mask
+    def _create_item_to_cluster_array(self) -> np.array:
+        """Use Kmeans to assign a cluster label to each item.
 
-    def _create_clustered_ranking(self, X: InteractionMatrix):
+        :return: array with a cluster label for every item. Shape = (|I|,)
+        :rtype: np.array
+        """
         embedding = self.model_.input_embeddings.weight.detach().numpy()
         kmeans = KMeans(self.num_clusters)
-        clusters = kmeans.fit_predict(embedding)
-        self.item_to_cluster_mapping = dict(enumerate(clusters))
-        # do a singular window operation
+        item_to_cluster = kmeans.fit_predict(embedding)
+        return item_to_cluster
+
+    def _create_cluster_to_cluster_neighborhoods(
+        self, X: InteractionMatrix, item_to_cluster: np.array
+    ) -> csr_matrix:
+        """Compute the clusters that should be considered neighbours.
+
+        Similarity between two clusters i, j is computed by the number of times
+        an item in cluster i is interacted with before an interaction
+        with an item from cluster j.
+
+        :param X: Interactions to use for similarity computation.
+        :type X: InteractionMatrix
+        :param item_to_cluster: Item to cluster assignment vector
+        :type item_to_cluster: np.array
+        :return: Sparse matrix with top Kcl neighbours for each cluster.
+            Shape = (|C| x |C|)
+        :rtype: csr_matrix
+        """
+        # do a singular window operation to get an item and the next interacted item.
         positives = self._singular_window(X)
         # replace all iids by cluster labels
-        positives_as_clusters = self._map_to_cluster(positives, self.item_to_cluster_mapping)
+        from_clusters = [item_to_cluster[i] for i in positives[:, 0]]
+        to_clusters = [item_to_cluster[i] for i in positives[:, 1]]
+
         # create a cluster to cluster matrix
         # cheap trick: csr matrix automatically adds up duplicate entries
-        from_clusters = positives_as_clusters[:, 0]
-        to_clusters = positives_as_clusters[:, 1]
-        values = [1] * len(from_clusters)
+        values = np.ones(len(from_clusters))
         cluster_to_cluster_csr = csr_matrix(
-            (values, (from_clusters, to_clusters)), shape=(self.num_clusters, self.num_clusters))
-        self.cluster_to_cluster = cluster_to_cluster_csr.toarray()
-        # get indices of the top ranking clusters according to top Kc
-        self.cluster_ranking = self.cluster_to_cluster.argpartition(-self.Kcl)[:, -self.Kcl:]
+            (values, (from_clusters, to_clusters)),
+            shape=(self.num_clusters, self.num_clusters),
+        )
 
-    def _map_to_cluster(self, items: np.ndarray, item_to_cluster_mapping: dict):
-        k = np.array(list(item_to_cluster_mapping.keys()))
-        v = np.array(list(item_to_cluster_mapping.values()))
-        mapping_ar = np.zeros(k.max() + 1, dtype=v.dtype)
-        mapping_ar[k] = v
-        clusters = mapping_ar[items]
-        return clusters
+        # Cut to topK most similar neighborhoods.
+        cluster_neighbourhood = get_top_K_values(cluster_to_cluster_csr, self.Kcl)
 
-    # todo not efficient since half of the windows and half of the window are useless
+        return cluster_neighbourhood
+
     def _singular_window(self, X: InteractionMatrix):
-        '''
+        """
         Create pairs of positive samples.
-        '''
+        """
         window_size = 1
         windowed_sequences = window(X.sorted_item_history, window_size)
         context = windowed_sequences[:, :window_size].flatten()

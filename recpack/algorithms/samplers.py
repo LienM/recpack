@@ -55,7 +55,7 @@ class PositiveNegativeSampler:
         :type exact: bool, optional
         :param distribution: The distribution used to sample negative items,
             defaults to uniform. Options are `'uniform'` and `'unigram'`
-
+        :type distribution: string, optional
         """
         self.U = U
         self.batch_size = batch_size
@@ -219,12 +219,44 @@ class PositiveNegativeSampler:
 
 
 class BootstrapSampler(PositiveNegativeSampler):
+    """Sampler that samples positives with replacement.
+
+    This approach allows to learn multiple times from the same positive interactions.
+    For more information on implementation see :class:`PositiveNegativeSampler`
+
+    :param U: Number of negative samples for each positive, defaults to 1
+    :type U: int, optional
+    :param batch_size: The number of samples returned per batch, defaults to 100
+    :type batch_size: int, optional
+    :param exact: If False (default) negatives are checked agains the corresponding
+        positive sample only, allowing for (rare) collisions.
+        If collisions should be avoided at all costs, use exact = True,
+        but suffer decreased performance.
+    :type exact: bool, optional
+    """
+
     def __init__(self, U=1, batch_size=100, exact=False):
         #  Bootstrap sampling is samping with replacement.
         super().__init__(U, batch_size, True, exact)
 
 
 class WarpSampler(PositiveNegativeSampler):
+    """Samples `U` negatives for each positive.
+
+    This approach allows to learn multiple times from the same positive interactions.
+    For more information on implementation see :class:`PositiveNegativeSampler`
+
+    :param U: Number of negative samples for each positive, defaults to 1
+    :type U: int, optional
+    :param batch_size: The number of samples returned per batch, defaults to 100
+    :type batch_size: int, optional
+    :param exact: If False (default) negatives are checked agains the corresponding
+        positive sample only, allowing for (rare) collisions.
+        If collisions should be avoided at all costs, use exact = True,
+        but suffer decreased performance.
+    :type exact: bool, optional
+    """
+
     def __init__(self, U=10, batch_size=100, exact=False):
         super().__init__(U, batch_size, False, exact)
 

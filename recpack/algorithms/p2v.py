@@ -144,10 +144,13 @@ class Prod2Vec(TorchMLAlgorithm):
         self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
+        if self.similarity_matrix_ is None:
+            raise RuntimeError(
+                "Expected similarity matrix to be computed before _evaluate"
+            )
         val_in_selection, val_out_selection = sample_rows(
             val_in, val_out, sample_size=1000
         )
-        self._create_similarity_matrix()
         predictions = self._batch_predict(val_in_selection)
         better = self.stopping_criterion.update(val_out_selection, predictions)
 
@@ -177,23 +180,17 @@ class Prod2Vec(TorchMLAlgorithm):
             nn.utils.clip_grad_norm_(self.model_.parameters(), self.clipnorm)
             self.optimizer.step()
 
+        # Construct the similarity matrix based on the updated model.
+        # While the base class does not use the X interaction matrix,
+        # Other subclasses do, and it reduces code duplication to pass it
+        self._create_similarity_matrix(X)
+
         return losses
-
-    def fit(
-        self,
-        X: InteractionMatrix,
-        validation_data: Tuple[InteractionMatrix, InteractionMatrix],
-    ) -> "TorchMLAlgorithm":
-        super().fit(X, validation_data)
-
-        self._create_similarity_matrix()
-
-        return self
 
     def _compute_loss(self, positive_sim, negative_sim):
         return skipgram_negative_sampling_loss(positive_sim, negative_sim)
 
-    def _create_similarity_matrix(self):
+    def _create_similarity_matrix(self, X: InteractionMatrix):
         # K similar items + self-similarity
         K = self.K + 1
         batch_size = 1000
