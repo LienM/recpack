@@ -178,7 +178,7 @@ def bpr_loss_wrapper(
     :class:`recpack.algorithms.stopping_criterion.StoppingCriterion`.
 
     Positive and negative items are sampled using
-    :func:`recpack.algorithms.samplers.BootstrapSampler`.
+    :class:`recpack.algorithms.samplers.BootstrapSampler`.
     Scores are then extracted from the X_pred,
     and these positive and negative predictions are passed to the
     :func:`bpr_loss` function.
