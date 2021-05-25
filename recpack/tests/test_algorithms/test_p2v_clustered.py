@@ -1,6 +1,3 @@
-import os
-from recpack.tests.test_algorithms.conftest import ITEM_IX, TIMESTAMP_IX, USER_IX
-import tempfile
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,14 +5,11 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
 import torch
-import torch.nn as nn
 
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
 from recpack.data.matrix import InteractionMatrix
-from recpack.splitters.scenarios import NextItemPrediction
-from recpack.data.matrix import to_csr_matrix
 
-from recpack.tests.test_algorithms.util import assert_changed, assert_same
+from recpack.tests.test_algorithms.util import assert_changed
 
 
 @pytest.fixture(scope="function")

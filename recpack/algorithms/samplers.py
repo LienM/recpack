@@ -18,6 +18,38 @@ def unigram_distribution(X: csr_matrix) -> np.array:
 
 
 class PositiveNegativeSampler:
+    """Samples linked positive and negative interactions for users.
+
+    Provides a :meth:`sample` method that samples positives and negatives.
+    Positives are sampled uniformly from all positive interactions.
+    Negative samples are sampled either based on a uniform distribution
+    or a unigram distribution.
+
+    The uniform distrbution makes it so each item has the same probability to
+    be selected as negative.
+    With the unigram distribution, items are sampled according to their weighted
+    popularity.
+
+    .. math::
+
+        P(w_i) = \\frac{  {f(w_i)}^{3/4}  }{\\sum_{j=0}^{n}\\left(  {f(w_j)}^{3/4} \\right) }
+
+    :param U: Number of negative samples for each positive, defaults to 1
+    :type U: int, optional
+    :param batch_size: The number of samples returned per batch, defaults to 100
+    :type batch_size: int, optional
+    :param replace: Sample positives with or without replacement. Defaults to True
+    :type replace: bool, optional
+    :param exact: If False (default) negatives are checked agains the corresponding
+        positive sample only, allowing for (rare) collisions.
+        If collisions should be avoided at all costs, use exact = True,
+        but suffer decreased performance.
+    :type exact: bool, optional
+    :param distribution: The distribution used to sample negative items,
+        defaults to uniform. Options are `'uniform'` and `'unigram'`
+    :type distribution: string, optional
+    """
+
     def __init__(
         self,
         U=1,
@@ -26,37 +58,7 @@ class PositiveNegativeSampler:
         exact=False,
         distribution="uniform",
     ):
-        """Samples linked positive and negative interactions for users.
 
-        Provides a :meth:`sample` method that samples positives and negatives.
-        Positives are sampled uniformly from all positive interactions.
-        Negative samples are sampled either based on a uniform distribution
-        or a unigram distribution.
-
-        The uniform distrbution makes it so each item has the same probability to
-        be selected as negative.
-        With the unigram distribution, items are sampled according to their weighted
-        popularity.
-
-        .. math::
-
-            P(w_i) = \\frac{  {f(w_i)}^{3/4}  }{\\sum_{j=0}^{n}\\left(  {f(w_j)}^{3/4} \\right) }
-
-        :param U: Number of negative samples for each positive, defaults to 1
-        :type U: int, optional
-        :param batch_size: The number of samples returned per batch, defaults to 100
-        :type batch_size: int, optional
-        :param replace: Sample positives with or without replacement. Defaults to True
-        :type replace: bool, optional
-        :param exact: If False (default) negatives are checked agains the corresponding
-            positive sample only, allowing for (rare) collisions.
-            If collisions should be avoided at all costs, use exact = True,
-            but suffer decreased performance.
-        :type exact: bool, optional
-        :param distribution: The distribution used to sample negative items,
-            defaults to uniform. Options are `'uniform'` and `'unigram'`
-        :type distribution: string, optional
-        """
         self.U = U
         self.batch_size = batch_size
         self.replace = replace

@@ -133,7 +133,6 @@ As such recpack contains a number of commonly used sampling methods.
 .. autosummary::
     :toctree: generated/
     
-    samplers.Sampler
     samplers.PositiveNegativeSampler
     samplers.BootstrapSampler
     samplers.WarpSampler

@@ -1,7 +1,6 @@
-import os
 from recpack.tests.test_algorithms.conftest import ITEM_IX, TIMESTAMP_IX, USER_IX
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import numpy as np
