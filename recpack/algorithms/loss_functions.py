@@ -236,7 +236,7 @@ def warp_loss_wrapper(
     """Metric wrapper around the :func:`warp_loss` function.
 
     Positives and negatives are sampled from the X_true matrix using
-    :func:`recpack.algorithms.samplers.WarpSampler`.
+    :class:`recpack.algorithms.samplers.WarpSampler`.
     Their scores are fetched from the X_pred matrix.
 
     :param X_true: True interactions expected for the users
