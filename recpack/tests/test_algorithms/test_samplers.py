@@ -1,5 +1,6 @@
 from collections import defaultdict
 import numpy as np
+import pytest
 from scipy.sparse import csr_matrix
 
 from recpack.algorithms.samplers import (
@@ -256,3 +257,8 @@ def test_unigram_distribution(pageviews):
     np.testing.assert_almost_equal(distr[2], 1 / denum)
     np.testing.assert_almost_equal(distr[3], 2 ** 0.75 / denum)
     np.testing.assert_almost_equal(distr[4], 1 / denum)
+
+
+def test_distribution_check():
+    with pytest.raises(ValueError):
+        sampler = PositiveNegativeSampler(distribution="nonexistant")
