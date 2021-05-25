@@ -50,6 +50,8 @@ class PositiveNegativeSampler:
     :type distribution: string, optional
     """
 
+    ALLOWED_DISTRIBUTIONS = ["uniform", "unigram"]
+
     def __init__(
         self,
         U=1,
@@ -63,6 +65,11 @@ class PositiveNegativeSampler:
         self.batch_size = batch_size
         self.replace = replace
         self.exact = exact
+
+        if distribution not in self.ALLOWED_DISTRIBUTIONS:
+            raise ValueError(
+                f"unknown distribution, use one of {self.ALLOWED_DISTRIBUTIONS}"
+            )
 
         self.distribution = distribution  # TODO: Enum style value, to avoid mismatches?
 
