@@ -34,7 +34,8 @@ class Metric:
         raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """Calculates this metric for all nonzero users in ``y_true``, given true labels and predicted scores.
+        """Calculates this metric for all nonzero users in ``y_true``,
+        given true labels and predicted scores.
 
         :param y_true: True user-item interactions.
         :type y_true: csr_matrix
@@ -50,7 +51,7 @@ class Metric:
     @property
     def results(self):
         """Detailed results of the metric."""
-        return pd.DataFrame({"score": self.value})
+        return pd.DataFrame({"score": [self.value]})
 
     @property
     def value(self) -> float:
@@ -154,7 +155,7 @@ class MetricTopK(Metric):
         return row, col
 
     def _calculate(self, y_true, y_pred_top_K):
-        """Computes metric given true labels ``y_true`` and predicted scores ``y_pred``. Only Top-K recommendations are considered. 
+        """Computes metric given true labels ``y_true`` and predicted scores ``y_pred``. Only Top-K recommendations are considered.
 
         To be implemented in the child class.
 
@@ -166,7 +167,7 @@ class MetricTopK(Metric):
         raise NotImplementedError()
 
     def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-        """Computes metric given true labels ``y_true`` and predicted scores ``y_pred``. Only Top-K recommendations are considered. 
+        """Computes metric given true labels ``y_true`` and predicted scores ``y_pred``. Only Top-K recommendations are considered.
 
         Detailed metric results can be retrieved with :attr:`results`.
         Global aggregate metric value is retrieved as :attr:`value`.
