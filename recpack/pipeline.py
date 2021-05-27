@@ -93,7 +93,7 @@ class Pipeline(object):
         train_data: Union[Tuple[Matrix, Matrix], Matrix],
         test_data: Tuple[Matrix, Matrix],
         validation_data: Tuple[Matrix, Matrix] = None,
-        batch_size=1000,
+        batch_size = 1000,
     ):
         """
         Runs the pipeline.
