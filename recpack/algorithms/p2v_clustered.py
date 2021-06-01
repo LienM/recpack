@@ -97,11 +97,11 @@ class Prod2VecClustered(Prod2Vec):
         item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
         # Cluster the items in the embedding space:
-        item_to_cluster = self._create_item_to_cluster_array()
+        cluster_assignments = self._cluster()
 
         # Compute cluster to cluster similarities
-        cluster_to_cluster_neighbours = self._create_cluster_to_cluster_neighborhoods(
-            X, item_to_cluster
+        cluster_to_cluster_neighbours = self._get_top_K_clusters(
+            X, cluster_assignments
         )
 
         # Compute similarities per cluster
@@ -109,7 +109,7 @@ class Prod2VecClustered(Prod2Vec):
             # Get clusters that are neighbours of the cluster
             # whose item similarities we are computing
             cluster_neighbours = cluster_to_cluster_neighbours[cluster, :].nonzero()[1]
-            cluster_items = (item_to_cluster == cluster).nonzero()[0]
+            cluster_items = (cluster_assignments == cluster).nonzero()[0]
 
             context = embedding[cluster_items, :]
 
@@ -118,7 +118,7 @@ class Prod2VecClustered(Prod2Vec):
             # The [:, np.newaxis] turns a 1d vector into a column vector
             # needed for pointwise multiplication as mask
             target = np.multiply(
-                embedding, (np.isin(item_to_cluster, cluster_neighbours))[:, np.newaxis]
+                embedding, (np.isin(cluster_assignments, cluster_neighbours))[:, np.newaxis]
             )
 
             item_cosine_similarity_[cluster_items] = get_top_K_values(
@@ -129,7 +129,7 @@ class Prod2VecClustered(Prod2Vec):
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
-    def _create_item_to_cluster_array(self) -> np.array:
+    def _cluster(self) -> np.ndarray:
         """Use Kmeans to assign a cluster label to each item.
 
         :return: array with a cluster label for every item. Shape = (|I|,)
@@ -137,11 +137,11 @@ class Prod2VecClustered(Prod2Vec):
         """
         embedding = self.model_.input_embeddings.weight.detach().numpy()
         kmeans = KMeans(self.num_clusters)
-        item_to_cluster = kmeans.fit_predict(embedding)
-        return item_to_cluster
+        cluster_assignments = kmeans.fit_predict(embedding)
+        return cluster_assignments
 
-    def _create_cluster_to_cluster_neighborhoods(
-        self, X: InteractionMatrix, item_to_cluster: np.array
+    def _get_top_K_clusters(
+        self, X: InteractionMatrix, item_to_cluster: np.ndarray
     ) -> csr_matrix:
         """Compute the clusters that should be considered neighbours.
 

@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+from collections import defaultdict
 
 import pytest
 import numpy as np
@@ -86,20 +87,20 @@ def test_cluster_similarity_computation():
         ]
     )
 
-    clusters = alg._create_item_to_cluster_array()
-    assert clusters.shape[0] == 8
-    assert 0 in clusters
-    assert 1 in clusters
-    assert 2 in clusters
-    assert 3 in clusters
+    # Check if the correct number of clusters was created
+    cluster_assignments = alg._cluster()
+    assert cluster_assignments.shape[0] == 8
+    assert 0 in cluster_assignments
+    assert 1 in cluster_assignments
+    assert 2 in cluster_assignments
+    assert 3 in cluster_assignments
 
-    assert clusters.max() == 3
+    assert cluster_assignments.max() == 3
 
-    users = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
-    items = [0, 1, 2, 1, 3, 2, 4, 3, 5, 4, 6, 5, 7, 6, 8, 7, 0, 8, 1]
-    ts = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2]
-
-    # Special data matrix, which causes cluster 1 -> 1 and 2, 2 -> 2 and 3 , ...
+    # Data Matrix is constructed so that
+    # neighbours(c_0) = [c_0, c_1]
+    # neighbours(c_1) = [c_1, c_2]
+    # etc. as in the test at the bottom.
     # fmt:off
     df = pd.DataFrame.from_dict(
         {
@@ -112,30 +113,46 @@ def test_cluster_similarity_computation():
 
     im = InteractionMatrix(df, "item", "user", timestamp_ix="ts")
 
-    c2c = alg._create_cluster_to_cluster_neighborhoods(im, clusters)
+    c2c = alg._get_top_K_clusters(im, cluster_assignments)
 
     # Because clusters are not assigned in order,
     # we need to get them based on their item values
     # Remember that we created the embeddings such that clusters are:
     # (0, 1), (2, 3), (4, 5), (6, 7)
-    c_0 = clusters[0]
-    c_1 = clusters[2]
-    c_2 = clusters[4]
-    c_3 = clusters[6]
+    c_0 = cluster_assignments[0]
+    c_1 = cluster_assignments[2]
+    c_2 = cluster_assignments[4]
+    c_3 = cluster_assignments[6]
 
     assert c2c.shape == (4, 4)
 
-    np.testing.assert_array_equal(c2c[c_0].nonzero()[1], np.array(sorted([c_0, c_1])))
-    np.testing.assert_array_equal(c2c[c_1].nonzero()[1], np.array(sorted([c_1, c_2])))
-    np.testing.assert_array_equal(c2c[c_2].nonzero()[1], np.array(sorted([c_2, c_3])))
-    np.testing.assert_array_equal(c2c[c_3].nonzero()[1], np.array(sorted([c_3, c_0])))
+    np.testing.assert_array_equal(
+        c2c[c_0].nonzero()[1], np.array(sorted([c_0, c_1])))
+    np.testing.assert_array_equal(
+        c2c[c_1].nonzero()[1], np.array(sorted([c_1, c_2])))
+    np.testing.assert_array_equal(
+        c2c[c_2].nonzero()[1], np.array(sorted([c_2, c_3])))
+    np.testing.assert_array_equal(
+        c2c[c_3].nonzero()[1], np.array(sorted([c_3, c_0])))
+
+    # Check if only items from neighbouring clusters are nonzero
+
+    alg._create_similarity_matrix(im)
+
+    # All items in neighbouring clusters except itself.
+    np.testing.assert_array_equal([1, 2, 3], alg.similarity_matrix_[0, :].nonzero()[1])
+    np.testing.assert_array_equal([3, 4, 5], alg.similarity_matrix_[2, :].nonzero()[1])
+    np.testing.assert_array_equal([5, 6, 7], alg.similarity_matrix_[4, :].nonzero()[1])
+    np.testing.assert_array_equal([0, 1, 7], alg.similarity_matrix_[6, :].nonzero()[1])
+
 
 
 def test_training_epoch(prod2vec, mat):
 
     prod2vec._init_model(mat)
 
-    params = [o for o in prod2vec.model_.named_parameters() if o[1].requires_grad]
+    params = [o for o in prod2vec.model_.named_parameters()
+              if o[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
