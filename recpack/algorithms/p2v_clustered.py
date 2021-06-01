@@ -3,6 +3,7 @@ from typing import Tuple
 import warnings
 
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 import torch.nn as nn
 from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.metrics.pairwise import cosine_similarity
@@ -108,7 +109,8 @@ class Prod2VecClustered(Prod2Vec):
         for cluster in np.arange(self.num_clusters):
             # Get clusters that are neighbours of the cluster
             # whose item similarities we are computing
-            cluster_neighbours = cluster_to_cluster_neighbours[cluster, :].nonzero()[1]
+            cluster_neighbours = cluster_to_cluster_neighbours[cluster, :].nonzero()[
+                1]
             cluster_items = (cluster_assignments == cluster).nonzero()[0]
 
             context = embedding[cluster_items, :]
@@ -118,7 +120,8 @@ class Prod2VecClustered(Prod2Vec):
             # The [:, np.newaxis] turns a 1d vector into a column vector
             # needed for pointwise multiplication as mask
             target = np.multiply(
-                embedding, (np.isin(cluster_assignments, cluster_neighbours))[:, np.newaxis]
+                embedding, (np.isin(cluster_assignments, cluster_neighbours))[
+                    :, np.newaxis]
             )
 
             item_cosine_similarity_[cluster_items] = get_top_K_values(
@@ -158,10 +161,10 @@ class Prod2VecClustered(Prod2Vec):
         :rtype: csr_matrix
         """
         # do a singular window operation to get an item and the next interacted item.
-        positives = self._singular_window(X)
+        context_items, focus_items = self._create_pairs(X)
         # replace all iids by cluster labels
-        from_clusters = [item_to_cluster[i] for i in positives[:, 0]]
-        to_clusters = [item_to_cluster[i] for i in positives[:, 1]]
+        from_clusters = [item_to_cluster[i] for i in context_items]
+        to_clusters = [item_to_cluster[i] for i in focus_items]
 
         # create a cluster to cluster matrix
         # cheap trick: csr matrix automatically adds up duplicate entries
@@ -172,19 +175,18 @@ class Prod2VecClustered(Prod2Vec):
         )
 
         # Cut to topK most similar neighborhoods.
-        cluster_neighbourhood = get_top_K_values(cluster_to_cluster_csr, self.Kcl)
+        cluster_neighbourhood = get_top_K_values(
+            cluster_to_cluster_csr, self.Kcl)
 
         return cluster_neighbourhood
 
-    def _singular_window(self, X: InteractionMatrix):
+    def _create_pairs(self, X: InteractionMatrix):
         """
         Create pairs of positive samples.
         """
-        window_size = 1
-        windowed_sequences = window(X.sorted_item_history, window_size)
-        context = windowed_sequences[:, :window_size].flatten()
-        focus = windowed_sequences[:, window_size]
-        positives = np.vstack([context, focus]).T
-        # remove any NaN valued rows (consequence of windowing)
-        positives = positives[~np.isnan(positives).any(axis=1)].astype(int)
-        return positives
+        windowed_sequences = np.array([w.tolist(
+        ) for _, sequence in X.sorted_item_history if len(sequence) >= 2 for w in sliding_window_view(sequence, 2)])
+        context = windowed_sequences[:, 0]
+        focus = windowed_sequences[:, 1]
+
+        return context, focus

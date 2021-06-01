@@ -146,7 +146,6 @@ def test_cluster_similarity_computation():
     np.testing.assert_array_equal([0, 1, 7], alg.similarity_matrix_[6, :].nonzero()[1])
 
 
-
 def test_training_epoch(prod2vec, mat):
 
     prod2vec._init_model(mat)
