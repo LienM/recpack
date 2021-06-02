@@ -180,7 +180,7 @@ class Prod2VecClustered(Prod2Vec):
 
         return cluster_neighbourhood
 
-    def _create_pairs(self, X: InteractionMatrix):
+    def _create_pairs(self, X: InteractionMatrix) -> Tuple[np.ndarray, np.ndarray]:
         """
         Create pairs of positive samples.
         """

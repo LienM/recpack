@@ -527,7 +527,7 @@ _supported_types = Matrix.__args__  # type: ignore
 
 def to_csr_matrix(
     X: Union[Matrix, Tuple[Matrix, ...]], binary: bool = False
-) -> csr_matrix:
+) -> Union[csr_matrix, Tuple[csr_matrix, ...]]:
     """
     Convert a matrix-like object to a scipy csr_matrix.
 

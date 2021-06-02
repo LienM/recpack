@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple
+from typing import Tuple, Iterator
 import warnings
 
 import numpy as np
@@ -141,7 +141,8 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size)
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
         if self.similarity_matrix_ is None:
@@ -172,7 +173,8 @@ class Prod2Vec(TorchMLAlgorithm):
             positive_sim = self.model_(
                 focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1)
             )
-            negative_sim = self.model_(focus_batch.unsqueeze(-1), negatives_batch)
+            negative_sim = self.model_(
+                focus_batch.unsqueeze(-1), negatives_batch)
 
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
@@ -187,10 +189,10 @@ class Prod2Vec(TorchMLAlgorithm):
 
         return losses
 
-    def _compute_loss(self, positive_sim, negative_sim):
+    def _compute_loss(self, positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
         return skipgram_negative_sampling_loss(positive_sim, negative_sim)
 
-    def _create_similarity_matrix(self, X: InteractionMatrix):
+    def _create_similarity_matrix(self, X: InteractionMatrix) -> None:
         # K similar items + self-similarity
         K = self.K + 1
         batch_size = 1000
@@ -204,17 +206,18 @@ class Prod2Vec(TorchMLAlgorithm):
         item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
         for batch in range(0, num_items, batch_size):
-            Y = embedding[batch : batch + batch_size]
-            item_cosine_similarity_batch = csr_matrix(cosine_similarity(Y, embedding))
+            Y = embedding[batch: batch + batch_size]
+            item_cosine_similarity_batch = csr_matrix(
+                cosine_similarity(Y, embedding))
 
-            item_cosine_similarity_[batch : batch + batch_size] = get_top_K_values(
+            item_cosine_similarity_[batch: batch + batch_size] = get_top_K_values(
                 item_cosine_similarity_batch, K
             )
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
-    def _batch_predict(self, X: csr_matrix):
+    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
         # TODO Do we even need a separate batch_predict method?
         scores = X @ self.similarity_matrix_
         if not isinstance(scores, csr_matrix):
@@ -225,7 +228,7 @@ class Prod2Vec(TorchMLAlgorithm):
         results = self._batch_predict(X)
         return results.tocsr()
 
-    def _skipgram_sample_pairs(self, X: InteractionMatrix):
+    def _skipgram_sample_pairs(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
         """Creates a training dataset using the skipgrams and negative sampling method.
 
         First, the sequences of items (iid) are grouped per user (uid).
@@ -236,14 +239,14 @@ class Prod2Vec(TorchMLAlgorithm):
 
         :param X: InteractionMatrix
         :yield: focus_batch, positive_samples_batch, negative_samples_batch
-        :rtype: Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]
+        :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
         """
         # Window, then extract focus (middle element) and context (all other elements).
         windowed_sequences = window(X.sorted_item_history, self.window_size)
         context = np.hstack(
             (
                 windowed_sequences[:, : self.window_size],
-                windowed_sequences[:, self.window_size + 1 :],
+                windowed_sequences[:, self.window_size + 1:],
             )
         )
         focus = windowed_sequences[:, self.window_size]
@@ -268,12 +271,12 @@ class Prod2Vec(TorchMLAlgorithm):
             positives=positives,
         )
 
-    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
+    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]) -> Tuple[Matrix, Tuple[csr_matrix, csr_matrix]]:
         return X, to_csr_matrix(validation_data, binary=True)
 
 
 class SkipGram(nn.Module):
-    def __init__(self, vocab_size, embedding_size):
+    def __init__(self, vocab_size: int, embedding_size: int):
         super().__init__()
         self.vocab_size = vocab_size
         self.embedding_size = embedding_size
@@ -285,15 +288,16 @@ class SkipGram(nn.Module):
         nn.init.normal_(self.input_embeddings.weight, std=self.std)
         nn.init.normal_(self.output_embeddings.weight, std=self.std)
 
-    def forward(self, focus_item_batch, context_items_batch):
+    def forward(self, focus_item_batch: torch.LongTensor, context_items_batch: torch.LongTensor) -> torch.Tensor:
         # Create a (batch_size, embedding_dim, 1) tensor
-        focus_vector = torch.movedim(self.input_embeddings(focus_item_batch), 1, 2)
+        focus_vector = torch.movedim(
+            self.input_embeddings(focus_item_batch), 1, 2)
         # Expected of size (batch_size, 1, embedding_dim)
         context_vectors = self.output_embeddings(context_items_batch)
         return torch.bmm(context_vectors, focus_vector).squeeze(-1)
 
 
-def window(sequences, window_size):
+def window(sequences: Iterator[Tuple[int, list]], window_size: int) -> np.ndarray:
     """
     Will apply a windowing operation to a sequence of item sequences.
 
