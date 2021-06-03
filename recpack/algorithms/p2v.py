@@ -5,49 +5,98 @@ import warnings
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 from scipy.sparse import csr_matrix, lil_matrix
+from sklearn.metrics.pairwise import cosine_similarity
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics.pairwise import cosine_similarity
 
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.data.matrix import InteractionMatrix, Matrix, to_csr_matrix
 from recpack.algorithms.samplers import PositiveNegativeSampler
 from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
 from recpack.algorithms.util import sample_rows
+from recpack.data.matrix import InteractionMatrix, Matrix, to_csr_matrix
 from recpack.util import get_top_K_values
+
 
 logger = logging.getLogger("recpack")
 
 
 class Prod2Vec(TorchMLAlgorithm):
     """
-    Prod2Vec algorithm from the paper: "E-commerce in Your Inbox: Product Recommendations at Scale". (https://arxiv.org/abs/1606.07154)
+    Prod2Vec algorithm from the paper:
+    "E-commerce in Your Inbox: Product Recommendations at Scale".
+    (https://arxiv.org/abs/1606.07154)
 
-    Extends the TorchMLAlgorithm class.
+    Applies SkipGram Negative Sampling to sequences
+    of user interactions to learn an input (target) and output (context) embedding for every item.
 
-    :param embedding_size: size of the embedding vectors
-    :type embedding_size: int
-    :param num_neg_samples: number of negative samples per positive sample
-    :rtype num_neg_samples: int
-    :param window_size: number of elements to the left and right of the target
-    :rtype: int
-    :param batch_size: How many samples to use in each update step.
-    Higher batch sizes make each epoch more efficient,
-    but increases the amount of epochs needed to converge to the optimum,
-    by reducing the amount of updates per epoch.
-    :type batch_size: int
-    :param max_epochs: The max number of epochs to train.
-        If the stopping criterion uses early stopping, less epochs could be used.
-    :type max_epochs: int
-    :param learning_rate: How much to update the weights at each update.
-    :type learning_rate: float
-    :param clipnorm: Clips gradient norm. The norm is computed over all gradients together, as if they were concatenated into a single vector.
+    Only input embeddings (target) are retained and used for making recommendations.
+    Recommendations are made by computing the similarity between input embeddings
+    of different items and recommending those most similar.
+
+    Where possible, defaults were taken from the paper. 
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import Prod2Vec
+
+        # Since RecVAE uses iterative optimisation, it needs validation data
+        # To decide which of the iterations yielded the best model
+        # This validation data should be split into an input and output matrix.
+        # In this example the data has been split in a strong generalization fashion
+        X = csr_matrix(np.array(
+            [[1, 0, 1], [1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
+        )
+        x_val_in = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
+        )
+        x_val_out = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
+        )
+        x_test_in = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
+        )
+
+        algo = Prod2Vec(embedding_size=10, num_neg_samples=10, max_epochs=4)
+        # Fit algorithm
+        algo.fit(X, (x_val_in, x_val_out))
+
+        # Recommend for the test input data,
+        predictions = algo.predict(x_test_in)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+    :param embedding_size: The size of the embedding vectors for both input and output embeddings, defaults to 300
+    :type embedding_size: int, optional
+    :param num_neg_samples: Number of negative samples for every positive sample, defaults to 10
+    :type num_neg_samples: int, optional
+    :param window_size: Size of the context window to the left and to the right of the target item
+         used in skipgram negative sampling, defaults to 2
+    :type window_size: int, optional
+    :param stopping_criterion: Used to identify the best model computed thus far.
+        The string indicates the name of the stopping criterion.
+        Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+        Defaults to 'precision'
+    :type stopping_criterion: str, optional
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
+    :type K: int, optional
+    :param batch_size: Batch size for Adam optimizer. Higher batch sizes make each epoch more efficient,
+        but increases the amount of epochs needed to converge to the optimum,
+        by reducing the amount of updates per epoch. Defaults to 1000
+    :type batch_size: int, optional
+    :param learning_rate: Learning rate, defaults to 0.01
+    :type learning_rate: float, optional
+    :param clipnorm: Clips gradient norm.
+        The norm is computed over all gradients together,
+        as if they were concatenated into a single vector, defaults to 1
     :type clipnorm: int, optional
-    :param stopping_criterion: Name of the stopping criterion to use for training.
-        For available values,
-        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
-    :type stopping_criterion: str
+    :param max_epochs: Maximum number of epochs (iterations), defaults to 10
+    :type max_epochs: int, optional
     :param stop_early: If True, early stopping is enabled,
         and after ``max_iter_no_change`` iterations where improvement of loss function
         is below ``min_improvement`` the optimisation is stopped,
@@ -62,50 +111,48 @@ class Prod2Vec(TorchMLAlgorithm):
         if the improvement is below this value.
         Defaults to 0.0
     :type min_improvement: float, optional
-    :param seed: Seed to the randomizers, useful for reproducible results,
+    :param seed: Seed for random sampling. Useful for reproducible results,
         defaults to None
-    :type seed: int, optional
-    :param save_best_to_file: If true, the best model will be saved after training,
-        defaults to False
+    :type seed: bool, optional
+    :param save_best_to_file: If true, the best model will be saved after training.
+        Defaults to False
     :type save_best_to_file: bool, optional
-    :param K: for top-K most similar items
-    :type k: int
-    :param replace: sample with or without replacement (see PositiveNegativeSampler)
-    :rtype replace: bool
-    :param exact: If False (default) negatives are checked against the corresponding positive sample only, allowing for (rare) collisions.
-    If collisions should be avoided at all costs, use exact = True, but suffer decreased performance. (see PositiveNegativeSampler)
-    :rtype exact: bool
+    :param replace: Sample with or without replacement (see :class:`recpack.algorithms.samplers.PositiveNegativeSampler` ), defaults to False
+    :type replace: bool, optional
+    :param exact: If False (default) negatives are checked against the corresponding positive sample only,
+        allowing for (rare) collisions. If collisions should be avoided at all costs,
+        use exact = True, but suffer decreased performance. Defaults to False
+    :type exact: bool, optional
     :param keep_last: Retain last model,
         rather than best (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
     :param distribution: Which distribution to use to sample negatives. Options are `["uniform", "unigram"]`.
-        defaults to `'uniform'`. Uniform distribution will sample all items equally likely.
-        The unigram distribution puts more weight on popular items.
-    :type distribution: string, optional
+        Uniform distribution will sample all items equally likely.
+        Unigram distribution puts more weight on popular items. Defaults to "uniform"
+    :type distribution: str, optional
     """
 
     def __init__(
         self,
-        embedding_size: int,
-        num_neg_samples: int,
-        window_size: int,
-        stopping_criterion: str,
-        K=200,
-        batch_size=1000,
-        learning_rate=0.01,
-        clipnorm=1,
-        max_epochs=10,
+        embedding_size: int = 300,
+        num_neg_samples: int = 10,
+        window_size: int = 2,
+        stopping_criterion: str = "precision",
+        K: int = 200,
+        batch_size: int = 1000,
+        learning_rate: float = 0.01,
+        clipnorm: float = 1.,
+        max_epochs: int = 10,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: float = 0.0,
-        seed=None,
-        save_best_to_file=False,
-        replace=False,
-        exact=False,
-        keep_last=False,
+        seed: int = None,
+        save_best_to_file: bool = False,
+        replace: bool = False,
+        exact: bool = False,
+        keep_last: bool = False,
         distribution="uniform",
     ):
-
         super().__init__(
             batch_size,
             max_epochs,
@@ -233,9 +280,7 @@ class Prod2Vec(TorchMLAlgorithm):
 
         First, the sequences of items (iid) are grouped per user (uid).
         Next, a windowing operation is applied over each seperate item sequence.
-        These windows are sliced and re-stacked in order to create skipgrams of two items (pos_training_set).
-        Next, a unigram distribution of all the items in the dataset is created.
-        This unigram distribution is used for creating the negative samples.
+        These windows are sliced and re-stacked in order to create skipgrams of two items.
 
         :param X: InteractionMatrix
         :yield: focus_batch, positive_samples_batch, negative_samples_batch
@@ -300,13 +345,14 @@ class SkipGram(nn.Module):
 def window(sequences: Iterator[Tuple[int, list]], window_size: int) -> np.ndarray:
     """
     Will apply a windowing operation to a sequence of item sequences.
+    Note: pads the sequences to make sure edge sequences are included.
 
-    Note: pads the sequences to make sure edge cases are also accounted for.
-
-    :param sequences: iterable of iterables
-    :param window_size: the size of the window
-    :returns: windowed sequences
-    :rtype: numpy.ndarray
+    :param sequences: Iterator yielding sorted user histories as a uid, list of items tuple
+    :type sequences: Iterator[Tuple[int, list]]
+    :param window_size: Size of the window on both the left and right of the focus item
+    :type window_size: int
+    :return: Windowed sequences of items
+    :rtype: np.ndarray
     """
     padded_sequences = [
         [np.NAN] * window_size + list(s) + [np.NAN] * window_size

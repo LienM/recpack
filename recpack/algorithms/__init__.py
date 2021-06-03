@@ -37,6 +37,7 @@ they have interacted with.
     ItemKNN
     NMFItemToItem
     SVDItemToItem
+    Prod2Vec
 
 Factorization Algorithms
 ------------------------------------
@@ -176,3 +177,5 @@ from recpack.algorithms.bprmf import BPRMF
 from recpack.algorithms.mult_vae import MultVAE
 from recpack.algorithms.rec_vae import RecVAE
 from recpack.algorithms.wmf import WeightedMatrixFactorization
+
+from recpack.algorithms.p2v import Prod2Vec
