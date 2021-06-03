@@ -28,13 +28,110 @@ class Prod2VecClustered(Prod2Vec):
     A cluster is considered related if users often consume an item
     from this cluster after the item.
     Clusters are ranked based on the probability
-    that a purchase from cluster ci is followed by a purchase from cluster cj.
+    that an interaction with an item from cluster ci is followed by an
+    interaction with an item from cluster cj.
     Products from these top clusters are sorted by their cosine similarity.
 
-    :param num_clusters: number of clusters for Kmeans clustering
-    :type num_clusters: int
-    :param Kcl: top-K clusters
-    :rtype Kcl: int
+    Where possible, defaults were taken from the paper.
+
+    **Example of use**::
+
+        import numpy as np
+        from scipy.sparse import csr_matrix
+        from recpack.algorithms import Prod2VecClustered
+
+        # Since RecVAE uses iterative optimisation, it needs validation data
+        # To decide which of the iterations yielded the best model
+        # This validation data should be split into an input and output matrix.
+        # In this example the data has been split in a strong generalization fashion
+        X = csr_matrix(np.array(
+            [[1, 0, 1], [1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
+        )
+        x_val_in = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
+        )
+        x_val_out = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
+        )
+        x_test_in = csr_matrix(np.array(
+            [[0, 0, 0], [0, 0, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
+        )
+
+        algo = Prod2VecClustered(embedding_size=10, num_neg_samples=10, max_epochs=4)
+        # Fit algorithm
+        algo.fit(X, (x_val_in, x_val_out))
+
+        # Recommend for the test input data,
+        predictions = algo.predict(x_test_in)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+    :param embedding_size: The size of the embedding vectors for both input and output embeddings, defaults to 300
+    :type embedding_size: int, optional
+    :param num_neg_samples: Number of negative samples for every positive sample, defaults to 10
+    :type num_neg_samples: int, optional
+    :param window_size: Size of the context window to the left and to the right of the target item
+         used in skipgram negative sampling, defaults to 2
+    :type window_size: int, optional
+    :param stopping_criterion: Used to identify the best model computed thus far.
+        The string indicates the name of the stopping criterion.
+        Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+        Defaults to 'precision'
+    :type stopping_criterion: str, optional
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
+    :type K: int, optional
+    :param num_clusters: Number of clusters for Kmeans clustering, defaults to 5
+    :type num_clusters: int, optional
+    :param Kcl: Maximum number of top-K clusters recommendations can be made from, defaults to 2
+    :type Kcl: int, optional
+    :param batch_size: Batch size for Adam optimizer. Higher batch sizes make each epoch more efficient,
+        but increases the amount of epochs needed to converge to the optimum,
+        by reducing the amount of updates per epoch. Defaults to 1000
+    :type batch_size: int, optional
+    :param learning_rate: Learning rate, defaults to 0.01
+    :type learning_rate: float, optional
+    :param clipnorm: Clips gradient norm.
+        The norm is computed over all gradients together,
+        as if they were concatenated into a single vector, defaults to 1
+    :type clipnorm: int, optional
+    :param max_epochs: Maximum number of epochs (iterations), defaults to 10
+    :type max_epochs: int, optional
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
+    :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
+        Defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.0
+    :type min_improvement: float, optional
+    :param seed: Seed for random sampling. Useful for reproducible results,
+        defaults to None
+    :type seed: bool, optional
+    :param save_best_to_file: If true, the best model will be saved after training.
+        Defaults to False
+    :type save_best_to_file: bool, optional
+    :param replace: Sample with or without replacement (see :class:`recpack.algorithms.samplers.PositiveNegativeSampler` ), defaults to False
+    :type replace: bool, optional
+    :param exact: If False (default) negatives are checked against the corresponding positive sample only,
+        allowing for (rare) collisions. If collisions should be avoided at all costs,
+        use exact = True, but suffer decreased performance. Defaults to False
+    :type exact: bool, optional
+    :param keep_last: Retain last model,
+        rather than best (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
+    :param distribution: Which distribution to use to sample negatives. Options are `["uniform", "unigram"]`.
+        Uniform distribution will sample all items equally likely.
+        Unigram distribution puts more weight on popular items. Defaults to "uniform"
+    :type distribution: str, optional
     """
 
     def __init__(

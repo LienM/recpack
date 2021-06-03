@@ -34,7 +34,7 @@ class Prod2Vec(TorchMLAlgorithm):
     Recommendations are made by computing the similarity between input embeddings
     of different items and recommending those most similar.
 
-    Where possible, defaults were taken from the paper. 
+    Where possible, defaults were taken from the paper.
 
     **Example of use**::
 
