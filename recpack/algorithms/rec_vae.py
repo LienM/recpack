@@ -1,24 +1,22 @@
+from copy import deepcopy
 import logging
-import time
 from typing import List, Tuple
 
+import numpy as np
+from scipy.sparse import csr_matrix
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torch.optim as optim
 
-import numpy as np
-from scipy.sparse import csr_matrix
-
-from copy import deepcopy
-
-from recpack.splitters.splitter_base import yield_batches
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.util import (
     swish,
     log_norm_pdf,
     naive_sparse2tensor,
 )
+from recpack.splitters.splitter_base import yield_batches
+
 
 logger = logging.getLogger("recpack")
 
@@ -134,7 +132,7 @@ class RecVAE(TorchMLAlgorithm):
         stopping_criterion: str = "ndcg",
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: int = 0.01,
+        min_improvement: float = 0.0,
         save_best_to_file: bool = False,
     ):
 
