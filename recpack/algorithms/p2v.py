@@ -69,7 +69,7 @@ class Prod2Vec(TorchMLAlgorithm):
         defaults to False
     :type save_best_to_file: bool, optional
     :param K: for top-K most similar items
-    :rtype k: int
+    :type k: int
     :param replace: sample with or without replacement (see PositiveNegativeSampler)
     :rtype replace: bool
     :param exact: If False (default) negatives are checked against the corresponding positive sample only, allowing for (rare) collisions.
@@ -90,7 +90,7 @@ class Prod2Vec(TorchMLAlgorithm):
         num_neg_samples: int,
         window_size: int,
         stopping_criterion: str,
-        K=10,
+        K=200,
         batch_size=1000,
         learning_rate=0.01,
         clipnorm=1,

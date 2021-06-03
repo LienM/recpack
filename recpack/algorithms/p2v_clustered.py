@@ -4,7 +4,6 @@ import warnings
 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
-import torch.nn as nn
 from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans
@@ -12,8 +11,7 @@ from sklearn.cluster import KMeans
 from recpack.data.matrix import InteractionMatrix
 from recpack.util import get_top_K_values
 from recpack.algorithms.p2v import Prod2Vec
-from recpack.algorithms.p2v import window
-from recpack.algorithms.util import sample_rows
+
 
 logger = logging.getLogger("recpack")
 
@@ -24,14 +22,14 @@ class Prod2VecClustered(Prod2Vec):
     E-commerce in Your Inbox: Product Recommendations at Scale
     (https://arxiv.org/abs/1606.07154)
 
-    Similar products are grouped into clusters,
-    products are recommended based on the top related clusters.
-    Uses a Kmeans clustering algorithm.
+    Products with similar embeddings are grouped into clusters
+    using Kmeans clustering.
+    Product recommendations are made only from the top-Kcl related clusters.
+    A cluster is considered related if users often consume an item
+    from this cluster after the item.
     Clusters are ranked based on the probability
     that a purchase from cluster ci is followed by a purchase from cluster cj.
-    Products from the top clusters are sorted by their cosine similarity,
-    top-K are returned as recommendations.
-
+    Products from these top clusters are sorted by their cosine similarity.
 
     :param num_clusters: number of clusters for Kmeans clustering
     :type num_clusters: int
@@ -45,7 +43,7 @@ class Prod2VecClustered(Prod2Vec):
         num_neg_samples: int,
         window_size: int,
         stopping_criterion: str,
-        K=10,
+        K=200,
         num_clusters=5,
         Kcl=2,
         batch_size=1000,
@@ -105,28 +103,36 @@ class Prod2VecClustered(Prod2Vec):
             X, cluster_assignments
         )
 
+        cluster_neighbour_cnt = cluster_to_cluster_neighbours.sum(axis=1)
+
+        if (cluster_neighbour_cnt == 0).any():
+            warnings.warn("There are clusters without neighbours", UserWarning)
+
         # Compute similarities per cluster
         for cluster in np.arange(self.num_clusters):
-            # Get clusters that are neighbours of the cluster
-            # whose item similarities we are computing
+            # Get clusters that occur after `cluster` often.
             cluster_neighbours = cluster_to_cluster_neighbours[cluster, :].nonzero()[
                 1]
+
+            if not cluster_neighbours.any():
+                continue
+
             cluster_items = (cluster_assignments == cluster).nonzero()[0]
 
             context = embedding[cluster_items, :]
 
-            # Set embeddings of items not in cluster to 0
-            # Similarities will only be computed with nonzero items.
-            # The [:, np.newaxis] turns a 1d vector into a column vector
-            # needed for pointwise multiplication as mask
-            target = np.multiply(
-                embedding, (np.isin(cluster_assignments, cluster_neighbours))[
-                    :, np.newaxis]
-            )
+            adjacent_cluster_items = np.asarray(np.isin(
+                cluster_assignments, cluster_neighbours)).nonzero()[0]
+
+            target = embedding[adjacent_cluster_items, :]
+
+            local_sims = lil_matrix((cluster_items.shape[0], num_items))
+
+            local_sims[:, adjacent_cluster_items] = cosine_similarity(
+                context, target)
 
             item_cosine_similarity_[cluster_items] = get_top_K_values(
-                csr_matrix(cosine_similarity(context, target)), K
-            )
+                local_sims.tocsr(), K)
 
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
