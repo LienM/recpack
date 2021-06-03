@@ -33,6 +33,8 @@ logger = logging.getLogger("recpack")
 ITEM_IX = InteractionMatrix.ITEM_IX
 
 
+# TODO Inherit from TorchMLAlgorithm
+
 class GRU4Rec(Algorithm):
     """A recurrent neural network for session-based recommendations.
 

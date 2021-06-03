@@ -4,7 +4,7 @@ import pytest
 
 from scipy.sparse import csr_matrix
 from recpack.data.matrix import InteractionMatrix
-from recpack.algorithms.rnn.session_rnn import GRU4Rec
+from recpack.algorithms.rnn.gru4rec import GRU4Rec
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 

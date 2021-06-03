@@ -189,4 +189,4 @@ from recpack.algorithms.wmf import WeightedMatrixFactorization
 
 from recpack.algorithms.p2v import Prod2Vec
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
-from recpack.algorithms.rnn.session_rnn import GRU4Rec
+from recpack.algorithms.rnn.gru4rec import GRU4Rec
