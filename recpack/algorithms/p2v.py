@@ -281,6 +281,7 @@ class Prod2Vec(TorchMLAlgorithm):
         :yield: focus_batch, positive_samples_batch, negative_samples_batch
         :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
         """
+        # TODO Should I add this to samplers? 
         # Window, then extract focus (middle element) and context (all other elements).
         windowed_sequences = window(X.sorted_item_history, self.window_size)
         context = np.hstack(
