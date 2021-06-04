@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from recpack.algorithms import stopping_criterion
 import numpy as np
 import pandas as pd
 import torch
@@ -8,12 +9,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix
 from torch import Tensor
 from tqdm import tqdm
 from sklearn.utils.validation import check_is_fitted
 
-from recpack.algorithms.base import Algorithm
+from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.metrics.recall import recall_k
 from recpack.data.matrix import InteractionMatrix
 from typing import Tuple, Optional, List
@@ -34,7 +35,7 @@ ITEM_IX = InteractionMatrix.ITEM_IX
 
 # TODO Inherit from TorchMLAlgorithm
 
-class GRU4Rec(Algorithm):
+class GRU4Rec(TorchMLAlgorithm):
     """A recurrent neural network for session-based recommendations.
 
     The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
@@ -100,11 +101,23 @@ class GRU4Rec(Algorithm):
         batch_size: int = 512,
         learning_rate: float = 0.03,
         momentum: float = 0.0,
-        clip_norm: Optional[float] = 1.0,
+        clip_norm: float = 1.0,
         seed: int = 2,
         bptt: int = 1,
         num_epochs: int = 5,
     ):
+
+        # TODO rename num_epochs
+        # TODO Add early stopping and a stopping criterion to the RNN
+        # super().__init__(
+        #     batch_size=batch_size,
+        #     max_epochs=num_epochs,
+        #     learning_rate=learning_rate,
+        #     # TODO Figure out early stopping for the RNN
+        #     stopping_criterion=None,
+        #     stop_early=
+        #     )
+
         self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.embedding_size = embedding_size
@@ -124,19 +137,12 @@ class GRU4Rec(Algorithm):
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
 
-    def _init_random_state(self) -> None:
-        """
-        Resets the random number generator state.
-        """
+    def _init_model(self, X: InteractionMatrix) -> None:
         if self.seed:
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
-    def _init_model(self, train_data: InteractionMatrix) -> None:
-        """
-        Initializes the neural network model.
-        """
-        num_items = train_data.shape[1]
+        num_items = X.shape[1]
 
         self.model_ = GRU4RecTorch(
             num_items=int(num_items),  # PyTorch 1.4 can't handle numpy ints
@@ -147,13 +153,10 @@ class GRU4Rec(Algorithm):
             activation=self.activation,
         ).to(self.device)
 
-    def _init_training(self, train_data: InteractionMatrix) -> None:
-        """
-        Initializes the objects required for network optimization.
-        """
-        num_items = train_data.shape[1]
-        dataframe = train_data.timestamps.reset_index()
+        num_items = X.shape[1]
+        dataframe = X.timestamps.reset_index()
 
+        # TODO Some of these should be moved I think
         item_counts_tr = dataframe[ITEM_IX].value_counts()
         item_counts = pd.Series(np.arange(num_items))
         item_counts = item_counts.map(item_counts_tr).fillna(0)
@@ -175,21 +178,6 @@ class GRU4Rec(Algorithm):
             "adagrad": optim.Adagrad(self.model_.parameters(), lr=self.learning_rate),
         }[self.optimizer]
 
-    def save(self, file) -> None:
-        """Saves the algorithm, all its learned parameters and optimization state.
-
-        :param file: A file-like or string containing a filepath.
-        """
-        torch.save(self, file)
-
-    @staticmethod
-    def load(file) -> GRU4Rec:
-        """Loads an algorithm previously stored with save().
-
-        :param file: A file-like or string with the filepath of the algorithm
-        """
-        return torch.load(file)
-
     def fit(
         self,
         X: InteractionMatrix,
@@ -205,9 +193,7 @@ class GRU4Rec(Algorithm):
         :param validation_data: Validation in and out matrices. None for no validation.
             Timestamps required.
         """
-        self._init_random_state()
         self._init_model(X)
-        self._init_training(X)
 
         # try:
         for epoch in range(self.num_epochs):

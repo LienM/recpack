@@ -306,6 +306,7 @@ from torch import Tensor
 
 Sampler = Callable[[int, Tensor], Tensor]  # (num_samples, targets) -> samples
 
+# TODO Sampler is called in train_epoch 
 
 class BPRLoss(nn.Module):
     """

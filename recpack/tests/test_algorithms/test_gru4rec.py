@@ -48,10 +48,8 @@ def session_rnn():
 
 def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
     device = session_rnn.device
-
-    session_rnn._init_random_state()
     session_rnn._init_model(matrix_sessions)
-    session_rnn._init_training(matrix_sessions)
+
 
     # Each training epoch should update the parameters
     for _ in range(5):
