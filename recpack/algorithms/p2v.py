@@ -42,7 +42,7 @@ class Prod2Vec(TorchMLAlgorithm):
         from scipy.sparse import csr_matrix
         from recpack.algorithms import Prod2Vec
 
-        # Since RecVAE uses iterative optimisation, it needs validation data
+        # Since Prod2Vec uses iterative optimisation, it needs validation data
         # To decide which of the iterations yielded the best model
         # This validation data should be split into an input and output matrix.
         # In this example the data has been split in a strong generalization fashion
