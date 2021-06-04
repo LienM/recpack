@@ -108,7 +108,8 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
 
 
 def test_overfit(prod2vec):
-    prod2vec.max_epochs = 200
+    prod2vec.max_epochs = 10
+    prod2vec.learning_rate = 0.1
     data = {
         "user": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3],
         "item": [0, 1, 2, 0, 1, 0, 1, 2, 0, 2, 3, 4, 5, 3, 4, 3, 4, 5, 3, 5],
@@ -134,7 +135,6 @@ def test_overfit(prod2vec):
 
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
 
-    print(similarity_matrix)
     # Get the most similar item for each item
     max_similarity_items = np.argmax(similarity_matrix, axis=1)
     # 3,4,5 should be close together in the vectors space -> 0,1,2 shouldn't be the most similar to either 3,4,5
