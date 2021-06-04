@@ -1,9 +1,11 @@
+from typing import Callable
+
 import numpy as np
 from scipy.sparse import csr_matrix
 import torch
+from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
-
 from tqdm import tqdm
 
 from recpack.algorithms.samplers import BootstrapSampler, WarpSampler
@@ -291,17 +293,6 @@ def warp_loss_wrapper(
         )
 
     return np.mean(losses)
-
-
-"""
-Custom loss functions
-"""
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from typing import Callable
-from torch import Tensor
 
 
 Sampler = Callable[[int, Tensor], Tensor]  # (num_samples, targets) -> samples
