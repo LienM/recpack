@@ -136,7 +136,7 @@ class GRU4Rec(TorchMLAlgorithm):
         self.max_epochs = max_epochs
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
-        
+
         # TODO Make this a param
         self.save_best_to_file = False
 
@@ -194,20 +194,20 @@ class GRU4Rec(TorchMLAlgorithm):
         :rtype: Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]
         """
         if not isinstance(X, InteractionMatrix):
-            raise TypeError("GRU4Rec requires training and validation data to be an instance of InteractionMatrix.")
+            raise TypeError(
+                "GRU4Rec requires training and validation data to be an instance of InteractionMatrix.")
 
         return X, validation_data
 
-    # def _transform_predict_input(self, X):
-    #     return to_csr_matrix(X, binary=True)    
+    def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
+        return X
 
-    def predict(self, X: InteractionMatrix) -> csr_matrix:
+    def _predict(self, X: InteractionMatrix) -> csr_matrix:
         """Predict recommendations for each user with at least a single event in their
         history.
 
         :param X: Data matrix, same shape as training matrix. Timestamps required.
         """
-        check_is_fitted(self)
 
         if X.num_interactions == 0:
             return csr_matrix(X.shape)
@@ -237,14 +237,13 @@ class GRU4Rec(TorchMLAlgorithm):
                 if not is_last:
                     continue
                 start, end = i * num_items, (i + 1) * num_items
-                data[start:end] = F.softmax(output.reshape(-1), dim=0).cpu().numpy()
+                data[start:end] = F.softmax(
+                    output.reshape(-1), dim=0).cpu().numpy()
                 row[start:end] = uid.item()
                 hidden = hidden * 0
                 i = i + 1
 
         X_pred = csr_matrix((data, (row, col)), shape=X.shape)
-
-        self._check_prediction(X_pred, X.values)
 
         return X_pred
 
@@ -268,7 +267,8 @@ class GRU4Rec(TorchMLAlgorithm):
                 self._optimizer.zero_grad()
                 loss.backward()
                 if self.clip_norm:
-                    nn.utils.clip_grad_norm_(self.model_.parameters(), self.clip_norm)
+                    nn.utils.clip_grad_norm_(
+                        self.model_.parameters(), self.clip_norm)
                 self._optimizer.step()
                 losses.append(loss.item())
                 loss = 0.0
@@ -324,7 +324,8 @@ class GRU4RecTorch(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = num_items
         self.drop = nn.Dropout(dropout)
-        self.emb = nn.Embedding(num_items, embedding_size) if embedding_size else None
+        self.emb = nn.Embedding(
+            num_items, embedding_size) if embedding_size else None
         self.rnn = nn.GRU(
             embedding_size or num_items,
             hidden_size,

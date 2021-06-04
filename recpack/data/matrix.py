@@ -197,6 +197,9 @@ class InteractionMatrix(DataMatrix):
         """
         return self.values.nonzero()
 
+    def nonzero(self) -> Tuple[List[int], List[int]]:
+        return self.values.nonzero()
+
     def _apply_mask(self, mask, inplace=False) -> Optional["InteractionMatrix"]:
         interaction_m = self if inplace else self.copy()
 
