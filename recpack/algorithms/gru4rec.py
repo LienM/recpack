@@ -14,7 +14,6 @@ import torch.optim as optim
 from scipy.sparse import csr_matrix
 from torch import Tensor
 from tqdm import tqdm
-from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.metrics.recall import recall_k
@@ -139,6 +138,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
         # TODO Make this a param
         self.save_best_to_file = False
+        self.keep_last = True
 
     def _init_model(self, X: InteractionMatrix) -> None:
         if self.seed:
@@ -278,6 +278,8 @@ class GRU4Rec(TorchMLAlgorithm):
             )  # Reset hidden state between users
 
         logger.info("training loss = {}".format(np.mean(losses)))
+
+        return losses
 
     def _evaluate(
         self, val_in: InteractionMatrix, val_out: InteractionMatrix
