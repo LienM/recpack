@@ -542,7 +542,7 @@ class TorchMLAlgorithm(Algorithm):
 
         return results.tocsr()
 
-    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
+    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]) -> Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]:
         """Transform the input matrices of the training function to the expected types
 
         All matrices get converted to binary csr matrices
@@ -556,7 +556,7 @@ class TorchMLAlgorithm(Algorithm):
         """
         return to_csr_matrix((X, validation_data), binary=True)
 
-    def _transform_predict_input(self, X):
+    def _transform_predict_input(self, X: Matrix) -> csr_matrix:
         return to_csr_matrix(X, binary=True)
 
     @property
