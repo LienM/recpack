@@ -65,7 +65,7 @@ def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
 def test_session_rnn_evaluation_epoch(session_rnn, matrix_sessions):
     device = session_rnn.device
 
-    session_rnn.fit(matrix_sessions)
+    session_rnn.fit(matrix_sessions, (matrix_sessions, matrix_sessions))
 
     # Model evaluation should have no effect on parameters
     for _ in range(5):
@@ -74,12 +74,12 @@ def test_session_rnn_evaluation_epoch(session_rnn, matrix_sessions):
         ]
         params_before = [(name, p.clone()) for (name, p) in params]
 
-        session_rnn._evaluate((matrix_sessions, matrix_sessions))
+        session_rnn._evaluate(matrix_sessions, matrix_sessions)
         assert_same(params_before, params, device)
 
 
 def test_session_rnn_predict(session_rnn, matrix_sessions):
-    session_rnn.fit(matrix_sessions)
+    session_rnn.fit(matrix_sessions, (matrix_sessions, matrix_sessions))
 
     X_pred = session_rnn.predict(matrix_sessions)
     scores = X_pred.toarray()

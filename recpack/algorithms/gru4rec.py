@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+
+from numpy.lib.arraysetops import isin
 from recpack.algorithms import stopping_criterion
 import numpy as np
 import pandas as pd
@@ -16,7 +18,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.metrics.recall import recall_k
-from recpack.data.matrix import InteractionMatrix
+from recpack.data.matrix import InteractionMatrix, Matrix
 from typing import Tuple, Optional, List
 
 from recpack.algorithms.loss_functions import (
@@ -84,7 +86,7 @@ class GRU4Rec(TorchMLAlgorithm):
     :param clip_norm: Clip the gradient's l2 norm, None for no clipping
     :param seed: Seed for random number generator
     :param bptt: Number of backpropagation through time steps
-    :param num_epochs: Max training runs through entire dataset
+    :param max_epochs: Max training runs through entire dataset
     """
 
     def __init__(
@@ -104,14 +106,12 @@ class GRU4Rec(TorchMLAlgorithm):
         clip_norm: float = 1.0,
         seed: int = 2,
         bptt: int = 1,
-        num_epochs: int = 5,
+        max_epochs: int = 5,
     ):
-
-        # TODO rename num_epochs
         # TODO Add early stopping and a stopping criterion to the RNN
         # super().__init__(
         #     batch_size=batch_size,
-        #     max_epochs=num_epochs,
+        #     max_epochs=max_epochs,
         #     learning_rate=learning_rate,
         #     # TODO Figure out early stopping for the RNN
         #     stopping_criterion=None,
@@ -133,9 +133,12 @@ class GRU4Rec(TorchMLAlgorithm):
         self.clip_norm = clip_norm
         self.seed = seed
         self.bptt = bptt
-        self.num_epochs = num_epochs
+        self.max_epochs = max_epochs
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
+        
+        # TODO Make this a param
+        self.save_best_to_file = False
 
     def _init_model(self, X: InteractionMatrix) -> None:
         if self.seed:
@@ -178,33 +181,25 @@ class GRU4Rec(TorchMLAlgorithm):
             "adagrad": optim.Adagrad(self.model_.parameters(), lr=self.learning_rate),
         }[self.optimizer]
 
-    def fit(
-        self,
-        X: InteractionMatrix,
-        validation_data: Tuple[InteractionMatrix, InteractionMatrix] = None,
-    ) -> GRU4Rec:
-        """Fit the model on the X dataset.
+    def _transform_fit_input(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
+        """Transform the input matrices of the training function to the expected types
 
-        Model quality is evaluated after every epoch on validation_data using the
-        algorithm's stopping criterion. If no validation data is provided or early
-        stopping is disabled, training will continue for exactly num_epochs.
+        All matrices get converted to binary csr matrices
 
-        :param train_data: The training data matrix. Timestamps required.
-        :param validation_data: Validation in and out matrices. None for no validation.
-            Timestamps required.
+        :param X: The interactions matrix
+        :type X: Matrix
+        :param validation_data: The tuple with validation_in and validation_out data
+        :type validation_data: Tuple[Matrix, Matrix]
+        :return: The transformed matrices
+        :rtype: Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]
         """
-        self._init_model(X)
+        if not isinstance(X, InteractionMatrix):
+            raise TypeError("GRU4Rec requires training and validation data to be an instance of InteractionMatrix.")
 
-        # try:
-        for epoch in range(self.num_epochs):
-            logger.info(f"Epoch {epoch}")
-            self._train_epoch(X)
-            # if validation_data:
-            #    self._evaluate(validation_data)
-        # except EarlyStoppingException:
-        #    pass
+        return X, validation_data
 
-        return self
+    # def _transform_predict_input(self, X):
+    #     return to_csr_matrix(X, binary=True)    
 
     def predict(self, X: InteractionMatrix) -> csr_matrix:
         """Predict recommendations for each user with at least a single event in their
@@ -285,7 +280,7 @@ class GRU4Rec(TorchMLAlgorithm):
         logger.info("training loss = {}".format(np.mean(losses)))
 
     def _evaluate(
-        self, validation_data: Tuple[InteractionMatrix, InteractionMatrix]
+        self, val_in: InteractionMatrix, val_out: InteractionMatrix
     ) -> None:
         """Evaluate the current model on the validation data.
 
@@ -294,9 +289,9 @@ class GRU4Rec(TorchMLAlgorithm):
 
         :param validation_data: Validation data interaction matrices.
         """
-        self.model_.train(False)
-        X_true = validation_data[1].binary_values
-        X_val_pred = self.predict(validation_data[0])
+        X_true = val_out.binary_values
+        X_val_pred = self.predict(val_in)
+        self._save_best()
         # TODO: Maybe StoppingCriterion here? Tho unsure non-loss criteria make sense..
 
 
