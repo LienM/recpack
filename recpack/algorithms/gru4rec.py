@@ -221,9 +221,12 @@ class GRU4Rec(TorchMLAlgorithm):
         col = np.tile(np.arange(num_items), num_users)
 
         with torch.no_grad():
-            actions, _, uids = matrix_to_tensor(
+            actions, _,  uids = matrix_to_tensor(
                 X, batch_size=1, device=self.device, shuffle=False, include_last=True
             )
+
+            print(actions.shape, uids.shape)
+
             is_last_action = uids != uids.roll(-1, dims=0)
             is_last_action[-1] = True
 
@@ -237,6 +240,8 @@ class GRU4Rec(TorchMLAlgorithm):
                 if not is_last:
                     continue
                 start, end = i * num_items, (i + 1) * num_items
+
+                print(output.shape)
                 data[start:end] = F.softmax(
                     output.reshape(-1), dim=0).cpu().numpy()
                 row[start:end] = uid.item()
