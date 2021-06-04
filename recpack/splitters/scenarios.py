@@ -69,7 +69,8 @@ class StrongGeneralization(Scenario):
         self.frac_users_train = frac_users_train
         self.frac_interactions_in = frac_interactions_in
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_train)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            frac_users_train)
         self.interaction_split = splitter_base.FractionInteractionSplitter(
             frac_interactions_in
         )
@@ -212,7 +213,8 @@ class WeakGeneralization(Scenario):
         :param data: Interaction matrix to be split.
         :type data: InteractionMatrix
         """
-        train_val_data, self._test_data_out = self.interaction_split.split(data)
+        train_val_data, self._test_data_out = self.interaction_split.split(
+            data)
 
         if self.validation:
             self.train_X, self._validation_data_out = self.validation_splitter.split(
@@ -312,7 +314,8 @@ class Timed(Scenario):
                 "t_validation should be provided when requesting a validation dataset."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, delta_out, delta_in)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -452,9 +455,11 @@ class StrongGeneralizationTimed(Scenario):
                 "t_validation should be provided when using validation split."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, delta_out, delta_in)
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_in)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            frac_users_in)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -477,7 +482,8 @@ class StrongGeneralizationTimed(Scenario):
         tr_val_data, _ = self.timestamp_spl.split(tr_val_data)
 
         if self.validation:
-            train_data, validation_data = self.validation_splitter.split(tr_val_data)
+            train_data, validation_data = self.validation_splitter.split(
+                tr_val_data)
             # Split validation data into input and output on t_validation
             (
                 self._validation_data_in,
@@ -488,7 +494,8 @@ class StrongGeneralizationTimed(Scenario):
         else:
             self.train_X = tr_val_data
 
-        self._test_data_in, self._test_data_out = self.timestamp_spl.split(te_data)
+        self._test_data_in, self._test_data_out = self.timestamp_spl.split(
+            te_data)
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
@@ -601,3 +608,78 @@ class StrongGeneralizationTimedMostRecent(Scenario):
             ) = self.most_recent_splitter.split(val_data)
         else:
             self.train_X = tr_val_data
+
+
+class NextItemPrediction(Scenario):
+    """Split data so that a user's second to last interaction is used to predict their last interaction.
+        Trains on all other interactions.
+
+    A scenario is stateful. After calling ``split`` on your dataset,
+    the training, validation and test dataset can be retrieved under
+    :attr:`training_data`, :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
+    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
+
+    :attr:`training_data` contains all but the last interaction of all users in the dataset
+    if no validation data is requested.
+    If validation data is requested, :attr:`training_data` contains all but
+    the last and second to last interaction of all users in the dataset.
+
+    - :attr:`validation_data_in` contains the third to last interaction of all users.
+    - :attr:`validation_data_out` contains the second to last interaction of all users.
+
+    - :attr:`test_data_in`: contains the second to last interaction of all users.
+    - :attr:`test_data_out` contains the last interaction of all users.
+
+    **Example**
+
+    As an example, we split this data with ``validation=False``::
+
+        time    0   1   2   3   4   5
+        user1   X   X   X
+        user2       X   X   X   X
+
+    would yield training_data::
+
+        time    0   1   2   3   4   5
+        user1   X   X
+        user2       X   X   X
+
+    test_data_in::
+
+        time    0   1   2   3   4   5
+        user1       X
+        user2          X
+
+    test_data_out::
+
+        time    0   1   2   3   4   5
+        user1           X
+        user2               X
+
+    Note: This scenario was designed for Word2Vec type algorithms.
+
+    :param validation: Assign a portion of the training dataset to validation data if True,
+        else split without validation data into only a training and test dataset.
+    :type validation: boolean, optional
+    """
+
+    def __init__(self, validation=False):
+        super().__init__(validation=validation)
+        self.most_recent_splitter = splitter_base.MostRecentSplitter(1)
+
+    def _split(self, data):
+        """Splits data so that a user's second to last interaction is used to predict their last interaction.
+            Trains on all other interactions.
+
+        :param data: Interaction matrix to be split. Must contain timestamps.
+        :type data: InteractionMatrix
+        """
+        train_val_data, self._test_data_out = self.most_recent_splitter.split(
+            data)
+        if self.validation:
+            train_val_data, self._validation_data_out = self.most_recent_splitter.split(
+                train_val_data)
+            _, self._validation_data_in = self.most_recent_splitter.split(
+                train_val_data)
+        _, self._test_data_in = self.most_recent_splitter.split(train_val_data)
+        self.train_X = train_val_data

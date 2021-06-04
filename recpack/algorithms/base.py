@@ -51,7 +51,8 @@ class Algorithm(BaseEstimator):
         Constructed by recreating the initialisation call.
         Example: ``Algorithm(param_1=value)``
         """
-        paramstring = ",".join((f"{k}={v}" for k, v in self.get_params().items()))
+        paramstring = ",".join(
+            (f"{k}={v}" for k, v in self.get_params().items()))
         return self.name + "(" + paramstring + ")"
 
     def __str__(self):
@@ -261,7 +262,8 @@ class ItemSimilarityMatrixAlgorithm(Algorithm):
 
         missing = self.similarity_matrix_.shape[0] - len(items_with_score)
         if missing > 0:
-            warnings.warn(f"{self.name} missing similar items for {missing} items.")
+            warnings.warn(
+                f"{self.name} missing similar items for {missing} items.")
 
 
 class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
@@ -342,7 +344,8 @@ class FactorizationAlgorithm(Algorithm):
         :return: matrix with scores for each nonzero user.
         :rtype: csr_matrix
         """
-        assert X.shape == (self.user_embedding_.shape[0], self.item_embedding_.shape[1])
+        assert X.shape == (
+            self.user_embedding_.shape[0], self.item_embedding_.shape[1])
         # Get the nonzero users, for these we will recommend.
         users = list(set(X.nonzero()[0]))
         # result is a lil matrix, makes editing rows easy
@@ -405,7 +408,9 @@ class TorchMLAlgorithm(Algorithm):
     :param save_best_to_file: If true, the best model will be saved after training,
         defaults to False
     :type save_best_to_file: bool, optional
-
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
     """
 
     def __init__(
@@ -419,6 +424,7 @@ class TorchMLAlgorithm(Algorithm):
         min_improvement: float = 0.01,
         seed=None,
         save_best_to_file=False,
+        keep_last=False
     ):
         # TODO batch_size * torch.cuda.device_count() if cuda else batch_size
         #   -> Multi GPU
@@ -447,6 +453,8 @@ class TorchMLAlgorithm(Algorithm):
 
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
+
+        self.keep_last = keep_last
 
     def _init_model(self, X: Matrix) -> None:
         """Initialise the torch model that will learn the weights
@@ -628,7 +636,13 @@ class TorchMLAlgorithm(Algorithm):
         try:
             for epoch in range(self.max_epochs):
                 self.model_.train()
-                self._train_epoch(X)
+                start_time = time.time()
+                losses = self._train_epoch(X)
+                end_time = time.time()
+                logger.info(
+                    f"Processed epoch {epoch} in {end_time-start_time :.2f} s."
+                    f"Batch Training Loss = {np.mean(losses) :.4f}"
+                )
                 # Make sure no grads are computed while evaluating
                 self.model_.eval()
                 with torch.no_grad():
@@ -636,7 +650,8 @@ class TorchMLAlgorithm(Algorithm):
         except EarlyStoppingException:
             pass
 
-        self._load_best()
+        if not self.keep_last:
+            self._load_best()
 
         if self.save_best_to_file:
             self.save()

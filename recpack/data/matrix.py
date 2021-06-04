@@ -2,7 +2,7 @@
 
 import logging
 import operator
-from typing import Any, Callable, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, List, Optional, Set, Tuple, Union, Iterator
 import warnings
 
 import pandas as pd
@@ -72,10 +72,12 @@ class InteractionMatrix(DataMatrix):
         self._df = df.rename(columns=col_mapper)
 
         num_users = (
-            self._df[InteractionMatrix.USER_IX].max() + 1 if shape is None else shape[0]
+            self._df[InteractionMatrix.USER_IX].max(
+            ) + 1 if shape is None else shape[0]
         )
         num_items = (
-            self._df[InteractionMatrix.ITEM_IX].max() + 1 if shape is None else shape[1]
+            self._df[InteractionMatrix.ITEM_IX].max(
+            ) + 1 if shape is None else shape[1]
         )
 
         self.shape = (num_users, num_items)
@@ -111,7 +113,8 @@ class InteractionMatrix(DataMatrix):
         ].values
         indices = indices[:, 0], indices[:, 1]
 
-        matrix = csr_matrix((values, indices), shape=self.shape, dtype=np.int32)
+        matrix = csr_matrix((values, indices),
+                            shape=self.shape, dtype=np.int32)
         return matrix
 
     @property
@@ -143,7 +146,8 @@ class InteractionMatrix(DataMatrix):
                 InteractionMatrix.TIMESTAMP_IX,
             ].values[0]
         except IndexError as e:
-            raise KeyError(f"Interaction ID {interactionid} not present in data")
+            raise KeyError(
+                f"Interaction ID {interactionid} not present in data")
 
     @property
     def timestamps(self) -> pd.Series:
@@ -360,7 +364,8 @@ class InteractionMatrix(DataMatrix):
         # This index can be dropped safely,
         #   as the data is still there in the original columns.
         index = pd.MultiIndex.from_frame(
-            interaction_m._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]]
+            interaction_m._df[[InteractionMatrix.USER_IX,
+                               InteractionMatrix.ITEM_IX]]
         )
         tuples = list(zip(*u_i_lists))
         c_df = interaction_m._df.set_index(index)
@@ -372,7 +377,7 @@ class InteractionMatrix(DataMatrix):
         return None if inplace else interaction_m
 
     @property
-    def binary_item_history(self) -> List[Tuple[int, List[int]]]:
+    def binary_item_history(self) -> Iterator[Tuple[int, List[int]]]:
         """The unique interactions per user
 
         :yield: tuples of user, list of distinct items the user interacted with.
@@ -385,18 +390,18 @@ class InteractionMatrix(DataMatrix):
             yield (uid, user_history[InteractionMatrix.ITEM_IX].values)
 
     @property
-    def interaction_history(self) -> List[Tuple[int, List[int]]]:
+    def interaction_history(self) -> Iterator[Tuple[int, List[int]]]:
         """The interactions per user
 
         :yield: tuples of user, list of interaction ids
             for each interaction of the user.
         :rtype: List[Tuple[int, List[int]]]
         """
-        for uid, user_history in self._df.groupby("uid"):
+        for uid, user_history in self._df.groupby(self.USER_IX):
             yield (uid, user_history[InteractionMatrix.INTERACTION_IX].values)
 
     @property
-    def sorted_interaction_history(self) -> List[Tuple[int, List[int]]]:
+    def sorted_interaction_history(self) -> Iterator[Tuple[int, List[int]]]:
         """The interactions per user, sorted by timestamp (ascending).
 
         :raises AttributeError: If there is no timestamp column can't sort
@@ -408,11 +413,32 @@ class InteractionMatrix(DataMatrix):
                 "InteractionMatrix is missing timestamps. "
                 "Cannot sort user history without timestamps."
             )
-        for uid, user_history in self._df.groupby("uid"):
+        for uid, user_history in self._df.groupby(self.USER_IX):
             yield (
                 uid,
-                user_history.sort_values("ts", ascending=True)[
+                user_history.sort_values(self.TIMESTAMP_IX, ascending=True)[
                     InteractionMatrix.INTERACTION_IX
+                ].values,
+            )
+
+    @property
+    def sorted_item_history(self) -> Iterator[Tuple[int, List[int]]]:
+        """The items of every user, sorted by timestamp (ascending).
+
+        :raises AttributeError: If there is no timestamp column can't sort
+        :yield: tuple of user id, list of item ids sorted by timestamp
+        :rtype: List[Tuple[int, List[int]]]
+        """
+        if not self.has_timestamps:
+            raise AttributeError(
+                "InteractionMatrix is missing timestamps. "
+                "Cannot sort user history without timestamps."
+            )
+        for uid, user_history in self._df.groupby(self.USER_IX):
+            yield (
+                uid,
+                user_history.sort_values(self.TIMESTAMP_IX, ascending=True)[
+                    InteractionMatrix.ITEM_IX
                 ].values,
             )
 
@@ -501,7 +527,7 @@ _supported_types = Matrix.__args__  # type: ignore
 
 def to_csr_matrix(
     X: Union[Matrix, Tuple[Matrix, ...]], binary: bool = False
-) -> csr_matrix:
+) -> Union[csr_matrix, Tuple[csr_matrix, ...]]:
     """
     Convert a matrix-like object to a scipy csr_matrix.
 
@@ -549,6 +575,7 @@ class UnsupportedTypeError(Exception):
         assert not _is_supported(X)
         super().__init__(
             "Recpack only supports matrix types {}. Received {}.".format(
-                ", ".join(t.__name__ for t in _supported_types), type(X).__name__
+                ", ".join(t.__name__ for t in _supported_types), type(
+                    X).__name__
             )
         )

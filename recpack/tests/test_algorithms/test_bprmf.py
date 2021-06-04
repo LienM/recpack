@@ -6,7 +6,6 @@ import pytest
 import torch
 
 from recpack.algorithms import BPRMF
-from recpack.algorithms.samplers import sample_positives_and_negatives
 from recpack.algorithms.bprmf import MFModule
 from recpack.algorithms.stopping_criterion import StoppingCriterion
 from recpack.metrics.recall import recall_k

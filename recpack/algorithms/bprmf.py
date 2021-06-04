@@ -13,7 +13,7 @@ import torch.optim as optim
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import bpr_loss
-from recpack.algorithms.samplers import bootstrap_sample_pairs
+from recpack.algorithms.samplers import BootstrapSampler
 from recpack.algorithms.util import (
     get_users,
 )
@@ -152,6 +152,11 @@ class BPRMF(TorchMLAlgorithm):
 
         self.sample_size = sample_size
 
+        self.sampler = BootstrapSampler(
+            U=1,
+            batch_size=self.batch_size,
+        )
+
     def _init_model(self, X: csr_matrix):
         num_users, num_items = X.shape
         self.model_ = MFModule(
@@ -159,7 +164,6 @@ class BPRMF(TorchMLAlgorithm):
         ).to(self.device)
 
         self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
-        self.steps = 0
 
     def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
         """Predict scores for matrix X, given the selected users.
@@ -192,14 +196,11 @@ class BPRMF(TorchMLAlgorithm):
         :type train_data: csr_matrix
         """
         losses = []
-        self.model_.train()
 
         # For each positive item sample a single negative item.
         for users, target_items, mnar_items in tqdm(
-            bootstrap_sample_pairs(
+            self.sampler.sample(
                 train_data,
-                U=1,
-                batch_size=self.batch_size,
                 sample_size=self.sample_size,
             ),
             desc="train_epoch BPRMF",
@@ -218,15 +219,18 @@ class BPRMF(TorchMLAlgorithm):
             mnar_sim = self.model_.forward(users, mnar_items).diag()
 
             # Checks to make sure the shapes are correct.
-            assert mnar_sim.shape == target_sim.shape
-            assert target_sim.shape[0] == users.shape[0]
+            if not (
+                (mnar_sim.shape == target_sim.shape)
+                or (target_sim.shape[0] == users.shape[0])
+            ):
+                raise AssertionError("Shapes should match")
 
             loss = self._compute_loss(target_sim, mnar_sim)
             loss.backward()
             losses.append(loss.item())
             self.optimizer.step()
 
-            self.steps += 1
+        return losses
 
     def _compute_loss(self, positive_sim, negative_sim):
 

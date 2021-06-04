@@ -37,6 +37,8 @@ they have interacted with.
     ItemKNN
     NMFItemToItem
     SVDItemToItem
+    Prod2Vec
+    Prod2VecClustered
 
 Factorization Algorithms
 ------------------------------------
@@ -132,10 +134,10 @@ As such recpack contains a number of commonly used sampling methods.
 
 .. autosummary::
     :toctree: generated/
-
-    samplers.bootstrap_sample_pairs
-    samplers.warp_sample_pairs
-    samplers.sample_positives_and_negatives
+    
+    samplers.PositiveNegativeSampler
+    samplers.BootstrapSampler
+    samplers.WarpSampler
 
 
 Utility Functions
@@ -176,3 +178,6 @@ from recpack.algorithms.bprmf import BPRMF
 from recpack.algorithms.mult_vae import MultVAE
 from recpack.algorithms.rec_vae import RecVAE
 from recpack.algorithms.wmf import WeightedMatrixFactorization
+
+from recpack.algorithms.p2v import Prod2Vec
+from recpack.algorithms.p2v_clustered import Prod2VecClustered

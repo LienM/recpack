@@ -8,7 +8,7 @@ setup(
     packages=find_packages(),
     # tests_require=["pytest"],
     install_requires=[
-        "numpy==1.19.5",
+        "numpy==1.20.2",
         "scipy==1.6.0",
         "scikit-learn==0.24.1",
         "pandas==1.2.1",
