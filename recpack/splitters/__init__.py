@@ -37,6 +37,7 @@ Scenarios
     scenarios.Timed
     scenarios.StrongGeneralizationTimed
     scenarios.StrongGeneralizationTimedMostRecent
+    scenarios.NextItemPrediction
 
 Splitters
 ------------
