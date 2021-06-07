@@ -136,7 +136,7 @@ class Algorithm(BaseEstimator):
         """
         return to_csr_matrix(X, binary=True)
 
-    def _transform_predict_input(self, X):
+    def _transform_predict_input(self, X: Matrix) -> csr_matrix:
         """Transform the input of predict to expected type
 
         Data will be turned into a binary csr matrix.
@@ -422,7 +422,7 @@ class TorchMLAlgorithm(Algorithm):
         stopping_criterion: str,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: float = 0.01,
+        min_improvement: float = 0.0,
         seed=None,
         save_best_to_file=False,
         keep_last=False
@@ -476,7 +476,7 @@ class TorchMLAlgorithm(Algorithm):
         self.best_model.seek(0)
         self.model_ = torch.load(self.best_model)
 
-    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
+    def _evaluate(self, val_in: Matrix, val_out: Matrix) -> None:
         """Perform evaluation step
 
         Evaluation computes predictions by passing the ``val_in`` matrix to the model,
@@ -490,8 +490,9 @@ class TorchMLAlgorithm(Algorithm):
         :type val_out: csr_matrix
         """
         # Evaluate batched
+        val_in = self._transform_predict_input(val_in)
         X_pred_cpu = self._predict(val_in)
-        X_true = val_out
+        X_true = to_csr_matrix(val_out)  # StoppingCriterion expects csr_matrix as output 
 
         better = self.stopping_criterion.update(X_true, X_pred_cpu)
 

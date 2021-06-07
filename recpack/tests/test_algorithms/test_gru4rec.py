@@ -62,6 +62,9 @@ def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
         assert_changed(params_before, params, device)
 
 
+# TODO Test if we update with information for all users when bptt > 1.  
+
+
 def test_session_rnn_evaluation_epoch(session_rnn, matrix_sessions):
     device = session_rnn.device
 

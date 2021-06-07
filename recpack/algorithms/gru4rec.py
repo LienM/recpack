@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 from numpy.lib.arraysetops import isin
-from recpack.algorithms import stopping_criterion
 import numpy as np
 import pandas as pd
 import torch
@@ -16,8 +15,7 @@ from torch import Tensor
 from tqdm import tqdm
 
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.metrics.recall import recall_k
-from recpack.data.matrix import InteractionMatrix, Matrix
+from recpack.data.matrix import InteractionMatrix
 from typing import Tuple, Optional, List
 
 from recpack.algorithms.loss_functions import (
@@ -106,16 +104,22 @@ class GRU4Rec(TorchMLAlgorithm):
         seed: int = 2,
         bptt: int = 1,
         max_epochs: int = 5,
+        save_best_to_file: bool = False,
+        keep_last: bool = True,
+        stopping_criterion: str = "recall"
     ):
         # TODO Add early stopping and a stopping criterion to the RNN
-        # super().__init__(
-        #     batch_size=batch_size,
-        #     max_epochs=max_epochs,
-        #     learning_rate=learning_rate,
-        #     # TODO Figure out early stopping for the RNN
-        #     stopping_criterion=None,
-        #     stop_early=
-        #     )
+        super().__init__(
+            batch_size,
+            max_epochs,
+            learning_rate,
+            # TODO Figure out early stopping for the RNN
+            stopping_criterion=stopping_criterion,
+            stop_early=False,
+            seed=seed,
+            save_best_to_file=save_best_to_file,
+            keep_last=keep_last
+        )
 
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -126,19 +130,9 @@ class GRU4Rec(TorchMLAlgorithm):
         self.sample_size = sample_size
         self.alpha = alpha
         self.optimizer = optimizer
-        self.batch_size = batch_size
-        self.learning_rate = learning_rate
         self.momentum = momentum
         self.clip_norm = clip_norm
-        self.seed = seed
         self.bptt = bptt
-        self.max_epochs = max_epochs
-        cuda = torch.cuda.is_available()
-        self.device = torch.device("cuda" if cuda else "cpu")
-
-        # TODO Make this a param
-        self.save_best_to_file = False
-        self.keep_last = True
 
     def _init_model(self, X: InteractionMatrix) -> None:
         if self.seed:
@@ -313,22 +307,6 @@ class GRU4Rec(TorchMLAlgorithm):
         )
 
         pass
-
-    def _evaluate(
-        self, val_in: InteractionMatrix, val_out: InteractionMatrix
-    ) -> None:
-        """Evaluate the current model on the validation data.
-
-        If performance improved over previous epoch, store the model and update
-        best value. If performance stagnates, stop training.
-
-        :param validation_data: Validation data interaction matrices.
-        """
-        X_true = val_out.binary_values
-        X_val_pred = self.predict(val_in)
-        self._save_best()
-        # TODO: Maybe StoppingCriterion here? Tho unsure non-loss criteria make sense..
-
 
 class GRU4RecTorch(nn.Module):
     """
