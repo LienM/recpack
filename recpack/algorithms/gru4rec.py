@@ -286,6 +286,34 @@ class GRU4Rec(TorchMLAlgorithm):
 
         return losses
 
+    def _sample_session_parallel_mini_batches(self, X: InteractionMatrix):
+        # TODO Shuffle users first.
+
+        from numpy.lib.stride_tricks import sliding_window_view
+
+        sorted_item_histories = list(X.sorted_item_history)
+        sorted_item_histories.sort()   # Shuffle users
+
+        w = torch.LongTensor([
+            [u] + w.tolist()
+            for u, sequence in sorted_item_histories
+            if len(sequence) >= 2
+            for w in sliding_window_view(sequence, 2)
+        ])
+
+        uids = w[:, 0]
+        actions = w[:, 1]
+        targets = w[:, 2]
+
+        # Create user-parallel mini batches
+        return (
+            batchify(actions, batch_size),
+            batchify(targets, batch_size),
+            batchify(uids, batch_size),
+        )
+
+        pass
+
     def _evaluate(
         self, val_in: InteractionMatrix, val_out: InteractionMatrix
     ) -> None:

@@ -13,11 +13,17 @@ def unigram_distribution(X: csr_matrix) -> np.array:
     the noise distribution is taken to be the unigram distribution to the power (3/4).
     Note: this is a heuristic based on the original Word2Vec paper.
     """
+    # TODO Is this the correct way to count this? If X is a (u,i) matrix instead of (i,i)?
+
     item_counts_powered = np.power(X.sum(axis=0).A[0], 3 / 4)
     return item_counts_powered / item_counts_powered.sum()
 
 
-class PositiveNegativeSampler:
+class Sampler:
+    pass
+
+
+class PositiveNegativeSampler(Sampler):
     """Samples linked positive and negative interactions for users.
 
     Provides a :meth:`sample` method that samples positives and negatives.
@@ -268,6 +274,22 @@ class WarpSampler(PositiveNegativeSampler):
 
     def __init__(self, U=10, batch_size=100, exact=False):
         super().__init__(U=U, batch_size=batch_size, replace=False, exact=exact)
+
+
+class SequenceSampler(Sampler):
+    pass
+
+
+class LocalOrderedNegativesSampler(SequenceSampler):
+    """Samples `U` negatives for each positive from the same batch.
+
+    Creates a sliding window  
+
+    User interactions are 
+
+    # TODO Maybe rename to WithinBatchNegativesSampler?
+    """
+    pass
 
 
 def _spot_collisions(
