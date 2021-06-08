@@ -180,11 +180,13 @@ def matrix_to_tensor(
         # Not used but just for consistency
         targets = w[:, 1]
 
-        return (
-            batchify(actions, batch_size),
-            batchify(targets, batch_size),
-            batchify(uids, batch_size),
-        )
+        batched_actions = batchify(actions, batch_size)
+        batched_targets = batchify(targets, batch_size)
+        batched_uids = batchify(uids, batch_size)
+        is_last_action = is_last_action = batched_uids != batched_uids.roll(
+            -1, dims=0)
+        is_last_action[-1] = True
+
     else:
         w = torch.LongTensor([
             [u] + w.tolist()
@@ -197,12 +199,19 @@ def matrix_to_tensor(
         actions = w[:, 1]
         targets = w[:, 2]
 
-        # Create user-parallel mini batches
-        return (
-            batchify(actions, batch_size),
-            batchify(targets, batch_size),
-            batchify(uids, batch_size),
-        )
+        batched_actions = batchify(actions, batch_size)
+        batched_targets = batchify(targets, batch_size)
+        batched_uids = batchify(uids, batch_size)
+        is_last_action = is_last_action = batched_uids != batched_uids.roll(
+            -1, dims=0)
+        is_last_action[-1] = True
+
+    return (
+        batched_actions,
+        batched_targets,
+        batched_uids,
+        is_last_action
+    )
 
 
 # TODO Understand how this works

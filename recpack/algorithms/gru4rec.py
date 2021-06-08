@@ -206,14 +206,9 @@ class GRU4Rec(TorchMLAlgorithm):
         col = np.tile(np.arange(num_items), num_users)
 
         with torch.no_grad():
-            actions, _,  uids = matrix_to_tensor(
+            actions, _, uids, is_last_action = matrix_to_tensor(
                 X, batch_size=1, device=self.device, shuffle=False, include_last=True
             )
-
-            print(actions.shape, uids.shape)
-
-            is_last_action = uids != uids.roll(-1, dims=0)
-            is_last_action[-1] = True
 
             i = 0  # User/session count
             self.model_.train(False)
@@ -226,7 +221,6 @@ class GRU4Rec(TorchMLAlgorithm):
                     continue
                 start, end = i * num_items, (i + 1) * num_items
 
-                print(output.shape)
                 data[start:end] = F.softmax(
                     output.reshape(-1), dim=0).cpu().numpy()
                 row[start:end] = uid.item()
@@ -239,14 +233,11 @@ class GRU4Rec(TorchMLAlgorithm):
 
     def _train_epoch(self, X: InteractionMatrix) -> None:
         """Train model for a single epoch."""
-        actions, targets, uids = matrix_to_tensor(
+        actions, targets, uids, is_last_action = matrix_to_tensor(
             X, batch_size=self.batch_size, device=self.device, shuffle=True
         )
-        is_last_action = uids != uids.roll(-1, dims=0)
-        is_last_action[-1] = True
 
         loss, losses = 0.0, []
-
 
         hidden = self.model_.init_hidden(self.batch_size)
         for i, (action, target, is_last) in tqdm(
