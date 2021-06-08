@@ -169,10 +169,13 @@ def matrix_to_tensor(
 
     # TODO Reshuffle but keep user sessions together.
 
+    sorted_item_histories = X.sorted_item_history
+    sorted(sorted_item_histories)
+
     if include_last:
         w = torch.LongTensor([
             [u, i]
-            for u, sequence in X.sorted_item_history
+            for u, sequence in sorted_item_histories
             for i in sequence
         ])
 
@@ -189,7 +192,7 @@ def matrix_to_tensor(
     else:
         w = torch.LongTensor([
             [u] + w.tolist()
-            for u, sequence in X.sorted_item_history
+            for u, sequence in sorted_item_histories
             if len(sequence) >= 2
             for w in sliding_window_view(sequence, 2)
         ])
@@ -206,25 +209,7 @@ def matrix_to_tensor(
         )
 
 
-def shuffle_and_sort(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Shuffle sessions but keep all interactions for a session together, sorted
-    by timestamp.
-    """
-    # Generate a unique random number for each session/user
-    uuid = df[USER_IX].unique()
-    rand = pd.Series(data=np.random.permutation(
-        len(uuid)), index=uuid, name="rand")
-    df = df.join(rand, on=USER_IX)
-    # Shuffle sessions by sorting on their random number
-    df = df.sort_values(by=["rand", TIMESTAMP_IX],
-                        ascending=True, ignore_index=True)
-    del df["rand"]
-    return df
-
 # TODO Understand how this works
-
-
 def batchify(data: Tensor, batch_size: int) -> Tensor:
     """
     Splits a sequence into contiguous batches, indexed along dim 0.
