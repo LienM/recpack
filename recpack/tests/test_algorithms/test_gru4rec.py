@@ -99,9 +99,8 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
     assert len(set(X_pred.nonzero()[1])) == matrix_sessions.shape[1]
 
     # Rnn should be able to learn simple repeating patterns
-    # TODO Fix test
-    # assert top_item[0] == 1
-    # assert top_item[1] == 2
-    # assert top_item[2] == 2
-    # assert top_item[3] == 2
-    # assert top_item[4] == 1
+    assert top_item[0] == 1
+    assert top_item[1] == 2
+    assert top_item[2] == 2
+    assert top_item[3] == 2
+    assert top_item[4] == 1

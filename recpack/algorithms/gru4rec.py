@@ -19,12 +19,12 @@ from recpack.data.matrix import InteractionMatrix
 from typing import Tuple, Optional, List
 
 from recpack.algorithms.loss_functions import (
-    BatchSampler,
-    BPRLoss,
-    BPRMaxLoss,
-    TOP1Loss,
-    TOP1MaxLoss,
+    bpr_loss,
+    bpr_max_loss,
+    top1_loss,
+    top1_max_loss
 )
+from recpack.algorithms.samplers import BatchSampler
 from recpack.algorithms.util import matrix_to_tensor
 
 
@@ -93,7 +93,8 @@ class GRU4Rec(TorchMLAlgorithm):
         embedding_size: Optional[int] = 250,
         dropout: float = 0.0,
         activation: str = "identity",
-        loss_fn: str = "cross-entropy",
+        loss_fn: str = "top1",
+        # loss_fn: str = "cross-entropy",
         sample_size: int = 5000,
         alpha: float = 0.5,
         optimization_algorithm: str = "adagrad",
@@ -133,6 +134,14 @@ class GRU4Rec(TorchMLAlgorithm):
         self.clip_norm = clip_norm
         self.bptt = bptt
 
+        self._criterion = {
+            # "cross-entropy": nn.CrossEntropyLoss(),
+            "top1": top1_loss,
+            "top1-max": top1_max_loss,
+            "bpr": bpr_loss,
+            "bpr-max": bpr_max_loss,
+        }[self.loss_fn]
+
     def _init_model(self, X: InteractionMatrix) -> None:
         if self.seed:
             torch.manual_seed(self.seed)
@@ -154,7 +163,8 @@ class GRU4Rec(TorchMLAlgorithm):
                 self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum
             )
         elif self.optimization_algorithm == "adagrad":
-            self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
+            self.optimizer = optim.Adagrad(
+                self.model_.parameters(), lr=self.learning_rate)
 
     def _transform_fit_input(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
         """Transform the input matrices of the training function to the expected types
@@ -236,7 +246,8 @@ class GRU4Rec(TorchMLAlgorithm):
         is_last_action[-1] = True
 
         loss, losses = 0.0, []
-        self.model_.train(True)
+
+
         hidden = self.model_.init_hidden(self.batch_size)
         for i, (action, target, is_last) in tqdm(
             enumerate(zip(actions, targets, is_last_action)), total=len(actions)
@@ -272,43 +283,40 @@ class GRU4Rec(TorchMLAlgorithm):
         item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
 
         sampler = BatchSampler(item_weights, device=self.device)
-        self._criterion = {
-            "cross-entropy": nn.CrossEntropyLoss(),
-            "top1": TOP1Loss(sampler, self.sample_size),
-            "top1-max": TOP1MaxLoss(sampler, self.sample_size),
-            "bpr": BPRLoss(sampler, self.sample_size),
-            "bpr-max": BPRMaxLoss(sampler, self.sample_size),
-        }[self.loss_fn]
 
-        return self._criterion(output, target)
+        samples = sampler(self.sample_size, target)
 
-    def _sample_session_parallel_mini_batches(self, X: InteractionMatrix):
-        # TODO Shuffle users first.
 
-        from numpy.lib.stride_tricks import sliding_window_view
 
-        sorted_item_histories = list(X.sorted_item_history)
-        sorted_item_histories.sort()   # Shuffle users
+        return self._criterion(output, target, samples)
 
-        w = torch.LongTensor([
-            [u] + w.tolist()
-            for u, sequence in sorted_item_histories
-            if len(sequence) >= 2
-            for w in sliding_window_view(sequence, 2)
-        ])
+    # def _sample_session_parallel_mini_batches(self, X: InteractionMatrix):
+    #     # TODO Shuffle users first.
 
-        uids = w[:, 0]
-        actions = w[:, 1]
-        targets = w[:, 2]
+    #     from numpy.lib.stride_tricks import sliding_window_view
 
-        # Create user-parallel mini batches
-        return (
-            batchify(actions, batch_size),
-            batchify(targets, batch_size),
-            batchify(uids, batch_size),
-        )
+    #     sorted_item_histories = list(X.sorted_item_history)
+    #     sorted_item_histories.sort()   # Shuffle users
 
-        pass
+    #     w = torch.LongTensor([
+    #         [u] + w.tolist()
+    #         for u, sequence in sorted_item_histories
+    #         if len(sequence) >= 2
+    #         for w in sliding_window_view(sequence, 2)
+    #     ])
+
+    #     uids = w[:, 0]
+    #     actions = w[:, 1]
+    #     targets = w[:, 2]
+
+    #     # Create user-parallel mini batches
+    #     return (
+    #         batchify(actions, batch_size),
+    #         batchify(targets, batch_size),
+    #         batchify(uids, batch_size),
+    #     )
+
+    #     pass
 
 
 class GRU4RecTorch(nn.Module):

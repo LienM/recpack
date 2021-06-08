@@ -165,11 +165,7 @@ def matrix_to_tensor(
     """
     # Convert the item and user ids to 1D tensors
 
-    # See notebook for alternative implementation
-
-    # TODO Reshuffle but keep user sessions together.
-
-    sorted_item_histories = X.sorted_item_history
+    sorted_item_histories = list(X.sorted_item_history)
     sorted(sorted_item_histories)
 
     if include_last:

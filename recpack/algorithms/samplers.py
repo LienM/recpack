@@ -343,3 +343,78 @@ def _spot_collisions(
 
     num_incorrect = negatives_mask.sum()
     return num_incorrect, negatives_mask
+
+
+
+
+
+class BatchSampler:
+    """
+    A sampler that uses the other targets in a minibatch as samples.
+
+    As an example, if the targets in a minibatch of size 5 are [1, 2, 3, 4, 5],
+    the resulting samples will be
+
+        [[2, 3, 4, 5]
+         [1, 3, 4, 5]
+         [1, 2, 4, 5]
+         [1, 2, 3, 5]
+         [1, 2, 3, 4]]
+
+    If the number of samples needed exceeds (batch size - 1), extra samples across all
+    items (not necessarily those in the target set) are added by sampling according
+    to the given item weights. The additional samples will be the same for every 
+    example in the batch.
+
+    :param weights: Sampling weights for each item as a tensor of shape (I,)
+    :param device: The device where generated samples will be stored
+    """
+
+    def __init__(self, weights: torch.Tensor, device: str = "cpu"):
+        self._wsampler = _WeightedSampler(weights, device=device)
+        self.device = device
+
+    def __call__(self, num_samples: int, targets: torch.Tensor) -> torch.Tensor:
+        """
+        Generate new samples
+
+        :param num_samples: The number of samples to draw, including the samples taken 
+            from the targets in the batch.
+        :param targets: The index of the target item in each batch, shape (B,)
+        :return: Samples as a tensor of shape (B, N), where N is the number of samples
+        """
+        m = len(targets)
+        batch_samples = (targets.flip(0).repeat(m - 1).reshape((m, -1))).to(self.device)
+        if num_samples > m - 1:
+            r = num_samples - (m - 1)
+            extra_samples = self._wsampler((1, r)).repeat((m, 1))
+            return torch.cat((batch_samples, extra_samples), dim=1)
+        else:
+            return batch_samples[:, :num_samples]
+
+
+class _WeightedSampler:
+    def __init__(self, weights, device="cpu"):
+        self.weights = torch.as_tensor(weights, dtype=torch.float, device=device)
+        self._cache_size = 1_000_000
+        self._cache_samples()
+
+    def __call__(self, shape):
+        n = np.prod(shape)
+        res = self._cache[self._i : self._i + n]
+        self._i += n
+        while len(res) < n:
+            self._cache_samples()
+            rem = n - len(res)
+            res = torch.cat((res, self._cache[:rem]))
+            self._i += rem
+        return res.reshape(shape)
+
+    def _cache_samples(self):
+        self._i = 0
+        self._cache = torch.multinomial(
+            self.weights, self._cache_size, replacement=True
+        )
+
+
+
