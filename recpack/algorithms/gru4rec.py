@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 
-from numpy.lib.arraysetops import isin
 import numpy as np
 import pandas as pd
 import torch
@@ -16,7 +15,7 @@ from tqdm import tqdm
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.data.matrix import InteractionMatrix
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional
 
 from recpack.algorithms.loss_functions import (
     bpr_loss,
@@ -239,12 +238,25 @@ class GRU4Rec(TorchMLAlgorithm):
 
         loss, losses = 0.0, []
 
+        num_items = X.shape[1]
+        dataframe = X.timestamps.reset_index()
+
+        item_counts_tr = dataframe[ITEM_IX].value_counts()
+        item_counts = pd.Series(np.arange(num_items))
+        item_counts = item_counts.map(item_counts_tr).fillna(0)
+        item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
+
+        sampler = BatchSampler(item_weights, device=self.device)
+
+
         hidden = self.model_.init_hidden(self.batch_size)
         for i, (action, target, is_last) in tqdm(
             enumerate(zip(actions, targets, is_last_action)), total=len(actions)
         ):
             output, hidden = self.model_(action.unsqueeze(0), hidden)
-            loss += self._compute_loss(X, output, target) / self.bptt
+            samples = sampler(self.sample_size, target)
+
+            loss += self._compute_loss(output, target, samples) / self.bptt
             if i % self.bptt == self.bptt - 1:
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -263,22 +275,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
         return losses
 
-    def _compute_loss(self, X, output, target) -> torch.Tensor:
-        num_items = X.shape[1]
-        dataframe = X.timestamps.reset_index()
-
-        # TODO Some of these should be moved I think
-        item_counts_tr = dataframe[ITEM_IX].value_counts()
-        item_counts = pd.Series(np.arange(num_items))
-        item_counts = item_counts.map(item_counts_tr).fillna(0)
-        item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
-
-        sampler = BatchSampler(item_weights, device=self.device)
-
-        samples = sampler(self.sample_size, target)
-
-
-
+    def _compute_loss(self, output, target, samples) -> torch.Tensor:
         return self._criterion(output, target, samples)
 
     # def _sample_session_parallel_mini_batches(self, X: InteractionMatrix):
