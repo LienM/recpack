@@ -187,7 +187,7 @@ class Prod2Vec(TorchMLAlgorithm):
         )
 
     def _init_model(self, X: Matrix) -> None:
-        self.model_ = SkipGram(X.shape[1], self.embedding_size)
+        self.model_ = SkipGram(X.shape[1], self.embedding_size).to(self.device)
         self.optimizer = optim.Adam(
             self.model_.parameters(), lr=self.learning_rate)
 
