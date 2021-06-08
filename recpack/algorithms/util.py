@@ -1,14 +1,14 @@
-from typing import Tuple
-from torch import Tensor
-from recpack.data.matrix import InteractionMatrix
-import pandas as pd
+
 from math import ceil
-from typing import Iterator, List, Union
+from typing import Iterator, List, Tuple
 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_matrix
 import torch
+
+
+from recpack.data.matrix import InteractionMatrix, Matrix
 
 
 def swish(x):
@@ -41,7 +41,7 @@ def naive_tensor2sparse(tensor: torch.Tensor) -> csr_matrix:
     return csr_matrix(tensor.detach().numpy())
 
 
-def get_users(data):
+def get_users(data: Matrix) -> list:
     return list(set(data.nonzero()[0]))
 
 
@@ -89,23 +89,13 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     return sampled_matrices
 
 
-"""
-Data format conversion and manipulation
-"""
-
-
-USER_IX = InteractionMatrix.USER_IX
-ITEM_IX = InteractionMatrix.ITEM_IX
-TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
-
-
 def matrix_to_tensor(
     X: InteractionMatrix,
     batch_size: int,
     device: str = "cpu",
     shuffle: bool = False,
     include_last: bool = False,
-) -> Tuple[Tensor, Tensor, Tensor]:
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Converts a user-item interactions matrix to torch tensors.
 
@@ -215,7 +205,7 @@ def matrix_to_tensor(
 
 
 # TODO Understand how this works
-def batchify(data: Tensor, batch_size: int) -> Tensor:
+def batchify(data: torch.Tensor, batch_size: int) -> torch.Tensor:
     """
     Splits a sequence into contiguous batches, indexed along dim 0.
 
