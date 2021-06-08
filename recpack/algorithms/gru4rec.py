@@ -76,7 +76,7 @@ class GRU4Rec(TorchMLAlgorithm):
     :param sample_size: Number of negative samples used for bpr, bpr-max, top1, top1-max
         loss calculation. This number includes samples from the same minibatch.
     :param alpha: Sampling weight parameter, 0 is uniform, 1 is popularity-based
-    :param optimizer: Gradient descent optimizer, one of "sgd", "adagrad"
+    :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad"
     :param batch_size: Number of examples in a mini-batch
     :param learning_rate: Gradient descent initial learning rate
     :param momentum: Momentum when using the sgd optimizer
@@ -96,7 +96,7 @@ class GRU4Rec(TorchMLAlgorithm):
         loss_fn: str = "cross-entropy",
         sample_size: int = 5000,
         alpha: float = 0.5,
-        optimizer: str = "adagrad",
+        optimization_algorithm: str = "adagrad",
         batch_size: int = 512,
         learning_rate: float = 0.03,
         momentum: float = 0.0,
@@ -108,7 +108,6 @@ class GRU4Rec(TorchMLAlgorithm):
         keep_last: bool = True,
         stopping_criterion: str = "recall"
     ):
-        # TODO Add early stopping and a stopping criterion to the RNN
         super().__init__(
             batch_size,
             max_epochs,
@@ -129,7 +128,7 @@ class GRU4Rec(TorchMLAlgorithm):
         self.loss_fn = loss_fn
         self.sample_size = sample_size
         self.alpha = alpha
-        self.optimizer = optimizer
+        self.optimization_algorithm = optimization_algorithm
         self.momentum = momentum
         self.clip_norm = clip_norm
         self.bptt = bptt
@@ -150,30 +149,12 @@ class GRU4Rec(TorchMLAlgorithm):
             activation=self.activation,
         ).to(self.device)
 
-        num_items = X.shape[1]
-        dataframe = X.timestamps.reset_index()
-
-        # TODO Some of these should be moved I think
-        item_counts_tr = dataframe[ITEM_IX].value_counts()
-        item_counts = pd.Series(np.arange(num_items))
-        item_counts = item_counts.map(item_counts_tr).fillna(0)
-        item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
-
-        sampler = BatchSampler(item_weights, device=self.device)
-        self._criterion = {
-            "cross-entropy": nn.CrossEntropyLoss(),
-            "top1": TOP1Loss(sampler, self.sample_size),
-            "top1-max": TOP1MaxLoss(sampler, self.sample_size),
-            "bpr": BPRLoss(sampler, self.sample_size),
-            "bpr-max": BPRMaxLoss(sampler, self.sample_size),
-        }[self.loss_fn]
-
-        self._optimizer = {
-            "sgd": optim.SGD(
+        if self.optimization_algorithm == "sgd":
+            self.optimizer = optim.SGD(
                 self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum
-            ),
-            "adagrad": optim.Adagrad(self.model_.parameters(), lr=self.learning_rate),
-        }[self.optimizer]
+            )
+        elif self.optimization_algorithm == "adagrad":
+            self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
     def _transform_fit_input(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
         """Transform the input matrices of the training function to the expected types
@@ -261,14 +242,14 @@ class GRU4Rec(TorchMLAlgorithm):
             enumerate(zip(actions, targets, is_last_action)), total=len(actions)
         ):
             output, hidden = self.model_(action.unsqueeze(0), hidden)
-            loss += self._criterion(output, target) / self.bptt
+            loss += self._compute_loss(X, output, target) / self.bptt
             if i % self.bptt == self.bptt - 1:
-                self._optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 loss.backward()
                 if self.clip_norm:
                     nn.utils.clip_grad_norm_(
                         self.model_.parameters(), self.clip_norm)
-                self._optimizer.step()
+                self.optimizer.step()
                 losses.append(loss.item())
                 loss = 0.0
                 hidden = hidden.detach()  # Prevent backprop past bptt steps
@@ -279,6 +260,27 @@ class GRU4Rec(TorchMLAlgorithm):
         logger.info("training loss = {}".format(np.mean(losses)))
 
         return losses
+
+    def _compute_loss(self, X, output, target) -> torch.Tensor:
+        num_items = X.shape[1]
+        dataframe = X.timestamps.reset_index()
+
+        # TODO Some of these should be moved I think
+        item_counts_tr = dataframe[ITEM_IX].value_counts()
+        item_counts = pd.Series(np.arange(num_items))
+        item_counts = item_counts.map(item_counts_tr).fillna(0)
+        item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
+
+        sampler = BatchSampler(item_weights, device=self.device)
+        self._criterion = {
+            "cross-entropy": nn.CrossEntropyLoss(),
+            "top1": TOP1Loss(sampler, self.sample_size),
+            "top1-max": TOP1MaxLoss(sampler, self.sample_size),
+            "bpr": BPRLoss(sampler, self.sample_size),
+            "bpr-max": BPRMaxLoss(sampler, self.sample_size),
+        }[self.loss_fn]
+
+        return self._criterion(output, target)
 
     def _sample_session_parallel_mini_batches(self, X: InteractionMatrix):
         # TODO Shuffle users first.
@@ -307,6 +309,7 @@ class GRU4Rec(TorchMLAlgorithm):
         )
 
         pass
+
 
 class GRU4RecTorch(nn.Module):
     """
