@@ -41,7 +41,7 @@ def naive_tensor2sparse(tensor: torch.Tensor) -> csr_matrix:
     return csr_matrix(tensor.detach().numpy())
 
 
-def get_users(data: Matrix) -> list:
+def get_users(data: Matrix) -> List[int]:
     return list(set(data.nonzero()[0]))
 
 

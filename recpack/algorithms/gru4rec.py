@@ -186,15 +186,17 @@ class GRU4Rec(TorchMLAlgorithm):
     def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
         return X
 
+
+    def _batch_predict(self, X: InteractionMatrix) -> csr_matrix:
+        pass
+
+
     def _predict(self, X: InteractionMatrix) -> csr_matrix:
         """Predict recommendations for each user with at least a single event in their
         history.
 
         :param X: Data matrix, same shape as training matrix. Timestamps required.
         """
-
-        if X.num_interactions == 0:
-            return csr_matrix(X.shape)
 
         num_users = X.num_active_users
         num_items = self.model_.output_size
@@ -248,6 +250,10 @@ class GRU4Rec(TorchMLAlgorithm):
 
         sampler = BatchSampler(item_weights, device=self.device)
 
+        """
+        TODO yield rows of actions and targets
+        
+        """
 
         hidden = self.model_.init_hidden(self.batch_size)
         for i, (action, target, is_last) in tqdm(

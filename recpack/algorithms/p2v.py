@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, Iterator
+from typing import Tuple, Iterator, List
 import warnings
 
 import numpy as np
@@ -264,10 +264,8 @@ class Prod2Vec(TorchMLAlgorithm):
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
-    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
         scores = X @ self.similarity_matrix_
-        if not isinstance(scores, csr_matrix):
-            scores = csr_matrix(scores)
         return scores
 
     def _skipgram_sample_pairs(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
@@ -281,7 +279,7 @@ class Prod2Vec(TorchMLAlgorithm):
         :yield: focus_batch, positive_samples_batch, negative_samples_batch
         :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
         """
-        # TODO Should I add this to samplers? 
+        # TODO Should I add this to samplers?
         # Window, then extract focus (middle element) and context (all other elements).
         windowed_sequences = window(X.sorted_item_history, self.window_size)
         context = np.hstack(
