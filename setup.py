@@ -18,6 +18,6 @@ setup(
         "dataclasses==0.6",
     ]
     + ["pytest==5.4.1", "pytest-cov==2.8.1"],
-    extras_require={"experimental": ["numba==0.50.1"]},
+    extras_require={"experimental": ["numba==0.53.1"]},
     entry_points={"console_scripts": ["run_pipeline = recpack.cli:run_pipeline"]},
 )
