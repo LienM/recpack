@@ -45,7 +45,7 @@ def get_users(data: Matrix) -> List[int]:
     return list(set(data.nonzero()[0]))
 
 
-def get_batches(users: List[int], batch_size=1000) -> Iterator[List[int]]:
+def get_batches(users: List, batch_size=1000) -> Iterator[List]:
     """Get user ids in batches from a list of ids.
 
     The list of users will be split into batches of batch_size.

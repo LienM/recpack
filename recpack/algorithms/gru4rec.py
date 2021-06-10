@@ -24,7 +24,7 @@ from recpack.algorithms.loss_functions import (
     top1_max_loss
 )
 from recpack.algorithms.samplers import BatchSampler
-from recpack.algorithms.util import matrix_to_tensor
+from recpack.algorithms.util import get_batches, matrix_to_tensor
 
 
 logger = logging.getLogger("recpack")
@@ -146,10 +146,11 @@ class GRU4Rec(TorchMLAlgorithm):
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
-        num_items = X.shape[1]
+        self.num_items = X.shape[1]
 
         self.model_ = GRU4RecTorch(
-            num_items=int(num_items),  # PyTorch 1.4 can't handle numpy ints
+            # PyTorch 1.4 can't handle numpy ints
+            num_items=int(self.num_items),
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
             embedding_size=self.embedding_size,
@@ -186,131 +187,63 @@ class GRU4Rec(TorchMLAlgorithm):
     def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
         return X
 
-
-    def _batch_predict(self, X: InteractionMatrix) -> csr_matrix:
-        pass
-
-
-    def _predict(self, X: InteractionMatrix) -> csr_matrix:
-        """Predict recommendations for each user with at least a single event in their
-        history.
-
-        :param X: Data matrix, same shape as training matrix. Timestamps required.
-        """
-
-        num_users = X.num_active_users
-        num_items = self.model_.output_size
-        num_scores = num_users * num_items
-
-        data = np.zeros(num_scores, dtype=np.float32)
-        row = np.zeros(num_scores, dtype=np.int32)
-        col = np.tile(np.arange(num_items), num_users)
-
-        with torch.no_grad():
-            actions, _, uids, is_last_action = matrix_to_tensor(
-                X, batch_size=1, device=self.device, shuffle=False, include_last=True
-            )
-
-            i = 0  # User/session count
-            self.model_.train(False)
-            hidden = self.model_.init_hidden(1)
-            for action, uid, is_last in tqdm(
-                zip(actions, uids, is_last_action), total=len(actions)
-            ):
-                output, hidden = self.model_(action.unsqueeze(0), hidden)
-                if not is_last:
-                    continue
-                start, end = i * num_items, (i + 1) * num_items
-
-                data[start:end] = F.softmax(
-                    output.reshape(-1), dim=0).cpu().numpy()
-                row[start:end] = uid.item()
-                hidden = hidden * 0
-                i = i + 1
-
-        X_pred = csr_matrix((data, (row, col)), shape=X.shape)
-
-        return X_pred
-
     def _train_epoch(self, X: InteractionMatrix) -> None:
-        """Train model for a single epoch."""
-        actions, targets, uids, is_last_action = matrix_to_tensor(
-            X, batch_size=self.batch_size, device=self.device, shuffle=True
-        )
 
-        loss, losses = 0.0, []
+        item_histories = list(X.sorted_item_history)
+        # Do I introduce bias if I sort them by length?
+        # TODO Sorted sorts by uid, can be biased
 
-        num_items = X.shape[1]
-        dataframe = X.timestamps.reset_index()
+        item_histories_w_len = [(uid, hist, len(hist))
+                                for uid, hist in item_histories]
+        sorted(item_histories_w_len, key=lambda x: x[2], reverse=True)
 
-        item_counts_tr = dataframe[ITEM_IX].value_counts()
-        item_counts = pd.Series(np.arange(num_items))
-        item_counts = item_counts.map(item_counts_tr).fillna(0)
-        item_weights = torch.as_tensor(item_counts.to_numpy()) ** self.alpha
+        # Generate batches of users. Take maximum len of history in batch
+        for batch in get_batches(item_histories_w_len, self.batch_size):
+            # Because they were sorted in reverse order the first element contains the max len in this batch
+            max_hist_len = batch[0][2]
 
-        sampler = BatchSampler(item_weights, device=self.device)
+            # Create a padding_ix
+            padding_ix = self.num_items
 
-        """
-        TODO yield rows of actions and targets
-        
-        """
+            # Initialize with all padding_ix
+            seq_batch = torch.zeros((self.batch_size, max_hist_len)) * padding_ix
 
-        hidden = self.model_.init_hidden(self.batch_size)
-        for i, (action, target, is_last) in tqdm(
-            enumerate(zip(actions, targets, is_last_action)), total=len(actions)
-        ):
-            output, hidden = self.model_(action.unsqueeze(0), hidden)
-            samples = sampler(self.sample_size, target)
+            for batch_ix, (_, hist, hist_len) in enumerate(batch):
+                seq_batch[batch_ix, 0:hist_len] = hist
 
-            loss += self._compute_loss(output, target, samples) / self.bptt
-            if i % self.bptt == self.bptt - 1:
-                self.optimizer.zero_grad()
-                loss.backward()
-                if self.clip_norm:
-                    nn.utils.clip_grad_norm_(
-                        self.model_.parameters(), self.clip_norm)
-                self.optimizer.step()
-                losses.append(loss.item())
-                loss = 0.0
-                hidden = hidden.detach()  # Prevent backprop past bptt steps
-            hidden = hidden * ~is_last.view(
-                1, -1, 1
-            )  # Reset hidden state between users
+            # Pad
+            # Create a padding_ix?
 
-        logger.info("training loss = {}".format(np.mean(losses)))
+            # Feed into the network in chunks of size bptt.
+
+        # hidden = self.model_.init_hidden(self.batch_size)
+        # for i, (action, target, is_last) in tqdm(
+        #     enumerate(zip(actions, targets, is_last_action)), total=len(actions)
+        # ):
+        #     output, hidden = self.model_(action.unsqueeze(0), hidden)
+        #     samples = sampler(self.sample_size, target)
+
+        #     loss += self._compute_loss(output, target, samples) / self.bptt
+        #     if i % self.bptt == self.bptt - 1:
+        #         self.optimizer.zero_grad()
+        #         loss.backward()
+        #         if self.clip_norm:
+        #             nn.utils.clip_grad_norm_(
+        #                 self.model_.parameters(), self.clip_norm)
+        #         self.optimizer.step()
+        #         losses.append(loss.item())
+        #         loss = 0.0
+        #         hidden = hidden.detach()  # Prevent backprop past bptt steps
+        #     hidden = hidden * ~is_last.view(
+        #         1, -1, 1
+        #     )  # Reset hidden state between users
+
+        # logger.info("training loss = {}".format(np.mean(losses)))
 
         return losses
 
     def _compute_loss(self, output, target, samples) -> torch.Tensor:
         return self._criterion(output, target, samples)
-
-    # def _sample_session_parallel_mini_batches(self, X: InteractionMatrix):
-    #     # TODO Shuffle users first.
-
-    #     from numpy.lib.stride_tricks import sliding_window_view
-
-    #     sorted_item_histories = list(X.sorted_item_history)
-    #     sorted_item_histories.sort()   # Shuffle users
-
-    #     w = torch.LongTensor([
-    #         [u] + w.tolist()
-    #         for u, sequence in sorted_item_histories
-    #         if len(sequence) >= 2
-    #         for w in sliding_window_view(sequence, 2)
-    #     ])
-
-    #     uids = w[:, 0]
-    #     actions = w[:, 1]
-    #     targets = w[:, 2]
-
-    #     # Create user-parallel mini batches
-    #     return (
-    #         batchify(actions, batch_size),
-    #         batchify(targets, batch_size),
-    #         batchify(uids, batch_size),
-    #     )
-
-    #     pass
 
 
 class GRU4RecTorch(nn.Module):
@@ -335,6 +268,7 @@ class GRU4RecTorch(nn.Module):
         embedding_size: Optional[int] = None,
         dropout: float = 0,
         activation: str = "elu-1",
+        padding_ix: int = 0
     ):
         super().__init__()
         self.input_size = num_items
