@@ -39,38 +39,49 @@ class TimeDecayingNearestNeighbour(Algorithm):
         # No transformation needed
         return X
 
-    def _concave_time_decay(self, x: int, t: int) -> float:
-        return self.decay_coeff ** x
+    def _concave_matrix_decay(self, X: csr_matrix, t: int) -> csr_matrix:
+        X_copy = X.copy()
+        X_copy.data = self.decay_coeff ** X.data
+        return X_copy
 
-    def _convex_time_decay(self, x: int, t: int) -> float:
-        return (1 - (self.decay_coeff ** (t - x)))
+    def _convex_matrix_decay(self, X: csr_matrix, t: int) -> csr_matrix:
+        X_copy = X.copy()
+        X_copy.data = (1 - (self.decay_coeff ** (t - X.data)))
+        return X_copy
 
-    def _linear_time_decay(self, x: int, t: int) -> float:
-        if t == 0:
-            return 0
-        return 1 - (x / t) * self.decay_coeff
+    def _linear_matrix_decay(self, X: csr_matrix, t: int) -> csr_matrix:
+        X_copy = X.copy()
+        X_copy.data = 1 - (X.data / t) * self.decay_coeff
+        return X_copy
 
     def _compute_dynamic_similarity_with_decay(self, X: InteractionMatrix, t: int):
 
         SUPPORTED_DECAY_FUNCTIONS = {
-            "concave": self._concave_time_decay,
-            "convex": self._convex_time_decay,
-            "linear": self._linear_time_decay
+            "concave": self._concave_matrix_decay,
+            "convex": self._convex_matrix_decay,
+            "linear": self._linear_matrix_decay
         }
 
         num_users, num_items = X.shape
-        csr = X.binary_values
-        item_similarities = lil_matrix((num_items, num_items), dtype=np.float64)
 
-        df = X._df
+        # Get the timestamps multi index
+        timestamps = X.timestamps
 
-        for i, j in permutations(range(0, num_items), 2):
-            for k in range(0, num_users):
-                if csr[k, i] and csr[k, j]:
-                    cond1 = (df.iid == i) & (df.uid == k)
-                    cond2 = (df.iid == j) & (df.uid == k)
+        item_similarities = lil_matrix((num_items, num_items))
+        for user in X.active_users:
+            # Construct user history as np array
+            user_hist = np.zeros((X.shape[1], 1))
+            user_hist[timestamps[user].index.values, 0] = X.timestamps[user].values
 
-                    item_similarities[i, j] += csr[k, i] * csr[k, j] * SUPPORTED_DECAY_FUNCTIONS[self.decay_fn](abs(df[cond1].iloc[0]['ts'] - df[cond2].iloc[0]['ts']), t)
+            # Compute the Cooc matrix for this user, with the difference in timestamp as value.
+            # 1. compute cooc matrix, such that cooc_one_ts[i,j] = t(j) if hist[i] and hist[j]
+            cooc_one_ts = user_hist.astype(bool) @ user_hist.T
+            # 2. Construct cooc csr matrix with the time delta between interactions
+            cooc_time_delta = csr_matrix(abs((cooc_one_ts - user_hist) * cooc_one_ts.astype(bool)))
+
+            # 3. apply the decay on these values
+            cooc_decayed = SUPPORTED_DECAY_FUNCTIONS[self.decay_fn](cooc_time_delta, t)
+            item_similarities += cooc_decayed
 
         return item_similarities.tocsr()
 
