@@ -7,6 +7,70 @@ from recpack.data.matrix import InteractionMatrix
 
 
 class TimeDecayingNearestNeighbour(Algorithm):
+    """Time Decaying Nearest Neighbours model.
+
+    First described in 'Dynamic Item-Based Recommendation Algorithm with Time Decay'
+    Chaolun Xia, Xiaohong Jiang, Sen Liu, Zhaobo Luo, Zhang Yu,
+    2010 Sixth International Conference on Natural Computation (ICNC 2010)
+
+    For each item the K most similar items are computed during fit.
+    Decay function parameter decides how to compute the similarity between two items.
+
+    .. math::
+        \\sim(i,j) = \\sum_{k=1}^{n} R_{k,i} . R_{k,j} . \\theta(|T_{k,i} - T_{k,j}|)
+
+    Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``
+
+    - Concave decay function between item i and j is computed as
+      the ``decay_coeff^t``. With t the absolute time interval between the interactions on both items.
+
+    **Example of use**::
+
+        import numpy as np
+        from recpack.data.matrix import InteractionMatrix
+        from recpack.algorithms.experimental import TimeDecayingNearestNeighbour
+
+        USER_IX = InteractionMatrix.USER_IX
+        ITEM_IX = InteractionMatrix.ITEM_IX
+        TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
+
+        data = {
+            TIMESTAMP_IX: [1, 1, 1, 2, 3, 4],
+            ITEM_IX: [0, 0, 1, 2, 1, 2],
+            USER_IX: [0, 1, 2, 2, 1, 0]
+        }
+        df = pd.DataFrame.from_dict(data)
+
+        X = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+        # We'll only keep the closest neighbour for each item.
+        # Default uses concave decay function with coefficient equal to 0.5
+        algo = TimeDecayingNearestNeighbour(K=1)
+        # Fit algorithm
+        algo.fit(X)
+
+        # We can inspect the fitted model
+        print(algo.similarity_matrix_.nnz)
+        # 3
+
+        # Get the predictions
+        predictions = algo.predict(X)
+
+        # Predictions is a csr matrix, inspecting the scores with
+        predictions.toarray()
+
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
+    :type K: int, optional
+    :param decay_coeff: How strongly the decay function should influence the scores,
+        make sure to pick a value in the correct interval for the selected decay function.
+        Defaults to 0.5
+    :type decay_coeff: float, optional
+    :param decay_fn: The decay function that needs to be applied on the item similarity scores.
+        Defaults to concave
+    :type decay_fn: str, optional
+    """
 
     # TODO - Add time interval step size
     SUPPORTED_COEFF_RANGES = {
@@ -17,7 +81,7 @@ class TimeDecayingNearestNeighbour(Algorithm):
 
     """The supported Decay function options"""
 
-    def __init__(self, K=200, decay_coeff=1, decay_fn: str = "concave"):
+    def __init__(self, K=200, decay_coeff: float = 0.5, decay_fn: str = "concave"):
         self.K = K
 
         if decay_fn not in self.SUPPORTED_COEFF_RANGES.keys():
