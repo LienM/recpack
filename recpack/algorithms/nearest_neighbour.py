@@ -12,7 +12,7 @@ from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     """Item K Nearest Neighbours model.
 
-    First descsribed in 'Item-based top-n recommendation algorithms.'
+    First described in 'Item-based top-n recommendation algorithms.'
     Deshpande, Mukund, and George Karypis,
     ACM Transactions on Information Systems (TOIS) 22.1 (2004): 143-177
 
