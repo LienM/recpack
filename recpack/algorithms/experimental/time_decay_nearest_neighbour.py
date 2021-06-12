@@ -5,8 +5,6 @@ from scipy.sparse import csr_matrix, lil_matrix
 from recpack.algorithms.base import Algorithm
 from recpack.data.matrix import InteractionMatrix
 
-from itertools import permutations
-
 
 class TimeDecayingNearestNeighbour(Algorithm):
 
