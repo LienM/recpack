@@ -17,7 +17,7 @@ class TimeDecayingNearestNeighbour(Algorithm):
     Decay function parameter decides how to compute the similarity between two items.
 
     .. math::
-        \\sim(i,j) = \\sum_{k=1}^{n} R_{k,i} . R_{k,j} . \\theta(|T_{k,i} - T_{k,j}|)
+        \\text{sim}(i,j) = \\sum\\limits_{u=1}^{|U|} R_{u,i} \\cdot R_{u,j} \\cdot \\theta(|T_{u,i} - T_{u,j}|)
 
     Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``
 
