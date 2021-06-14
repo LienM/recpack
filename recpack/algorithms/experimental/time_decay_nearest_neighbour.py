@@ -101,22 +101,22 @@ class TimeDecayingNearestNeighbour(Algorithm):
         # No transformation needed
         return X
 
-    def _concave_matrix_decay(self, X: csr_matrix, t: int) -> csr_matrix:
+    def _concave_matrix_decay(self, X: csr_matrix, max_delta: int) -> csr_matrix:
         X_copy = X.copy()
         X_copy.data = self.decay_coeff ** X.data
         return X_copy
 
-    def _convex_matrix_decay(self, X: csr_matrix, t: int) -> csr_matrix:
+    def _convex_matrix_decay(self, X: csr_matrix, max_delta: int) -> csr_matrix:
         X_copy = X.copy()
-        X_copy.data = (1 - (self.decay_coeff ** (t - X.data)))
+        X_copy.data = (1 - (self.decay_coeff ** (max_delta - X.data)))
         return X_copy
 
-    def _linear_matrix_decay(self, X: csr_matrix, t: int) -> csr_matrix:
+    def _linear_matrix_decay(self, X: csr_matrix, max_delta: int) -> csr_matrix:
         X_copy = X.copy()
-        X_copy.data = 1 - (X.data / t) * self.decay_coeff
+        X_copy.data = 1 - (X.data / max_delta) * self.decay_coeff
         return X_copy
 
-    def _compute_dynamic_similarity_with_decay(self, X: InteractionMatrix, t: int):
+    def _compute_dynamic_similarity_with_decay(self, X: InteractionMatrix, max_delta: int):
 
         SUPPORTED_DECAY_FUNCTIONS = {
             "concave": self._concave_matrix_decay,
@@ -142,7 +142,7 @@ class TimeDecayingNearestNeighbour(Algorithm):
             cooc_time_delta = csr_matrix(abs((cooc_one_ts - user_hist) * cooc_one_ts.astype(bool)))
 
             # 3. apply the decay on these values
-            cooc_decayed = SUPPORTED_DECAY_FUNCTIONS[self.decay_fn](cooc_time_delta, t)
+            cooc_decayed = SUPPORTED_DECAY_FUNCTIONS[self.decay_fn](cooc_time_delta, max_delta)
             item_similarities += cooc_decayed
 
         return item_similarities.tocsr()
@@ -153,10 +153,10 @@ class TimeDecayingNearestNeighbour(Algorithm):
         # then we select the maximal timestamp from this groupby
         largest_time_interval = None
         if self.decay_fn in ("convex", "linear"):
-            max_ts_per_item = X.timestamps.reset_index()['ts'].max()
-            min_ts_per_item = X.timestamps.reset_index()['ts'].min()
+            max_ts = X.timestamps.reset_index()['ts'].max()
+            min_ts = X.timestamps.reset_index()['ts'].min()
 
-            largest_time_interval = max_ts_per_item - min_ts_per_item
+            largest_time_interval = max_ts - min_ts
 
         item_similarities = self._compute_dynamic_similarity_with_decay(X, largest_time_interval)
 
