@@ -21,8 +21,19 @@ class TimeDecayingNearestNeighbour(Algorithm):
 
     Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``
 
-    - Concave decay function between item i and j is computed as
-      the ``decay_coeff^t``. With t the absolute time interval between the interactions on both items.
+    - Concave decay function between item i and j is computed as:
+    .. math::
+        \\theta(x) = \\alpha^{x} \\text{for} \\alpha \\in  [0, 1]
+
+    - Convex decay function between item i and j is computed as:
+    .. math::
+        \\theta(x) = 1 - \\beta^{t-x} \\text{for} \\beta \\in  (0, 1)
+
+    - Linear decay function between item i and j is computed as:
+    .. math::
+        \\theta(x) = 1 - \\frac{x}{t} \\cdot \\gamma \\text{for} \\gamma \\in  [0, 1]
+
+    With ``t`` the absolute time interval between the interactions on both items.
 
     **Example of use**::
 
