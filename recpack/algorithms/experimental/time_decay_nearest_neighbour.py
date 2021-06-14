@@ -1,12 +1,11 @@
 import numpy as np
-import warnings
 from scipy.sparse import csr_matrix, lil_matrix
 
-from recpack.algorithms.base import Algorithm
+from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import InteractionMatrix
 
 
-class TimeDecayingNearestNeighbour(Algorithm):
+class TimeDecayingNearestNeighbour(TopKItemSimilarityMatrixAlgorithm):
     """Time Decaying Nearest Neighbours model.
 
     First described in 'Dynamic Item-Based Recommendation Algorithm with Time Decay'
@@ -92,7 +91,7 @@ class TimeDecayingNearestNeighbour(Algorithm):
 
     """The supported Decay function options"""
 
-    def __init__(self, K=200, decay_coeff: float = 0.5, decay_fn: str = "concave"):
+    def __init__(self, K: int = 200, decay_coeff: float = 0.5, decay_fn: str = "concave"):
         self.K = K
 
         if decay_fn not in self.SUPPORTED_COEFF_RANGES.keys():
@@ -172,47 +171,3 @@ class TimeDecayingNearestNeighbour(Algorithm):
         item_similarities = self._compute_dynamic_similarity_with_decay(X, largest_time_interval)
 
         self.similarity_matrix_ = item_similarities
-
-    def _predict(self, X: csr_matrix) -> csr_matrix:
-        """Predict scores for nonzero users in X
-
-        Scores are computed by matrix multiplication of X
-        with the stored similarity matrix.
-
-        :param X: csr_matrix with interactions
-        :type X: csr_matrix
-        :return: csr_matrix with scores
-        :rtype: csr_matrix
-        """
-        scores = X @ self.similarity_matrix_
-
-        # If self.similarity_matrix_ is not a csr matrix,
-        # scores will also not be a csr matrix
-        if not isinstance(scores, csr_matrix):
-            scores = csr_matrix(scores)
-
-        return scores
-
-    def _check_fit_complete(self):
-        """Helper function to check if model was correctly fitted
-
-        Checks implemented:
-
-        - Checks if the algorithm has been fitted, using sklearn's `check_is_fitted`
-        - Checks if the fitted similarity matrix contains similar items for each item
-
-        For failing checks a warning is printed.
-        """
-        # Use super to check is fitted
-        super()._check_fit_complete()
-
-        # Additional checks on the fitted matrix.
-        # Check if actually exists!
-        assert hasattr(self, "similarity_matrix_")
-
-        # Check row wise, since that will determine the recommendation options.
-        items_with_score = set(self.similarity_matrix_.nonzero()[0])
-
-        missing = self.similarity_matrix_.shape[0] - len(items_with_score)
-        if missing > 0:
-            warnings.warn(f"{self.name} missing similar items for {missing} items.")
