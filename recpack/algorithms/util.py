@@ -1,14 +1,12 @@
 
 from math import ceil
-from typing import Iterator, List, Tuple
+from typing import Iterator, List
 
 import numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
 from scipy.sparse import csr_matrix
 import torch
 
-
-from recpack.data.matrix import InteractionMatrix, Matrix
+from recpack.data.matrix import Matrix
 
 
 def swish(x):
@@ -87,135 +85,3 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
         sampled_matrices.append(sampled_mat)
 
     return sampled_matrices
-
-
-def matrix_to_tensor(
-    X: InteractionMatrix,
-    batch_size: int,
-    device: str = "cpu",
-    shuffle: bool = False,
-    include_last: bool = False,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    Converts a user-item interactions matrix to torch tensors.
-
-    Information about the interactions is split over three different tensors
-    of identical shape, containing item id, next item id and user id of the
-    interaction. Interactions are grouped by user and ordered by time along
-    the first dimension of the tensors. The second dimension corresponds to
-    the batch size.
-
-    As an example, take following interactions (already grouped by user and
-    ordered by time for clarity)::
-
-        time      0 1 2  3 4  5 6 7  8 9 10
-        iid       0 1 2  3 4  5 6 7  8 9 10
-        uid       0 0 0  1 1  2 2 2  3 3 3
-
-    The last interaction of a user is never used as an input during training
-    because we don't know what the next action will be. Removing it, we get::
-
-        time      0 1  3  5 6  8 9
-        iid_in    0 1  3  5 6  8 9
-        iid_next  1 2  4  6 7  9 10
-        uid       0 0  1  2 2  3 3
-                        ^       ^
-    These interactions are turned into tensors by cutting them in ``batch_size``
-    pieces of equal length, which form the columns of the tensors::
-
-        iid_in        iid_next      uid
-
-        [[0, 5],      [[1, 6],      [[0, 2],
-         [1, 6],       [2, 7],       [0, 2],
-         [3, 8]]   ,   [4, 9]]   ,   [1, 3]]
-
-    Note that these are simply the interactions from above, laid out column by
-    column. Each row is a mini-batch, containing interactions that took place
-    after the corresponding user's interaction in the previous row. Using this
-    format a recurrent network can process many user histories in parallel.
-
-    The last interaction (iid_in: 9, uid: 3) is discarded because the number of
-    interactions (7) is not a multiple of the batch size (2). Some users may
-    also have their interactions split across different columns. This has neg-
-    ligible impact on training when using any moderately large dataset, but may
-    be undesirable for evaluation. In that case a batch size of 1 can be used.
-
-    :param data_m: DataM object to be converted to tensors, must have timestamps
-    :param batch_size: Number of actions per batch. If the number of actions is
-        not divisible by batch_size, up to (batch_size - 1) actions will be
-        dropped. In cases where this is unacceptable, use a batch_size of 1.
-    :param device: Torch device to store the tensors on.
-    :param shuffle: Randomize the position of users/sessions in the tensors. If
-        False, actions will be ordered by user id.
-    :param include_last: Whether to include the last interaction of each user.
-        If true, the value of the next item id is undefined for the last action.
-    :return: Three tensors containing input item ids, next item ids and user ids,
-        respectively. All of shape (N, B), where B is the batch size and N is
-        the number of complete batches that can be created.
-    """
-    # Convert the item and user ids to 1D tensors
-
-    sorted_item_histories = list(X.sorted_item_history)
-    sorted(sorted_item_histories)
-
-    if include_last:
-        w = torch.LongTensor([
-            [u, i]
-            for u, sequence in sorted_item_histories
-            for i in sequence
-        ])
-
-        uids = w[:, 0]
-        actions = w[:, 1]
-        # Not used but just for consistency
-        targets = w[:, 1]
-
-        batched_actions = batchify(actions, batch_size)
-        batched_targets = batchify(targets, batch_size)
-        batched_uids = batchify(uids, batch_size)
-        is_last_action = is_last_action = batched_uids != batched_uids.roll(
-            -1, dims=0)
-        is_last_action[-1] = True
-
-    else:
-        w = torch.LongTensor([
-            [u] + w.tolist()
-            for u, sequence in sorted_item_histories
-            if len(sequence) >= 2
-            for w in sliding_window_view(sequence, 2)
-        ])
-
-        uids = w[:, 0]
-        actions = w[:, 1]
-        targets = w[:, 2]
-
-        batched_actions = batchify(actions, batch_size)
-        batched_targets = batchify(targets, batch_size)
-        batched_uids = batchify(uids, batch_size)
-        is_last_action = is_last_action = batched_uids != batched_uids.roll(
-            -1, dims=0)
-        is_last_action[-1] = True
-
-    return (
-        batched_actions,
-        batched_targets,
-        batched_uids,
-        is_last_action
-    )
-
-
-# TODO Understand how this works
-def batchify(data: torch.Tensor, batch_size: int) -> torch.Tensor:
-    """
-    Splits a sequence into contiguous batches, indexed along dim 0.
-
-    :param data: One-dimensional tensor to be split into batches
-    :param batch_size: How many elements per batch
-    :return: A tensor of shape (N, B), where B is the batch size and N is the number
-        of complete batches that can be created
-    """
-    nbatch = data.size(0) // batch_size
-    data = data.narrow(0, 0, nbatch * batch_size)
-    data = data.view(batch_size, -1).t()
-    data = data.contiguous()
-    return data

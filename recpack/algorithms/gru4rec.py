@@ -1,37 +1,24 @@
-from __future__ import annotations
-
 import logging
+from math import ceil
+from typing import Tuple, List
 
 import numpy as np
-import pandas as pd
+from scipy.sparse.lil import lil_matrix
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-
-from scipy.sparse import csr_matrix
-from torch import Tensor
 from tqdm import tqdm
 
 from recpack.algorithms.base import TorchMLAlgorithm
+from recpack.algorithms.loss_functions import (bpr_loss, bpr_max_loss,
+                                               top1_loss, top1_max_loss)
+from recpack.algorithms.samplers import SequenceMiniBatchSampler
 from recpack.data.matrix import InteractionMatrix
-from typing import Tuple, Optional
-
-from recpack.algorithms.loss_functions import (
-    bpr_loss,
-    bpr_max_loss,
-    top1_loss,
-    top1_max_loss
-)
-from recpack.algorithms.samplers import BatchSampler
-from recpack.algorithms.util import get_batches, matrix_to_tensor
 
 
 logger = logging.getLogger("recpack")
 ITEM_IX = InteractionMatrix.ITEM_IX
 
-
-# TODO Inherit from TorchMLAlgorithm
 
 class GRU4Rec(TorchMLAlgorithm):
     """A recurrent neural network for session-based recommendations.
@@ -68,8 +55,6 @@ class GRU4Rec(TorchMLAlgorithm):
     :param embedding_size: Size of item embeddings. If None, no embeddings are used and
         the input to the network is a one-of-N binary vector.
     :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout.
-    :param activation: Final layer activation function, one of "identity", "tanh",
-        "softmax", "relu", "elu-<X>", "leaky-<X>"
     :param loss_fn: Loss function. One of "cross-entropy", "top1", "top1-max", "bpr",
         "bpr-max"
     :param sample_size: Number of negative samples used for bpr, bpr-max, top1, top1-max
@@ -89,9 +74,8 @@ class GRU4Rec(TorchMLAlgorithm):
         self,
         num_layers: int = 1,
         hidden_size: int = 100,
-        embedding_size: Optional[int] = 250,
+        embedding_size: int = 250,
         dropout: float = 0.0,
-        activation: str = "identity",
         loss_fn: str = "top1",
         # loss_fn: str = "cross-entropy",
         sample_size: int = 5000,
@@ -124,7 +108,6 @@ class GRU4Rec(TorchMLAlgorithm):
         self.hidden_size = hidden_size
         self.embedding_size = embedding_size
         self.dropout = dropout
-        self.activation = activation
         self.loss_fn = loss_fn
         self.sample_size = sample_size
         self.alpha = alpha
@@ -146,16 +129,17 @@ class GRU4Rec(TorchMLAlgorithm):
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
+        # Invalid item ID. Used to mask inputs to the RNN
         self.num_items = X.shape[1]
+        self.pad_token = self.num_items
 
         self.model_ = GRU4RecTorch(
-            # PyTorch 1.4 can't handle numpy ints
-            num_items=int(self.num_items),
-            hidden_size=self.hidden_size,
+            self.num_items,
+            self.hidden_size,
+            self.embedding_size,
+            self.pad_token,
             num_layers=self.num_layers,
-            embedding_size=self.embedding_size,
-            dropout=self.dropout,
-            activation=self.activation,
+            dropout=self.dropout
         ).to(self.device)
 
         if self.optimization_algorithm == "sgd":
@@ -165,6 +149,13 @@ class GRU4Rec(TorchMLAlgorithm):
         elif self.optimization_algorithm == "adagrad":
             self.optimizer = optim.Adagrad(
                 self.model_.parameters(), lr=self.learning_rate)
+
+        # TODO Make exact configurable
+        self.sampler = SequenceMiniBatchSampler(
+            self.sample_size,
+            self.pad_token,
+            self.batch_size,
+            exact=False)
 
     def _transform_fit_input(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
         """Transform the input matrices of the training function to the expected types
@@ -187,63 +178,80 @@ class GRU4Rec(TorchMLAlgorithm):
     def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
         return X
 
-    def _train_epoch(self, X: InteractionMatrix) -> None:
+    def _train_epoch(self, X: InteractionMatrix) -> List[float]:
 
-        item_histories = list(X.sorted_item_history)
-        # Do I introduce bias if I sort them by length?
-        # TODO Sorted sorts by uid, can be biased
+        losses = []
 
-        item_histories_w_len = [(uid, hist, len(hist))
-                                for uid, hist in item_histories]
-        sorted(item_histories_w_len, key=lambda x: x[2], reverse=True)
-
-        # Generate batches of users. Take maximum len of history in batch
-        for batch in get_batches(item_histories_w_len, self.batch_size):
-            # Because they were sorted in reverse order the first element contains the max len in this batch
-            max_hist_len = batch[0][2]
-
-            # Create a padding_ix
-            padding_ix = self.num_items
-
-            # Initialize with all padding_ix
-            seq_batch = torch.zeros((self.batch_size, max_hist_len)) * padding_ix
-
-            for batch_ix, (_, hist, hist_len) in enumerate(batch):
-                seq_batch[batch_ix, 0:hist_len] = hist
-
-            # Pad
-            # Create a padding_ix?
-
-            # Feed into the network in chunks of size bptt.
-
-        # hidden = self.model_.init_hidden(self.batch_size)
-        # for i, (action, target, is_last) in tqdm(
-        #     enumerate(zip(actions, targets, is_last_action)), total=len(actions)
-        # ):
-        #     output, hidden = self.model_(action.unsqueeze(0), hidden)
-        #     samples = sampler(self.sample_size, target)
-
-        #     loss += self._compute_loss(output, target, samples) / self.bptt
-        #     if i % self.bptt == self.bptt - 1:
-        #         self.optimizer.zero_grad()
-        #         loss.backward()
-        #         if self.clip_norm:
-        #             nn.utils.clip_grad_norm_(
-        #                 self.model_.parameters(), self.clip_norm)
-        #         self.optimizer.step()
-        #         losses.append(loss.item())
-        #         loss = 0.0
-        #         hidden = hidden.detach()  # Prevent backprop past bptt steps
-        #     hidden = hidden * ~is_last.view(
-        #         1, -1, 1
-        #     )  # Reset hidden state between users
-
-        # logger.info("training loss = {}".format(np.mean(losses)))
+        for _, positives_batch, negatives_batch in self.sampler.sample(X):
+            loss = self._train_batch(positives_batch, negatives_batch)
+            losses.append(loss)
 
         return losses
 
-    def _compute_loss(self, output, target, samples) -> torch.Tensor:
-        return self._criterion(output, target, samples)
+    def _train_batch(self, positives_batch: torch.LongTensor, negatives_batch: torch.LongTensor):
+        batch_loss = 0
+        true_batch_size, max_hist_len = positives_batch.shape
+        # Want to reuse this between chunks of the same batch of sequences
+        hidden = self.model_.init_hidden(true_batch_size)
+
+        # Feed the sequence into the network in chunks of size bptt.
+        # We do this because we want to propagate after every bptt elements, but keep hidden states.
+        for input_chunk, negatives_chunk in zip(
+            positives_batch.tensor_split(
+                ceil(max_hist_len / self.bptt), axis=1),
+            negatives_batch.tensor_split(
+                ceil(max_hist_len / self.bptt), axis=1)
+        ):
+            # Remove rows with only pad tokens from chunk and from hidden. We can do this because the array is sorted.
+            true_rows = (input_chunk != self.pad_token).any(axis=1)
+            true_input_chunk = input_chunk[true_rows]
+            true_negative_chunk = negatives_chunk[true_rows]
+            # This will not work because it makes a copy of the hidden state.
+            true_hidden = hidden[:, true_rows, :]
+
+            # If there are any values remaining
+            if true_input_chunk.any():
+                self.optimizer.zero_grad()
+                output, hidden[:, true_rows, :] = self.model_(
+                    true_input_chunk, true_hidden)
+
+                # Select score for positive and negative sample for all tokens
+                positive_scores = torch.gather(
+                    output, 2, true_input_chunk.unsqueeze(-1))
+                negative_scores = torch.gather(
+                    output, 2, true_negative_chunk)
+
+                # TODO Remove pad tokens
+                loss = self._compute_loss(positive_scores, negative_scores)
+
+                batch_loss += loss.item()
+                loss.backward()
+                self.optimizer.step()
+                hidden = hidden.detach()
+
+        return batch_loss
+
+    def _predict(self, X: InteractionMatrix):
+        X_pred = lil_matrix(X.shape)
+
+        for uid_batch, positives_batch, _ in self.sampler.sample(X):
+            batch_size = positives_batch.shape[0]
+            hidden = self.model_.init_hidden(batch_size)
+            output, hidden = self.model_(positives_batch, hidden)
+            # Use only the final prediction
+            # Not so easy of course because of padding...
+            last_item_in_hist = (
+                positives_batch != self.pad_token).sum(axis=1) - 1
+
+            item_scores = output[torch.arange(
+                0, batch_size, dtype=int), last_item_in_hist]
+
+            X_pred[uid_batch.detach().cpu().numpy()] = item_scores.detach().cpu().numpy()
+
+        return X_pred.tocsr()
+
+    def _compute_loss(self, positive_scores, negative_scores) -> torch.Tensor:
+        return self._criterion(positive_scores, negative_scores)
 
 
 class GRU4RecTorch(nn.Module):
@@ -264,31 +272,36 @@ class GRU4RecTorch(nn.Module):
         self,
         num_items: int,
         hidden_size: int,
+        embedding_size: int,
+        pad_token: int,
         num_layers: int = 1,
-        embedding_size: Optional[int] = None,
         dropout: float = 0,
-        activation: str = "elu-1",
-        padding_ix: int = 0
     ):
+        # TODO I made it impossible to not use an embedding. Is this OK?
         super().__init__()
         self.input_size = num_items
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size
         self.output_size = num_items
-        self.drop = nn.Dropout(dropout)
+        self.pad_token = pad_token
+        self.drop = nn.Dropout(dropout, inplace=True)
+
+        # Passing pad_token will make sure these embeddings are always zero-valued.
+        # TODO Make this pad_token thing clearer
         self.emb = nn.Embedding(
-            num_items, embedding_size) if embedding_size else None
+            num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
-            embedding_size or num_items,
+            embedding_size,
             hidden_size,
             num_layers=num_layers,
             dropout=(dropout if num_layers > 1 else 0),
+            batch_first=True
         )
-        self.h2o = nn.Linear(hidden_size, num_items)
-        self.act = self._create_activation(activation)
+        self.lin = nn.Linear(hidden_size, num_items)
+        self.act = nn.Softmax(dim=2)
         self.init_weights()
 
-    def forward(self, input: Tensor, hidden: Tensor) -> Tuple[Tensor, Tensor]:
+    def forward(self, x: torch.LongTensor, hidden: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Computes scores for each item given an action sequence and previous
         hidden state.
@@ -299,16 +312,31 @@ class GRU4RecTorch(nn.Module):
                  for every sequence in the batch, as well as the next hidden state.
                  As Tensors of shapes (A*B, I) and (L, B, H) respectively.
         """
-        input = (
-            self.drop(self.emb(input))
-            if self.emb
-            else F.one_hot(input, self.input_size).float()
-        )
-        output, hidden = self.rnn(input, hidden)
-        output = self.drop(output)
-        output = self.act(self.h2o(output))
-        output = output.view(-1, self.output_size)
-        return output, hidden
+        emb_x = self.emb(x)
+        self.drop(emb_x)
+
+        # Check if it needs padding
+        any_row_requires_padding = (x == self.pad_token).any()
+
+        if any_row_requires_padding:
+            seq_lengths = (x != self.pad_token).sum(axis=1)
+
+            padded_emb_x = nn.utils.rnn.pack_padded_sequence(
+                emb_x, seq_lengths, batch_first=True)
+
+            padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
+
+            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(
+                padded_rnn_x, batch_first=True)
+
+        else:
+            rnn_x, hidden = self.rnn(emb_x, hidden)
+
+        self.drop(rnn_x)
+
+        out = self.act(self.lin(rnn_x))
+
+        return out, hidden
 
     def init_weights(self) -> None:
         """
@@ -318,24 +346,8 @@ class GRU4RecTorch(nn.Module):
         for param in self.parameters():
             nn.init.uniform_(param, -initrange, initrange)
 
-    def init_hidden(self, batch_size: int) -> Tensor:
+    def init_hidden(self, batch_size: int) -> torch.Tensor:
         """
-        Returns an initial, zero-valued hidden state with shape (L, B, H).
+        Returns an initial, zero-valued hidden state with shape (B, L, H).
         """
-        weights = next(self.rnn.parameters())
-        return weights.new_zeros((self.rnn.num_layers, batch_size, self.hidden_size))
-
-    def _create_activation(self, a):
-        if a == "identity":
-            return nn.Identity()
-        elif a == "tanh":
-            return nn.Tanh()
-        elif a == "softmax":
-            return nn.Softmax()
-        elif a == "relu":
-            return nn.ReLU()
-        elif a.startswith("elu-"):
-            return nn.ELU(alpha=float(a.split("-")[1]))
-        elif a.startswith("leaky-"):
-            return nn.LeakyReLU(negative_slope=float(a.split("-")[1]))
-        raise NotImplementedError("Unsupported activation function")
+        return torch.zeros((batch_size, self.rnn.num_layers, self.hidden_size))

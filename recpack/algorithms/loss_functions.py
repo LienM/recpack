@@ -3,7 +3,6 @@ from typing import Callable
 import numpy as np
 from scipy.sparse import csr_matrix
 import torch
-from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -71,7 +70,8 @@ def vae_loss(reconstructed_X, mu, logvar, X, anneal=1.0):
     """
 
     BCE = -torch.mean(torch.sum(F.log_softmax(reconstructed_X, 1) * X, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
+                                      mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD
 
@@ -82,6 +82,7 @@ def warp_loss(
     margin: float,
     J: int,
     U: int,
+    mask: torch.Tensor = None
 ) -> torch.Tensor:
     """
     Implementation of
@@ -141,7 +142,7 @@ def skipgram_negative_sampling_loss(
     return -(pos_loss + neg_loss).mean()
 
 
-def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
+def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
     """Implementation of the Bayesian Personalized Ranking loss.
 
     BPR loss as defined in Rendle, Steffen, et al.
@@ -284,9 +285,11 @@ def warp_loss_wrapper(
             .tolist(),
         ]
 
-        dist_pos_interaction = torch.tensor(dist_pos_interaction.A[0]).unsqueeze(-1)
+        dist_pos_interaction = torch.tensor(
+            dist_pos_interaction.A[0]).unsqueeze(-1)
         dist_neg_interaction_flat = torch.tensor(dist_neg_interaction.A[0])
-        dist_neg_interaction = dist_neg_interaction_flat.reshape(current_batch_size, -1)
+        dist_neg_interaction = dist_neg_interaction_flat.reshape(
+            current_batch_size, -1)
 
         losses.append(
             warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U)
@@ -295,14 +298,7 @@ def warp_loss_wrapper(
     return np.mean(losses)
 
 
-Sampler = Callable[[int, Tensor], Tensor]  # (num_samples, targets) -> samples
-
-
-
-# TODO Refactor these losses so that they work with pos_sim and neg_sim like all others. 
-
-
-def bpr_max_loss(input: Tensor, target: Tensor, samples: Tensor, reg: float = 1.0) -> Tensor:
+def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, reg: float = 1.0, mask: torch.BoolTensor = None) -> torch.Tensor:
     """
     Bayesian Personalized Ranking Max Loss.
 
@@ -328,17 +324,18 @@ def bpr_max_loss(input: Tensor, target: Tensor, samples: Tensor, reg: float = 1.
     :param num_samples: Number of samples to use in loss calculation. BPR-Max loss 
         tends to scale better with sample size than base BPR.
     """
-    target_scores = torch.gather(input, 1, target.unsqueeze(1))
-    sample_scores = torch.gather(input, 1, samples)
-    weights = torch.softmax(sample_scores, dim=1)
-    score_diff = weights * torch.sigmoid(target_scores - sample_scores)
-    norm_penalty = weights * sample_scores ** 2
+    if negative_scores.ndim == 2:
+        negative_scores = negative_scores.unsqueeze(-1)
+
+    weights = torch.softmax(negative_scores, dim=2)
+    score_diff = weights * torch.sigmoid(positive_scores - negative_scores)
+    norm_penalty = weights * negative_scores ** 2
     return (
         -torch.log(score_diff.sum(dim=1)) + reg * norm_penalty.sum(dim=1)
     ).mean()
 
 
-def top1_loss(input: Tensor, target: Tensor, samples: Tensor, reg: float = 1.0) -> Tensor:
+def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
     """
     TOP1 Loss.
 
@@ -358,14 +355,12 @@ def top1_loss(input: Tensor, target: Tensor, samples: Tensor, reg: float = 1.0) 
     :param sampler: Sampler to draw negative samples from
     :param num_samples: Number of samples to use in loss calculation
     """
-    target_scores = torch.gather(input, 1, target.unsqueeze(1))
-    sample_scores = torch.gather(input, 1, samples)
-    score_diff = torch.sigmoid(sample_scores - target_scores)
-    norm_penalty = torch.sigmoid(sample_scores ** 2)
+    score_diff = torch.sigmoid(negative_scores - positive_scores)
+    norm_penalty = torch.sigmoid(negative_scores ** 2)
     return (score_diff + norm_penalty).mean()
 
 
-def top1_max_loss(input: Tensor, target: Tensor, samples: Tensor, reg: float = 1.0) -> Tensor:
+def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
     """
     TOP1 Max Loss.
 
@@ -389,10 +384,12 @@ def top1_max_loss(input: Tensor, target: Tensor, samples: Tensor, reg: float = 1
     :param num_samples: Number of samples to use in loss calculation. TOP1-Max loss 
         tends to scale better with sample size than base TOP1.
     """
-    target_scores = torch.gather(input, 1, target.unsqueeze(1))
-    sample_scores = torch.gather(input, 1, samples)
-    weights = torch.softmax(sample_scores, dim=1)
-    score_diff = torch.sigmoid(sample_scores - target_scores)
-    norm_penalty = torch.sigmoid(sample_scores ** 2)
+    if negative_scores.ndim == 2:
+        negative_scores = negative_scores.unsqueeze(-1)
+
+    weights = torch.softmax(negative_scores, dim=1)
+    score_diff = torch.sigmoid(negative_scores - positive_scores)
+    norm_penalty = torch.sigmoid(negative_scores ** 2)
     loss_terms = weights * (score_diff + norm_penalty)
-    return loss_terms.sum(dim=1).mean()
+    # TODO Not sure about this dim in the sum
+    return loss_terms.sum(dim=2).mean()

@@ -3,7 +3,8 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.data.matrix import to_binary
+from recpack.data.matrix import InteractionMatrix, to_binary
+from recpack.algorithms.util import get_batches
 
 
 def unigram_distribution(X: csr_matrix) -> np.array:
@@ -21,6 +22,8 @@ def unigram_distribution(X: csr_matrix) -> np.array:
 
 class Sampler:
     pass
+
+# TODO Rename to TripletSampler?
 
 
 class PositiveNegativeSampler(Sampler):
@@ -142,7 +145,7 @@ class PositiveNegativeSampler(Sampler):
         negative_sample_probabilities = self._get_distribution(X)
 
         for start in range(0, sample_size, self.batch_size):
-            sample_batch = samples[start : start + self.batch_size]
+            sample_batch = samples[start: start + self.batch_size]
 
             batch = positives[sample_batch]
             users = batch[:, 0]
@@ -272,24 +275,57 @@ class WarpSampler(PositiveNegativeSampler):
     :type exact: bool, optional
     """
 
-    def __init__(self, U=10, batch_size=100, exact=False):
+    def __init__(self, U=10, batch_size=100, exact=False) -> None:
         super().__init__(U=U, batch_size=batch_size, replace=False, exact=exact)
 
 
-class SequenceSampler(Sampler):
-    pass
+class SequenceMiniBatchSampler(Sampler):
+    """Samples a negative for every positive in a sequence.
 
-
-class LocalOrderedNegativesSampler(SequenceSampler):
-    """Samples `U` negatives for each positive from the same batch.
-
-    Creates a sliding window  
-
-    User interactions are 
-
-    # TODO Maybe rename to WithinBatchNegativesSampler?
+    # TODO Finish documentation
     """
-    pass
+
+    def __init__(self, U: int, pad_token: int, batch_size: int = 100, exact: bool = False) -> None:
+        super().__init__()
+        self.U = U
+        self.pad_token = pad_token
+        self.batch_size = batch_size
+        self.exact = exact
+
+    def sample(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
+        item_histories = list(X.sorted_item_history)
+        # Do I introduce bias if I sort them by length?
+        item_histories.sort(key=lambda x: len(x[1]), reverse=True)
+
+        num_items = X.shape[1]
+
+        # Generate batches of users. Take maximum len of history in batch
+        for batch in get_batches(item_histories, self.batch_size):
+            # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.
+            max_hist_len = len(batch[0][1])
+            batch_size = len(batch)
+            # TODO Use numpy instead of torch so you can check for collisions
+
+            # Initialize seq_batch with self.pad_token
+            positives_batch = torch.ones(
+                (batch_size, max_hist_len), dtype=int) * self.pad_token
+
+            negatives_batch = torch.ones(
+                (batch_size, max_hist_len, self.U), dtype=int) * self.pad_token
+
+            uid_batch = torch.zeros((batch_size, ), dtype=int)
+
+            # Add sequences in batch
+            for batch_ix, (uid, hist) in enumerate(batch):
+                hist_len = hist.shape[0]
+                positives_batch[batch_ix, 0:hist_len] = torch.LongTensor(hist)
+                # TODO Check for collisions
+                negatives_batch[batch_ix, 0:hist_len, :] = torch.randint(
+                    0, int(num_items), (hist_len, self.U))
+
+                uid_batch[batch_ix] = uid
+
+            yield (uid_batch, positives_batch, negatives_batch)
 
 
 def _spot_collisions(
@@ -343,78 +379,3 @@ def _spot_collisions(
 
     num_incorrect = negatives_mask.sum()
     return num_incorrect, negatives_mask
-
-
-
-
-
-class BatchSampler:
-    """
-    A sampler that uses the other targets in a minibatch as samples.
-
-    As an example, if the targets in a minibatch of size 5 are [1, 2, 3, 4, 5],
-    the resulting samples will be
-
-        [[2, 3, 4, 5]
-         [1, 3, 4, 5]
-         [1, 2, 4, 5]
-         [1, 2, 3, 5]
-         [1, 2, 3, 4]]
-
-    If the number of samples needed exceeds (batch size - 1), extra samples across all
-    items (not necessarily those in the target set) are added by sampling according
-    to the given item weights. The additional samples will be the same for every 
-    example in the batch.
-
-    :param weights: Sampling weights for each item as a tensor of shape (I,)
-    :param device: The device where generated samples will be stored
-    """
-
-    def __init__(self, weights: torch.Tensor, device: str = "cpu"):
-        self._wsampler = _WeightedSampler(weights, device=device)
-        self.device = device
-
-    def __call__(self, num_samples: int, targets: torch.Tensor) -> torch.Tensor:
-        """
-        Generate new samples
-
-        :param num_samples: The number of samples to draw, including the samples taken 
-            from the targets in the batch.
-        :param targets: The index of the target item in each batch, shape (B,)
-        :return: Samples as a tensor of shape (B, N), where N is the number of samples
-        """
-        m = len(targets)
-        batch_samples = (targets.flip(0).repeat(m - 1).reshape((m, -1))).to(self.device)
-        if num_samples > m - 1:
-            r = num_samples - (m - 1)
-            extra_samples = self._wsampler((1, r)).repeat((m, 1))
-            return torch.cat((batch_samples, extra_samples), dim=1)
-        else:
-            return batch_samples[:, :num_samples]
-
-
-class _WeightedSampler:
-    def __init__(self, weights, device="cpu"):
-        self.weights = torch.as_tensor(weights, dtype=torch.float, device=device)
-        self._cache_size = 1_000_000
-        self._cache_samples()
-
-    def __call__(self, shape):
-        n = np.prod(shape)
-        res = self._cache[self._i : self._i + n]
-        self._i += n
-        while len(res) < n:
-            self._cache_samples()
-            rem = n - len(res)
-            res = torch.cat((res, self._cache[:rem]))
-            self._i += rem
-        return res.reshape(shape)
-
-    def _cache_samples(self):
-        self._i = 0
-        self._cache = torch.multinomial(
-            self.weights, self._cache_size, replacement=True
-        )
-
-
-

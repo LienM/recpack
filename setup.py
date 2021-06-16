@@ -12,7 +12,7 @@ setup(
         "scipy==1.6.0",
         "scikit-learn==0.24.1",
         "pandas==1.2.1",
-        "torch==1.7.1",
+        "torch==1.9.0",
         "torchtest==0.5",
         "tqdm==4.46.0",
         "dataclasses==0.6",
