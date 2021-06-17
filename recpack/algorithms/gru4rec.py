@@ -160,7 +160,6 @@ class GRU4Rec(TorchMLAlgorithm):
     def _transform_fit_input(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
         """Transform the input matrices of the training function to the expected types
 
-        All matrices get converted to binary csr matrices
 
         :param X: The interactions matrix
         :type X: Matrix
