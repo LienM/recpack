@@ -6,6 +6,7 @@ import numba
 
 from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
+from scipy.sparse import csr_matrix
 
 
 @enum.unique
@@ -50,7 +51,7 @@ class DAMIBCover(ItemSimilarityMatrixAlgorithm):
         predictions = get_predictions(X, self.similarity_matrix_, self.p, self.agg)
 
         self._check_prediction(predictions, X)
-        return predictions
+        return csr_matrix(predictions)
 
 
 # @numba.njit(parallel=True)
