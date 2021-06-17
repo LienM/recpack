@@ -321,7 +321,7 @@ class FactorizationAlgorithm(Algorithm):
 
         Checks implemented:
 
-        - Checks if model is fitting, using the sklearn check_is_fitted function,
+        - Checks if model is fitted, using the sklearn check_is_fitted function,
           https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
         - Checks if `num_components` is correct
         """
