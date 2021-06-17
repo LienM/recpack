@@ -307,11 +307,11 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
     term. It can be defined as:
 
     .. math::
-        L_{bpr-max} = -\log \sum_{j=1}^{N_S} s_j \sigma(r_i - r_j) + 
-                      \lambda \sum_{j=1}^{N_S} s_j r_j^2
+        L_{bpr-max} = -\\log \\sum\\limits_{j=1}^{N_S} s_j \\sigma(r_i - r_j) +
+        \\lambda \\sum\\limits_{j=1}^{N_S} s_j r_j^2
 
     where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
-    score and :math:`r_j` is the score given to the sampled item. The BPR loss 
+    score and :math:`r_j` is the score given to the sampled negative. The BPR loss 
     between target score and the maximum sampled score is approximated by computing 
     a softmax distribution over the negative samples and using the softmax values 
     :math:`s_j` as weights.
@@ -344,10 +344,10 @@ def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, mask
     It can be defined as:
 
     .. math::
-        L_{top1} = \frac{1}{N_S} \sum_{j=1}^{N_S} \sigma(r_j - r_i) + \sigma(r_j^2)
+        L_{top1} = \\frac{1}{N_S} \\sum\\limits_{j=1}^{N_S} \\sigma(r_j - r_i) + \\sigma(r_j^2)
 
     where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
-    score and :math:`r_j` is the score given to the sampled item.
+    score and :math:`r_j` is the score given to the sampled negative item.
 
     See the 2016 paper "Session-based Recommendations with Recurrent Neural Networks"
     by Hidasi et al. for the motivation behind using it for top-k recommendations.
@@ -368,10 +368,10 @@ def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, 
     and the negative sample with the highest score. It can be defined as:
 
     .. math::
-        L_{top1-max} = \sum_{j=1}^{N_S} s_j\left(\sigma(r_j - r_i) + \sigma(r_j^2)\right)
+        L_{top1-max} = \\sum\\limits_{j=1}^{N_S} s_j\\left(\\sigma(r_j - r_i) + \\sigma(r_j^2)\\right)
 
     where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
-    score and :math:`r_j` is the score given to the sampled item. The TOP1 loss 
+    score and :math:`r_j` is the score given to the sampled negative. The TOP1 loss 
     between target score and the maximum sampled score is approximated by computing 
     a softmax distribution over the negative samples and using the softmax values 
     :math:`s_j` as weights.

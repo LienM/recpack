@@ -242,6 +242,8 @@ class GRU4Rec(TorchMLAlgorithm):
             last_item_in_hist = (
                 positives_batch != self.pad_token).sum(axis=1) - 1
 
+            # Item scores is a matrix with the scores for each item 
+            # based on the last item in the sequence
             item_scores = output[torch.arange(
                 0, batch_size, dtype=int), last_item_in_hist]
 
