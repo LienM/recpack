@@ -198,9 +198,6 @@ class PositiveNegativeSampler(Sampler):
                         probabilities=negative_sample_probabilities,
                     )
 
-                    # np.random.randint(
-                    #     0, X.shape[1], size=(true_batch_size,)
-                    # )
                     while True:
 
                         num_incorrect, negatives_mask = _spot_collisions(
@@ -283,14 +280,15 @@ class SequenceMiniBatchSampler(Sampler):
     """Samples a negative for every positive in a sequence.
 
     # TODO Finish documentation
+
+    exact is irrelevant here: we care about the order. 
     """
 
-    def __init__(self, U: int, pad_token: int, batch_size: int = 100, exact: bool = False) -> None:
+    def __init__(self, U: int, pad_token: int, batch_size: int = 100) -> None:
         super().__init__()
         self.U = U
         self.pad_token = pad_token
         self.batch_size = batch_size
-        self.exact = exact
 
     def sample(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
         item_histories = list(X.sorted_item_history)
@@ -299,33 +297,54 @@ class SequenceMiniBatchSampler(Sampler):
 
         num_items = X.shape[1]
 
+        # TODO Fix the checking if there are collisions.
+        # Expects positives_batch to be a 1-d array.
+
         # Generate batches of users. Take maximum len of history in batch
         for batch in get_batches(item_histories, self.batch_size):
             # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.
             max_hist_len = len(batch[0][1])
             batch_size = len(batch)
-            # TODO Use numpy instead of torch so you can check for collisions
+
+            uid_batch = np.zeros((batch_size, ), dtype=int)
 
             # Initialize seq_batch with self.pad_token
-            positives_batch = torch.ones(
+            positives_batch = np.ones(
                 (batch_size, max_hist_len), dtype=int) * self.pad_token
 
-            negatives_batch = torch.ones(
-                (batch_size, max_hist_len, self.U), dtype=int) * self.pad_token
-
-            uid_batch = torch.zeros((batch_size, ), dtype=int)
+            negatives_batch = np.random.randint(
+                0, num_items, (batch_size, max_hist_len, self.U))
 
             # Add sequences in batch
             for batch_ix, (uid, hist) in enumerate(batch):
                 hist_len = hist.shape[0]
-                positives_batch[batch_ix, 0:hist_len] = torch.LongTensor(hist)
-                # TODO Check for collisions
-                negatives_batch[batch_ix, 0:hist_len, :] = torch.randint(
-                    0, int(num_items), (hist_len, self.U))
-
+                positives_batch[batch_ix, :hist_len] = torch.LongTensor(hist)
                 uid_batch[batch_ix] = uid
 
-            yield (uid_batch, positives_batch, negatives_batch)
+                negatives_col = negatives_batch[batch_ix, :hist_len, :]
+                while True:
+
+                    # Approximately fix the negatives that are equal to the positives,
+                    # if there are any, assumes collisions are rare
+                    mask = np.apply_along_axis(
+                        lambda col: col == hist, 0, negatives_col
+                    )
+                    num_incorrect = np.sum(mask)
+
+                    if num_incorrect > 0:
+                        new_negatives = np.random.randint(
+                            0, num_items, size=(num_incorrect,))
+                        negatives_col[mask] = new_negatives
+                    else:
+                        # Exit the while loop
+                        break
+
+                negatives_batch[batch_ix, :hist_len, :] = negatives_col
+
+            yield (
+                torch.LongTensor(uid_batch),
+                torch.LongTensor(positives_batch),
+                torch.LongTensor(negatives_batch))
 
 
 def _spot_collisions(

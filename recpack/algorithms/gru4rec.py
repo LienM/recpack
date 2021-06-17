@@ -150,12 +150,10 @@ class GRU4Rec(TorchMLAlgorithm):
             self.optimizer = optim.Adagrad(
                 self.model_.parameters(), lr=self.learning_rate)
 
-        # TODO Make exact configurable
         self.sampler = SequenceMiniBatchSampler(
             self.sample_size,
             self.pad_token,
-            self.batch_size,
-            exact=False)
+            self.batch_size)
 
     def _transform_fit_input(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
         """Transform the input matrices of the training function to the expected types
@@ -201,8 +199,9 @@ class GRU4Rec(TorchMLAlgorithm):
             negatives_batch.tensor_split(
                 ceil(max_hist_len / self.bptt), axis=1)
         ):
+            true_input_mask = (input_chunk != self.pad_token)
             # Remove rows with only pad tokens from chunk and from hidden. We can do this because the array is sorted.
-            true_rows = (input_chunk != self.pad_token).any(axis=1)
+            true_rows = true_input_mask.any(axis=1)
             true_input_chunk = input_chunk[true_rows]
             true_negative_chunk = negatives_chunk[true_rows]
             # This will not work because it makes a copy of the hidden state.
@@ -219,6 +218,8 @@ class GRU4Rec(TorchMLAlgorithm):
                     output, 2, true_input_chunk.unsqueeze(-1))
                 negative_scores = torch.gather(
                     output, 2, true_negative_chunk)
+
+                true_input_mask
 
                 # TODO Remove pad tokens
                 loss = self._compute_loss(positive_scores, negative_scores)
@@ -238,7 +239,6 @@ class GRU4Rec(TorchMLAlgorithm):
             hidden = self.model_.init_hidden(batch_size)
             output, hidden = self.model_(positives_batch, hidden)
             # Use only the final prediction
-            # Not so easy of course because of padding...
             last_item_in_hist = (
                 positives_batch != self.pad_token).sum(axis=1) - 1
 
