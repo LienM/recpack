@@ -543,8 +543,10 @@ class TorchMLAlgorithm(Algorithm):
                 if isinstance(X, InteractionMatrix):
                     batch = X.users_in(users)
                 else:
-                    batch = csr_matrix(X.shape)
+                    batch = lil_matrix(X.shape)
                     batch[users] = X[users]
+                    batch = batch.tocsr()
+
 
                 results[users] = self._batch_predict(batch, users=users)[users]
 
