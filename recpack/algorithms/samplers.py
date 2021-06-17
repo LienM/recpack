@@ -275,11 +275,23 @@ class WarpSampler(PositiveNegativeSampler):
 
 
 class SequenceMiniBatchSampler(Sampler):
-    """Samples a negative for every positive in a sequence.
+    """Samples `U` negatives for every positive in a sequence.
 
-    # TODO Finish documentation
+    This approach allows to learn multiple times from the same positive interactions.
+    Because the sequence-aspect is important here, we only eliminate collisions
+    in the exact same location in the sequence.
+    As a result, a sample that occurs at a later or earlier time in the sequence
+    may be sampled as a negative for all other locations in the sequence.
 
-    exact is irrelevant here: we care about the order. 
+    Handles sequences of unequal length by padding them with `pad_token`.
+
+    :param U: Number of negative samples for each positive
+    :type U: int
+    :param pad_token: Token used to indicate that this location in the sequence
+        contains a padding element.
+    :type pad_token: int
+    :param batch_size: The number of sequences returned per batch, defaults to 100
+    :type batch_size: int, optional
     """
 
     def __init__(self, U: int, pad_token: int, batch_size: int = 100) -> None:
