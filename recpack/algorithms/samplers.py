@@ -295,9 +295,6 @@ class SequenceMiniBatchSampler(Sampler):
 
         num_items = X.shape[1]
 
-        # TODO Fix the checking if there are collisions.
-        # Expects positives_batch to be a 1-d array.
-
         # Generate batches of users. Take maximum len of history in batch
         for batch in get_batches(item_histories, self.batch_size):
             # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.

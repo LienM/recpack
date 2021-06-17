@@ -11,13 +11,10 @@ from recpack.algorithms.samplers import (
 )
 from recpack.data.matrix import to_binary
 
-# TODO Parametrize
 
-
-def test_sequence_mini_batch_sampling(matrix_sessions):
-    U = 3
+@pytest.mark.parametrize("U, batch_size", [(2, 3), (3, 2), (1, 1), (6, 6)])
+def test_sequence_mini_batch_sampling(matrix_sessions, U, batch_size):
     pad_token = matrix_sessions.shape[1] + 1
-    batch_size = 2
 
     sampler = SequenceMiniBatchSampler(U, pad_token, batch_size=batch_size)
 
@@ -26,7 +23,8 @@ def test_sequence_mini_batch_sampling(matrix_sessions):
     for uid_batch, pos_batch, neg_batch in sampler.sample(matrix_sessions):
         # Check batch_size
         b = uid_batch.shape[0]
-        assert (b == batch_size) or (b == matrix_sessions.num_interactions % batch_size)
+        assert (b == batch_size) or (
+            b == matrix_sessions.num_interactions % batch_size)
         assert pos_batch.shape[0] == uid_batch.shape[0]
         assert neg_batch.shape[0] == uid_batch.shape[0]
 
