@@ -8,38 +8,6 @@ from recpack.algorithms.gru4rec import GRU4Rec
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 
-USER_IX = InteractionMatrix.USER_IX
-ITEM_IX = InteractionMatrix.ITEM_IX
-TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
-
-
-@pytest.fixture(scope="function")
-def matrix_sessions() -> InteractionMatrix:
-    # (user, time) matrix, non-zero entries are item ids
-    user_time = csr_matrix(
-        [
-            # 0  1  2  3  4  5  6  7
-            [0, 1, 2, 0, 0, 0, 0, 0],
-            [1, 2, 0, 1, 3, 1, 0, 0],
-            [1, 2, 1, 2, 1, 0, 2, 1],
-            [1, 3, 1, 2, 1, 0, 2, 1],
-            [1, 2, 1, 2, 1, 2, 1, 2],
-        ]
-    )
-    user_ids, timestamps = user_time.nonzero()
-    item_ids = user_time.data
-    df = pd.DataFrame(
-        {
-            USER_IX: user_ids,
-            ITEM_IX: item_ids,
-            TIMESTAMP_IX: timestamps,
-        }
-    )
-    return InteractionMatrix(
-        df, user_ix=USER_IX, item_ix=ITEM_IX, timestamp_ix=TIMESTAMP_IX
-    )
-
-
 @pytest.fixture(scope="function")
 def session_rnn():
     rnn = GRU4Rec(seed=42, batch_size=1, embedding_size=5, hidden_size=10)

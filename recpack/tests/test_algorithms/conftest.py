@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
-import scipy.sparse as sp
+from scipy.sparse import csr_matrix
 
 
 from recpack.data.matrix import InteractionMatrix
@@ -65,7 +65,7 @@ def pageviews():
         [1, 2, 1, 1, 1, 1],
     )
 
-    pv = sp.csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
+    pv = csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
 
     return pv
 
@@ -78,7 +78,7 @@ def pageviews_for_pairwise():
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     )
 
-    pv = sp.csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
+    pv = csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
 
     return pv
 
@@ -96,7 +96,7 @@ def purchases():
         [1, 1],
     )
 
-    pur = sp.csr_matrix((pur_values, (pur_users, pur_items)), shape=(10, 5))
+    pur = csr_matrix((pur_values, (pur_users, pur_items)), shape=(10, 5))
 
     return pur
 
@@ -115,7 +115,7 @@ def larger_matrix():
         [1] * num_interactions,
     )
 
-    pv = sp.csr_matrix(
+    pv = csr_matrix(
         (pv_values, (pv_users, pv_items)), shape=(num_users + 200, num_items)
     )
 
@@ -130,7 +130,7 @@ def data():
         [0.3, 0.2, 0.1, 0.23, 0.3, 0.5],
     )
 
-    pred = sp.csr_matrix(
+    pred = csr_matrix(
         (pred_values, (pred_users, pred_items)), shape=(10, 5))
 
     return pred
@@ -156,3 +156,30 @@ def p2v_embedding():
     embedding = torch.from_numpy(embedding)
     embedding = nn.Embedding.from_pretrained(embedding)
     return embedding
+
+
+@pytest.fixture(scope="function")
+def matrix_sessions() -> InteractionMatrix:
+    # (user, time) matrix, non-zero entries are item ids
+    user_time = csr_matrix(
+        [
+            # 0  1  2  3  4  5  6  7
+            [0, 1, 2, 0, 0, 0, 0, 0],
+            [1, 2, 0, 1, 3, 1, 0, 0],
+            [1, 2, 1, 2, 1, 0, 2, 1],
+            [1, 3, 1, 2, 1, 0, 2, 1],
+            [1, 2, 1, 2, 1, 2, 1, 2],
+        ]
+    )
+    user_ids, timestamps = user_time.nonzero()
+    item_ids = user_time.data
+    df = pd.DataFrame(
+        {
+            USER_IX: user_ids,
+            ITEM_IX: item_ids,
+            TIMESTAMP_IX: timestamps,
+        }
+    )
+    return InteractionMatrix(
+        df, user_ix=USER_IX, item_ix=ITEM_IX, timestamp_ix=TIMESTAMP_IX
+    )

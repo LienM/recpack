@@ -7,15 +7,13 @@ from recpack.data.matrix import InteractionMatrix, to_binary
 from recpack.algorithms.util import get_batches
 
 
-def unigram_distribution(X: csr_matrix) -> np.array:
+def unigram_distribution(X: csr_matrix) -> np.ndarray:
     """Creates a unigram distribution based on the item frequency.
 
     Follows the advice outlined in https://arxiv.org/abs/1310.4546 to create this noise distribution:
     the noise distribution is taken to be the unigram distribution to the power (3/4).
     Note: this is a heuristic based on the original Word2Vec paper.
     """
-    # TODO Is this the correct way to count this? If X is a (u,i) matrix instead of (i,i)?
-
     item_counts_powered = np.power(X.sum(axis=0).A[0], 3 / 4)
     return item_counts_powered / item_counts_powered.sum()
 
@@ -322,10 +320,10 @@ class SequenceMiniBatchSampler(Sampler):
                 uid_batch[batch_ix] = uid
 
                 negatives_col = negatives_batch[batch_ix, :hist_len, :]
+
                 while True:
 
-                    # Approximately fix the negatives that are equal to the positives,
-                    # if there are any, assumes collisions are rare
+                    # Fix the negatives. We only care about exact matches: same location in the sequence.
                     mask = np.apply_along_axis(
                         lambda col: col == hist, 0, negatives_col
                     )
@@ -348,19 +346,19 @@ class SequenceMiniBatchSampler(Sampler):
 
 
 def _spot_collisions(
-    users: np.array, negatives_batch: np.array, X: csr_matrix
-) -> Tuple[int, np.array]:
+    users: np.ndarray, negatives_batch: np.ndarray, X: csr_matrix
+) -> Tuple[int, np.ndarray]:
     """Spot collisions between the negative samples and the interactions in X.
 
     :param users: Ordered batch of users
-    :type users: np.array
+    :type users: np.ndarray
     :param negatives_batch: Ordered batch of negative items
-    :type negatives_batch: np.array
+    :type negatives_batch: np.ndarray
     :param X: Entirety of all user interactions
     :type X: csr_matrix
     :return: Tuple containing the number of incorrect negative samples,
         and the locations of these incorrect samples in the batch array
-    :rtype: Tuple[int, np.array]
+    :rtype: Tuple[int, np.ndarray]
     """
     # Eliminate the collisions, exactly.
     # Turn this batch of negatives into a csr_matrix

@@ -1,4 +1,3 @@
-from collections import defaultdict
 import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
@@ -8,8 +7,48 @@ from recpack.algorithms.samplers import (
     WarpSampler,
     PositiveNegativeSampler,
     unigram_distribution,
+    SequenceMiniBatchSampler
 )
 from recpack.data.matrix import to_binary
+
+# TODO Parametrize
+
+
+def test_sequence_mini_batch_sampling(matrix_sessions):
+    U = 3
+    pad_token = matrix_sessions.shape[1] + 1
+    batch_size = 2
+
+    sampler = SequenceMiniBatchSampler(U, pad_token, batch_size=batch_size)
+
+    total_interactions = 0
+    total_users = 0
+    for uid_batch, pos_batch, neg_batch in sampler.sample(matrix_sessions):
+        # Check batch_size
+        b = uid_batch.shape[0]
+        assert (b == batch_size) or (b == matrix_sessions.num_interactions % batch_size)
+        assert pos_batch.shape[0] == uid_batch.shape[0]
+        assert neg_batch.shape[0] == uid_batch.shape[0]
+
+        # Check sequence length
+        assert pos_batch.shape[1] == neg_batch.shape[1]
+        # Check number of negatives
+        assert neg_batch.shape[2] == U
+
+        total_users += uid_batch.shape[0]
+        # Sum all interactions that are not pads
+        total_interactions += (pos_batch != pad_token).sum()
+
+        # Negative samples should never match the positive sample in the same location in the sequence.
+        for i in range(U):
+            negative_sequences = neg_batch.detach().numpy()[:, :, i]
+            pos_sequences = pos_batch.detach().numpy()
+
+            assert not (negative_sequences == pos_sequences).any()
+
+    # Assert all interactions & users were present
+    assert total_interactions == matrix_sessions.num_interactions
+    assert total_users == matrix_sessions.num_active_users
 
 
 def test_warp_sampling_exact():
@@ -43,7 +82,8 @@ def test_warp_sampling_exact():
             for j in range(i):
 
                 overlap = (
-                    neg_interactions[:, j].numpy() == neg_interactions[:, i].numpy()
+                    neg_interactions[:, j].numpy(
+                    ) == neg_interactions[:, i].numpy()
                 )
 
                 np.testing.assert_array_equal(overlap, False)
@@ -91,7 +131,8 @@ def test_bootstrap_sampling_exact(pageviews):
         total_interactions += b
         # No negatives should be accidental positives
         np.testing.assert_array_almost_equal(
-            pageviews[users.numpy().copy(), negatives_batch.squeeze().numpy().copy()], 0
+            pageviews[users.numpy().copy(),
+                      negatives_batch.squeeze().numpy().copy()], 0
         )
 
     assert total_interactions == sample_size
@@ -150,7 +191,8 @@ def test_sample_positives_and_negatives_bootstrap_exact(pageviews):
         total_interactions += b
         # No negatives should be accidental positives
         np.testing.assert_array_almost_equal(
-            pageviews[users.numpy().copy(), negatives_batch.squeeze().numpy().copy()], 0
+            pageviews[users.numpy().copy(),
+                      negatives_batch.squeeze().numpy().copy()], 0
         )
 
     assert total_interactions == sample_size
@@ -161,7 +203,8 @@ def test_sample_positives_and_negatives_warp(pageviews):
     batch_size = 4
     U = 10
 
-    sampler = PositiveNegativeSampler(U=U, batch_size=batch_size, replace=False)
+    sampler = PositiveNegativeSampler(
+        U=U, batch_size=batch_size, replace=False)
 
     total_interactions = 0
     for users, positives_batch, negatives_batch in sampler.sample(pageviews):
@@ -203,7 +246,8 @@ def test_sample_positives_and_negatives_w_positives_arg(larger_matrix):
         total_interactions += b
         # No negatives should be accidental positives
         np.testing.assert_array_almost_equal(
-            pageviews[users.numpy().copy(), negatives_batch.squeeze().numpy().copy()], 0
+            pageviews[users.numpy().copy(),
+                      negatives_batch.squeeze().numpy().copy()], 0
         )
 
         for i in range(0, positives_batch.shape[0]):
@@ -237,9 +281,12 @@ def test_sample_positives_and_negatives_w_unigram(mat):
     assert negatives_perc[0] > negatives_perc[3]
     assert negatives_perc[0] > negatives_perc[4]
 
-    np.testing.assert_almost_equal(negatives_perc[0], negatives_perc[1], decimal=2)
-    np.testing.assert_almost_equal(negatives_perc[0], negatives_perc[2], decimal=2)
-    np.testing.assert_almost_equal(negatives_perc[3], negatives_perc[4], decimal=2)
+    np.testing.assert_almost_equal(
+        negatives_perc[0], negatives_perc[1], decimal=2)
+    np.testing.assert_almost_equal(
+        negatives_perc[0], negatives_perc[2], decimal=2)
+    np.testing.assert_almost_equal(
+        negatives_perc[3], negatives_perc[4], decimal=2)
 
 
 def test_unigram_distribution(pageviews):
