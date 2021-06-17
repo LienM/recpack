@@ -1,9 +1,11 @@
 """Module with classes for representing data."""
 
+from dataclasses import dataclass, asdict
 import logging
 import operator
 from typing import Any, Callable, List, Optional, Set, Tuple, Union, Iterator
 import warnings
+import yaml
 
 import pandas as pd
 import numpy as np
@@ -15,6 +17,16 @@ logger = logging.getLogger("recpack")
 
 class DataMatrix:
     """Base class for representing data"""
+
+
+@dataclass
+class InteractionMatrixMetadata:
+    num_users: int
+    num_items: int
+    has_timestamps: bool
+
+    def to_dict(self):
+        return asdict(self)
 
 
 class InteractionMatrix(DataMatrix):
@@ -72,12 +84,10 @@ class InteractionMatrix(DataMatrix):
         self._df = df.rename(columns=col_mapper)
 
         num_users = (
-            self._df[InteractionMatrix.USER_IX].max(
-            ) + 1 if shape is None else shape[0]
+            self._df[InteractionMatrix.USER_IX].max() + 1 if shape is None else shape[0]
         )
         num_items = (
-            self._df[InteractionMatrix.ITEM_IX].max(
-            ) + 1 if shape is None else shape[1]
+            self._df[InteractionMatrix.ITEM_IX].max() + 1 if shape is None else shape[1]
         )
 
         self.shape = (num_users, num_items)
@@ -98,6 +108,49 @@ class InteractionMatrix(DataMatrix):
         )
 
     @property
+    def metadata(self) -> InteractionMatrixMetadata:
+        # TODO: hope that the cast to int does not cause issues
+        return InteractionMatrixMetadata(
+            num_users=int(self.shape[0]),
+            num_items=int(self.shape[1]),
+            has_timestamps=self.has_timestamps,
+        )
+
+    def save(self, path) -> None:
+        """Save the interaction matrix to file
+
+        :param path: NO EXTENSION!
+        :type path: [type]
+        """
+        # Save dataframe to .csv
+        self._df.to_csv(f"{path}.csv", header=True, index=False)
+
+        # Write metadata to metadata file.
+        with open(f"{path}_metadata.yaml", "w") as f:
+            f.write(yaml.safe_dump(self.metadata.to_dict()))
+
+    @classmethod
+    def load(cls, path) -> "InteractionMatrix":
+        """Create a new interaction matrix instance from saved file.
+
+        :param path: NO EXTENSION!
+        :type path: [type]
+        """
+        df = pd.read_csv(f"{path}.csv")
+
+        with open(f"{path}_metadata.yaml", "r") as f:
+            metadata = InteractionMatrixMetadata(**yaml.safe_load(f))
+
+        timestamp_ix = cls.TIMESTAMP_IX if metadata.has_timestamps else None
+        return InteractionMatrix(
+            df,
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.USER_IX,
+            timestamp_ix=timestamp_ix,
+            shape=(metadata.num_users, metadata.num_items),
+        )
+
+    @property
     def values(self) -> csr_matrix:
         """All user-item interactions as a sparse matrix of size ``(|users|, |items|)``.
 
@@ -113,8 +166,7 @@ class InteractionMatrix(DataMatrix):
         ].values
         indices = indices[:, 0], indices[:, 1]
 
-        matrix = csr_matrix((values, indices),
-                            shape=self.shape, dtype=np.int32)
+        matrix = csr_matrix((values, indices), shape=self.shape, dtype=np.int32)
         return matrix
 
     @property
@@ -146,8 +198,7 @@ class InteractionMatrix(DataMatrix):
                 InteractionMatrix.TIMESTAMP_IX,
             ].values[0]
         except IndexError as e:
-            raise KeyError(
-                f"Interaction ID {interactionid} not present in data")
+            raise KeyError(f"Interaction ID {interactionid} not present in data")
 
     @property
     def timestamps(self) -> pd.Series:
@@ -364,8 +415,7 @@ class InteractionMatrix(DataMatrix):
         # This index can be dropped safely,
         #   as the data is still there in the original columns.
         index = pd.MultiIndex.from_frame(
-            interaction_m._df[[InteractionMatrix.USER_IX,
-                               InteractionMatrix.ITEM_IX]]
+            interaction_m._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]]
         )
         tuples = list(zip(*u_i_lists))
         c_df = interaction_m._df.set_index(index)
@@ -575,7 +625,6 @@ class UnsupportedTypeError(Exception):
         assert not _is_supported(X)
         super().__init__(
             "Recpack only supports matrix types {}. Received {}.".format(
-                ", ".join(t.__name__ for t in _supported_types), type(
-                    X).__name__
+                ", ".join(t.__name__ for t in _supported_types), type(X).__name__
             )
         )

@@ -1,7 +1,14 @@
-import scipy.sparse
+import numpy as np
+import pandas as pd
 import pytest
+import scipy.sparse
 
 from recpack.data.matrix import InteractionMatrix
+
+INPUT_SIZE = 1000
+USER_IX = InteractionMatrix.USER_IX
+ITEM_IX = InteractionMatrix.ITEM_IX
+TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 
 @pytest.fixture(scope="function")
@@ -51,3 +58,27 @@ def data_knn():
     )
 
     return pred
+
+
+@pytest.fixture(scope="function")
+def mat():
+    data = {
+        TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2],
+        ITEM_IX: [0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2],
+        USER_IX: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5],
+    }
+    df = pd.DataFrame.from_dict(data)
+
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+
+@pytest.fixture(scope="function")
+def larger_mat():
+    data = {
+        TIMESTAMP_IX: np.random.randint(0, 100, size=100),
+        ITEM_IX: np.random.randint(0, 25, size=100),
+        USER_IX: np.random.randint(0, 100, size=100),
+    }
+    df = pd.DataFrame.from_dict(data)
+
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
