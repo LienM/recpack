@@ -12,7 +12,13 @@ from recpack.algorithms.samplers import (
 from recpack.data.matrix import to_binary
 
 
-@pytest.mark.parametrize("U, batch_size", [(2, 3), (3, 2), (1, 1), (6, 6)])
+@pytest.mark.parametrize("U, batch_size", [
+    (1, 3),
+    (3, 1),
+    (3, 2),
+    (1, 1),
+    (6, 6)
+    ])
 def test_sequence_mini_batch_sampling(matrix_sessions, U, batch_size):
     pad_token = matrix_sessions.shape[1] + 1
 
@@ -20,13 +26,14 @@ def test_sequence_mini_batch_sampling(matrix_sessions, U, batch_size):
 
     total_interactions = 0
     total_users = 0
-    for uid_batch, pos_batch, neg_batch in sampler.sample(matrix_sessions):
+    for uid_batch, pos_batch, tar_batch, neg_batch in sampler.sample(matrix_sessions):
         # Check batch_size
         b = uid_batch.shape[0]
         assert (b == batch_size) or (
             b == matrix_sessions.num_interactions % batch_size)
         assert pos_batch.shape[0] == uid_batch.shape[0]
         assert neg_batch.shape[0] == uid_batch.shape[0]
+        assert pos_batch.shape == tar_batch.shape
 
         # Check sequence length
         assert pos_batch.shape[1] == neg_batch.shape[1]
@@ -37,12 +44,15 @@ def test_sequence_mini_batch_sampling(matrix_sessions, U, batch_size):
         # Sum all interactions that are not pads
         total_interactions += (pos_batch != pad_token).sum()
 
-        # Negative samples should never match the positive sample in the same location in the sequence.
+        np.testing.assert_array_almost_equal(np.roll(pos_batch, -1, axis=1), tar_batch)
+
+        # Negative samples should never match the target sample in the same location in the sequence.
         for i in range(U):
             negative_sequences = neg_batch.detach().numpy()[:, :, i]
-            pos_sequences = pos_batch.detach().numpy()
+            tar_sequences = tar_batch.detach().numpy()
 
-            assert not (negative_sequences == pos_sequences).any()
+            assert not (negative_sequences == tar_sequences).any()
+
 
     # Assert all interactions & users were present
     assert total_interactions == matrix_sessions.num_interactions

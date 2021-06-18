@@ -300,7 +300,7 @@ class SequenceMiniBatchSampler(Sampler):
         self.pad_token = pad_token
         self.batch_size = batch_size
 
-    def sample(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
+    def sample(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
         item_histories = list(X.sorted_item_history)
         # Do I introduce bias if I sort them by length?
         item_histories.sort(key=lambda x: len(x[1]), reverse=True)
@@ -322,19 +322,22 @@ class SequenceMiniBatchSampler(Sampler):
             negatives_batch = np.random.randint(
                 0, num_items, (batch_size, max_hist_len, self.U))
 
+            targets_batch = positives_batch.copy()
+
             # Add sequences in batch
             for batch_ix, (uid, hist) in enumerate(batch):
                 hist_len = hist.shape[0]
-                positives_batch[batch_ix, :hist_len] = torch.LongTensor(hist)
+                positives_batch[batch_ix, :hist_len] = hist
                 uid_batch[batch_ix] = uid
+                targets_batch[batch_ix] = np.roll(positives_batch[batch_ix], -1)
 
-                negatives_col = negatives_batch[batch_ix, :hist_len, :]
+                negatives_col = negatives_batch[batch_ix]
 
                 while True:
-
+                    
                     # Fix the negatives. We only care about exact matches: same location in the sequence.
                     mask = np.apply_along_axis(
-                        lambda col: col == hist, 0, negatives_col
+                        lambda col: col == targets_batch[batch_ix], 0, negatives_col
                     )
                     num_incorrect = np.sum(mask)
 
@@ -346,11 +349,12 @@ class SequenceMiniBatchSampler(Sampler):
                         # Exit the while loop
                         break
 
-                negatives_batch[batch_ix, :hist_len, :] = negatives_col
+                negatives_batch[batch_ix] = negatives_col
 
             yield (
                 torch.LongTensor(uid_batch),
                 torch.LongTensor(positives_batch),
+                torch.LongTensor(targets_batch),
                 torch.LongTensor(negatives_batch))
 
 

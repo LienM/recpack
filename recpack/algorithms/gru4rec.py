@@ -178,29 +178,25 @@ class GRU4Rec(TorchMLAlgorithm):
 
         losses = []
 
-        for _, positives_batch, negatives_batch in self.sampler.sample(X):
+        for _, positives_batch, targets_batch, negatives_batch in self.sampler.sample(X):
             loss = self._train_batch(
-                positives_batch, negatives_batch)
+                positives_batch, targets_batch, negatives_batch)
             losses.append(loss)
 
         return losses
 
-    def _train_batch(self, positives_batch: torch.LongTensor, negatives_batch: torch.LongTensor):
+    def _train_batch(self, positives_batch: torch.LongTensor, targets_batch: torch.LongTensor, negatives_batch: torch.LongTensor):
         batch_loss = 0
         true_batch_size, max_hist_len = positives_batch.shape
         # Want to reuse this between chunks of the same batch of sequences
         hidden = self.model_.init_hidden(true_batch_size)
-
-        # To get the outputs, we roll the input sequence one timestamp backward
-        # Position 1 is now occupied by the item previously in position 2
-        target_batch = positives_batch.roll(-1, 1)
 
         # Feed the sequence into the network in chunks of size bptt.
         # We do this because we want to propagate after every bptt elements, but keep hidden states.
         for input_chunk, target_chunk, negatives_chunk in zip(
             positives_batch.tensor_split(
                 ceil(max_hist_len / self.bptt), axis=1),
-            target_batch.tensor_split(
+            targets_batch.tensor_split(
                 ceil(max_hist_len / self.bptt), axis=1),
             negatives_batch.tensor_split(
                 ceil(max_hist_len / self.bptt), axis=1)
@@ -256,7 +252,7 @@ class GRU4Rec(TorchMLAlgorithm):
     def _predict(self, X: InteractionMatrix):
         X_pred = lil_matrix(X.shape)
 
-        for uid_batch, positives_batch, _ in self.sampler.sample(X):
+        for uid_batch, positives_batch, _, _ in self.sampler.sample(X):
             batch_size = positives_batch.shape[0]
             hidden = self.model_.init_hidden(batch_size)
             output, hidden = self.model_(positives_batch, hidden)
