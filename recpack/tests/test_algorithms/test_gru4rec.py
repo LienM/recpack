@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -10,7 +9,7 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 @pytest.fixture(scope="function")
 def session_rnn():
-    rnn = GRU4Rec(seed=42, batch_size=1, embedding_size=5, hidden_size=10)
+    rnn = GRU4Rec(seed=42, batch_size=3, embedding_size=5, hidden_size=10, sample_size=1, learning_rate=0.01)
     return rnn
 
 
@@ -18,6 +17,20 @@ def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
     device = session_rnn.device
     session_rnn._init_model(matrix_sessions)
 
+    # Each training epoch should update the parameters
+    for _ in range(5):
+        params = [
+            np for np in session_rnn.model_.named_parameters() if np[1].requires_grad
+        ]
+        params_before = [(name, p.clone()) for (name, p) in params]
+
+        session_rnn._train_epoch(matrix_sessions)
+        assert_changed(params_before, params, device)
+
+
+def test_session_rnn_training_batch(session_rnn, matrix_sessions):
+    device = session_rnn.device
+    session_rnn._init_model(matrix_sessions)
 
     # Each training epoch should update the parameters
     for _ in range(5):
@@ -54,6 +67,11 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
 
     X_pred = session_rnn.predict(matrix_sessions)
     scores = X_pred.toarray()
+
+    print(list(matrix_sessions.sorted_item_history))
+
+    print(scores)
+
     top_item = scores.argmax(axis=1)
 
     # Prediction matrix should have same shape as input matrix
@@ -66,6 +84,7 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
     # All items should have a score
     assert len(set(X_pred.nonzero()[1])) == matrix_sessions.shape[1]
 
+    print(top_item)
     # Rnn should be able to learn simple repeating patterns
     assert top_item[0] == 1
     assert top_item[1] == 2

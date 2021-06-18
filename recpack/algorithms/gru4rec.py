@@ -76,8 +76,7 @@ class GRU4Rec(TorchMLAlgorithm):
         hidden_size: int = 100,
         embedding_size: int = 250,
         dropout: float = 0.0,
-        loss_fn: str = "top1",
-        # loss_fn: str = "cross-entropy",
+        loss_fn: str = "bpr",
         sample_size: int = 5000,
         alpha: float = 0.5,
         optimization_algorithm: str = "adagrad",
@@ -180,7 +179,8 @@ class GRU4Rec(TorchMLAlgorithm):
         losses = []
 
         for _, positives_batch, negatives_batch in self.sampler.sample(X):
-            loss = self._train_batch(positives_batch, negatives_batch)
+            loss = self._train_batch(
+                positives_batch, negatives_batch)
             losses.append(loss)
 
         return losses
@@ -191,21 +191,32 @@ class GRU4Rec(TorchMLAlgorithm):
         # Want to reuse this between chunks of the same batch of sequences
         hidden = self.model_.init_hidden(true_batch_size)
 
+        # To get the outputs, we roll the input sequence one timestamp backward
+        # Position 1 is now occupied by the item previously in position 2
+        target_batch = positives_batch.roll(-1, 1)
+
         # Feed the sequence into the network in chunks of size bptt.
         # We do this because we want to propagate after every bptt elements, but keep hidden states.
-        for input_chunk, negatives_chunk in zip(
+        for input_chunk, target_chunk, negatives_chunk in zip(
             positives_batch.tensor_split(
+                ceil(max_hist_len / self.bptt), axis=1),
+            target_batch.tensor_split(
                 ceil(max_hist_len / self.bptt), axis=1),
             negatives_batch.tensor_split(
                 ceil(max_hist_len / self.bptt), axis=1)
         ):
+
             true_input_mask = (input_chunk != self.pad_token)
             # Remove rows with only pad tokens from chunk and from hidden. We can do this because the array is sorted.
             true_rows = true_input_mask.any(axis=1)
             true_input_chunk = input_chunk[true_rows]
             true_negative_chunk = negatives_chunk[true_rows]
-            # This will not work because it makes a copy of the hidden state.
+            true_target_chunk = target_chunk[true_rows]
             true_hidden = hidden[:, true_rows, :]
+
+            # print("input", true_input_chunk)
+            # print("target", true_target_chunk)
+            
 
             # If there are any values remaining
             if true_input_chunk.any():
@@ -213,13 +224,24 @@ class GRU4Rec(TorchMLAlgorithm):
                 output, hidden[:, true_rows, :] = self.model_(
                     true_input_chunk, true_hidden)
 
+                print("input", true_input_chunk)
+                print("target", true_target_chunk)
+
                 # Select score for positive and negative sample for all tokens
                 positive_scores = torch.gather(
-                    output, 2, true_input_chunk.unsqueeze(-1))
+                    output, 2, true_target_chunk.unsqueeze(-1))
                 negative_scores = torch.gather(
                     output, 2, true_negative_chunk)
 
-                true_input_mask
+                true_input_mask_flat = true_input_mask.reshape(-1)
+
+                print(positive_scores)
+                print(negative_scores)
+
+                # print(true_input_mask_flat.shape)
+
+                # positive_scores_flat = positive_scores.reshape(-1)
+                # negative_scores_flat = negative_scores.reshape(-1)
 
                 # TODO Remove pad tokens
                 loss = self._compute_loss(positive_scores, negative_scores)
@@ -242,12 +264,12 @@ class GRU4Rec(TorchMLAlgorithm):
             last_item_in_hist = (
                 positives_batch != self.pad_token).sum(axis=1) - 1
 
-            # Item scores is a matrix with the scores for each item 
+            # Item scores is a matrix with the scores for each item
             # based on the last item in the sequence
             item_scores = output[torch.arange(
                 0, batch_size, dtype=int), last_item_in_hist]
 
-            X_pred[uid_batch.detach().cpu().numpy()] = item_scores.detach().cpu().numpy()
+            X_pred[uid_batch.detach().cpu().numpy()] = item_scores.detach().cpu().numpy()[:, :-1]
 
         return X_pred.tocsr()
 
@@ -298,7 +320,8 @@ class GRU4RecTorch(nn.Module):
             dropout=(dropout if num_layers > 1 else 0),
             batch_first=True
         )
-        self.lin = nn.Linear(hidden_size, num_items)
+        # Also return the padding token
+        self.lin = nn.Linear(hidden_size, num_items + 1)
         self.act = nn.Softmax(dim=2)
         self.init_weights()
 
@@ -349,6 +372,6 @@ class GRU4RecTorch(nn.Module):
 
     def init_hidden(self, batch_size: int) -> torch.Tensor:
         """
-        Returns an initial, zero-valued hidden state with shape (B, L, H).
+        Returns an initial, zero-valued hidden state with shape (L B, H).
         """
-        return torch.zeros((batch_size, self.rnn.num_layers, self.hidden_size))
+        return torch.zeros((self.rnn.num_layers, batch_size, self.hidden_size))
