@@ -21,6 +21,7 @@ def unigram_distribution(X: csr_matrix) -> np.ndarray:
 class Sampler:
     pass
 
+
 # TODO Rename to TripletSampler?
 
 
@@ -143,7 +144,7 @@ class PositiveNegativeSampler(Sampler):
         negative_sample_probabilities = self._get_distribution(X)
 
         for start in range(0, sample_size, self.batch_size):
-            sample_batch = samples[start: start + self.batch_size]
+            sample_batch = samples[start : start + self.batch_size]
 
             batch = positives[sample_batch]
             users = batch[:, 0]
@@ -300,7 +301,11 @@ class SequenceMiniBatchSampler(Sampler):
         self.pad_token = pad_token
         self.batch_size = batch_size
 
-    def sample(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
+    def sample(
+        self, X: InteractionMatrix
+    ) -> Iterator[
+        Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]
+    ]:
         item_histories = list(X.sorted_item_history)
         # Do I introduce bias if I sort them by length?
         item_histories.sort(key=lambda x: len(x[1]), reverse=True)
@@ -313,14 +318,16 @@ class SequenceMiniBatchSampler(Sampler):
             max_hist_len = len(batch[0][1])
             batch_size = len(batch)
 
-            uid_batch = np.zeros((batch_size, ), dtype=int)
+            uid_batch = np.zeros((batch_size,), dtype=int)
 
             # Initialize seq_batch with self.pad_token
-            positives_batch = np.ones(
-                (batch_size, max_hist_len), dtype=int) * self.pad_token
+            positives_batch = (
+                np.ones((batch_size, max_hist_len), dtype=int) * self.pad_token
+            )
 
             negatives_batch = np.random.randint(
-                0, num_items, (batch_size, max_hist_len, self.U))
+                0, num_items, (batch_size, max_hist_len, self.U)
+            )
 
             targets_batch = positives_batch.copy()
 
@@ -330,11 +337,13 @@ class SequenceMiniBatchSampler(Sampler):
                 positives_batch[batch_ix, :hist_len] = hist
                 uid_batch[batch_ix] = uid
                 targets_batch[batch_ix] = np.roll(positives_batch[batch_ix], -1)
+                # set last item to padding, otherwise 1st item is rolled till here
+                targets_batch[batch_ix, -1] = self.pad_token
 
                 negatives_col = negatives_batch[batch_ix]
 
                 while True:
-                    
+
                     # Fix the negatives. We only care about exact matches: same location in the sequence.
                     mask = np.apply_along_axis(
                         lambda col: col == targets_batch[batch_ix], 0, negatives_col
@@ -343,7 +352,8 @@ class SequenceMiniBatchSampler(Sampler):
 
                     if num_incorrect > 0:
                         new_negatives = np.random.randint(
-                            0, num_items, size=(num_incorrect,))
+                            0, num_items, size=(num_incorrect,)
+                        )
                         negatives_col[mask] = new_negatives
                     else:
                         # Exit the while loop
@@ -355,7 +365,8 @@ class SequenceMiniBatchSampler(Sampler):
                 torch.LongTensor(uid_batch),
                 torch.LongTensor(positives_batch),
                 torch.LongTensor(targets_batch),
-                torch.LongTensor(negatives_batch))
+                torch.LongTensor(negatives_batch),
+            )
 
 
 def _spot_collisions(
