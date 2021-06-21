@@ -107,6 +107,33 @@ class InteractionMatrix(DataMatrix):
             shape=self.shape,
         )
 
+    def union(self, im: "InteractionMatrix") -> "InteractionMatrix":
+        """Combine events from two interaction matrices.
+
+        The matrices need the same shape, and to match timestamps dimension.
+
+        :param im: InteractionMatrix
+        :type im: InteractionMatrix
+        :rtype: InteractionMatrix
+        """
+        if self.has_timestamps != im.has_timestamps:
+            raise ValueError("TODO: sensible error, but mismatch in timestamps")
+
+        if self.shape != im.shape:
+            raise ValueError("Shapes mismatch.")
+
+        timestamp_ix = self.TIMESTAMP_IX if self.has_timestamps else None
+        return InteractionMatrix(
+            pd.concat([self._df, im._df]),
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.USER_IX,
+            timestamp_ix=timestamp_ix,
+            shape=self.shape,
+        )
+
+    def __add__(self, other):
+        return self.union(other)
+
     @property
     def metadata(self) -> InteractionMatrixMetadata:
         # TODO: hope that the cast to int does not cause issues

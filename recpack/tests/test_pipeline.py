@@ -18,10 +18,10 @@ def pipeline_builder(mat):
     name = "test_builder"
 
     pb = recpack.pipeline.PipelineBuilder(name)
-    pb.add_metric("CalibratedRecallK", 20)
-    pb.add_metric("CalibratedRecallK", 10)
-    pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.add_algorithm("EASE", params={"l2": 20})
+    pb.add_metric("CalibratedRecallK", 2)
+    pb.add_metric("CalibratedRecallK", 2)
+    pb.add_algorithm("ItemKNN", params={"K": 2})
+    pb.add_algorithm("EASE", params={"l2": 2})
     pb.set_train_data(mat)
     pb.set_test_data((mat, mat))
 
@@ -204,7 +204,7 @@ def test_pipeline_builder_construct_config_dict(pipeline_builder):
 
     assert len(d["metrics"]) == 2
     assert d["metrics"][0]["name"] == "CalibratedRecallK"
-    assert d["metrics"][0]["K"] == 20
+    assert d["metrics"][0]["K"] == 2
 
     assert len(d["algorithms"]) == 2
     assert d["algorithms"][0]["name"] == "ItemKNN"
@@ -290,3 +290,14 @@ def test_default_name():
     pb2 = recpack.pipeline.PipelineBuilder()
 
     assert pb.name != pb2.name
+
+
+def test_pipeline(pipeline_builder):
+    pipeline = pipeline_builder.build()
+
+    pipeline.run()
+
+    metrics = pipeline.get()
+    assert len(metrics) == len(pipeline.algorithms)
+
+    assert len(metrics[list(metrics.keys())[0]]) == len(pipeline.metrics)

@@ -23,32 +23,41 @@ from recpack.data.matrix import Matrix, InteractionMatrix
 logger = logging.getLogger("recpack")
 
 
-class AlgorithmRegistry:
+class Registry:
     def __init__(self):
         self.registered = {}
 
-    def get_algorithm(self, name):
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def __contains__(self, key):
+        try:
+            self.get(key)
+            return True
+        except AttributeError:
+            return False
+
+    def get(self, name):
+        raise NotImplementedError
+
+    def register(self, name, c):
+        self.registered[name] = c
+
+
+class AlgorithmRegistry(Registry):
+    def get(self, name):
         if name in self.registered:
             return self.registered[name]
         else:
             return getattr(recpack.algorithms, name)
 
-    def register(self, name, c):
-        self.registered[name] = c
 
-
-class MetricRegistry:
-    def __init__(self):
-        self.registered = {}
-
-    def get_metric(self, name):
+class MetricRegistry(Registry):
+    def get(self, name):
         if name in self.registered:
             return self.registered[name]
         else:
             return getattr(recpack.metrics, name)
-
-    def register(self, name, c):
-        self.registered[name] = c
 
 
 ALGORITHM_REGISTRY = AlgorithmRegistry()
@@ -160,18 +169,18 @@ class Pipeline(object):
         # TODO: investigate using advanced optimisers
         # Construct grid:
         results = []
+        if len(algorithm.grid) == 0:
+            return algorithm.params
         optimisation_params = ParameterGrid(algorithm.grid)
         for p in optimisation_params:
-            algo = ALGORITHM_REGISTRY.get_algorithm(algorithm.name)(
-                **p, **algorithm.params
-            )
+            algo = ALGORITHM_REGISTRY.get(algorithm.name)(**p, **algorithm.params)
 
             # validation data in case of TorchML!
             if isinstance(algo, recpack.algorithms.base.TorchMLAlgorithm):
                 algo.fit(self.train_data, self.validation_data)
             else:
                 algo.fit(self.train_data)
-            metric = METRIC_REGISTRY.get_metric(metric_entry.name)(K=metric_entry.K)
+            metric = METRIC_REGISTRY.get(metric_entry.name)(K=metric_entry.K)
 
             prediction = algo.predict(self.validation_data[0])
 
@@ -188,7 +197,7 @@ class Pipeline(object):
 
         # Sort by metric value
         optimal_params = sorted(
-            results, key=lambda x: x["value"], ascending=metric_entry.minimise
+            results, key=lambda x: x["value"], reverse=~metric_entry.minimise
         )[0]["params"]
         return optimal_params
 
@@ -207,23 +216,32 @@ class Pipeline(object):
         :param validation_data: Validation data, (in, out) tuple. Optional.
         """
         # optimisation phase:
-        for algorithm in self.algorithms:
+        for algorithm in tqdm(self.algorithms):
             optimal_params = self._optimise(algorithm, self.optimisation_metric)
 
             # Train again.
-            # TODO: skip if TorchML -> Or retrain, but then just do duplicate work
-            algo = getattr(recpack.algorithms, algorithm.name)(**optimal_params)
+            algo = ALGORITHM_REGISTRY.get(algorithm.name)(**optimal_params)
             # algo.fit(union(self.train_data, self.validation_data))
-            algo.fit(self.train_data)
+            if isinstance(algo, recpack.algorithms.base.TorchMLAlgorithm):
+                # TODO: Optimise this retraining step, by returning trained model?
+                algo.fit(self.train_data, self.validation_data)
+            else:
+                algo.fit(
+                    self.train_data
+                    if self.validation_data is None
+                    else self.train_data
+                    + self.validation_data[0]
+                    + self.validation_data[1]
+                )
 
             # Evaluate
             test_in, test_out = self.test_data
             recommendations = algo.predict(test_in)
             for metric in self.metrics:
                 m = getattr(recpack.metrics, metric.name)(metric.K)
-                m.calculate(test_out, recommendations)
+                m.calculate(test_out.binary_values, recommendations)
 
-                self.metrics_registry.register(m, algo.identifier, m.identifier)
+                self.metric_registry.register(m, algo.identifier, m.name)
 
     def get(self):
         return self.metric_registry.metrics
@@ -250,50 +268,73 @@ class PipelineBuilder(object):
         self.test_data = None
         self.optimisation_metric = None
 
-    def add_metric(self, metric_name: str, K):
+    def add_metric(self, metric: str, K):
         """Register a metric to evaluate
 
-        :param metric_name: [description]
-        :type metric_name: [type]
+        :param metric: [description]
+        :type metric: [type]
         :param K: [description]
         :type K: [type]
         :return: [description]
         :rtype: [type]
         """
-        if type(metric_name) != str:
-            raise ValueError("metric name should be string!")
-            # TODO: Accept strings and class names?
+
+        # Make it so it's possible to add metrics by their class as well.
+        if type(metric) == type:
+            metric = metric.__name__
+
+        if type(metric) != str:
+            raise ValueError(f"metric should be string or type, not {type(metric)}!")
+
+        if metric not in METRIC_REGISTRY:
+            raise ValueError(f"metric {metric} could not be resolved.")
 
         if isinstance(K, Iterable):
             for k in K:
-                self.add_metric(metric_name, k)
+                self.add_metric(metric, k)
         else:
-            self.metrics.append(MetricEntry(metric_name, K))
+            self.metrics.append(MetricEntry(metric, K))
 
-    def add_algorithm(self, algorithm_name, grid={}, params={}):
+    def add_algorithm(self, algorithm, grid={}, params={}):
         """Register an algorithm to run.
 
-        :param algorithm_name: [description]
-        :type algorithm_name: [type]
+        :param algorithm: [description]
+        :type algorithm: [type]
         :param grid: [description], defaults to {}
         :type grid: dict, optional
         :param params: [description], defaults to {}
         :type params: dict, optional
         """
-        if type(algorithm_name) != str:
+        if type(algorithm) == type:
+            algorithm = algorithm.__name__
+
+        if type(algorithm) != str:
+            raise ValueError(
+                f"algorithm should be string or type, not {type(algorithm)}!"
+            )
+
+        if algorithm not in ALGORITHM_REGISTRY:
+            raise ValueError(f"algorithm {algorithm} could not be resolved.")
+
+        if type(algorithm) != str:
             raise ValueError("algorithm name should be string!")
             # TODO: Accept strings and class names?
-        self.algorithms.append(AlgorithmEntry(algorithm_name, grid, params))
+        self.algorithms.append(AlgorithmEntry(algorithm, grid, params))
 
-    def set_optimisation_metric(self, metric_name, K, minimise=False):
-        if type(metric_name) != str:
-            raise ValueError("metric name should be string!")
-            # TODO: Accept strings and class names?
+    def set_optimisation_metric(self, metric, K, minimise=False):
+        # Make it so it's possible to add metrics by their class as well.
+        if type(metric) == type:
+            metric = metric.__name__
 
-        self.optimisation_metric = OptimisationMetricEntry(metric_name, K, minimise)
+        if type(metric) != str:
+            raise ValueError(f"metric should be string or type, not {type(metric)}!")
+
+        if metric not in METRIC_REGISTRY:
+            raise ValueError(f"metric {metric} could not be resolved.")
+
+        self.optimisation_metric = OptimisationMetricEntry(metric, K, minimise)
 
     def set_train_data(self, train_data: Matrix):
-        # TODO: input validation?
         self.train_data = train_data
 
     def set_validation_data(self, validation_data: Matrix):
