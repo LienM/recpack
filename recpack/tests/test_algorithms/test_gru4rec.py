@@ -9,7 +9,7 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 @pytest.fixture(scope="function")
 def session_rnn():
-    rnn = GRU4Rec(seed=42, batch_size=3, embedding_size=5, hidden_size=10, sample_size=1, learning_rate=0.01)
+    rnn = GRU4Rec(seed=42, batch_size=3, embedding_size=5, hidden_size=10, sample_size=3, bptt=2)
     return rnn
 
 
@@ -68,9 +68,9 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
     X_pred = session_rnn.predict(matrix_sessions)
     scores = X_pred.toarray()
 
-    print(list(matrix_sessions.sorted_item_history))
+    # print(list(matrix_sessions.sorted_item_history))
 
-    print(scores)
+    # print(scores)
 
     top_item = scores.argmax(axis=1)
 

@@ -142,7 +142,7 @@ def skipgram_negative_sampling_loss(
     return -(pos_loss + neg_loss).mean()
 
 
-def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
+def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
     """Implementation of the Bayesian Personalized Ranking loss.
 
     BPR loss as defined in Rendle, Steffen, et al.
@@ -159,7 +159,7 @@ def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor, mask: torch
     :return: The loss value of the bpr criterion
     :rtype: torch.Tensor
     """
-    distance = positive_sim - negative_sim
+    distance = positive_sim.unsqueeze(-1) - negative_sim
     # Probability of ranking given parameters
     elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
     # The goal is to minimize loss
@@ -298,7 +298,7 @@ def warp_loss_wrapper(
     return np.mean(losses)
 
 
-def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, reg: float = 1.0, mask: torch.BoolTensor = None) -> torch.Tensor:
+def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, reg: float = 1.0) -> torch.Tensor:
     """
     Bayesian Personalized Ranking Max Loss.
 
@@ -324,10 +324,7 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
     :param num_samples: Number of samples to use in loss calculation. BPR-Max loss 
         tends to scale better with sample size than base BPR.
     """
-    if negative_scores.ndim == 2:
-        negative_scores = negative_scores.unsqueeze(-1)
-
-    weights = torch.softmax(negative_scores, dim=2)
+    weights = torch.softmax(negative_scores, dim=1)
     score_diff = weights * torch.sigmoid(positive_scores - negative_scores)
     norm_penalty = weights * negative_scores ** 2
     return (
@@ -335,7 +332,7 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
     ).mean()
 
 
-def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
+def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
     """
     TOP1 Loss.
 
@@ -360,7 +357,7 @@ def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, mask
     return (score_diff + norm_penalty).mean()
 
 
-def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, mask: torch.BoolTensor = None) -> torch.Tensor:
+def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
     """
     TOP1 Max Loss.
 
@@ -384,12 +381,9 @@ def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, 
     :param num_samples: Number of samples to use in loss calculation. TOP1-Max loss 
         tends to scale better with sample size than base TOP1.
     """
-    if negative_scores.ndim == 2:
-        negative_scores = negative_scores.unsqueeze(-1)
-
     weights = torch.softmax(negative_scores, dim=1)
     score_diff = torch.sigmoid(negative_scores - positive_scores)
     norm_penalty = torch.sigmoid(negative_scores ** 2)
     loss_terms = weights * (score_diff + norm_penalty)
     # TODO Not sure about this dim in the sum
-    return loss_terms.sum(dim=2).mean()
+    return loss_terms.sum(dim=1).mean()

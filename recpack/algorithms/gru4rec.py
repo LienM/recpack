@@ -5,6 +5,7 @@ from typing import Tuple, List
 import numpy as np
 from scipy.sparse.lil import lil_matrix
 import torch
+from torch.functional import split
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
@@ -178,76 +179,80 @@ class GRU4Rec(TorchMLAlgorithm):
 
         losses = []
 
+        # TODO Create two samplers. A simple and then this one. 
         for _, positives_batch, targets_batch, negatives_batch in self.sampler.sample(X):
-            loss = self._train_batch(
-                positives_batch, targets_batch, negatives_batch)
-            losses.append(loss)
+
+            batch_loss = 0
+            true_batch_size = positives_batch.shape[0]
+            # Want to reuse this between chunks of the same batch of sequences
+            hidden = self.model_.init_hidden(true_batch_size)
+
+            for input_chunk, target_chunk, neg_chunk in self._chunk(positives_batch, targets_batch, negatives_batch):
+                true_input_mask = (input_chunk != self.pad_token)
+                # Remove rows with only pad tokens from chunk and from hidden. We can do this because the array is sorted.
+                true_rows = true_input_mask.any(axis=1)
+                true_input_chunk = input_chunk[true_rows]
+                true_target_chunk = target_chunk[true_rows]
+                true_neg_chunk = neg_chunk[true_rows]
+                true_hidden = hidden[:, true_rows, :]
+
+                # If there are any values remaining
+                if true_input_chunk.any():
+                    self.optimizer.zero_grad()
+                    output, hidden[:, true_rows, :] = self.model_(
+                        true_input_chunk, true_hidden)
+                    # Select score for positive and negative sample for all tokens
+                    positive_scores = torch.gather(
+                        output, 2, true_target_chunk.unsqueeze(-1))
+                    negative_scores = torch.gather(
+                        output, 2, true_neg_chunk)
+
+                    # TODO Remove pad tokens
+                    loss = self._compute_loss(
+                        positive_scores.squeeze(-1), negative_scores, true_input_mask)
+
+                    batch_loss += loss.item()
+                    loss.backward()
+                    self.optimizer.step()
+                
+                hidden = hidden.detach()
+
+            losses.append(batch_loss)
 
         return losses
 
-    def _train_batch(self, positives_batch: torch.LongTensor, targets_batch: torch.LongTensor, negatives_batch: torch.LongTensor):
-        batch_loss = 0
-        true_batch_size, max_hist_len = positives_batch.shape
-        # Want to reuse this between chunks of the same batch of sequences
-        hidden = self.model_.init_hidden(true_batch_size)
+    def _compute_loss(
+        self,
+        positive_scores: torch.LongTensor,
+        negative_scores: torch.LongTensor,
+        true_input_mask: torch.BoolTensor
+    ) -> torch.Tensor:
 
-        # Feed the sequence into the network in chunks of size bptt.
-        # We do this because we want to propagate after every bptt elements, but keep hidden states.
-        for input_chunk, target_chunk, negatives_chunk in zip(
-            positives_batch.tensor_split(
-                ceil(max_hist_len / self.bptt), axis=1),
-            targets_batch.tensor_split(
-                ceil(max_hist_len / self.bptt), axis=1),
-            negatives_batch.tensor_split(
-                ceil(max_hist_len / self.bptt), axis=1)
-        ):
+        print(positive_scores.shape)
+        true_batch_size, max_hist_len = positive_scores.shape
 
-            true_input_mask = (input_chunk != self.pad_token)
-            # Remove rows with only pad tokens from chunk and from hidden. We can do this because the array is sorted.
-            true_rows = true_input_mask.any(axis=1)
-            true_input_chunk = input_chunk[true_rows]
-            true_negative_chunk = negatives_chunk[true_rows]
-            true_target_chunk = target_chunk[true_rows]
-            true_hidden = hidden[:, true_rows, :]
+        true_input_mask_flat = true_input_mask.view(
+            true_batch_size*max_hist_len, -1)
 
-            # print("input", true_input_chunk)
-            # print("target", true_target_chunk)
-            
+        print("mask", true_input_mask.shape)
+        print("flat", true_input_mask_flat.shape)
 
-            # If there are any values remaining
-            if true_input_chunk.any():
-                self.optimizer.zero_grad()
-                output, hidden[:, true_rows, :] = self.model_(
-                    true_input_chunk, true_hidden)
+        positive_scores_flat = positive_scores.view(
+            true_batch_size*max_hist_len, -1)
+        negative_scores_flat = negative_scores.view(
+            true_batch_size*max_hist_len, -1, negative_scores.shape[2])
+        
 
-                print("input", true_input_chunk)
-                print("target", true_target_chunk)
+        return self._criterion(positive_scores_flat, negative_scores_flat)
 
-                # Select score for positive and negative sample for all tokens
-                positive_scores = torch.gather(
-                    output, 2, true_target_chunk.unsqueeze(-1))
-                negative_scores = torch.gather(
-                    output, 2, true_negative_chunk)
+    def _chunk(self, *tensors: torch.LongTensor):
+        max_hist_len = tensors[0].shape[1]
 
-                true_input_mask_flat = true_input_mask.reshape(-1)
+        chunk_size = ceil(max_hist_len / self.bptt)
 
-                print(positive_scores)
-                print(negative_scores)
+        split_tensors = [t.tensor_split(chunk_size, axis=1) for t in tensors]
 
-                # print(true_input_mask_flat.shape)
-
-                # positive_scores_flat = positive_scores.reshape(-1)
-                # negative_scores_flat = negative_scores.reshape(-1)
-
-                # TODO Remove pad tokens
-                loss = self._compute_loss(positive_scores, negative_scores)
-
-                batch_loss += loss.item()
-                loss.backward()
-                self.optimizer.step()
-                hidden = hidden.detach()
-
-        return batch_loss
+        return zip(*split_tensors)
 
     def _predict(self, X: InteractionMatrix):
         X_pred = lil_matrix(X.shape)
@@ -265,12 +270,10 @@ class GRU4Rec(TorchMLAlgorithm):
             item_scores = output[torch.arange(
                 0, batch_size, dtype=int), last_item_in_hist]
 
-            X_pred[uid_batch.detach().cpu().numpy()] = item_scores.detach().cpu().numpy()[:, :-1]
+            X_pred[uid_batch.detach().cpu().numpy()] = item_scores.detach().cpu().numpy()[
+                :, :-1]
 
         return X_pred.tocsr()
-
-    def _compute_loss(self, positive_scores, negative_scores) -> torch.Tensor:
-        return self._criterion(positive_scores, negative_scores)
 
 
 class GRU4RecTorch(nn.Module):
