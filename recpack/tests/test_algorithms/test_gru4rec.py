@@ -2,6 +2,9 @@ import pandas as pd
 import pytest
 
 from scipy.sparse import csr_matrix
+import torch
+from unittest.mock import MagicMock
+
 from recpack.data.matrix import InteractionMatrix
 from recpack.algorithms.gru4rec import GRU4Rec
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
@@ -9,7 +12,15 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 @pytest.fixture(scope="function")
 def session_rnn():
-    rnn = GRU4Rec(seed=42, batch_size=3, embedding_size=5, hidden_size=10, sample_size=3, bptt=2)
+    rnn = GRU4Rec(
+        seed=42,
+        batch_size=3,
+        embedding_size=5,
+        hidden_size=10,
+        sample_size=1,
+        bptt=1,
+        learning_rate=0.1,
+    )
     return rnn
 
 
@@ -43,7 +54,7 @@ def test_session_rnn_training_batch(session_rnn, matrix_sessions):
         assert_changed(params_before, params, device)
 
 
-# TODO Test if we update with information for all users when bptt > 1.  
+# TODO Test if we update with information for all users when bptt > 1.
 
 
 def test_session_rnn_evaluation_epoch(session_rnn, matrix_sessions):
@@ -68,9 +79,9 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
     X_pred = session_rnn.predict(matrix_sessions)
     scores = X_pred.toarray()
 
-    # print(list(matrix_sessions.sorted_item_history))
+    print(list(matrix_sessions.sorted_item_history))
 
-    # print(scores)
+    print(scores)
 
     top_item = scores.argmax(axis=1)
 
