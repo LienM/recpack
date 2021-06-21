@@ -478,3 +478,14 @@ def test_load(larger_mat):
 
     assert im.shape == larger_mat.shape
     assert im.active_users == larger_mat.active_users
+
+
+def test_add(larger_mat):
+    double_mat = larger_mat + larger_mat
+
+    assert double_mat.num_interactions == larger_mat.num_interactions * 2
+
+
+def test_add_mismatch(mat, larger_mat):
+    with pytest.raises(ValueError):
+        mat + larger_mat
