@@ -7,14 +7,13 @@ from recpack.algorithms.samplers import (
     WarpSampler,
     PositiveNegativeSampler,
     unigram_distribution,
-    SequenceMiniBatchSampler,
     SequenceMiniBatchPositivesTargetsNegativesSampler
 )
 from recpack.data.matrix import to_binary
 
 
 @pytest.mark.parametrize("U, batch_size", [(1, 3), (3, 1), (3, 2), (1, 1), (6, 6)])
-def test_sequence_mini_batch_sampling(matrix_sessions, U, batch_size):
+def test_sequence_mini_batch_pos_tar_neg_sampling(matrix_sessions, U, batch_size):
     pad_token = matrix_sessions.shape[1] + 1
 
     sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(U, pad_token, batch_size=batch_size)

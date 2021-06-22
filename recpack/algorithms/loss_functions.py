@@ -159,7 +159,8 @@ def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Te
     :return: The loss value of the bpr criterion
     :rtype: torch.Tensor
     """
-    distance = positive_sim.unsqueeze(-1) - negative_sim
+    # TODO Fix this so that it can handle more than 1 negative
+    distance = positive_sim - negative_sim
     # Probability of ranking given parameters
     elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
     # The goal is to minimize loss
