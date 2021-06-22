@@ -8,6 +8,7 @@ from recpack.algorithms.samplers import (
     PositiveNegativeSampler,
     unigram_distribution,
     SequenceMiniBatchSampler,
+    SequenceMiniBatchPositivesTargetsNegativesSampler
 )
 from recpack.data.matrix import to_binary
 
@@ -16,7 +17,7 @@ from recpack.data.matrix import to_binary
 def test_sequence_mini_batch_sampling(matrix_sessions, U, batch_size):
     pad_token = matrix_sessions.shape[1] + 1
 
-    sampler = SequenceMiniBatchSampler(U, pad_token, batch_size=batch_size)
+    sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(U, pad_token, batch_size=batch_size)
 
     total_interactions = 0
     total_users = 0

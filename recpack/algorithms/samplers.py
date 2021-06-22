@@ -144,7 +144,7 @@ class PositiveNegativeSampler(Sampler):
         negative_sample_probabilities = self._get_distribution(X)
 
         for start in range(0, sample_size, self.batch_size):
-            sample_batch = samples[start : start + self.batch_size]
+            sample_batch = samples[start: start + self.batch_size]
 
             batch = positives[sample_batch]
             users = batch[:, 0]
@@ -276,6 +276,57 @@ class WarpSampler(PositiveNegativeSampler):
 
 
 class SequenceMiniBatchSampler(Sampler):
+    """Samples batches of user, input sequences.
+
+    Handles sequences of unequal length by padding them with `pad_token`.
+
+    :param pad_token: Token used to indicate that this location in the sequence
+        contains a padding element.
+    :type pad_token: int
+    :param batch_size: The number of sequences returned per batch, defaults to 100
+    :type batch_size: int, optional
+    """
+
+    def __init__(self, pad_token: int, batch_size: int = 100) -> None:
+        super().__init__()
+        self.pad_token = pad_token
+        self.batch_size = batch_size
+
+    def sample(
+        self, X: InteractionMatrix
+    ) -> Iterator[
+        Tuple[torch.LongTensor, torch.LongTensor]
+    ]:
+        item_histories = list(X.sorted_item_history)
+        # Do I introduce bias if I sort them by length?
+        item_histories.sort(key=lambda x: len(x[1]), reverse=True)
+
+        # Generate batches of users. Take maximum len of history in batch
+        for batch in get_batches(item_histories, self.batch_size):
+            # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.
+            max_hist_len = len(batch[0][1])
+            batch_size = len(batch)
+
+            uid_batch = np.zeros((batch_size,), dtype=int)
+
+            # Initialize seq_batch with self.pad_token
+            positives_batch = (
+                np.ones((batch_size, max_hist_len), dtype=int) * self.pad_token
+            )
+
+            # Add sequences in batch
+            for batch_ix, (uid, hist) in enumerate(batch):
+                hist_len = hist.shape[0]
+                positives_batch[batch_ix, :hist_len] = hist
+                uid_batch[batch_ix] = uid
+
+            yield (
+                torch.LongTensor(uid_batch),
+                torch.LongTensor(positives_batch)
+            )
+
+
+class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler):
     """Samples `U` negatives for every positive in a sequence.
 
     This approach allows to learn multiple times from the same positive interactions.
@@ -296,50 +347,33 @@ class SequenceMiniBatchSampler(Sampler):
     """
 
     def __init__(self, U: int, pad_token: int, batch_size: int = 100) -> None:
-        super().__init__()
+        super().__init__(pad_token, batch_size)
         self.U = U
-        self.pad_token = pad_token
-        self.batch_size = batch_size
 
     def sample(
         self, X: InteractionMatrix
     ) -> Iterator[
-        Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]
+        Tuple[torch.LongTensor, torch.LongTensor,
+              torch.LongTensor, torch.LongTensor]
     ]:
-        item_histories = list(X.sorted_item_history)
-        # Do I introduce bias if I sort them by length?
-        item_histories.sort(key=lambda x: len(x[1]), reverse=True)
 
         num_items = X.shape[1]
 
         # Generate batches of users. Take maximum len of history in batch
-        for batch in get_batches(item_histories, self.batch_size):
-            # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.
-            max_hist_len = len(batch[0][1])
-            batch_size = len(batch)
-
-            uid_batch = np.zeros((batch_size,), dtype=int)
-
-            # Initialize seq_batch with self.pad_token
-            positives_batch = (
-                np.ones((batch_size, max_hist_len), dtype=int) * self.pad_token
-            )
+        for uid_batch, positives_batch in super().sample(X):
 
             negatives_batch = np.random.randint(
-                0, num_items, (batch_size, max_hist_len, self.U)
+                0, num_items, (*positives_batch.shape, self.U)
             )
 
-            targets_batch = positives_batch.copy()
+            targets_batch = positives_batch.numpy().copy()
 
-            # Add sequences in batch
-            for batch_ix, (uid, hist) in enumerate(batch):
-                hist_len = hist.shape[0]
-                positives_batch[batch_ix, :hist_len] = hist
-                uid_batch[batch_ix] = uid
-                targets_batch[batch_ix] = np.roll(positives_batch[batch_ix], -1)
-                # set last item to padding, otherwise 1st item is rolled till here
-                targets_batch[batch_ix, -1] = self.pad_token
+            targets_batch = np.roll(
+                positives_batch, -1, axis=1)
+            # set last item to padding, otherwise 1st item is rolled till here
+            targets_batch[:, -1] = self.pad_token
 
+            for batch_ix in range(0, positives_batch.shape[0]):
                 negatives_col = negatives_batch[batch_ix]
 
                 while True:
@@ -362,8 +396,8 @@ class SequenceMiniBatchSampler(Sampler):
                 negatives_batch[batch_ix] = negatives_col
 
             yield (
-                torch.LongTensor(uid_batch),
-                torch.LongTensor(positives_batch),
+                uid_batch,
+                positives_batch,
                 torch.LongTensor(targets_batch),
                 torch.LongTensor(negatives_batch),
             )

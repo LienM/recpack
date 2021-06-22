@@ -5,7 +5,6 @@ from typing import Tuple, List
 import numpy as np
 from scipy.sparse.lil import lil_matrix
 import torch
-from torch.functional import split
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
@@ -13,12 +12,11 @@ from tqdm import tqdm
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import (bpr_loss, bpr_max_loss,
                                                top1_loss, top1_max_loss)
-from recpack.algorithms.samplers import SequenceMiniBatchSampler
+from recpack.algorithms.samplers import SequenceMiniBatchPositivesTargetsNegativesSampler, SequenceMiniBatchSampler
 from recpack.data.matrix import InteractionMatrix
 
 
 logger = logging.getLogger("recpack")
-ITEM_IX = InteractionMatrix.ITEM_IX
 
 
 class GRU4Rec(TorchMLAlgorithm):
@@ -58,7 +56,7 @@ class GRU4Rec(TorchMLAlgorithm):
     :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout.
     :param loss_fn: Loss function. One of "cross-entropy", "top1", "top1-max", "bpr",
         "bpr-max"
-    :param sample_size: Number of negative samples used for bpr, bpr-max, top1, top1-max
+    :param U: Number of negative samples used for bpr, bpr-max, top1, top1-max
         loss calculation. This number includes samples from the same minibatch.
     :param alpha: Sampling weight parameter, 0 is uniform, 1 is popularity-based
     :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad"
@@ -78,7 +76,7 @@ class GRU4Rec(TorchMLAlgorithm):
         embedding_size: int = 250,
         dropout: float = 0.0,
         loss_fn: str = "bpr",
-        sample_size: int = 5000,
+        U: int = 5000,
         alpha: float = 0.5,
         optimization_algorithm: str = "adagrad",
         batch_size: int = 512,
@@ -109,7 +107,7 @@ class GRU4Rec(TorchMLAlgorithm):
         self.embedding_size = embedding_size
         self.dropout = dropout
         self.loss_fn = loss_fn
-        self.sample_size = sample_size
+        self.U = U
         self.alpha = alpha
         self.optimization_algorithm = optimization_algorithm
         self.momentum = momentum
@@ -150,10 +148,14 @@ class GRU4Rec(TorchMLAlgorithm):
             self.optimizer = optim.Adagrad(
                 self.model_.parameters(), lr=self.learning_rate)
 
-        self.sampler = SequenceMiniBatchSampler(
-            self.sample_size,
+        self.predict_sampler = SequenceMiniBatchSampler(
             self.pad_token,
-            self.batch_size)
+            batch_size=self.batch_size)
+
+        self.fit_sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(
+            self.U,
+            self.pad_token,
+            batch_size=self.batch_size)
 
     def _transform_fit_input(self, X: InteractionMatrix, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
         """Transform the input matrices of the training function to the expected types
@@ -179,8 +181,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
         losses = []
 
-        # TODO Create two samplers. A simple and then this one. 
-        for _, positives_batch, targets_batch, negatives_batch in self.sampler.sample(X):
+        for _, positives_batch, targets_batch, negatives_batch in self.fit_sampler.sample(X):
 
             batch_loss = 0
             true_batch_size = positives_batch.shape[0]
@@ -214,7 +215,7 @@ class GRU4Rec(TorchMLAlgorithm):
                     batch_loss += loss.item()
                     loss.backward()
                     self.optimizer.step()
-                
+
                 hidden = hidden.detach()
 
             losses.append(batch_loss)
@@ -241,7 +242,6 @@ class GRU4Rec(TorchMLAlgorithm):
             true_batch_size*max_hist_len, -1)
         negative_scores_flat = negative_scores.view(
             true_batch_size*max_hist_len, -1, negative_scores.shape[2])
-        
 
         return self._criterion(positive_scores_flat, negative_scores_flat)
 
@@ -257,7 +257,7 @@ class GRU4Rec(TorchMLAlgorithm):
     def _predict(self, X: InteractionMatrix):
         X_pred = lil_matrix(X.shape)
 
-        for uid_batch, positives_batch, _, _ in self.sampler.sample(X):
+        for uid_batch, positives_batch in self.predict_sampler.sample(X):
             batch_size = positives_batch.shape[0]
             hidden = self.model_.init_hidden(batch_size)
             output, hidden = self.model_(positives_batch, hidden)
