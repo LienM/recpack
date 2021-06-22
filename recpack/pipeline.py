@@ -4,21 +4,17 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 import datetime
 import os
-from typing import Tuple, Union, Dict, Any
+from typing import Tuple, Union, Dict, Any, List
 import yaml
 
 import numpy as np
 
-# import scipy.sparse
 from sklearn.model_selection import ParameterGrid
 from tqdm.auto import tqdm
 
 import recpack.algorithms
 
-# from recpack.metrics import METRICS
 from recpack.data.matrix import Matrix, InteractionMatrix
-
-# from recpack.splitters.splitter_base import FoldIterator
 
 logger = logging.getLogger("recpack")
 
@@ -135,42 +131,57 @@ class AlgorithmEntry:
 
 
 class Pipeline(object):
+    """Performs all steps in order and holds on to results.
+
+    Pipeline is run per algorithm.
+    First grid parameters are optimised by training on train_data and
+    evaluation on validation_data.
+    Next the model with optimised parameters is retrained
+    on the combination of train_data and validation_data.
+    Predictions are then generated with test_in as input and evaluated on test_out.
+
+    Results can be accessed via the :meth:`get` method.
+
+    :param algorithms: List of algorithms to evaluate in this pipeline.
+    :type algorithms: List[AlgorithmEntry]
+    :param metric_names: List of Metric entries to evaluate each algorithm on.
+    :type metric_names: List[MetricEntry]
+    :param train_data: The data to train models on.
+    :type train_data: InteractionMatrix
+    :param validation_data: The data to use for optimising parameters,
+        can be None only if none of the algorithms require optimisation.
+    :type validation_data: Union[Tuple[InteractionMatrix, InteractionMatrix], None]
+    :param test_data: The data to perform evaluation, as (`test_in`, `test_out`) tuple.
+    :type: Tuple[InteractionMatrix, InteractionMatrix]
+    :param optimisation_metric: The metric to optimise each algorithm on.
+    """
+
     def __init__(
         self,
-        algorithms,
-        metrics,
-        train_data,
-        validation_data,
-        test_data,
-        optimisation_metric,
+        algorithms: List[AlgorithmEntry],
+        metrics: List[MetricEntry],
+        train_data: InteractionMatrix,
+        validation_data: Union[Tuple[InteractionMatrix, InteractionMatrix], None],
+        test_data: Tuple[InteractionMatrix, InteractionMatrix],
+        optimisation_metric: Union[OptimisationMetricEntry, None],
     ):
-        """
-        Performs all steps in order and holds on to results.
-
-        :param algorithms: List of algorithms to evaluate in this pipeline
-        :type algorithms: `list(recpack.algorithms.Model)`
-
-        :param metric_names: The names of metrics to compute in this pipeline.
-                            Allowed values can be found in :ref:`recpack.metrics`
-        :type metric_names: `list(string)`
-
-        :param K_values: The K values for each of the metrics
-        :type K_values: `list(int)`
-        """
         self.algorithms = algorithms
         self.metrics = metrics
         self.train_data = train_data
         self.validation_data = validation_data
         self.test_data = test_data
         self.optimisation_metric = optimisation_metric
+
         self.metric_registry = MetricAccumulator()
 
     def _optimise(self, algorithm, metric_entry: OptimisationMetricEntry):
         # TODO: investigate using advanced optimisers
-        # Construct grid:
-        results = []
+
         if len(algorithm.grid) == 0:
             return algorithm.params
+
+        results = []
+        # Construct grid:
         optimisation_params = ParameterGrid(algorithm.grid)
         for p in optimisation_params:
             algo = ALGORITHM_REGISTRY.get(algorithm.name)(**p, **algorithm.params)
@@ -202,26 +213,14 @@ class Pipeline(object):
         return optimal_params
 
     def run(self):
-        """
-        Runs the pipeline.
+        """Runs the pipeline."""
 
-        This will use the different components in the pipeline to:
-        1. Train models
-        2. Evaluate models
-        3. return metrics
-
-        :param train_data: Training data. If given a tuple the second matrix will
-                           be used as targets.
-        :param test_data: Test data, (in, out) tuple.
-        :param validation_data: Validation data, (in, out) tuple. Optional.
-        """
-        # optimisation phase:
         for algorithm in tqdm(self.algorithms):
+            # optimisation:
             optimal_params = self._optimise(algorithm, self.optimisation_metric)
 
             # Train again.
             algo = ALGORITHM_REGISTRY.get(algorithm.name)(**optimal_params)
-            # algo.fit(union(self.train_data, self.validation_data))
             if isinstance(algo, recpack.algorithms.base.TorchMLAlgorithm):
                 # TODO: Optimise this retraining step, by returning trained model?
                 algo.fit(self.train_data, self.validation_data)
@@ -238,7 +237,7 @@ class Pipeline(object):
             test_in, test_out = self.test_data
             recommendations = algo.predict(test_in)
             for metric in self.metrics:
-                m = getattr(recpack.metrics, metric.name)(metric.K)
+                m = METRIC_REGISTRY.get(metric.name)(K=metric.K)
                 m.calculate(test_out.binary_values, recommendations)
 
                 self.metric_registry.register(m, algo.identifier, m.name)
@@ -251,6 +250,20 @@ class Pipeline(object):
 
 
 class PipelineBuilder(object):
+    """Builder to facilitate construction of pipelines.
+
+    The builder contains functions to set specific values for the pipeline.
+    Save and Load make it possible to easily recreate pipelines.
+
+    :param name: The name of the pipeline,
+        the filename the pipeline is saved to is based on this name.
+        If no name is specified, the timestamp of creation is used.
+    :type name: string
+    :param path: The path to store pipeline in,
+        defaults to the current working directory.
+    :type path: str
+    """
+
     # TODO: input validation of metrics / algorithms / data
     def __init__(self, name=None, path=os.getcwd()):
 
@@ -268,15 +281,16 @@ class PipelineBuilder(object):
         self.test_data = None
         self.optimisation_metric = None
 
-    def add_metric(self, metric: str, K):
+    def add_metric(self, metric: Union[str, type], K: Union[List, int]):
         """Register a metric to evaluate
 
-        :param metric: [description]
-        :type metric: [type]
-        :param K: [description]
-        :type K: [type]
-        :return: [description]
-        :rtype: [type]
+        :param metric: Metric name or type.
+        :type metric: Union[str, type]
+        :param K: The K value(s) used to construct metrics.
+            If it is a list, for each value a metric is added.
+        :type K: Union[List, int]
+        :raises ValueError: If metric can't be resolved to a key
+            in the `METRIC_REGISTRY`.
         """
 
         # Make it so it's possible to add metrics by their class as well.
@@ -295,15 +309,22 @@ class PipelineBuilder(object):
         else:
             self.metrics.append(MetricEntry(metric, K))
 
-    def add_algorithm(self, algorithm, grid={}, params={}):
-        """Register an algorithm to run.
+    def add_algorithm(
+        self, algorithm: Union[str, type], grid: Dict = {}, params: Dict = {}
+    ):
+        """Add an algorithm to run.
 
-        :param algorithm: [description]
-        :type algorithm: [type]
-        :param grid: [description], defaults to {}
+        Parameters in grid will be optimised during running of pipeline.
+
+        :param algorithm: Algorithm name or algorithm type.
+        :type algorithm: Union[str, type]
+        :param grid: Parameters to optimise, and the values to use in grid search,
+            defaults to {}
         :type grid: dict, optional
-        :param params: [description], defaults to {}
+        :param params: The key-values that are set fixed for running, defaults to {}
         :type params: dict, optional
+        :raises ValueError: If algorithm can't be resolved to a key
+            in the `ALGORITHM_REGISTRY`.
         """
         if type(algorithm) == type:
             algorithm = algorithm.__name__
@@ -318,10 +339,23 @@ class PipelineBuilder(object):
 
         if type(algorithm) != str:
             raise ValueError("algorithm name should be string!")
-            # TODO: Accept strings and class names?
         self.algorithms.append(AlgorithmEntry(algorithm, grid, params))
 
-    def set_optimisation_metric(self, metric, K, minimise=False):
+    def set_optimisation_metric(self, metric: Union[str, type], K: int, minimise=False):
+        """Set the metric for optimisation of parameters in algorithms.
+
+        If the metric is not implemented by default in recpack,
+        you should register it in the `METRIC_REGISTRY`
+
+        :param metric: metric name or metric type
+        :type metric: Union[str, type]
+        :param K: The K value for the metric
+        :type K: int
+        :param minimise: If True minimal value for metric is better, defaults to False
+        :type minimise: bool, optional
+        :raises ValueError: If metric can't be resolved to a key
+            in the `METRIC_REGISTRY`.
+        """
         # Make it so it's possible to add metrics by their class as well.
         if type(metric) == type:
             metric = metric.__name__
@@ -334,19 +368,41 @@ class PipelineBuilder(object):
 
         self.optimisation_metric = OptimisationMetricEntry(metric, K, minimise)
 
-    def set_train_data(self, train_data: Matrix):
+    def set_train_data(self, train_data: InteractionMatrix):
+        """Set the training dataset.
+
+        :param train_data: The interaction matrix to use during training.
+        :type train_data: InteractionMatrix
+        """
         self.train_data = train_data
 
     def set_validation_data(self, validation_data: Matrix):
+        """Set the validation data sets.
+
+        Validation data should be a tuple of InteractionMatrices.
+
+        :param validation_data: The tuple of validation data,
+            as (validation_in, validation_out) tuple.
+        :type validation_data: Tuple[InteractionMatrix, InteractionMatrix]
+        :raises ValueError: If tuple does not contain two InteractionMatrices.
+        """
         if not len(validation_data) == 2:
-            raise RuntimeError(
+            raise ValueError(
                 "Incorrect value, expected tuple with data_in and data_out"
             )
         self.validation_data = validation_data
 
-    def set_test_data(self, test_data: Matrix):
+    def set_test_data(self, test_data: Tuple[InteractionMatrix, InteractionMatrix]):
+        """Set the test data sets.
+
+        Test data should be a tuple of InteractionMatrices.
+
+        :param test_data: The tuple of test data, as (test_in, test_out) tuple.
+        :type test_data: Tuple[InteractionMatrix, InteractionMatrix]
+        :raises ValueError: If tuple does not contain two InteractionMatrices.
+        """
         if not len(test_data) == 2:
-            raise RuntimeError(
+            raise ValueError(
                 "Incorrect value, expected tuple with data_in and data_out"
             )
 
@@ -499,11 +555,7 @@ class PipelineBuilder(object):
             self.validation_data[1].save(self._validation_out_file_path)
 
     def save(self):
-        """Save the pipeline settings to file
-
-        :return: [description]
-        :rtype: [type]
-        """
+        """Save the pipeline settings to file"""
         self._check_readiness()
 
         # Make sure folder exists

@@ -173,7 +173,7 @@ def test_pipeline_builder_bad_test_data(mat):
         pb.set_test_data(None)
     with pytest.raises(TypeError) as error:
         pb.set_test_data(mat)
-    with pytest.raises(RuntimeError) as error:
+    with pytest.raises(ValueError) as error:
         pb.set_test_data((mat,))
 
     assert (
@@ -189,7 +189,7 @@ def test_pipeline_builder_bad_validation_data(mat):
         pb.set_validation_data(None)
     with pytest.raises(TypeError) as error:
         pb.set_validation_data(mat)
-    with pytest.raises(RuntimeError) as error:
+    with pytest.raises(ValueError) as error:
         pb.set_validation_data((mat,))
 
     assert (
