@@ -170,7 +170,7 @@ class InteractionMatrix(DataMatrix):
         """
         df = pd.read_csv(f"{path}.csv")
 
-        with open(f"{path}_metadata.yaml", "r") as f:
+        with open(f"{path}_properties.yaml", "r") as f:
             metadata = cls.InteractionMatrixProperties(**yaml.safe_load(f))
 
         timestamp_ix = cls.TIMESTAMP_IX if metadata.has_timestamps else None

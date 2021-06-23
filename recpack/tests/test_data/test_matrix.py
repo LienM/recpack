@@ -450,12 +450,14 @@ def test_save(larger_mat):
         with patch(open_name, mocker):
             larger_mat.save("test_data")
 
-    mocker.assert_called_once_with("test_data_metadata.yaml", "w")
+    mocker.assert_called_once_with("test_data_properties.yaml", "w")
 
     handle = mocker()
     # handle.call
     assert handle.write.call_count == 1
-    handle.write.assert_called_once_with(yaml.safe_dump(larger_mat.metadata.to_dict()))
+    handle.write.assert_called_once_with(
+        yaml.safe_dump(larger_mat.properties.to_dict())
+    )
 
     assert mocker2.call_count == 1
     mocker2.assert_called_once_with("test_data.csv", header=True, index=False)
@@ -467,11 +469,11 @@ def test_load(larger_mat):
     with patch("recpack.data.matrix.pd.read_csv", mocker2):
         with patch(
             "recpack.data.matrix.open",
-            mock_open(read_data=yaml.safe_dump(larger_mat.metadata.to_dict())),
+            mock_open(read_data=yaml.safe_dump(larger_mat.properties.to_dict())),
         ) as mocker:
             im = InteractionMatrix.load("test_data")
 
-    mocker.assert_called_once_with("test_data_metadata.yaml", "r")
+    mocker.assert_called_once_with("test_data_properties.yaml", "r")
 
     assert mocker2.call_count == 1
     mocker2.assert_called_once_with("test_data.csv")
