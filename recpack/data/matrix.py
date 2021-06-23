@@ -19,16 +19,6 @@ class DataMatrix:
     """Base class for representing data"""
 
 
-@dataclass
-class InteractionMatrixMetadata:
-    num_users: int
-    num_items: int
-    has_timestamps: bool
-
-    def to_dict(self):
-        return asdict(self)
-
-
 class InteractionMatrix(DataMatrix):
     """
     Stores information about interactions between users and items.
@@ -54,6 +44,15 @@ class InteractionMatrix(DataMatrix):
     USER_IX = "uid"
     TIMESTAMP_IX = "ts"
     INTERACTION_IX = "interactionid"
+
+    @dataclass
+    class InteractionMatrixProperties:
+        num_users: int
+        num_items: int
+        has_timestamps: bool
+
+        def to_dict(self):
+            return asdict(self)
 
     def __init__(
         self,
@@ -135,38 +134,44 @@ class InteractionMatrix(DataMatrix):
         return self.union(other)
 
     @property
-    def metadata(self) -> InteractionMatrixMetadata:
+    def properties(self) -> "InteractionMatrixProperties":
         # TODO: hope that the cast to int does not cause issues
-        return InteractionMatrixMetadata(
+        return self.InteractionMatrixProperties(
             num_users=int(self.shape[0]),
             num_items=int(self.shape[1]),
             has_timestamps=self.has_timestamps,
         )
 
-    def save(self, path) -> None:
-        """Save the interaction matrix to file
+    def save(self, path: str) -> None:
+        """Save the interaction matrix to files.
 
-        :param path: NO EXTENSION!
-        :type path: [type]
+        Creates two files one at `{path}.csv` with the raw dataframe,
+        and a second at `{path}_properties.yaml` which contains the properties
+        of the interaction matrix.
+
+        :param path: The prefix of the files to save, should end in the filename,
+            but without extension (no .csv or such).
+        :type path: str
         """
         # Save dataframe to .csv
         self._df.to_csv(f"{path}.csv", header=True, index=False)
 
-        # Write metadata to metadata file.
-        with open(f"{path}_metadata.yaml", "w") as f:
-            f.write(yaml.safe_dump(self.metadata.to_dict()))
+        # Write properties to properties file.
+        with open(f"{path}_properties.yaml", "w") as f:
+            f.write(yaml.safe_dump(self.properties.to_dict()))
 
     @classmethod
     def load(cls, path) -> "InteractionMatrix":
         """Create a new interaction matrix instance from saved file.
 
-        :param path: NO EXTENSION!
-        :type path: [type]
+        :param path: The prefix of the files to load, should end in the filename,
+            but without extension (no .csv or such).
+        :type path: str
         """
         df = pd.read_csv(f"{path}.csv")
 
         with open(f"{path}_metadata.yaml", "r") as f:
-            metadata = InteractionMatrixMetadata(**yaml.safe_load(f))
+            metadata = cls.InteractionMatrixProperties(**yaml.safe_load(f))
 
         timestamp_ix = cls.TIMESTAMP_IX if metadata.has_timestamps else None
         return InteractionMatrix(

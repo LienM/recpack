@@ -84,7 +84,7 @@ class MetricAccumulator:
         return results
 
     @property
-    def number_of_users_evaluated(self):
+    def num_users(self):
         results = defaultdict(dict)
         for key in self.registry:
             for k in self.registry[key]:
@@ -136,7 +136,8 @@ class Pipeline(object):
     Pipeline is run per algorithm.
     First grid parameters are optimised by training on train_data and
     evaluation on validation_data.
-    Next the model with optimised parameters is retrained
+    Next, unless the model requires validation data,
+    the model with optimised parameters is retrained
     on the combination of train_data and validation_data.
     Predictions are then generated with test_in as input and evaluated on test_out.
 
@@ -172,7 +173,7 @@ class Pipeline(object):
         self.test_data = test_data
         self.optimisation_metric = optimisation_metric
 
-        self.metric_registry = MetricAccumulator()
+        self._results = MetricAccumulator()
 
     def _optimise(self, algorithm, metric_entry: OptimisationMetricEntry):
         # TODO: investigate using advanced optimisers
@@ -240,13 +241,13 @@ class Pipeline(object):
                 m = METRIC_REGISTRY.get(metric.name)(K=metric.K)
                 m.calculate(test_out.binary_values, recommendations)
 
-                self.metric_registry.register(m, algo.identifier, m.name)
+                self._results.register(m, algo.identifier, m.name)
 
-    def get(self):
-        return self.metric_registry.metrics
+    def get_metrics(self):
+        return self._results.metrics
 
-    def get_number_of_users_evaluated(self):
-        return self.metric_registry.number_of_users_evaluated
+    def get_num_users(self):
+        return self._results.num_users
 
 
 class PipelineBuilder(object):
@@ -296,12 +297,11 @@ class PipelineBuilder(object):
         # Make it so it's possible to add metrics by their class as well.
         if type(metric) == type:
             metric = metric.__name__
-
-        if type(metric) != str:
-            raise ValueError(f"metric should be string or type, not {type(metric)}!")
+        elif type(metric) != str:
+            raise TypeError(f"mMtric should be string or type, not {type(metric)}!")
 
         if metric not in METRIC_REGISTRY:
-            raise ValueError(f"metric {metric} could not be resolved.")
+            raise ValueError(f"Metric {metric} could not be resolved.")
 
         if isinstance(K, Iterable):
             for k in K:
@@ -329,16 +329,14 @@ class PipelineBuilder(object):
         if type(algorithm) == type:
             algorithm = algorithm.__name__
 
-        if type(algorithm) != str:
-            raise ValueError(
-                f"algorithm should be string or type, not {type(algorithm)}!"
+        elif type(algorithm) != str:
+            raise TypeError(
+                f"Algorithm should be string or type, not {type(algorithm)}!"
             )
 
         if algorithm not in ALGORITHM_REGISTRY:
-            raise ValueError(f"algorithm {algorithm} could not be resolved.")
+            raise ValueError(f"Algorithm {algorithm} could not be resolved.")
 
-        if type(algorithm) != str:
-            raise ValueError("algorithm name should be string!")
         self.algorithms.append(AlgorithmEntry(algorithm, grid, params))
 
     def set_optimisation_metric(self, metric: Union[str, type], K: int, minimise=False):
@@ -360,8 +358,8 @@ class PipelineBuilder(object):
         if type(metric) == type:
             metric = metric.__name__
 
-        if type(metric) != str:
-            raise ValueError(f"metric should be string or type, not {type(metric)}!")
+        elif type(metric) != str:
+            raise ValueError(f"Metric should be string or type, not {type(metric)}!")
 
         if metric not in METRIC_REGISTRY:
             raise ValueError(f"metric {metric} could not be resolved.")
@@ -377,7 +375,7 @@ class PipelineBuilder(object):
         self.train_data = train_data
 
     def set_validation_data(self, validation_data: Matrix):
-        """Set the validation data sets.
+        """Set the validation datasets.
 
         Validation data should be a tuple of InteractionMatrices.
 
@@ -393,7 +391,7 @@ class PipelineBuilder(object):
         self.validation_data = validation_data
 
     def set_test_data(self, test_data: Tuple[InteractionMatrix, InteractionMatrix]):
-        """Set the test data sets.
+        """Set the test datasets.
 
         Test data should be a tuple of InteractionMatrices.
 
@@ -421,7 +419,10 @@ class PipelineBuilder(object):
         if self.optimisation_metric is None and np.any(
             [len(algo.grid) > 0 for algo in self.algorithms]
         ):
-            raise RuntimeError("No optimisation metric selected")
+            raise RuntimeError(
+                "No optimisation metric selected to perform requested hyperparameter optimisation,"
+                "can't construct pipeline."
+            )
 
         # Check availability of data
         if self.train_data is None:
@@ -436,7 +437,8 @@ class PipelineBuilder(object):
             [len(algo.grid) > 0 for algo in self.algorithms]
         ):
             raise RuntimeError(
-                "No validation data available, can't construct pipeline."
+                "No validation data available to perform the requested hyper parameter optimisation"
+                ", can't construct pipeline."
             )
 
         # Validate shape is correct

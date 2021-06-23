@@ -67,7 +67,10 @@ def test_pipeline_builder(mat):
 
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert error.value.args[0] == "No optimisation metric selected"
+    assert error.value.args[0] == (
+        "No optimisation metric selected to perform requested hyperparameter optimisation,"
+        "can't construct pipeline."
+    )
 
     pb.set_optimisation_metric("CalibratedRecallK", 20)
 
@@ -94,7 +97,9 @@ def test_pipeline_builder(mat):
         pb.build()
 
     assert (
-        error.value.args[0] == "No validation data available, can't construct pipeline."
+        error.value.args[0]
+        == "No validation data available to perform the requested hyper parameter optimisation"
+        ", can't construct pipeline."
     )
 
     pb.set_validation_data((mat, mat))
@@ -239,15 +244,15 @@ def test_save(pipeline_builder, mat):
     assert mocker2.call_count == 3
 
     assert mocker2.call_args_list[0].args == (
-        f"{pipeline_builder.path}/{pipeline_builder.name}/train_metadata.yaml",
+        f"{pipeline_builder.path}/{pipeline_builder.name}/train_properties.yaml",
         "w",
     )
     assert mocker2.call_args_list[1].args == (
-        f"{pipeline_builder.path}/{pipeline_builder.name}/test_in_metadata.yaml",
+        f"{pipeline_builder.path}/{pipeline_builder.name}/test_in_properties.yaml",
         "w",
     )
     assert mocker2.call_args_list[2].args == (
-        f"{pipeline_builder.path}/{pipeline_builder.name}/test_out_metadata.yaml",
+        f"{pipeline_builder.path}/{pipeline_builder.name}/test_out_properties.yaml",
         "w",
     )
 
@@ -267,7 +272,7 @@ def test_load(pipeline_builder, mat):
     mocker = mock_open(
         read_data=yaml.safe_dump(pipeline_builder._construct_config_dict())
     )
-    mocker2 = mock_open(read_data=yaml.safe_dump(mat.metadata.to_dict()))
+    mocker2 = mock_open(read_data=yaml.safe_dump(mat.properties.to_dict()))
     mocker3 = MagicMock(return_value=mat._df)
 
     pb2 = recpack.pipeline.PipelineBuilder(
@@ -297,7 +302,7 @@ def test_pipeline(pipeline_builder):
 
     pipeline.run()
 
-    metrics = pipeline.get()
+    metrics = pipeline.get_metrics()
     assert len(metrics) == len(pipeline.algorithms)
 
     assert len(metrics[list(metrics.keys())[0]]) == len(pipeline.metrics)
