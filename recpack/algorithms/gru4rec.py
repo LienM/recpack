@@ -239,14 +239,15 @@ class GRU4Rec(TorchMLAlgorithm):
             for input_chunk, target_chunk, neg_chunk in self._chunk(
                 positives_batch, targets_batch, negatives_batch
             ):
-                true_input_mask = input_chunk != self.pad_token
+                input_mask = input_chunk != self.pad_token
                 # Remove rows with only pad tokens from chunk and from hidden.
                 # We can do this because the array is sorted.
-                true_rows = true_input_mask.any(axis=1)
+                true_rows = input_mask.any(axis=1)
                 true_input_chunk = input_chunk[true_rows]
                 true_target_chunk = target_chunk[true_rows]
                 true_neg_chunk = neg_chunk[true_rows]
                 true_hidden = hidden[:, true_rows, :]
+                true_input_mask = input_mask[true_rows]
 
                 # If there are any values remaining
                 if true_input_chunk.any():
@@ -265,7 +266,8 @@ class GRU4Rec(TorchMLAlgorithm):
 
                     # TODO Remove pad tokens
                     loss = self._compute_loss(
-                        positive_scores.squeeze(-1), negative_scores, true_input_mask
+                        positive_scores.squeeze(
+                            -1), negative_scores, true_input_mask
                     )
 
                     batch_loss += loss.item()
@@ -285,16 +287,20 @@ class GRU4Rec(TorchMLAlgorithm):
         true_input_mask: torch.BoolTensor,
     ) -> torch.Tensor:
 
+        assert true_input_mask.shape == positive_scores.shape
+
         true_batch_size, max_hist_len = positive_scores.shape
 
-        true_input_mask_flat = true_input_mask.view(true_batch_size * max_hist_len, -1)
+        true_input_mask_flat = true_input_mask.view(
+            true_batch_size * max_hist_len)
 
-        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, 1).unsqueeze(-1)
+        positive_scores_flat = positive_scores.view(
+            true_batch_size * max_hist_len, 1)
         negative_scores_flat = negative_scores.view(
-            true_batch_size * max_hist_len, -1, negative_scores.shape[2]
+            true_batch_size * max_hist_len, negative_scores.shape[2]
         )
 
-        return self._criterion(positive_scores_flat, negative_scores_flat)
+        return self._criterion(positive_scores_flat[true_input_mask_flat], negative_scores_flat[true_input_mask_flat])
 
     def _chunk(self, *tensors: torch.LongTensor):
         """Split tensors into chunks of self.bptt width, or max hist len width.
@@ -322,7 +328,8 @@ class GRU4Rec(TorchMLAlgorithm):
             output, hidden = self.model_(positives_batch, hidden)
             # Use only the final prediction
             # Last item is the last non padding token per row.
-            last_item_in_hist = (positives_batch != self.pad_token).sum(axis=1) - 1
+            last_item_in_hist = (
+                positives_batch != self.pad_token).sum(axis=1) - 1
 
             # Item scores is a matrix with the scores for each item
             # based on the last item in the sequence
@@ -371,7 +378,8 @@ class GRU4RecTorch(nn.Module):
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
         # TODO Make this pad_token thing clearer
-        self.emb = nn.Embedding(num_items + 1, embedding_size, padding_idx=pad_token)
+        self.emb = nn.Embedding(
+            num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
             embedding_size,
             hidden_size,
@@ -412,7 +420,8 @@ class GRU4RecTorch(nn.Module):
 
             padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
 
-            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(padded_rnn_x, batch_first=True)
+            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(
+                padded_rnn_x, batch_first=True)
 
         else:
             rnn_x, hidden = self.rnn(emb_x, hidden)

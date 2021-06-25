@@ -108,6 +108,8 @@ def test_skipgram_negative_sampling_loss():
 
     np.testing.assert_almost_equal(loss, expected_loss, decimal=3)
 
+# -------------------- BPR
+
 
 def test_bpr_loss_2d_1dim():
     pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]])
@@ -144,6 +146,8 @@ def test_bpr_loss_2d():
         -(np.log(sigmoid(0.5)) + np.log(sigmoid(0)) + np.log(sigmoid(-0.5))) / 3
     )
     np.testing.assert_almost_equal(loss, expected_loss)
+
+# -------------------- BPR MAX
 
 
 def test_bpr_max_loss_2d_1dim():
@@ -241,6 +245,8 @@ def test_bpr_max_loss_2d():
 
     np.testing.assert_almost_equal(loss, expected_loss)
 
+# ------------------- TOP-1 MAX
+
 
 def test_top1_max_loss_2d_1dim():
     pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]])
@@ -251,9 +257,9 @@ def test_top1_max_loss_2d_1dim():
     s = neg_sim_as_tensor.softmax(dim=0)
 
     expected_loss = (
-        s[0, 0] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
+        s[0, 0] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
         + s[0, 1] * (sigmoid(0) + sigmoid(neg_sim_as_tensor[0, 1] ** 2))
-        + s[0, 2] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 2] ** 2))
+        + s[0, 2] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0, 2] ** 2))
     ) / 3
 
     np.testing.assert_almost_equal(loss, expected_loss)
@@ -266,9 +272,9 @@ def test_top1_max_loss_2d_1dim():
     s = neg_sim_as_tensor.softmax(dim=1)
 
     expected_loss = (
-        s[0, 0] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
+        s[0, 0] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
         + s[1, 0] * (sigmoid(0) + sigmoid(neg_sim_as_tensor[1, 0] ** 2))
-        + s[2, 0] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[2, 0] ** 2))
+        + s[2, 0] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2, 0] ** 2))
     ) / 3
 
     np.testing.assert_almost_equal(loss, expected_loss)
@@ -283,9 +289,9 @@ def test_top1_max_loss_1d():
     s = neg_sim_as_tensor.unsqueeze(-1).softmax(dim=1)
 
     expected_loss = (
-        s[0, 0] * sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0] ** 2)
+        s[0, 0] * sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0] ** 2)
         + s[1, 0] * sigmoid(0) + sigmoid(neg_sim_as_tensor[1] ** 2)
-        + s[2, 0] * sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[2] ** 2)
+        + s[2, 0] * sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2] ** 2)
     ) / 3
 
     np.testing.assert_almost_equal(loss, expected_loss)
@@ -300,30 +306,90 @@ def test_top1_max_loss_2d():
 
     s = neg_sim_as_tensor.softmax(dim=1)
 
+    loss_term1 = (
+        (s[0, 0] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2)))
+        + (s[0, 1] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 1] ** 2)))
+    )
+
+    loss_term2 = (
+        (s[1, 0] * (sigmoid(0) + sigmoid(neg_sim_as_tensor[1, 0] ** 2)))
+        + (s[1, 1] * (sigmoid(0) + sigmoid(neg_sim_as_tensor[1, 1] ** 2)))
+    )
+
+    loss_term3 = (
+        (s[2, 0] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2, 0] ** 2)))
+        + (s[2, 1] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2, 1] ** 2)))
+    )
+
+    expected_loss = (loss_term1 + loss_term2 + loss_term3) / 3
+
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+# ------------------- TOP1
+
+
+def test_top1_loss_2d_1dim():
+    pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]])
+    neg_sim_as_tensor = torch.FloatTensor([[0.1, 0.3, 0.6]])
+
+    loss = top1_loss(pos_sim_as_tensor, neg_sim_as_tensor)
+
     expected_loss = (
-        s[0, 0] * sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0] ** 2)
-        + s[1, 0] * sigmoid(0) + sigmoid(neg_sim_as_tensor[1] ** 2)
-        + s[2, 0] * sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[2] ** 2)
+        (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
+        + (sigmoid(0) + sigmoid(neg_sim_as_tensor[0, 1] ** 2))
+        + (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0, 2] ** 2))
     ) / 3
 
-    norm_penalty0 = ((s[0, 0] * (neg_sim_as_tensor[0, 0] ** 2)) +
-                     ((s[0, 1] * (neg_sim_as_tensor[0, 1] ** 2))))
+    np.testing.assert_almost_equal(loss, expected_loss)
 
-    norm_penalty1 = ((s[1, 0] * (neg_sim_as_tensor[1, 0] ** 2)) +
-                     ((s[1, 1] * (neg_sim_as_tensor[1, 1] ** 2))))
+    pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
+    neg_sim_as_tensor = torch.FloatTensor([[0.1, 0.3, 0.6]]).t()
 
-    norm_penalty2 = ((s[2, 0] * (neg_sim_as_tensor[2, 0] ** 2)) +
-                     ((s[2, 1] * (neg_sim_as_tensor[2, 1] ** 2))))
+    loss = top1_loss(pos_sim_as_tensor, neg_sim_as_tensor)
 
-    # Take the mean across samples
-    norm_penalty = (norm_penalty0 + norm_penalty1 + norm_penalty2) / 3
-
-    # Multiply by 2 because two negatives (with the same value)
     expected_loss = (
-        -(np.log(s[0, 0] * sigmoid(0.5) * 2)
-          + np.log(s[1, 0] * sigmoid(0) * 2)
-          + np.log(s[2, 0] * sigmoid(-0.5) * 2))
-    ) / 3 + norm_penalty
+        (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
+        + (sigmoid(0) + sigmoid(neg_sim_as_tensor[1, 0] ** 2))
+        + (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2, 0] ** 2))
+    ) / 3
+
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+
+def test_top1_loss_1d():
+    pos_sim_as_tensor = torch.FloatTensor([0.6, 0.3, 0.1])
+    neg_sim_as_tensor = torch.FloatTensor([0.1, 0.3, 0.6])
+
+    loss = top1_loss(pos_sim_as_tensor, neg_sim_as_tensor)
+
+    expected_loss = (
+        sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0] ** 2)
+        + sigmoid(0) + sigmoid(neg_sim_as_tensor[1] ** 2)
+        + sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2] ** 2)
+    ) / 3
+
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+
+def test_top1_loss_2d():
+    pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
+    neg_sim_as_tensor = torch.FloatTensor(
+        [[0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]).t()
+
+    loss = top1_loss(pos_sim_as_tensor, neg_sim_as_tensor)
+
+    s = neg_sim_as_tensor.softmax(dim=1)
+
+    expected_loss = (
+        # Negative sample 1, user 1
+        (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
+        # Negative sample 2, user 2
+        + (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 1] ** 2))
+        + (sigmoid(0) + sigmoid(neg_sim_as_tensor[1, 0] ** 2))
+        + (sigmoid(0) + sigmoid(neg_sim_as_tensor[1, 1] ** 2))
+        + (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2, 0] ** 2))
+        + (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[2, 1] ** 2))
+    ) / 6
 
     np.testing.assert_almost_equal(loss, expected_loss)
 

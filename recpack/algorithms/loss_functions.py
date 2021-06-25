@@ -337,7 +337,7 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
     # Mean over all samples
     if negative_scores.ndim == 1:
         negative_scores = negative_scores.unsqueeze(-1)
-    
+
     if positive_scores.ndim == 1:
         positive_scores = positive_scores.unsqueeze(-1)
 
@@ -356,8 +356,7 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
 
 
 def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-    """
-    TOP1 Loss.
+    """TOP1 Loss.
 
     This is a pairwise loss function similar to BPR loss, but with an added score 
     regularization term. It was devised specifically for use with the Session RNN.
@@ -375,14 +374,25 @@ def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> t
     :param sampler: Sampler to draw negative samples from
     :param num_samples: Number of samples to use in loss calculation
     """
+    # Mean over all samples
+    if negative_scores.ndim == 1:
+        negative_scores = negative_scores.unsqueeze(-1)
+
+    if positive_scores.ndim == 1:
+        positive_scores = positive_scores.unsqueeze(-1)
+
+    size = positive_scores.size()
+    if len(size) == 2 and size[0] < size[1]:
+        positive_scores = positive_scores.t()
+        negative_scores = negative_scores.t()
+
     score_diff = torch.sigmoid(negative_scores - positive_scores)
     norm_penalty = torch.sigmoid(negative_scores ** 2)
     return (score_diff + norm_penalty).mean()
 
 
 def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
-    """
-    TOP1 Max Loss.
+    """TOP1 Max Loss.
 
     This is a differentiable approximation to the TOP1 loss between the target item 
     and the negative sample with the highest score. It can be defined as:
@@ -417,7 +427,10 @@ def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) 
         negative_scores = negative_scores.t()
 
     weights = torch.softmax(negative_scores, dim=1)
+
     score_diff = torch.sigmoid(negative_scores - positive_scores)
+
     norm_penalty = torch.sigmoid(negative_scores ** 2)
     loss_terms = (weights * (score_diff + norm_penalty)).sum(dim=1)
+
     return loss_terms.mean()
