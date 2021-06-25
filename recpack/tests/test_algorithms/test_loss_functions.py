@@ -242,24 +242,110 @@ def test_bpr_max_loss_2d():
     np.testing.assert_almost_equal(loss, expected_loss)
 
 
-# def test_bpr_loss_wrapper(X_true, X_pred):
-#     # Tuples are user, pos_item, neg_item
-#     xij_samples = np.array([[0, 1, 0], [0, 2, 0], [1, 0, 2], [1, 1, 2]])
+def test_top1_max_loss_2d_1dim():
+    pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]])
+    neg_sim_as_tensor = torch.FloatTensor([[0.1, 0.3, 0.6]])
 
-#     x = xij_samples[:, 0]
-#     i = xij_samples[:, 1]
-#     j = xij_samples[:, 2]
+    loss = top1_max_loss(pos_sim_as_tensor, neg_sim_as_tensor)
 
-#     pos_samples = X_pred[x, i]
-#     neg_samples = X_pred[x, j]
+    s = neg_sim_as_tensor.softmax(dim=0)
 
-#     expected_loss = bpr_loss(
-#         torch.FloatTensor(pos_samples), torch.FloatTensor(neg_samples)
-#     )
+    expected_loss = (
+        s[0, 0] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
+        + s[0, 1] * (sigmoid(0) + sigmoid(neg_sim_as_tensor[0, 1] ** 2))
+        + s[0, 2] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[0, 2] ** 2))
+    ) / 3
 
-#     # Using more samples than positives this will make the estimate more stable,
-#     # And assert below should match.
-#     loss = bpr_loss_wrapper(X_true, X_pred, batch_size=1,
-#                             sample_size=1000, exact=True)
+    np.testing.assert_almost_equal(loss, expected_loss)
 
-#     np.testing.assert_almost_equal(loss, expected_loss, decimal=2)
+    pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
+    neg_sim_as_tensor = torch.FloatTensor([[0.1, 0.3, 0.6]]).t()
+
+    loss = top1_max_loss(pos_sim_as_tensor, neg_sim_as_tensor)
+
+    s = neg_sim_as_tensor.softmax(dim=1)
+
+    expected_loss = (
+        s[0, 0] * (sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0, 0] ** 2))
+        + s[1, 0] * (sigmoid(0) + sigmoid(neg_sim_as_tensor[1, 0] ** 2))
+        + s[2, 0] * (sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[2, 0] ** 2))
+    ) / 3
+
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+
+def test_top1_max_loss_1d():
+    pos_sim_as_tensor = torch.FloatTensor([0.6, 0.3, 0.1])
+    neg_sim_as_tensor = torch.FloatTensor([0.1, 0.3, 0.6])
+
+    loss = top1_max_loss(pos_sim_as_tensor, neg_sim_as_tensor)
+
+    s = neg_sim_as_tensor.unsqueeze(-1).softmax(dim=1)
+
+    expected_loss = (
+        s[0, 0] * sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0] ** 2)
+        + s[1, 0] * sigmoid(0) + sigmoid(neg_sim_as_tensor[1] ** 2)
+        + s[2, 0] * sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[2] ** 2)
+    ) / 3
+
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+
+def test_top1_max_loss_2d():
+    pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
+    neg_sim_as_tensor = torch.FloatTensor(
+        [[0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]).t()
+
+    loss = top1_max_loss(pos_sim_as_tensor, neg_sim_as_tensor)
+
+    s = neg_sim_as_tensor.softmax(dim=1)
+
+    expected_loss = (
+        s[0, 0] * sigmoid(0.5) + sigmoid(neg_sim_as_tensor[0] ** 2)
+        + s[1, 0] * sigmoid(0) + sigmoid(neg_sim_as_tensor[1] ** 2)
+        + s[2, 0] * sigmoid(-0.5) + sigmoid(neg_sim_as_tensor[2] ** 2)
+    ) / 3
+
+    norm_penalty0 = ((s[0, 0] * (neg_sim_as_tensor[0, 0] ** 2)) +
+                     ((s[0, 1] * (neg_sim_as_tensor[0, 1] ** 2))))
+
+    norm_penalty1 = ((s[1, 0] * (neg_sim_as_tensor[1, 0] ** 2)) +
+                     ((s[1, 1] * (neg_sim_as_tensor[1, 1] ** 2))))
+
+    norm_penalty2 = ((s[2, 0] * (neg_sim_as_tensor[2, 0] ** 2)) +
+                     ((s[2, 1] * (neg_sim_as_tensor[2, 1] ** 2))))
+
+    # Take the mean across samples
+    norm_penalty = (norm_penalty0 + norm_penalty1 + norm_penalty2) / 3
+
+    # Multiply by 2 because two negatives (with the same value)
+    expected_loss = (
+        -(np.log(s[0, 0] * sigmoid(0.5) * 2)
+          + np.log(s[1, 0] * sigmoid(0) * 2)
+          + np.log(s[2, 0] * sigmoid(-0.5) * 2))
+    ) / 3 + norm_penalty
+
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+
+def test_bpr_loss_wrapper(X_true, X_pred):
+    # Tuples are user, pos_item, neg_item
+    xij_samples = np.array([[0, 1, 0], [0, 2, 0], [1, 0, 2], [1, 1, 2]])
+
+    x = xij_samples[:, 0]
+    i = xij_samples[:, 1]
+    j = xij_samples[:, 2]
+
+    pos_samples = X_pred[x, i]
+    neg_samples = X_pred[x, j]
+
+    expected_loss = bpr_loss(
+        torch.FloatTensor(pos_samples), torch.FloatTensor(neg_samples)
+    )
+
+    # Using more samples than positives this will make the estimate more stable,
+    # And assert below should match.
+    loss = bpr_loss_wrapper(X_true, X_pred, batch_size=1,
+                            sample_size=1000, exact=True)
+
+    np.testing.assert_almost_equal(loss, expected_loss, decimal=2)

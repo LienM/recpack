@@ -404,9 +404,20 @@ def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) 
     :param num_samples: Number of samples to use in loss calculation. TOP1-Max loss 
         tends to scale better with sample size than base TOP1.
     """
+    # Mean over all samples
+    if negative_scores.ndim == 1:
+        negative_scores = negative_scores.unsqueeze(-1)
+
+    if positive_scores.ndim == 1:
+        positive_scores = positive_scores.unsqueeze(-1)
+
+    size = positive_scores.size()
+    if len(size) == 2 and size[0] < size[1]:
+        positive_scores = positive_scores.t()
+        negative_scores = negative_scores.t()
+
     weights = torch.softmax(negative_scores, dim=1)
     score_diff = torch.sigmoid(negative_scores - positive_scores)
     norm_penalty = torch.sigmoid(negative_scores ** 2)
-    loss_terms = weights * (score_diff + norm_penalty)
-    # TODO Not sure about this dim in the sum
-    return loss_terms.sum(dim=1).mean()
+    loss_terms = (weights * (score_diff + norm_penalty)).sum(dim=1)
+    return loss_terms.mean()
