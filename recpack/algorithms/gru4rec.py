@@ -401,7 +401,7 @@ class GRU4RecTorch(nn.Module):
         hidden state.
 
         :param input: Action sequences as a Tensor of shape (A, B)
-        :param hidden: Previous hidden state, shape (L, B, H)
+        :param hidden: Previous hidden state, shape (sequence length, batch size, hidden layer size)
         :return: The computed scores for all items at each point in the sequence
                  for every sequence in the batch, as well as the next hidden state.
                  As Tensors of shapes (A*B, I) and (L, B, H) respectively.
