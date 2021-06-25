@@ -17,8 +17,8 @@ def session_rnn():
         batch_size=3,
         embedding_size=5,
         hidden_size=10,
-        sample_size=1,
-        bptt=1,
+        U=3,
+        bptt=2,
         learning_rate=0.1,
     )
     return rnn
