@@ -49,6 +49,7 @@ def larger_mat():
 
     return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
+
 @pytest.fixture(scope="function")
 def small_mat_unigram():
     data = {TIMESTAMP_IX: np.random.randint(0, 10, size=10), ITEM_IX: [0, 0, 0, 0, 0, 1, 2, 3, 4, 5], USER_IX: np.random.randint(0, 10, size=10)}
