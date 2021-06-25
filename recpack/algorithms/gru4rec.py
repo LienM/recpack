@@ -56,6 +56,8 @@ class GRU4Rec(TorchMLAlgorithm):
     For the mathematical details of GRU see "Empirical Evaluation of Gated Recurrent
     Neural Networks on Sequence Modeling" by Chung et al.
 
+    Note: Cross-Entropy loss was mentioned in the paper, but omitted for implementation reasons.
+
     :param num_layers: Number of hidden layers in the RNN. Defaults to 1
     :type num_layers: int, optional
     :param hidden_size: Number of neurons in the hidden layer(s). Defaults to 100
@@ -64,7 +66,7 @@ class GRU4Rec(TorchMLAlgorithm):
     :type embedding_size: int, optional
     :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout
     :type dropout: float
-    :param loss_fn: Loss function. One of "cross-entropy", "top1", "top1-max", "bpr",
+    :param loss_fn: Loss function. One of "top1", "top1-max", "bpr",
         "bpr-max". Defaults to "bpr"
     :type loss_fn: str, optional
     :param U: Number of negative samples used for bpr, bpr-max, top1, top1-max
@@ -145,8 +147,6 @@ class GRU4Rec(TorchMLAlgorithm):
         self.bptt = bptt
 
         self._criterion = {
-            # TODO Fix cross-entropy
-            # "cross-entropy": nn.CrossEntropyLoss(),
             "top1": top1_loss,
             "top1-max": top1_max_loss,
             "bpr": bpr_loss,

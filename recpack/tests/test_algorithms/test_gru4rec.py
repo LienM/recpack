@@ -22,12 +22,12 @@ def session_rnn():
         U=3,
         bptt=2,
         learning_rate=0.1,
+        loss_fn="bpr"
     )
     return rnn
 
 
 def test_session_rnn_compute_loss(session_rnn):
-    session_rnn.loss_fn = "bpr"
 
     pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
     neg_sim_as_tensor = torch.FloatTensor(
@@ -35,7 +35,8 @@ def test_session_rnn_compute_loss(session_rnn):
 
     true_input_mask = torch.BoolTensor([[True, True, True]]).t()
 
-    loss = session_rnn._compute_loss(pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
+    loss = session_rnn._compute_loss(
+        pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
 
     expected_loss = (
         -(np.log(sigmoid(0.5)) + np.log(sigmoid(0)) + np.log(sigmoid(-0.5))) / 3
@@ -45,7 +46,8 @@ def test_session_rnn_compute_loss(session_rnn):
     # Block out the middle element
     true_input_mask = torch.BoolTensor([[True, False, True]]).t()
 
-    loss = session_rnn._compute_loss(pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
+    loss = session_rnn._compute_loss(
+        pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
 
     expected_loss = (
         -(np.log(sigmoid(0.5)) + np.log(sigmoid(-0.5))) / 2

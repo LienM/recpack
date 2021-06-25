@@ -312,8 +312,8 @@ def warp_loss_wrapper(
 def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, reg: float = 1.0) -> torch.Tensor:
     """Bayesian Personalized Ranking Max Loss.
 
-    This is a differentiable approximation to the BPR loss between the target item 
-    and the negative sample with the highest score, with an added regularization 
+    This is a differentiable approximation to the BPR loss between the target item
+    and the negative sample with the highest score, with an added regularization
     term. It can be defined as:
 
     .. math::
@@ -321,18 +321,23 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
         \\lambda \\sum\\limits_{j=1}^{N_S} s_j r_j^2
 
     where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
-    score and :math:`r_j` is the score given to the sampled negative. The BPR loss 
-    between target score and the maximum sampled score is approximated by computing 
-    a softmax distribution over the negative samples and using the softmax values 
+    score and :math:`r_j` is the score given to the sampled negative. The BPR loss
+    between target score and the maximum sampled score is approximated by computing
+    a softmax distribution over the negative samples and using the softmax values
     :math:`s_j` as weights.
 
-    See the 2018 paper "Recurrent Neural Networks with Top-K Gains for Session-based 
-    Recommendations" by Hidasi et al. for the motivation behind these changes to the 
+    See the 2018 paper "Recurrent Neural Networks with Top-K Gains for Session-based
+    Recommendations" by Hidasi et al. for the motivation behind these changes to the
     original BPR loss.
 
-    :param sampler: Sampler to draw negative samples from
-    :param num_samples: Number of samples to use in loss calculation. BPR-Max loss 
-        tends to scale better with sample size than base BPR.
+    :param positive_scores: Output values assigned to positive samples
+    :type positive_scores: torch.Tensor
+    :param negative_scores: Output values assigned to negative samples
+    :type negative_scores: torch.Tensor
+    :param reg: Regularization weight, defaults to 1.0
+    :type reg: float, optional
+    :return: Computed BPR Max Loss
+    :rtype: torch.Tensor
     """
     # Mean over all samples
     if negative_scores.ndim == 1:
@@ -358,7 +363,7 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
 def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
     """TOP1 Loss.
 
-    This is a pairwise loss function similar to BPR loss, but with an added score 
+    This is a pairwise loss function similar to BPR loss, but with an added score
     regularization term. It was devised specifically for use with the Session RNN.
     It can be defined as:
 
@@ -371,8 +376,12 @@ def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> t
     See the 2016 paper "Session-based Recommendations with Recurrent Neural Networks"
     by Hidasi et al. for the motivation behind using it for top-k recommendations.
 
-    :param sampler: Sampler to draw negative samples from
-    :param num_samples: Number of samples to use in loss calculation
+    :param positive_scores: Output values assigned to positive samples
+    :type positive_scores: torch.Tensor
+    :param negative_scores: Output values assigned to negative samples
+    :type negative_scores: torch.Tensor
+    :return: Computed Top-1 Loss
+    :rtype: torch.Tensor
     """
     # Mean over all samples
     if negative_scores.ndim == 1:
@@ -394,25 +403,28 @@ def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> t
 def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
     """TOP1 Max Loss.
 
-    This is a differentiable approximation to the TOP1 loss between the target item 
+    This is a differentiable approximation to the TOP1 loss between the target item
     and the negative sample with the highest score. It can be defined as:
 
     .. math::
         L_{top1-max} = \\sum\\limits_{j=1}^{N_S} s_j\\left(\\sigma(r_j - r_i) + \\sigma(r_j^2)\\right)
 
     where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
-    score and :math:`r_j` is the score given to the sampled negative. The TOP1 loss 
-    between target score and the maximum sampled score is approximated by computing 
-    a softmax distribution over the negative samples and using the softmax values 
+    score and :math:`r_j` is the score given to the sampled negative. The TOP1 loss
+    between target score and the maximum sampled score is approximated by computing
+    a softmax distribution over the negative samples and using the softmax values
     :math:`s_j` as weights.
 
-    See the 2018 paper "Recurrent Neural Networks with Top-K Gains for Session-based 
-    Recommendations" by Hidasi et al. for the motivation behind these changes to the 
+    See the 2018 paper "Recurrent Neural Networks with Top-K Gains for Session-based
+    Recommendations" by Hidasi et al. for the motivation behind these changes to the
     original TOP1 loss.
 
-    :param sampler: Sampler to draw negative samples from
-    :param num_samples: Number of samples to use in loss calculation. TOP1-Max loss 
-        tends to scale better with sample size than base TOP1.
+    :param positive_scores: Output values assigned to positive samples
+    :type positive_scores: torch.Tensor
+    :param negative_scores: Output values assigned to negative samples
+    :type negative_scores: torch.Tensor
+    :return: Computed Top-1 Max Loss
+    :rtype: torch.Tensor
     """
     # Mean over all samples
     if negative_scores.ndim == 1:
