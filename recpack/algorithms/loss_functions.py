@@ -83,7 +83,6 @@ def warp_loss(
     margin: float,
     J: int,
     U: int,
-    mask: torch.Tensor = None
 ) -> torch.Tensor:
     """WARP loss 
 
