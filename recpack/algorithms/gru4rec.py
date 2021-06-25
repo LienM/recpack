@@ -60,42 +60,38 @@ class GRU4Rec(TorchMLAlgorithm):
     :type num_layers: int, optional
     :param hidden_size: Number of neurons in the hidden layer(s). Defaults to 100
     :type hidden_size: int, optional
-    :param embedding_size: Size of item embeddings. If None, no embeddings are used and
-        the input to the network is a one-of-N binary vector. Defaults to 250.
-        TODO: @lien, lower down in the model,
-        it is mentioned that it's impossible to use no embeddings, should we update docstring?
+    :param embedding_size: Size of item embeddings. Defaults to 250
     :type embedding_size: int, optional
-    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout.
+    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout
     :type dropout: float
     :param loss_fn: Loss function. One of "cross-entropy", "top1", "top1-max", "bpr",
         "bpr-max". Defaults to "bpr"
     :type loss_fn: str, optional
     :param U: Number of negative samples used for bpr, bpr-max, top1, top1-max
-        loss calculation. This number includes samples from the same minibatch.
-        Defaults to 5000? TODO: @lien why this high?
+        loss calculation. Sampled uniformly random
     :type U: int, optional
     :param alpha: Sampling weight parameter, 0 is uniform, 1 is popularity-based
-        Defaults to 0.5.
+        Defaults to 0.5
     :type alpha: float, optional
     :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad".
         Defaults to adagrad.
     :type optimization_algorithm: str, optional
-    :param batch_size: Number of examples in a mini-batch.
+    :param batch_size: Number of examples in a mini-batch
         Defaults to 512.
     :type batch_size: int, optional
-    :param learning_rate: Gradient descent initial learning rate.
+    :param learning_rate: Gradient descent initial learning rate
         Defaults to 0.03
     :type learning_rate: float, optional
     :param momentum: Momentum when using the sgd optimizer
         Defaults to 0.0
     :type momentum: float, optional
-    :param clip_norm: Clip the gradient's l2 norm, None for no clipping
+    :param clipnorm: Clip the gradient's l2 norm, None for no clipping
         Defaults to 1.0
-    :type clip_norm: float, optional
+    :type clipnorm: float, optional
     :param seed: Seed for random number generator
         Defaults to 2
     :type seed: int, optional
-    :param bptt: Number of backpropagation through time steps.
+    :param bptt: Number of backpropagation through time steps
         Defaults to 1
     :type bptt: int, optional
     :param max_epochs: Max training runs through entire dataset
@@ -110,13 +106,13 @@ class GRU4Rec(TorchMLAlgorithm):
         embedding_size: int = 250,
         dropout: float = 0.0,
         loss_fn: str = "bpr",
-        U: int = 5000,
+        U: int = 50,
         alpha: float = 0.5,
         optimization_algorithm: str = "adagrad",
         batch_size: int = 512,
         learning_rate: float = 0.03,
         momentum: float = 0.0,
-        clip_norm: float = 1.0,
+        clipnorm: float = 1.0,
         seed: int = 2,
         bptt: int = 1,
         max_epochs: int = 5,
@@ -145,10 +141,11 @@ class GRU4Rec(TorchMLAlgorithm):
         self.alpha = alpha
         self.optimization_algorithm = optimization_algorithm
         self.momentum = momentum
-        self.clip_norm = clip_norm
+        self.clipnorm = clipnorm
         self.bptt = bptt
 
         self._criterion = {
+            # TODO Fix cross-entropy
             # "cross-entropy": nn.CrossEntropyLoss(),
             "top1": top1_loss,
             "top1-max": top1_max_loss,
@@ -197,7 +194,6 @@ class GRU4Rec(TorchMLAlgorithm):
         validation_data: Tuple[InteractionMatrix, InteractionMatrix],
     ):
         """Transform the input matrices of the training function to the expected types
-
 
         :param X: The interactions matrix
         :type X: Matrix
@@ -264,7 +260,6 @@ class GRU4Rec(TorchMLAlgorithm):
                     # negative scores has shape (batch_size x bptt x U)
                     negative_scores = torch.gather(output, 2, true_neg_chunk)
 
-                    # TODO Remove pad tokens
                     loss = self._compute_loss(
                         positive_scores.squeeze(
                             -1), negative_scores, true_input_mask
@@ -272,6 +267,10 @@ class GRU4Rec(TorchMLAlgorithm):
 
                     batch_loss += loss.item()
                     loss.backward()
+                    if self.clipnorm:
+                        nn.utils.clip_grad_norm_(
+                            self.model_.parameters(), self.clipnorm)
+
                     self.optimizer.step()
 
                 hidden = hidden.detach()
@@ -345,17 +344,21 @@ class GRU4Rec(TorchMLAlgorithm):
 
 
 class GRU4RecTorch(nn.Module):
-    """
-    PyTorch definition of a basic recurrent neural network for session-based
+    """PyTorch definition of a basic recurrent neural network for session-based
     recommendations.
 
     :param num_items: Number of items
+    :type num_items: int
     :param hidden_size: Number of neurons in the hidden layer(s)
-    :param num_layers: Number of hidden layers
+    :type hidden_size: int
     :param embedding_size: Size of the item embeddings, None for no embeddings
-    :param dropout: Dropout applied to embeddings and hidden layers
-    :param activation: Final layer activation function, one of "identity", "tanh",
-        "softmax", "relu", "elu-<X>", "leaky-<X>"
+    :type embedding_size: int
+    :param pad_token: Index of the padding_token
+    :type pad_token: int
+    :param num_layers: Number of hidden layers, defaults to 1
+    :type num_layers: int, optional
+    :param dropout: Dropout applied to embeddings and hidden layers, defaults to 0
+    :type dropout: float, optional
     """
 
     def __init__(
@@ -367,7 +370,6 @@ class GRU4RecTorch(nn.Module):
         num_layers: int = 1,
         dropout: float = 0,
     ):
-        # TODO I made it impossible to not use an embedding. Is this OK?
         super().__init__()
         self.input_size = num_items
         self.embedding_size = embedding_size
@@ -377,7 +379,6 @@ class GRU4RecTorch(nn.Module):
         self.drop = nn.Dropout(dropout, inplace=True)
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
-        # TODO Make this pad_token thing clearer
         self.emb = nn.Embedding(
             num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
@@ -433,15 +434,13 @@ class GRU4RecTorch(nn.Module):
         return out, hidden
 
     def init_weights(self) -> None:
-        """
-        Initializes all model parameters uniformly.
+        """Initializes all model parameters uniformly.
         """
         initrange = 0.01
         for param in self.parameters():
             nn.init.uniform_(param, -initrange, initrange)
 
     def init_hidden(self, batch_size: int) -> torch.Tensor:
-        """
-        Returns an initial, zero-valued hidden state with shape (L B, H).
+        """Returns an initial, zero-valued hidden state with shape (L B, H).
         """
         return torch.zeros((self.rnn.num_layers, batch_size, self.hidden_size))
