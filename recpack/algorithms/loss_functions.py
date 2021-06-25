@@ -12,8 +12,9 @@ from recpack.algorithms.samplers import BootstrapSampler, WarpSampler
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
     # TODO: Refactor so it's not CML specific
-    """
-    Implementation of covariance loss as described in
+    """Covariance loss.
+
+    Convariance loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
 
@@ -84,8 +85,8 @@ def warp_loss(
     U: int,
     mask: torch.Tensor = None
 ) -> torch.Tensor:
-    """
-    Implementation of
+    """WARP loss 
+
     WARP loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
@@ -136,6 +137,15 @@ def warp_loss(
 def skipgram_negative_sampling_loss(
     positive_sim: torch.Tensor, negative_sim: torch.Tensor
 ) -> torch.Tensor:
+    """Skipgram Sampling Loss.
+
+    :param positive_sim: Similarity scores between focus and context item.
+    :type positive_sim: torch.Tensor
+    :param negative_sim: Similarity scores between focus and negative sample.
+    :type negative_sim: torch.Tensor
+    :return: Loss value.
+    :rtype: torch.Tensor
+    """
     pos_loss = positive_sim.sigmoid().log()
     neg_loss = negative_sim.neg().sigmoid().log().sum(-1)
 
@@ -143,7 +153,7 @@ def skipgram_negative_sampling_loss(
 
 
 def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
-    """Implementation of the Bayesian Personalized Ranking loss.
+    """Bayesian Personalized Ranking loss.
 
     BPR loss as defined in Rendle, Steffen, et al.
     "BPR: Bayesian personalized ranking from implicit feedback."
@@ -159,7 +169,7 @@ def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Te
     :return: The loss value of the bpr criterion
     :rtype: torch.Tensor
     """
-    # TODO Fix this so that it can handle more than 1 negative
+
     distance = positive_sim - negative_sim
     # Probability of ranking given parameters
     elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
@@ -300,8 +310,7 @@ def warp_loss_wrapper(
 
 
 def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, reg: float = 1.0) -> torch.Tensor:
-    """
-    Bayesian Personalized Ranking Max Loss.
+    """Bayesian Personalized Ranking Max Loss.
 
     This is a differentiable approximation to the BPR loss between the target item 
     and the negative sample with the highest score, with an added regularization 
@@ -325,9 +334,22 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
     :param num_samples: Number of samples to use in loss calculation. BPR-Max loss 
         tends to scale better with sample size than base BPR.
     """
+    # Mean over all samples
+    if negative_scores.ndim == 1:
+        negative_scores = negative_scores.unsqueeze(-1)
+    
+    if positive_scores.ndim == 1:
+        positive_scores = positive_scores.unsqueeze(-1)
+
+    size = positive_scores.size()
+    if len(size) == 2 and size[0] < size[1]:
+        positive_scores = positive_scores.t()
+        negative_scores = negative_scores.t()
+
     weights = torch.softmax(negative_scores, dim=1)
     score_diff = weights * torch.sigmoid(positive_scores - negative_scores)
     norm_penalty = weights * negative_scores ** 2
+
     return (
         -torch.log(score_diff.sum(dim=1)) + reg * norm_penalty.sum(dim=1)
     ).mean()

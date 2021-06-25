@@ -285,21 +285,14 @@ class GRU4Rec(TorchMLAlgorithm):
         true_input_mask: torch.BoolTensor,
     ) -> torch.Tensor:
 
-        print(positive_scores.shape)
-        print(negative_scores.shape)
         true_batch_size, max_hist_len = positive_scores.shape
 
         true_input_mask_flat = true_input_mask.view(true_batch_size * max_hist_len, -1)
 
-        print("mask", true_input_mask)
-        print("flat", true_input_mask_flat.shape)
-
-        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, -1)
+        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, 1).unsqueeze(-1)
         negative_scores_flat = negative_scores.view(
             true_batch_size * max_hist_len, -1, negative_scores.shape[2]
         )
-        print(positive_scores_flat.shape)
-        print(negative_scores_flat.shape)
 
         return self._criterion(positive_scores_flat, negative_scores_flat)
 
