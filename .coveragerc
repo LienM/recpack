@@ -1,5 +1,7 @@
 [run]
-omit = recpack/tests/*
+omit =
+    recpack/tests/*
+    setup.py
 
 [report]
 exclude_lines =
