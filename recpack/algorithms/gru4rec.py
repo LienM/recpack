@@ -1,6 +1,6 @@
 import logging
 from math import ceil
-from typing import Tuple, List
+from typing import Tuple, List, Iterator
 
 import numpy as np
 from scipy.sparse.lil import lil_matrix
@@ -72,9 +72,6 @@ class GRU4Rec(TorchMLAlgorithm):
     :param U: Number of negative samples used for bpr, bpr-max, top1, top1-max
         loss calculation. Sampled uniformly random
     :type U: int, optional
-    :param alpha: Sampling weight parameter, 0 is uniform, 1 is popularity-based
-        Defaults to 0.5
-    :type alpha: float, optional
     :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad".
         Defaults to adagrad.
     :type optimization_algorithm: str, optional
@@ -109,7 +106,6 @@ class GRU4Rec(TorchMLAlgorithm):
         dropout: float = 0.0,
         loss_fn: str = "bpr",
         U: int = 50,
-        alpha: float = 0.5,
         optimization_algorithm: str = "adagrad",
         batch_size: int = 512,
         learning_rate: float = 0.03,
@@ -140,7 +136,6 @@ class GRU4Rec(TorchMLAlgorithm):
         self.dropout = dropout
         self.loss_fn = loss_fn
         self.U = U
-        self.alpha = alpha
         self.optimization_algorithm = optimization_algorithm
         self.momentum = momentum
         self.clipnorm = clipnorm
@@ -229,11 +224,11 @@ class GRU4Rec(TorchMLAlgorithm):
             batch_loss = 0
             true_batch_size = positives_batch.shape[0]
             # Want to reuse this between chunks of the same batch of sequences
-            hidden = self.model_.init_hidden(true_batch_size)
+            hidden = self.model_.init_hidden(true_batch_size).to(self.device)
 
             # Generate vertical chunks of BPTT width
             for input_chunk, target_chunk, neg_chunk in self._chunk(
-                positives_batch, targets_batch, negatives_batch
+                positives_batch.to(self.device), targets_batch.to(self.device), negatives_batch.to(self.device)
             ):
                 input_mask = input_chunk != self.pad_token
                 # Remove rows with only pad tokens from chunk and from hidden.
@@ -301,7 +296,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
         return self._criterion(positive_scores_flat[true_input_mask_flat], negative_scores_flat[true_input_mask_flat])
 
-    def _chunk(self, *tensors: torch.LongTensor):
+    def _chunk(self, *tensors: torch.LongTensor) -> Iterator[Tuple[torch.LongTensor, ...]]:
         """Split tensors into chunks of self.bptt width, or max hist len width.
 
         The input tensors of  shape (batch_size, max_hist_length, 1 or U)
@@ -324,7 +319,7 @@ class GRU4Rec(TorchMLAlgorithm):
         for uid_batch, positives_batch in self.predict_sampler.sample(X):
             batch_size = positives_batch.shape[0]
             hidden = self.model_.init_hidden(batch_size)
-            output, hidden = self.model_(positives_batch, hidden)
+            output, hidden = self.model_(positives_batch.to(self.device), hidden.to(self.device))
             # Use only the final prediction
             # Last item is the last non padding token per row.
             last_item_in_hist = (
