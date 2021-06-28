@@ -1,7 +1,7 @@
 from math import sqrt
 
 import numpy
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr, csr_matrix
 
 from recpack.algorithms import KUNN
 from recpack.algorithms.util import union_csr_matrices
@@ -10,26 +10,35 @@ from recpack.algorithms.util import union_csr_matrices
 def test_kunn_fit():
     kunn = KUNN(Ku=1, Ki=1)
 
-    values = [1, 1, 1, 1, 1, 1]
-    users = [0, 1, 1, 2, 2, 2]
-    items = [2, 0, 2, 0, 1, 2]
-    test_matrix = csr_matrix((values, (users, items)))
+    test_matrix = csr_matrix([
+        [0, 0, 1],
+        [1, 0, 1],
+        [1, 1, 1]
+    ])
 
     kunn.fit(test_matrix)
 
-    knni_values = [(sqrt(2) + sqrt(3)) / 6, 1 / sqrt(6), (sqrt(2) + sqrt(3)) / 6]
+    knni_values = [
+        (sqrt(2) + sqrt(3)) / 6,
+        1 / sqrt(6),
+        (sqrt(2) + sqrt(3)) / 6
+    ]
     knni_items_x = [2, 0, 0]
     knni_items_y = [0, 1, 2]
     knni_true = csr_matrix((knni_values, (knni_items_x, knni_items_y)))
 
-    numpy.testing.assert_almost_equal(knni_true.todense(), kunn.knn_i_.todense())
+    numpy.testing.assert_almost_equal(
+        knni_true.todense(), kunn.knn_i_.todense())
 
 
 def test_kunn_item_knn():
-    values = [1, 1, 1, 1, 1, 1, 1]
-    users = [0, 0, 1, 1, 2, 2, 2]
-    items = [1, 2, 0, 2, 0, 1, 2]
-    test_matrix = csr_matrix((values, (users, items)), shape=(5, 3))
+    test_matrix = csr_matrix([
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 0, 0],
+        [0, 0, 0]
+    ])
 
     Ki = 2
     Ku = 2
@@ -51,7 +60,8 @@ def test_kunn_item_knn():
     iknn_item_1 = [0, 0, 1, 1, 2, 2]
     iknn_item_2 = [1, 2, 0, 2, 0, 1]
     pred_iknn = csr_matrix(
-        (iknn_values, (iknn_item_1, iknn_item_2)), shape=(test_matrix.shape[1],) * 2
+        (iknn_values, (iknn_item_1, iknn_item_2)), shape=(
+            test_matrix.shape[1],) * 2
     )
 
     numpy.testing.assert_almost_equal(item_knn.todense(), pred_iknn.todense())
@@ -62,30 +72,24 @@ def test_kunn_user_knn():
     Ku = 2
     kunn = KUNN(Ku=Ku, Ki=Ki)
 
-    # Construct a test matrix
-    # 0 1 1
-    # 1 0 1
-    # 1 1 1
-    # 0 0 0
-    values = [1, 1, 1, 1, 1, 1, 1]
-    users = [0, 0, 1, 1, 2, 2, 2]
-    items = [1, 2, 0, 2, 0, 1, 2]
-    test_matrix = csr_matrix((values, (users, items)), shape=(5, 3))
+    test_matrix = csr_matrix([
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 0, 0],
+        [0, 0, 0]
+    ])
 
     kunn.fit(test_matrix)
 
     # Construct prediction input matrix
-    # 0 0 0
-    # 0 0 0
-    # 0 0 0
-    # 1 1 0
-    # 0 1 1
-    values_pred = [1, 1, 1, 1]
-    users_pred = [3, 3, 4, 4]
-    items_pred = [0, 1, 1, 2]
-    pred_matrix = csr_matrix(
-        (values_pred, (users_pred, items_pred)), shape=test_matrix.shape
-    )
+    pred_matrix = csr_matrix([
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [1, 1, 0],
+        [0, 1, 1]
+    ])
 
     user_knn = kunn._fit_user_knn(pred_matrix)
     assert user_knn.shape == (test_matrix.shape[0],) * 2
@@ -129,7 +133,8 @@ def test_kunn_user_knn():
     uknn_user_1 = [3, 3, 4, 4]
     uknn_user_2 = [1, 2, 0, 2]
     pred_uknn = csr_matrix(
-        (uknn_values, (uknn_user_1, uknn_user_2)), shape=(test_matrix.shape[0],) * 2
+        (uknn_values, (uknn_user_1, uknn_user_2)), shape=(
+            test_matrix.shape[0],) * 2
     )
     numpy.testing.assert_almost_equal(user_knn.todense(), pred_uknn.todense())
 
@@ -139,14 +144,11 @@ def test_kunn_user_knn_full_overlap():
     Ku = 2
     kunn = KUNN(Ku=Ku, Ki=Ki)
 
-    # Construct a test matrix
-    # 0 1 1
-    # 1 0 1
-    # 1 1 1
-    values = [1, 1, 1, 1, 1, 1, 1]
-    users = [0, 0, 1, 1, 2, 2, 2]
-    items = [1, 2, 0, 2, 0, 1, 2]
-    test_matrix = csr_matrix((values, (users, items)), shape=(3, 3))
+    test_matrix = csr_matrix([
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1]
+    ])
 
     kunn.fit(test_matrix)
 
@@ -175,7 +177,8 @@ def test_kunn_user_knn_full_overlap():
     uknn_user_1 = [0, 1, 0, 2, 1, 2]
     uknn_user_2 = [1, 0, 2, 0, 2, 1]
     pred_uknn = csr_matrix(
-        (uknn_values, (uknn_user_1, uknn_user_2)), shape=(test_matrix.shape[0],) * 2
+        (uknn_values, (uknn_user_1, uknn_user_2)), shape=(
+            test_matrix.shape[0],) * 2
     )
     numpy.testing.assert_almost_equal(user_knn.todense(), pred_uknn.todense())
 
@@ -185,27 +188,19 @@ def test_kunn_user_knn_partial_overlap():
     Ku = 2
     kunn = KUNN(Ku=Ku, Ki=Ki)
 
-    # Construct a test matrix
-    # 1 0 0
-    # 1 1 0
-    # 0 1 1
-    values = [1, 1, 1, 1, 1]
-    users = [0, 1, 1, 2, 2]
-    items = [0, 0, 1, 1, 2]
-    test_matrix = csr_matrix((values, (users, items)), shape=(3, 3))
+    test_matrix = csr_matrix([
+        [1, 0, 0],
+        [1, 1, 0],
+        [0, 1, 1]
+    ])
 
     kunn.fit(test_matrix)
 
-    # Construct prediction input matrix
-    # 0 0 1
-    # 0 0 0
-    # 1 0 0
-    values_pred = [1, 1]
-    users_pred = [0, 2]
-    items_pred = [2, 0]
-    pred_matrix = csr_matrix(
-        (values_pred, (users_pred, items_pred)), shape=test_matrix.shape
-    )
+    pred_matrix = csr_matrix([
+        [0, 0, 1],
+        [0, 0, 0],
+        [1, 0, 0]
+    ])
 
     user_knn = kunn._fit_user_knn(pred_matrix)
     assert user_knn.shape == (test_matrix.shape[0],) * 2
@@ -227,7 +222,8 @@ def test_kunn_user_knn_partial_overlap():
     uknn_user_1 = [0, 0, 2, 2]
     uknn_user_2 = [1, 2, 0, 1]
     pred_uknn = csr_matrix(
-        (uknn_values, (uknn_user_1, uknn_user_2)), shape=(test_matrix.shape[0],) * 2
+        (uknn_values, (uknn_user_1, uknn_user_2)), shape=(
+            test_matrix.shape[0],) * 2
     )
     numpy.testing.assert_almost_equal(user_knn.todense(), pred_uknn.todense())
 
@@ -250,19 +246,35 @@ def test_combination_csr_matrices():
 def test_predict_k_1():
     kunn = KUNN(Ku=1, Ki=1)
 
-    values = [1, 1, 1, 1, 1, 1, 1]
-    users = [0, 0, 1, 1, 2, 2, 2]
-    items = [1, 2, 0, 2, 0, 1, 2]
-    training_matrix = csr_matrix((values, (users, items)), shape=(5, 3))
+    training_matrix = csr_matrix([
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 0, 0],
+        [0, 0, 0]
+    ])
+
+    # values = [1, 1, 1, 1, 1, 1, 1]
+    # users = [0, 0, 1, 1, 2, 2, 2]
+    # items = [1, 2, 0, 2, 0, 1, 2]
+    # training_matrix = csr_matrix((values, (users, items)), shape=(5, 3))
 
     kunn.fit(training_matrix)
 
-    values_pred = [1, 1, 1, 1]
-    users_pred = [3, 3, 4, 4]
-    items_pred = [0, 1, 1, 2]
-    pred_matrix = csr_matrix(
-        (values_pred, (users_pred, items_pred)), shape=training_matrix.shape
-    )
+    pred_matrix = csr_matrix([
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [1, 1, 0],
+        [0, 1, 1]
+    ])
+
+    # values_pred = [1, 1, 1, 1]
+    # users_pred = [3, 3, 4, 4]
+    # items_pred = [0, 1, 1, 2]
+    # pred_matrix = csr_matrix(
+    #     (values_pred, (users_pred, items_pred)), shape=training_matrix.shape
+    # )
 
     prediction = kunn.predict(pred_matrix)
 
@@ -318,7 +330,8 @@ def test_predict_k_1():
 
     # 2 users have seen both items 0 and 2 => user 1,2
     numpy.testing.assert_array_equal(
-        training_matrix[:, j].multiply(training_matrix[:, i]).toarray().nonzero()[0],
+        training_matrix[:, j].multiply(
+            training_matrix[:, i]).toarray().nonzero()[0],
         numpy.array([1, 2]),
     )
 
@@ -340,19 +353,35 @@ def test_predict_k_1():
 def test_predict_k_2():
     kunn = KUNN(Ku=2, Ki=2)
 
-    values = [1, 1, 1, 1, 1, 1, 1]
-    users = [0, 0, 1, 1, 2, 2, 2]
-    items = [1, 2, 0, 2, 0, 1, 2]
-    training_matrix = csr_matrix((values, (users, items)), shape=(5, 3))
+    training_matrix = csr_matrix([
+        [0, 1, 1],
+        [1, 0, 1],
+        [1, 1, 1],
+        [0, 0, 0],
+        [0, 0, 0]
+    ])
+
+    # values = [1, 1, 1, 1, 1, 1, 1]
+    # users = [0, 0, 1, 1, 2, 2, 2]
+    # items = [1, 2, 0, 2, 0, 1, 2]
+    # training_matrix = csr_matrix((values, (users, items)), shape=(5, 3))
 
     kunn.fit(training_matrix)
 
-    values_pred = [1, 1, 1, 1]
-    users_pred = [3, 3, 4, 4]
-    items_pred = [0, 1, 1, 2]
-    pred_matrix = csr_matrix(
-        (values_pred, (users_pred, items_pred)), shape=training_matrix.shape
-    )
+    pred_matrix = csr_matrix([
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [1, 1, 0],
+        [0, 1, 1]
+    ])
+
+    # values_pred = [1, 1, 1, 1]
+    # users_pred = [3, 3, 4, 4]
+    # items_pred = [0, 1, 1, 2]
+    # pred_matrix = csr_matrix(
+    #     (values_pred, (users_pred, items_pred)), shape=training_matrix.shape
+    # )
 
     prediction = kunn.predict(pred_matrix)
 

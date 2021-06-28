@@ -20,7 +20,7 @@ class KUNN(Algorithm):
     Verstrepen et al. (10.1145/2645710.2645731)
 
     Computes the item KNN model and stores training interactions at fitting time.
-    Computes the user KNN model between test and training users at prediction time. 
+    Computes the user KNN model between test and training users at prediction time.
 
     Scores are computed as a sum of item and user similarity.
 
