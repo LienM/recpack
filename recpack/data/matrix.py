@@ -140,8 +140,8 @@ class InteractionMatrix(DataMatrix):
     def properties(self) -> "InteractionMatrixProperties":
         # TODO: hope that the cast to int does not cause issues
         return self.InteractionMatrixProperties(
-            num_users=int(self.shape[0]),
-            num_items=int(self.shape[1]),
+            num_users=self.shape[0].item(),
+            num_items=self.shape[1].item(),
             has_timestamps=self.has_timestamps,
         )
 
