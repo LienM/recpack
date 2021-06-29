@@ -298,7 +298,7 @@ class PipelineBuilder(object):
         if type(metric) == type:
             metric = metric.__name__
         elif type(metric) != str:
-            raise TypeError(f"mMtric should be string or type, not {type(metric)}!")
+            raise TypeError(f"Metric should be string or type, not {type(metric)}!")
 
         if metric not in METRIC_REGISTRY:
             raise ValueError(f"Metric {metric} could not be resolved.")

@@ -19,7 +19,7 @@ def pipeline_builder(mat):
 
     pb = recpack.pipeline.PipelineBuilder(name)
     pb.add_metric("CalibratedRecallK", 2)
-    pb.add_metric("CalibratedRecallK", 2)
+    pb.add_metric("CalibratedRecallK", 3)
     pb.add_algorithm("ItemKNN", params={"K": 2})
     pb.add_algorithm("EASE", params={"l2": 2})
     pb.set_train_data(mat)
