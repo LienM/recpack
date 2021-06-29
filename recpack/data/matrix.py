@@ -122,8 +122,11 @@ class InteractionMatrix(DataMatrix):
             raise ValueError("Shapes mismatch.")
 
         timestamp_ix = self.TIMESTAMP_IX if self.has_timestamps else None
+
+        df = pd.concat([self._df, im._df])
         return InteractionMatrix(
-            pd.concat([self._df, im._df]),
+            # Drop the interaction index to make sure it gets recreated.
+            df.reset_index().drop(columns=[InteractionMatrix.INTERACTION_IX, "index"]),
             InteractionMatrix.ITEM_IX,
             InteractionMatrix.USER_IX,
             timestamp_ix=timestamp_ix,

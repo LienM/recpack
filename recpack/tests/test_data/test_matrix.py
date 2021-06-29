@@ -486,6 +486,15 @@ def test_add(larger_mat):
     double_mat = larger_mat + larger_mat
 
     assert double_mat.num_interactions == larger_mat.num_interactions * 2
+    assert double_mat.active_users == larger_mat.active_users
+    np.testing.assert_array_equal(
+        double_mat.binary_values.toarray(), larger_mat.binary_values.toarray()
+    )
+    assert (
+        double_mat._df[double_mat.INTERACTION_IX].nunique()
+        == 2 * larger_mat._df[larger_mat.INTERACTION_IX].nunique()
+    )
+    np.testing.assert_array_equal(double_mat._df.columns, larger_mat._df.columns)
 
 
 def test_add_mismatch(mat, larger_mat):
