@@ -174,6 +174,8 @@ class InteractionMatrix(DataMatrix):
         :param path: The prefix of the files to load, should end in the filename,
             but without extension (no .csv or such).
         :type path: str
+        :return: InteractionMatrix created from file.
+        :rtype: InteractionMatrix
         """
         df = pd.read_csv(f"{path}.csv")
 
@@ -193,11 +195,11 @@ class InteractionMatrix(DataMatrix):
     def values(self) -> csr_matrix:
         """All user-item interactions as a sparse matrix of size ``(|users|, |items|)``.
 
-        Each entry is the sum of interaction values for that user and item.
-        If the value_ix is not present in the DataFrame,
-        the entry is the total number of interactions between that user and item.
-
+        Each entry is the number of interactions between that user and item.
         If there are no interactions between a user and item, the entry is 0.
+
+        :return: Interactions between users and items as a csr_matrix.
+        :rtype: csr_matrix
         """
         values = np.ones(self._df.shape[0])
         indices = self._df[
@@ -218,14 +220,14 @@ class InteractionMatrix(DataMatrix):
         """
         return self.TIMESTAMP_IX in self._df
 
-    def get_timestamp(self, interactionid: int) -> int:
-        """Return the timestamp of a specific interaction
+    def get_timestamp(self, interaction_id: int) -> int:
+        """Return the timestamp of a specific interaction by interaction ID.
 
-        :param interactionid: the interaction id in the DataFrame
-            to fetch the timestamp from.
-        :type interactionid: int
-        :raises AttributeError: Raised if the object does not have timestamps
-        :return: The timestamp of the fetched id
+        :param interaction_id: the interaction ID in the DataFrame
+            to fetch the timestamp of.
+        :type interaction_id: int
+        :raises AttributeError: Raised if the object does not have timestamps.
+        :return: The timestamp of the interaction.
         :rtype: int
         """
         if not self.has_timestamps:
@@ -234,19 +236,19 @@ class InteractionMatrix(DataMatrix):
             )
         try:
             return self._df.loc[
-                self._df[InteractionMatrix.INTERACTION_IX] == interactionid,
+                self._df[InteractionMatrix.INTERACTION_IX] == interaction_id,
                 InteractionMatrix.TIMESTAMP_IX,
             ].values[0]
         except IndexError as e:
             raise KeyError(
-                f"Interaction ID {interactionid} not present in data")
+                f"Interaction ID {interaction_id} not present in data")
 
     @property
     def timestamps(self) -> pd.Series:
-        """Timestamps of interactions as a pandas Series, indexed by user and item id.
+        """Timestamps of interactions as a pandas Series, indexed by user ID and item ID.
 
-        :raises AttributeError: If there is no timestamp column
-        :return: Series of interactions with multi index on user, item ids
+        :raises AttributeError: If there is no timestamp column.
+        :return: Series of interactions with multi-index on (user ID, item ID)
         :rtype: pd.Series
         """
         if not self.has_timestamps:
@@ -263,8 +265,7 @@ class InteractionMatrix(DataMatrix):
     def eliminate_timestamps(
         self, inplace: bool = False
     ) -> Optional["InteractionMatrix"]:
-        """
-        Remove all timestamp information.
+        """Remove all timestamp information.
 
         :type inplace: bool
         :param inplace: Modify the data matrix in place. If False, returns a new object.
@@ -282,10 +283,10 @@ class InteractionMatrix(DataMatrix):
 
     @property
     def indices(self) -> Tuple[List[int], List[int]]:
-        """
-        Return all user-item combinations that have at least one interaction.
+        """Returns a tuple of lists of user IDs and item IDs corresponding to interactions.
 
-        Returns a tuple of a list of user indices, and a list of item indices
+        :return: Tuple of lists of user IDs and item IDs that correspond to at least one interaction. 
+        :rtype: Tuple[List[int], List[int]]
         """
         return self.values.nonzero()
 
@@ -300,13 +301,15 @@ class InteractionMatrix(DataMatrix):
     def _timestamps_cmp(
         self, op: Callable, timestamp: float, inplace: bool = False
     ) -> Optional["InteractionMatrix"]:
-        """
-        Filter interactions based on timestamp.
+        """Filter interactions based on timestamp.
 
         :param op: Comparison operator.
             Keep only interactions for which op(t, timestamp) is True.
+        :type op: Callable
         :param timestamp: Timestamp to compare against in seconds from epoch.
+        :type timestamp: float
         :param inplace: Modify the data matrix in place. If False, returns a new object.
+        :type inplace: bool, optional
         """
         logger.debug(f"Performing {op.__name__}(t, timestamp)")
 
@@ -317,7 +320,7 @@ class InteractionMatrix(DataMatrix):
     def timestamps_gt(
         self, timestamp: float, inplace: bool = False
     ) -> Optional["InteractionMatrix"]:
-        """select interactions after a given timestamp.
+        """Select interactions after a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t > timestamp.
 
@@ -334,7 +337,7 @@ class InteractionMatrix(DataMatrix):
     def timestamps_lt(
         self, timestamp: float, inplace: bool = False
     ) -> Optional["InteractionMatrix"]:
-        """select interactions up to a given timestamp.
+        """Select interactions up to a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t < timestamp.
 
@@ -351,7 +354,7 @@ class InteractionMatrix(DataMatrix):
     def timestamps_gte(
         self, timestamp: float, inplace: bool = False
     ) -> Optional["InteractionMatrix"]:
-        """select interactions after and including a given timestamp.
+        """Select interactions after and including a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t >= timestamp.
 
@@ -368,7 +371,7 @@ class InteractionMatrix(DataMatrix):
     def timestamps_lte(
         self, timestamp: float, inplace: bool = False
     ) -> Optional["InteractionMatrix"]:
-        """select interactions up to and including a given timestamp.
+        """Select interactions up to and including a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t <= timestamp.
 
