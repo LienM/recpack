@@ -481,6 +481,9 @@ def test_load(larger_mat):
     assert im.shape == larger_mat.shape
     assert im.active_users == larger_mat.active_users
 
+    # Added to check bug loading shape of InteractionMatrix
+    prop = im.properties
+
 
 def test_add(larger_mat):
     double_mat = larger_mat + larger_mat

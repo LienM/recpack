@@ -90,7 +90,7 @@ class InteractionMatrix(DataMatrix):
             ) + 1 if shape is None else shape[1]
         )
 
-        self.shape = (num_users, num_items)
+        self.shape = (int(num_users), int(num_items))
 
     def copy(self) -> "InteractionMatrix":
         """Create a deep copy of this InteractionMatrix.
@@ -143,10 +143,9 @@ class InteractionMatrix(DataMatrix):
 
     @property
     def properties(self) -> "InteractionMatrixProperties":
-        # TODO: hope that the cast to int does not cause issues
         return self.InteractionMatrixProperties(
-            num_users=self.shape[0].item(),
-            num_items=self.shape[1].item(),
+            num_users=self.shape[0],
+            num_items=self.shape[1],
             has_timestamps=self.has_timestamps,
         )
 
