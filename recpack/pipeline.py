@@ -1,59 +1,56 @@
 import logging
-from collections import defaultdict, Counter
-from collections.abc import Iterable
+from collections import defaultdict, Counter, Iterable
 from dataclasses import asdict, dataclass
 import datetime
 import os
-from typing import Tuple, Union, Dict, Any, List
+from typing import Tuple, Union, Dict, Any, List, Callable
 import yaml
 
 import numpy as np
-
 from sklearn.model_selection import ParameterGrid
 from tqdm.auto import tqdm
 
 import recpack.algorithms
-
+import recpack.metrics
 from recpack.data.matrix import Matrix, InteractionMatrix
+
 
 logger = logging.getLogger("recpack")
 
 
 class Registry:
-    def __init__(self):
+    def __init__(self, src):
         self.registered = {}
+        self.src = src
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> type:
         return self.get(key)
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         try:
             self.get(key)
             return True
         except AttributeError:
             return False
 
-    def get(self, name):
-        raise NotImplementedError
+    def get(self, name: str) -> type:
+        if name in self.registered:
+            return self.registered[name]
+        else:
+            return getattr(self.src, name)
 
-    def register(self, name, c):
+    def register(self, name: str, c: type):
         self.registered[name] = c
 
 
 class AlgorithmRegistry(Registry):
-    def get(self, name):
-        if name in self.registered:
-            return self.registered[name]
-        else:
-            return getattr(recpack.algorithms, name)
+    def __init__(self):
+        super().__init__(recpack.algorithms)
 
 
 class MetricRegistry(Registry):
-    def get(self, name):
-        if name in self.registered:
-            return self.registered[name]
-        else:
-            return getattr(recpack.metrics, name)
+    def __init__(self):
+        super().__init__(recpack.metrics)
 
 
 ALGORITHM_REGISTRY = AlgorithmRegistry()
@@ -141,6 +138,7 @@ class Pipeline(object):
     on the combination of train_data and validation_data.
     Predictions are then generated with test_in as input and evaluated on test_out.
 
+    # TODO Method was renamed
     Results can be accessed via the :meth:`get` method.
 
     :param algorithms: List of algorithms to evaluate in this pipeline.
