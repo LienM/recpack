@@ -150,38 +150,38 @@ class InteractionMatrix(DataMatrix):
             has_timestamps=self.has_timestamps,
         )
 
-    def save(self, path: str) -> None:
+    def save(self, file_prefix: str) -> None:
         """Save the interaction matrix to files.
 
-        Creates two files one at `{path}.csv` with the raw dataframe,
-        and a second at `{path}_properties.yaml` which contains the properties
+        Creates two files one at `{file_prefix}.csv` with the raw dataframe,
+        and a second at `{file_prefix}_properties.yaml` which contains the properties
         of the interaction matrix.
 
-        :param path: The prefix of the files to save, should end in the filename,
+        :param file_prefix: The prefix of the files to save, should end in the filename,
             but without extension (no .csv or such).
-        :type path: str
+        :type file_prefix: str
         """
         # Save dataframe to .csv
-        self._df.to_csv(f"{path}.csv", header=True, index=False)
+        self._df.to_csv(f"{file_prefix}.csv", header=True, index=False)
 
         # Write properties to properties file.
-        with open(f"{path}_properties.yaml", "w") as f:
+        with open(f"{file_prefix}_properties.yaml", "w") as f:
             f.write(yaml.safe_dump(self.properties.to_dict()))
 
     @classmethod
-    def load(cls, path) -> "InteractionMatrix":
+    def load(cls, file_prefix) -> "InteractionMatrix":
         """Create a new interaction matrix instance from saved file.
 
-        :param path: The prefix of the files to load, should end in the filename,
+        :param file_prefix: The prefix of the files to load, should end in the filename,
             but without extension (no .csv or such).
-        :type path: str
+        :type file_prefix: str
         :return: InteractionMatrix created from file.
         :rtype: InteractionMatrix
         """
-        df = pd.read_csv(f"{path}.csv")
-
-        with open(f"{path}_properties.yaml", "r") as f:
+        with open(f"{file_prefix}_properties.yaml", "r") as f:
             metadata = cls.InteractionMatrixProperties(**yaml.safe_load(f))
+
+        df = pd.read_csv(f"{file_prefix}.csv")
 
         timestamp_ix = cls.TIMESTAMP_IX if metadata.has_timestamps else None
         return InteractionMatrix(

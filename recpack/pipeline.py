@@ -1,9 +1,9 @@
 import logging
-from collections import defaultdict, Counter, Iterable
-from dataclasses import asdict, dataclass
+from collections import defaultdict, namedtuple
+from collections.abc import Iterable
 import datetime
 import os
-from typing import Tuple, Union, Dict, Any, List, Callable
+from typing import Tuple, Union, Dict, List
 import yaml
 
 import numpy as np
@@ -12,7 +12,8 @@ from tqdm.auto import tqdm
 
 import recpack.algorithms
 import recpack.metrics
-from recpack.data.matrix import Matrix, InteractionMatrix
+from recpack.algorithms.base import TorchMLAlgorithm
+from recpack.data.matrix import InteractionMatrix
 
 
 logger = logging.getLogger("recpack")
@@ -63,70 +64,39 @@ class MetricAccumulator:
     """
 
     def __init__(self):
-        self.registry = defaultdict(dict)
+        self.acc = defaultdict(dict)
 
     def __getitem__(self, key):
-        return self.registry[key]
+        return self.acc[key]
 
-    def register(self, metric, algorithm_name, metric_name):
-        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
-        self.registry[algorithm_name][metric_name] = metric
+    def add(self, metric, algorithm_name, metric_name):
+        logger.debug(
+            f"Metric {metric_name} created for algorithm {algorithm_name}")
+        self.acc[algorithm_name][metric_name] = metric
 
     @property
     def metrics(self):
         results = defaultdict(dict)
-        for key in self.registry:
-            for k in self.registry[key]:
-                results[key][k] = self.registry[key][k].value
+        for key in self.acc:
+            for k in self.acc[key]:
+                results[key][k] = self.acc[key][k].value
         return results
 
     @property
     def num_users(self):
         results = defaultdict(dict)
-        for key in self.registry:
-            for k in self.registry[key]:
-                results[key][k] = self.registry[key][k].num_users
+        for key in self.acc:
+            for k in self.acc[key]:
+                results[key][k] = self.acc[key][k].num_users
         return results
 
 
-@dataclass
-class MetricEntry:
-    name: str
-    K: int
+MetricEntry = namedtuple('MetricEntry', ["name", "K"])
+OptimisationMetricEntry = namedtuple(
+    'OptimisationMetricEntry', ["name", "K", "minimise"])
+AlgorithmEntry = namedtuple('AlgorithmEntry', ["name", "grid", "params"])
 
-    def __hash__(self):
-        return hash(self.name) + hash(self.K)
-
-    def to_dict(self):
-        return asdict(self)
-
-    @classmethod
-    def from_dict(cls, d) -> "MetricEntry":
-        return MetricEntry(**d)
-
-
-@dataclass
-class OptimisationMetricEntry(MetricEntry):
-    minimise: bool = False
-
-
-@dataclass
-class AlgorithmEntry:
-    name: str
-    grid: Dict[str, Any]
-    params: Dict[str, Any]
-
-    def to_dict(self):
-        return asdict(self)
-
-    def __hash__(self):
-        return hash(str(self.to_dict()))
-
-    @classmethod
-    def from_dict(cls, d):
-        return AlgorithmEntry(**d)
-
-
+# TODO Add save_results to pipeline
 class Pipeline(object):
     """Performs all steps in order and holds on to results.
 
@@ -138,8 +108,7 @@ class Pipeline(object):
     on the combination of train_data and validation_data.
     Predictions are then generated with test_in as input and evaluated on test_out.
 
-    # TODO Method was renamed
-    Results can be accessed via the :meth:`get` method.
+    Results can be accessed via the :meth:`get_metrics` method.
 
     :param algorithms: List of algorithms to evaluate in this pipeline.
     :type algorithms: List[AlgorithmEntry]
@@ -171,7 +140,7 @@ class Pipeline(object):
         self.test_data = test_data
         self.optimisation_metric = optimisation_metric
 
-        self._results = MetricAccumulator()
+        self._metric_acc = MetricAccumulator()
 
     def _optimise(self, algorithm, metric_entry: OptimisationMetricEntry):
         # TODO: investigate using advanced optimisers
@@ -183,10 +152,11 @@ class Pipeline(object):
         # Construct grid:
         optimisation_params = ParameterGrid(algorithm.grid)
         for p in optimisation_params:
-            algo = ALGORITHM_REGISTRY.get(algorithm.name)(**p, **algorithm.params)
+            algo = ALGORITHM_REGISTRY.get(
+                algorithm.name)(**p, **algorithm.params)
 
             # validation data in case of TorchML!
-            if isinstance(algo, recpack.algorithms.base.TorchMLAlgorithm):
+            if isinstance(algo, TorchMLAlgorithm):
                 algo.fit(self.train_data, self.validation_data)
             else:
                 algo.fit(self.train_data)
@@ -194,8 +164,7 @@ class Pipeline(object):
 
             prediction = algo.predict(self.validation_data[0])
 
-            # TODO: Binary values or values?
-            metric.calculate(self.validation_data[1].values, prediction)
+            metric.calculate(self.validation_data[1].binary_values, prediction)
 
             results.append(
                 {
@@ -216,11 +185,12 @@ class Pipeline(object):
 
         for algorithm in tqdm(self.algorithms):
             # optimisation:
-            optimal_params = self._optimise(algorithm, self.optimisation_metric)
+            optimal_params = self._optimise(
+                algorithm, self.optimisation_metric)
 
             # Train again.
             algo = ALGORITHM_REGISTRY.get(algorithm.name)(**optimal_params)
-            if isinstance(algo, recpack.algorithms.base.TorchMLAlgorithm):
+            if isinstance(algo, TorchMLAlgorithm):
                 # TODO: Optimise this retraining step, by returning trained model?
                 algo.fit(self.train_data, self.validation_data)
             else:
@@ -238,14 +208,13 @@ class Pipeline(object):
             for metric in self.metrics:
                 m = METRIC_REGISTRY.get(metric.name)(K=metric.K)
                 m.calculate(test_out.binary_values, recommendations)
-
-                self._results.register(m, algo.identifier, m.name)
+                self._metric_acc.add(m, algo.identifier, m.name)
 
     def get_metrics(self):
-        return self._results.metrics
+        return self._metric_acc.metrics
 
     def get_num_users(self):
-        return self._results.num_users
+        return self._metric_acc.num_users
 
 
 class PipelineBuilder(object):
@@ -262,8 +231,8 @@ class PipelineBuilder(object):
         defaults to the current working directory.
     :type path: str
     """
-
     # TODO: input validation of metrics / algorithms / data
+
     def __init__(self, name=None, path=os.getcwd()):
 
         self.name = name
@@ -272,13 +241,26 @@ class PipelineBuilder(object):
 
         self.path = path
 
-        self.metrics = []
+        self.metrics = {}
         self.algorithms = []
 
-        self.train_data = None
-        self.validation_data = None
-        self.test_data = None
-        self.optimisation_metric = None
+        self._config_file_path = f"{self.path}/{self.name}/config.yaml"
+        self._train_file_path = f"{self.path}/{self.name}/train"
+        self._test_in_file_path = f"{self.path}/{self.name}/test_in"
+        self._test_out_file_path = f"{self.path}/{self.name}/test_out"
+        self._validation_in_file_path = f"{self.path}/{self.name}/validation_in"
+        self._validation_out_file_path = f"{self.path}/{self.name}/validation_out"
+
+    def _parse_arg(self, arg: Union[type, str]) -> str:
+        if type(arg) == type:
+            arg = arg.__name__
+
+        elif type(arg) != str:
+            raise TypeError(
+                f"Argument should be string or type, not {type(arg)}!"
+            )
+
+        return arg
 
     def add_metric(self, metric: Union[str, type], K: Union[List, int]):
         """Register a metric to evaluate
@@ -293,10 +275,7 @@ class PipelineBuilder(object):
         """
 
         # Make it so it's possible to add metrics by their class as well.
-        if type(metric) == type:
-            metric = metric.__name__
-        elif type(metric) != str:
-            raise TypeError(f"Metric should be string or type, not {type(metric)}!")
+        metric = self._parse_arg(metric)
 
         if metric not in METRIC_REGISTRY:
             raise ValueError(f"Metric {metric} could not be resolved.")
@@ -305,7 +284,15 @@ class PipelineBuilder(object):
             for k in K:
                 self.add_metric(metric, k)
         else:
-            self.metrics.append(MetricEntry(metric, K))
+            # Check if metric already exists
+            metric_name = f"{metric}_{K}"
+
+            if metric_name in self.metrics:
+                logger.warning(
+                    f"Metric {metric_name} already exists."
+                )
+            else:
+                self.metrics[metric_name] = MetricEntry(metric, K)
 
     def add_algorithm(
         self, algorithm: Union[str, type], grid: Dict = {}, params: Dict = {}
@@ -324,18 +311,14 @@ class PipelineBuilder(object):
         :raises ValueError: If algorithm can't be resolved to a key
             in the `ALGORITHM_REGISTRY`.
         """
-        if type(algorithm) == type:
-            algorithm = algorithm.__name__
-
-        elif type(algorithm) != str:
-            raise TypeError(
-                f"Algorithm should be string or type, not {type(algorithm)}!"
-            )
+        algorithm = self._parse_arg(algorithm)
 
         if algorithm not in ALGORITHM_REGISTRY:
             raise ValueError(f"Algorithm {algorithm} could not be resolved.")
 
-        self.algorithms.append(AlgorithmEntry(algorithm, grid, params))
+        # Should I check for duplicates?
+        self.algorithms.append(AlgorithmEntry(
+            algorithm, grid, params))
 
     def set_optimisation_metric(self, metric: Union[str, type], K: int, minimise=False):
         """Set the metric for optimisation of parameters in algorithms.
@@ -352,12 +335,7 @@ class PipelineBuilder(object):
         :raises ValueError: If metric can't be resolved to a key
             in the `METRIC_REGISTRY`.
         """
-        # Make it so it's possible to add metrics by their class as well.
-        if type(metric) == type:
-            metric = metric.__name__
-
-        elif type(metric) != str:
-            raise ValueError(f"Metric should be string or type, not {type(metric)}!")
+        metric = self._parse_arg(metric)
 
         if metric not in METRIC_REGISTRY:
             raise ValueError(f"metric {metric} could not be resolved.")
@@ -372,8 +350,8 @@ class PipelineBuilder(object):
         """
         self.train_data = train_data
 
-    def set_validation_data(self, validation_data: Tuple[Matrix, Matrix]):
-        # TODO Can these be both csr_matrix as InteractionMatrix, or only InteractionMatrix?
+    def set_validation_data(self, validation_data: Tuple[InteractionMatrix, InteractionMatrix]):
+        # TODO Support csr_matrix
         """Set the validation datasets.
 
         Validation data should be a tuple of InteractionMatrices.
@@ -407,15 +385,14 @@ class PipelineBuilder(object):
 
     def _check_readiness(self):
         if len(self.metrics) == 0:
-            raise RuntimeError("No metrics specified, can't construct pipeline")
+            raise RuntimeError(
+                "No metrics specified, can't construct pipeline")
 
         if len(self.algorithms) == 0:
-            raise RuntimeError("No algorithms specified, can't construct pipeline")
+            raise RuntimeError(
+                "No algorithms specified, can't construct pipeline")
 
-        # Check that there is an optimisation criterion
-        # if there are algorithms to optimise
-        # TODO: If none specified? Use last one?
-        if self.optimisation_metric is None and np.any(
+        if not hasattr(self, 'optimisation_metric') and np.any(
             [len(algo.grid) > 0 for algo in self.algorithms]
         ):
             raise RuntimeError(
@@ -424,17 +401,19 @@ class PipelineBuilder(object):
             )
 
         # Check availability of data
-        if self.train_data is None:
-            raise RuntimeError("No training data available, can't construct pipeline.")
+        if not hasattr(self, 'train_data'):
+            raise RuntimeError(
+                "No training data available, can't construct pipeline.")
 
-        if self.test_data is None:
-            raise RuntimeError("No test data available, can't construct pipeline.")
+        if not hasattr(self, 'test_data'):
+            raise RuntimeError(
+                "No test data available, can't construct pipeline.")
 
         # If there are parameters to optimise,
         # there needs to be validation data available.
-        if self.validation_data is None and np.any(
+        if (not hasattr(self, 'validation_data') and np.any(
             [len(algo.grid) > 0 for algo in self.algorithms]
-        ):
+        )) or np.any([isinstance(algo, TorchMLAlgorithm) for algo in self.algorithms]):
             raise RuntimeError(
                 "No validation data available to perform the requested hyper parameter optimisation"
                 ", can't construct pipeline."
@@ -446,10 +425,11 @@ class PipelineBuilder(object):
         if any([d.shape != shape for d in self.test_data]):
             raise RuntimeError("Shape mismatch between test and training data")
 
-        if self.validation_data is not None and any(
+        if hasattr(self, 'validation_data') and any(
             [d.shape != shape for d in self.validation_data]
         ):
-            raise RuntimeError("Shape mismatch between validation and training data")
+            raise RuntimeError(
+                "Shape mismatch between validation and training data")
 
     def build(self) -> Pipeline:
         """Construct a pipeline object, given the set values.
@@ -462,88 +442,15 @@ class PipelineBuilder(object):
 
         self._check_readiness()
 
-        # Check duplicated metrics
-        cm = Counter(self.metrics)
-        for key, count in cm.items():
-            if count > 1:
-                logger.warning(
-                    f"Found duplicated metric: {key}, "
-                    "deduplicating before creation of pipeline."
-                )
-
-        metrics = list(cm.keys())
-
-        # Check duplicated algorithms
-        ca = Counter(self.algorithms)
-        for key, count in cm.items():
-            if count > 1:
-                logger.warning(
-                    f"Found duplicated algorithm: {key}, "
-                    "deduplicating before creation of pipeline."
-                )
-
-        algorithms = list(ca.keys())
-
         return Pipeline(
-            algorithms,
-            metrics,
+            self.algorithms,
+            list(self.metrics.values()),
             self.train_data,
-            self.validation_data,
+            self.validation_data if hasattr(self, 'validation_data') else None,
             self.test_data,
-            self.optimisation_metric,
+            self.optimisation_metric if hasattr(
+                self, 'optimisation_metric') else None,
         )
-
-    @property
-    def _config_file_path(self):
-        return f"{self.path}/{self.name}/config.yaml"
-
-    @property
-    def _train_file_path(self):
-        return f"{self.path}/{self.name}/train"
-
-    @property
-    def _test_in_file_path(self):
-        return f"{self.path}/{self.name}/test_in"
-
-    @property
-    def _test_out_file_path(self):
-        return f"{self.path}/{self.name}/test_out"
-
-    @property
-    def _validation_in_file_path(self):
-        return f"{self.path}/{self.name}/validation_in"
-
-    @property
-    def _validation_out_file_path(self):
-        return f"{self.path}/{self.name}/validation_out"
-
-    def _construct_config_dict(self):
-        dict_to_dump = {}
-        dict_to_dump["algorithms"] = [algo.to_dict() for algo in self.algorithms]
-        dict_to_dump["metrics"] = [m.to_dict() for m in self.metrics]
-
-        dict_to_dump["optimisation_metric"] = (
-            self.optimisation_metric.to_dict()
-            if self.optimisation_metric is not None
-            else None
-        )
-
-        dict_to_dump["train_data"] = {"filename": self._train_file_path}
-
-        dict_to_dump["test_data"] = {
-            "data_in": {"filename": self._test_in_file_path},
-            "data_out": {"filename": self._test_out_file_path},
-        }
-
-        dict_to_dump["validation_data"] = (
-            {
-                "data_in": {"filename": self._validation_in_file_path},
-                "data_out": {"filename": self._validation_out_file_path},
-            }
-            if self.validation_data
-            else None
-        )
-        return dict_to_dump
 
     def _save_data(self):
         self.train_data.save(self._train_file_path)
@@ -551,9 +458,19 @@ class PipelineBuilder(object):
         self.test_data[0].save(self._test_in_file_path)
         self.test_data[1].save(self._test_out_file_path)
 
-        if self.validation_data:
+        if hasattr(self, "validation_data"):
             self.validation_data[0].save(self._validation_in_file_path)
             self.validation_data[1].save(self._validation_out_file_path)
+
+    @property
+    def _pipeline_config(self):
+        d = {}
+        d["algorithms"] = [algo._asdict() for algo in self.algorithms]
+        d["metrics"] = [m._asdict() for m in self.metrics.values()]
+        d["optimisation_metric"] = (self.optimisation_metric._asdict(
+        ) if hasattr(self, "optimisation_metric") else None)
+
+        return d
 
     def save(self):
         """Save the pipeline settings to file"""
@@ -564,39 +481,43 @@ class PipelineBuilder(object):
             os.makedirs(f"{self.path}/{self.name}")
 
         self._save_data()
-        d = self._construct_config_dict()
 
         with open(self._config_file_path, "w") as outfile:
-            outfile.write(yaml.safe_dump(d))
+            outfile.write(yaml.safe_dump(self._pipeline_config))
 
     def _load_data(self, d):
-        self.train_data = InteractionMatrix.load(d["train_data"]["filename"])
+        self.train_data = InteractionMatrix.load(self._train_file_path)
 
         self.test_data = (
-            InteractionMatrix.load(d["test_data"]["data_in"]["filename"]),
-            InteractionMatrix.load(d["test_data"]["data_out"]["filename"]),
+            InteractionMatrix.load(self._test_in_file_path),
+            InteractionMatrix.load(self._test_out_file_path),
         )
 
-        if d["validation_data"]:
+        try:
             self.validation_data = (
-                InteractionMatrix.load(d["validation_data"]["data_in"]["filename"]),
-                InteractionMatrix.load(d["validation_data"]["data_out"]["filename"]),
+                InteractionMatrix.load(
+                    self._validation_in_file_path),
+                InteractionMatrix.load(
+                    self._validation_out_file_path),
             )
+        except FileNotFoundError:
+            pass
 
     def load(self):
         """Load the settings from file into the correct members."""
 
         with open(self._config_file_path, "r") as infile:
-
             d = yaml.safe_load(infile)
 
-        self.metrics = [MetricEntry(**m) for m in d["metrics"]]
-        self.algorithms = [AlgorithmEntry(**a) for a in d["algorithms"]]
-        self.OptimisationMetricEntry = (
-            # TODO Load does not exist
-            OptimisationMetricEntry.load(d["optimisation_metric"])
-            if d["optimisation_metric"]
-            else None
-        )
+        for m in d["metrics"]:
+            self.add_metric(m["name"], m["K"])
+
+        for a in d["algorithms"]:
+            self.add_algorithm(a["name"], a["grid"], a["params"])
+
+        if d["optimisation_metric"]:
+            opt = d["optimisation_metric"]
+            self.set_optimisation_metric(
+                opt["name"], opt["K"], opt["minimise"])
 
         self._load_data(d)
