@@ -67,9 +67,6 @@ class KUNN(Algorithm):
     """
 
     def __init__(self, Ku: int = 100, Ki: int = 100):
-        """Initialize the KUNN Algorithm but setting the
-        number of K (top-K) for users and items.
-        """
         super().__init__()
         self.Ku = Ku
         self.Ki = Ki
@@ -81,7 +78,7 @@ class KUNN(Algorithm):
             which will be used to fit the algorithm.
         """
 
-        self.training_interactions_ = csr_matrix(X, copy=True)  # Memoize X
+        self.training_interactions_ = csr_matrix(X, copy=True)
         self.knn_i_ = self._fit_item_knn(X)
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
@@ -96,7 +93,7 @@ class KUNN(Algorithm):
         :rtype: csr_matrix
         """
 
-        knn_u = self._fit_user_knn(X)  # Memoized training interactions are used in `_fit_user_knn`
+        knn_u = self._fit_user_knn(X)  # Memorised training interactions are used in `_fit_user_knn` as well
 
         users_to_predict = get_users(X)
 
