@@ -254,8 +254,8 @@ class PipelineBuilder(object):
     The builder contains functions to set specific values for the pipeline.
     Save and Load make it possible to easily recreate pipelines.
 
-    :param name: The name of the pipeline,
-        the filename the pipeline is saved to is based on this name.
+    :param name: The name of the pipeline.
+        The filename the pipeline is saved to is based on this name.
         If no name is specified, the timestamp of creation is used.
     :type name: string
     :param path: The path to store pipeline in,
@@ -372,7 +372,8 @@ class PipelineBuilder(object):
         """
         self.train_data = train_data
 
-    def set_validation_data(self, validation_data: Matrix):
+    def set_validation_data(self, validation_data: Tuple[Matrix, Matrix]):
+        # TODO Can these be both csr_matrix as InteractionMatrix, or only InteractionMatrix?
         """Set the validation datasets.
 
         Validation data should be a tuple of InteractionMatrices.
@@ -592,6 +593,7 @@ class PipelineBuilder(object):
         self.metrics = [MetricEntry(**m) for m in d["metrics"]]
         self.algorithms = [AlgorithmEntry(**a) for a in d["algorithms"]]
         self.OptimisationMetricEntry = (
+            # TODO Load does not exist
             OptimisationMetricEntry.load(d["optimisation_metric"])
             if d["optimisation_metric"]
             else None
