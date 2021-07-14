@@ -24,8 +24,9 @@ class InteractionMatrix(DataMatrix):
 
     It provides a number of properties and methods for easy manipulation of this interaction data.
 
-    ! Note: The InteractionMatrix does not assume binary user-item pairs.
-    If a user interaction with an item more than once, there will be two entries for this user-item pair. !
+    .. note::
+        The InteractionMatrix does not assume binary user-item pairs.
+        If a user interacts with an item more than once, there will be two entries for this user-item pair.
 
     :param df: Dataframe containing user-item interactions. Must contain at least
                item ids and user ids.
@@ -594,7 +595,8 @@ class InteractionMatrix(DataMatrix):
     def from_csr_matrix(cls, X: csr_matrix) -> "InteractionMatrix":
         """Create an InteractionMatrix from a csr_matrix containing interactions.
 
-        WARNING: No timestamps can be passed this way!
+        .. warning:: 
+            No timestamps can be passed this way!
 
         :return: InteractionMatrix constructed from the csr_matrix.
         :rtype: InteractionMatrix
