@@ -7,6 +7,7 @@ import yaml
 
 from recpack.pipeline import PipelineBuilder, ALGORITHM_REGISTRY, METRIC_REGISTRY
 
+
 # ---- TEST REGISTRIES
 def test_metric_registry():
     assert "CalibratedRecallK" in METRIC_REGISTRY
@@ -38,7 +39,7 @@ def pipeline_builder(mat):
 
 def test_pipeline_builder(mat):
     pb = PipelineBuilder()
-    assert pb.path == os.getcwd()
+    assert pb.base_path == os.getcwd()
 
     # Build empty pipeline
     with pytest.raises(RuntimeError) as error:
@@ -248,20 +249,20 @@ def test_save(pipeline_builder, mat):
     assert mocker2.call_count == 3
 
     assert mocker2.call_args_list[0].args == (
-        f"{pipeline_builder.path}/{pipeline_builder.name}/train_properties.yaml",
+        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/train_properties.yaml",
         "w",
     )
     assert mocker2.call_args_list[1].args == (
-        f"{pipeline_builder.path}/{pipeline_builder.name}/test_in_properties.yaml",
+        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/test_in_properties.yaml",
         "w",
     )
     assert mocker2.call_args_list[2].args == (
-        f"{pipeline_builder.path}/{pipeline_builder.name}/test_out_properties.yaml",
+        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/test_out_properties.yaml",
         "w",
     )
 
     mocker.assert_called_with(
-        f"{pipeline_builder.path}/{pipeline_builder.name}/config.yaml", "w"
+        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/config.yaml", "w"
     )
     handler = mocker()
     handler.write.assert_called_with(yaml.safe_dump(pipeline_builder._pipeline_config))
@@ -273,7 +274,7 @@ def test_load(pipeline_builder, mat):
     mocker2 = mock_open(read_data=yaml.safe_dump(mat.properties.to_dict()))
     mocker3 = MagicMock(return_value=mat._df)
 
-    pb2 = PipelineBuilder(name=pipeline_builder.name, path=pipeline_builder.path)
+    pb2 = PipelineBuilder(folder_name=pipeline_builder.folder_name, base_path=pipeline_builder.base_path)
 
     with patch("recpack.data.matrix.pd.read_csv", mocker3):
         with patch("recpack.data.matrix.open", mocker2):
@@ -290,7 +291,7 @@ def test_default_name():
     time.sleep(0.1)
     pb2 = PipelineBuilder()
 
-    assert pb.name != pb2.name
+    assert pb.folder_name != pb2.folder_name
 
 
 def test_pipeline(pipeline_builder):

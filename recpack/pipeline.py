@@ -232,29 +232,29 @@ class PipelineBuilder(object):
         The filename the pipeline is saved to is based on this name.
         If no name is specified, the timestamp of creation is used.
     :type name: string
-    :param path: The path to store pipeline in,
+    :param base_path: The base_path to store pipeline in,
         defaults to the current working directory.
-    :type path: str
+    :type base_path: str
     """
 
-    def __init__(self, name=None, path=os.getcwd()):
+    def __init__(self, folder_name=None, base_path=os.getcwd()):
 
-        self.name = name
-        if self.name is None:
-            self.name = datetime.datetime.now().isoformat()
+        self.folder_name = folder_name
+        if self.folder_name is None:
+            self.folder_name = datetime.datetime.now().isoformat()
 
-        self.path = path
+        self.base_path = base_path
 
         self.metrics = {}
         self.algorithms = []
 
-        self._config_file_path = f"{self.path}/{self.name}/config.yaml"
-        self._train_file_path = f"{self.path}/{self.name}/train"
-        self._test_in_file_path = f"{self.path}/{self.name}/test_in"
-        self._test_out_file_path = f"{self.path}/{self.name}/test_out"
-        self._validation_in_file_path = f"{self.path}/{self.name}/validation_in"
-        self._validation_out_file_path = f"{self.path}/{self.name}/validation_out"
-        self.results_directory = f"{self.path}/{self.name}"
+        self._config_file_path = f"{self.base_path}/{self.folder_name}/config.yaml"
+        self._train_file_path = f"{self.base_path}/{self.folder_name}/train"
+        self._test_in_file_path = f"{self.base_path}/{self.folder_name}/test_in"
+        self._test_out_file_path = f"{self.base_path}/{self.folder_name}/test_out"
+        self._validation_in_file_path = f"{self.base_path}/{self.folder_name}/validation_in"
+        self._validation_out_file_path = f"{self.base_path}/{self.folder_name}/validation_out"
+        self.results_directory = f"{self.base_path}/{self.folder_name}"
 
     def _parse_arg(self, arg: Union[type, str]) -> str:
         if type(arg) == type:
@@ -482,8 +482,8 @@ class PipelineBuilder(object):
         self._check_readiness()
 
         # Make sure folder exists
-        if not os.path.exists(f"{self.path}/{self.name}"):
-            os.makedirs(f"{self.path}/{self.name}")
+        if not os.path.exists(f"{self.base_path}/{self.folder_name}"):
+            os.makedirs(f"{self.base_path}/{self.folder_name}")
 
         self._save_data()
 
