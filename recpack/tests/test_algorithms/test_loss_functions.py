@@ -12,6 +12,7 @@ from recpack.algorithms.loss_functions import (
     covariance_loss,
     bpr_loss,
     bpr_loss_wrapper,
+    skipgram_negative_sampling_loss
 )
 
 
@@ -89,6 +90,24 @@ def sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
 
+def test_skipgram_negative_sampling_loss():
+    pos_sim_as_tensor = torch.FloatTensor([0.6, 0.3])
+    neg_sim_as_tensor = torch.FloatTensor([[0.1, 0.3, 0.6],
+                                           [0.1, 0.3, 0.6]])
+    loss = skipgram_negative_sampling_loss(
+        pos_sim_as_tensor, neg_sim_as_tensor)
+
+    neg_loss = np.log(sigmoid(-0.1)) + \
+        np.log(sigmoid(-0.3)) + np.log(sigmoid(-0.6))
+
+    expected_loss = np.array([
+        -(np.log(sigmoid(0.6)) + neg_loss),
+        -(np.log(sigmoid(0.3)) + neg_loss)
+    ]).mean()
+
+    np.testing.assert_almost_equal(loss, expected_loss, decimal=3)
+
+
 def test_bpr_loss():
     pos_sim_as_tensor = torch.FloatTensor([0.6, 0.3, 0.1])
     neg_sim_as_tensor = torch.FloatTensor([0.1, 0.3, 0.6])
@@ -122,6 +141,7 @@ def test_bpr_loss_wrapper(X_true, X_pred):
 
     # Using more samples than positives this will make the estimate more stable,
     # And assert below should match.
-    loss = bpr_loss_wrapper(X_true, X_pred, batch_size=1, sample_size=1000, exact=True)
+    loss = bpr_loss_wrapper(X_true, X_pred, batch_size=1,
+                            sample_size=1000, exact=True)
 
     np.testing.assert_almost_equal(loss, expected_loss, decimal=2)

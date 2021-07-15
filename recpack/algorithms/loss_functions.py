@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from tqdm import tqdm
 
-from recpack.algorithms.samplers import bootstrap_sample_pairs, warp_sample_pairs
+from recpack.algorithms.samplers import BootstrapSampler, WarpSampler
 
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
@@ -130,7 +130,16 @@ def warp_loss(
     return loss
 
 
-def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor):
+def skipgram_negative_sampling_loss(
+    positive_sim: torch.Tensor, negative_sim: torch.Tensor
+) -> torch.Tensor:
+    pos_loss = positive_sim.sigmoid().log()
+    neg_loss = negative_sim.neg().sigmoid().log().sum(-1)
+
+    return -(pos_loss + neg_loss).mean()
+
+
+def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
     """Implementation of the Bayesian Personalized Ranking loss.
 
     BPR loss as defined in Rendle, Steffen, et al.
@@ -169,7 +178,7 @@ def bpr_loss_wrapper(
     :class:`recpack.algorithms.stopping_criterion.StoppingCriterion`.
 
     Positive and negative items are sampled using
-    :func:`recpack.algorithms.samplers.bootstrap_sample_pairs`.
+    :class:`recpack.algorithms.samplers.BootstrapSampler`.
     Scores are then extracted from the X_pred,
     and these positive and negative predictions are passed to the
     :func:`bpr_loss` function.
@@ -178,10 +187,10 @@ def bpr_loss_wrapper(
     :type X_true: csr_matrix
     :param X_pred: The predicted scores for users
     :type X_pred: csr_matrix
-    :param batch_size: size of the batches to sample
-    :type batch_size: The size of the batches to sample, defaults to 1000
-    :param sample_size: int, optional
-    :type sample_size: How many samples to construct
+    :param batch_size: size of the batches to sample, defaults to 1000
+    :type batch_size: int, optional
+    :param sample_size: How many samples to construct
+    :type sample_size: int, optional
     :param exact: If True sampling happens exact,
         otherwise sampling assumes high sparsity of data,
         accepting a minimal amount of false negatives,
@@ -196,12 +205,10 @@ def bpr_loss_wrapper(
 
     losses = []
 
-    for users, target_items, negative_items in bootstrap_sample_pairs(
-        X_true,
-        U=1,
-        batch_size=batch_size,
-        sample_size=sample_size,
-        exact=exact,
+    sampler = BootstrapSampler(U=1, batch_size=batch_size, exact=exact)
+
+    for users, target_items, negative_items in sampler.sample(
+        X_true, sample_size=sample_size
     ):
         # Needed to do copy, to use as index in the predidction matrix
         users = users.numpy().copy()
@@ -223,12 +230,13 @@ def warp_loss_wrapper(
     batch_size: int = 1000,
     U: int = 20,
     margin: float = 1.9,
+    sample_size=None,
     exact=False,
 ):
     """Metric wrapper around the :func:`warp_loss` function.
 
     Positives and negatives are sampled from the X_true matrix using
-    :func:`recpack.algorithms.samplers.warp_sample_pairs`.
+    :class:`recpack.algorithms.samplers.WarpSampler`.
     Their scores are fetched from the X_pred matrix.
 
     :param X_true: True interactions expected for the users
@@ -241,6 +249,8 @@ def warp_loss_wrapper(
     :type U: int, optional
     :param margin: required margin between positives and negatives, defaults to 1.9
     :type margin: float, optional
+    :param sample_size: How many samples to construct
+    :type sample_size: int, optional
     :param exact: If True sampling happens exact,
         otherwise sampling assumes high sparsity of data,
         accepting a minimal amount of false negatives.
@@ -252,8 +262,10 @@ def warp_loss_wrapper(
     losses = []
     J = X_true.shape[1]
 
+    sampler = WarpSampler(U=U, batch_size=batch_size, exact=exact)
+
     for users, positives_batch, negatives_batch in tqdm(
-        warp_sample_pairs(X_true, U=U, batch_size=batch_size, exact=exact)
+        sampler.sample(X_true, sample_size=sample_size)
     ):
 
         current_batch_size = users.shape[0]

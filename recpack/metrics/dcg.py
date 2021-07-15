@@ -4,24 +4,32 @@ import itertools
 from scipy.sparse import csr_matrix
 import numpy as np
 
-from recpack.metrics.base import ElementwiseMetricK, ListwiseMetricK
+from recpack.metrics.base import ListwiseMetricK
 from recpack.metrics.util import sparse_divide_nonzero
-from recpack.util import get_top_K_ranks
+
 
 logger = logging.getLogger("recpack")
 
 
-class DCGK(ElementwiseMetricK):
+class DiscountedCumulativeGainK(ListwiseMetricK):
+    """Computes the sum of gains of all items in a recommendation list.
+
+    Relevant items that are ranked higher in the Top-K recommendations have a higher gain.
+
+    The Discounted Cumulative Gain (DCG) is computed for every user as
+
+    .. math::
+
+        \\text{DiscountedCumulativeGain}(u) = \\sum\\limits_{i \\in Top-K(u)} \\frac{y^{true}_{u,i}}{\\log_2 (\\text{rank}(u,i) + 1)}
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
+    """
+
     def __init__(self, K):
         super().__init__(K)
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
 
         denominator = y_pred_top_K.multiply(y_true)
         # Denominator: log2(rank_i + 1)
@@ -32,19 +40,54 @@ class DCGK(ElementwiseMetricK):
 
         dcg = sparse_divide_nonzero(numerator, denominator)
 
-        self.scores_ = dcg
+        self.scores_ = csr_matrix(dcg.sum(axis=1))
 
         return
 
 
 def dcg_k(y_true, y_pred, k=50):
-    r = DCGK(K=k)
+    """Wrapper function around DiscountedCumulativeGain class.
+
+    :param y_true: True labels
+    :type y_true: csr_matrix
+    :param y_pred: Predicted scores
+    :type y_pred: csr_matrix
+    :param k: Size of the recommendation list consisting of the Top-K item predictions.
+    :type k: int, optional
+    :return: global dcg value
+    :rtype: float
+    """
+    r = DiscountedCumulativeGainK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value
 
 
-class NDCGK(ListwiseMetricK):
+class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
+
+    """Computes the normalized sum of gains of all items in a recommendation list.
+
+    The normalized Discounted Cumulative Gain (nDCG) is similar to DCG,
+    but normalizes by dividing the resulting sum of cumulative gains
+    by the best possible discounted cumulative gain for a list of recommendations
+    of length K for a user with history length N.
+
+    Scores are always in the interval [0, 1]
+
+    .. math::
+
+        \\text{NormalizedDiscountedCumulativeGain}(u) = \\frac{\\text{DCG}(u)}{\\text{IDCG}(u)}
+
+    where IDCG stands for Ideal Discounted Cumulative Gain, computed as:
+
+    .. math::
+
+        \\text{IDCG}(u) = \\sum\\limits_{j=1}^{\\text{min}(K, |y^{true}_u|)} \\frac{1}{\\log_2 (j + 1)}
+
+    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :type K: int
+    """
+
     def __init__(self, K):
         super().__init__(K)
 
@@ -55,13 +98,7 @@ class NDCGK(ListwiseMetricK):
             [1] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y))
         )
 
-    def calculate(self, y_true: csr_matrix, y_pred: csr_matrix) -> None:
-
-        y_true, y_pred = self.eliminate_empty_users(y_true, y_pred)
-        self.verify_shape(y_true, y_pred)
-
-        y_pred_top_K = get_top_K_ranks(y_pred, self.K)
-        self.y_pred_top_K_ = y_pred_top_K
+    def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
 
         # Correct predictions only
         denominator = y_pred_top_K.multiply(y_true)
@@ -79,14 +116,26 @@ class NDCGK(ListwiseMetricK):
         hist_len[hist_len > self.K] = self.K
 
         self.scores_ = sparse_divide_nonzero(
-            csr_matrix(per_user_dcg), csr_matrix(self.IDCG_cache[hist_len])
+            csr_matrix(per_user_dcg),
+            csr_matrix(self.IDCG_cache[hist_len]),
         )
 
         return
 
 
 def ndcg_k(y_true, y_pred, k=50):
-    r = NDCGK(K=k)
+    """Wrapper function around NormalizedDiscountedCumulativeGain class.
+
+    :param y_true: True labels
+    :type y_true: csr_matrix
+    :param y_pred: Predicted scores
+    :type y_pred: csr_matrix
+    :param k: Size of the recommendation list consisting of the Top-K item predictions.
+    :type k: int, optional
+    :return: ndcg value
+    :rtype: float
+    """
+    r = NormalizedDiscountedCumulativeGainK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value

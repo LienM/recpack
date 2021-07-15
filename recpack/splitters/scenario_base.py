@@ -7,53 +7,80 @@ from recpack.data.matrix import InteractionMatrix
 
 
 class Scenario(ABC):
+    """Base class for defining an evaluation scenario.
+
+    A scenario is a set of steps that splits data into training,
+    validation and test datasets.
+    Both validation and test dataset are made up of two components:
+    a fold-in set of interactions that is used to predict another held-out
+    set of interactions.
+
+    :param validation: Create a validation dataset when True, else split into training and test datasets.
+    :type validation: boolean, optional
+    """
+
     def __init__(self, validation=False):
-        """
-        Base class for defining an evaluation "Scenario",
-        i.e. a set of steps that splits data into training,
-        validation and test sets and creates the required data
-        folds for evaluation where a fold of the user's history is
-        used to predict another fold.
-        """
         self.validation = validation
         if validation:
             self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8)
 
     @abstractmethod
-    def split(self, data_m: InteractionMatrix):
-        """
-        Method to be implemented in all classes that inherit
-        from Scenario. Used to create the required data objects.
-        Returns them as follows:
-        train, test_in, test_out
-        or when separate labels for training are provided by the scenario:
-        train_X, train_y, test_in, test_out
+    def _split(self, data_m: InteractionMatrix) -> None:
+        """Abstract method to be implemented by the scenarios.
 
-        :param data_m: Interaction matrix
+        Splits the data and assigns to :attr:`train_X`,
+        :attr:`test_data_in, :attr:`test_data_out`, :attr:`validation_data_in`
+        and :attr:`validation_data_out`
+
+        :param data_m: Interaction matrix to be split.
+        :type data_m: InteractionMatrix
+        """
+
+    def split(self, data_m: InteractionMatrix) -> None:
+        """Splits ``data_m`` according to the scenario.
+
+        After splitting properties :attr:`training_data`,
+        :attr:`validation_data` and :attr:`test_data` can be used to retrieve the splitted data.
+
+        :param data_m: Interaction matrix that should be split.
         :type data: InteractionMatrix
         """
-        pass
+        self._split(data_m)
+
+        self._check_split()
 
     @property
-    def training_data(
-        self,
-    ) -> Union[Tuple[InteractionMatrix, InteractionMatrix], InteractionMatrix]:
-        return (
-            (self.train_X, self.train_y) if hasattr(self, "train_y") else self.train_X
-        )
+    def training_data(self) -> InteractionMatrix:
+        """The training dataset.
+
+        :return: Interaction Matrix of training interactions.
+        :rtype: InteractionMatrix
+        """
+        if not hasattr(self, "train_X"):
+            raise KeyError("Split before trying to access the training_data property.")
+
+        return self.train_X
 
     @property
     def validation_data(
         self,
     ) -> Union[Tuple[InteractionMatrix, InteractionMatrix], None]:
-        """
-        Returns validation data.
+        """The validation dataset. Consist of a fold-in and hold-out set of interactions.
 
-        :return: Validation data matrices as InteractionMatrix in, InteractionMatrix out.
+        Data is processed such that both matrices contain the exact same users.
+        Users that were present in only one of the matrices and not in the other are removed.
+
+        :return: Validation data matrices as
+            InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         if not hasattr(self, "_validation_data_in"):
-            return None
+            raise KeyError(
+                "Split before trying to access the validation_data property."
+            )
+
+        if not self.validation:
+            raise KeyError("This scenario was created without validation_data.")
 
         # make sure users match both.
         in_users = self._validation_data_in.active_users
@@ -66,25 +93,50 @@ class Scenario(ABC):
         )
 
     @property
+    def validation_data_in(self):
+        """Fold-in part of the validation dataset"""
+        return self.validation_data[0]
+
+    @property
+    def validation_data_out(self):
+        """Held-out part of the validation dataset"""
+        return self.validation_data[1]
+
+    @property
+    def test_data_in(self):
+        """Fold-in part of the test dataset"""
+        return self.test_data[0]
+
+    @property
+    def test_data_out(self):
+        """Held-out part of the test dataset"""
+        return self.test_data[1]
+
+    @property
     def test_data(self) -> Tuple[InteractionMatrix, InteractionMatrix]:
-        """
-        Returns test data.
+        """The test dataset. Consist of a fold-in and hold-out set of interactions.
+
+        Data is processed such that both matrices contain the exact same users.
+        Users that were present in only one of the matrices and not in the other are removed.
 
         :return: Test data matrices as InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
         # make sure users match.
-        in_users = self.test_data_in.active_users
-        out_users = self.test_data_out.active_users
+        in_users = self._test_data_in.active_users
+        out_users = self._test_data_out.active_users
 
         matching = list(in_users.intersection(out_users))
         return (
-            self.test_data_in.users_in(matching),
-            self.test_data_out.users_in(matching),
+            self._test_data_in.users_in(matching),
+            self._test_data_out.users_in(matching),
         )
 
-    def validate(self):
-        # TODO Test presency of train_y
+    def _check_split(self):
+        """Checks that the splits have been done properly.
+
+        Makes sure all expected attributes are set.
+        """
         assert hasattr(self, "train_X") and self.train_X is not None
         if self.validation:
             assert (
@@ -96,8 +148,8 @@ class Scenario(ABC):
                 and self._validation_data_out is not None
             )
 
-        assert hasattr(self, "test_data_in") and self.test_data_in is not None
-        assert hasattr(self, "test_data_out") and self.test_data_out is not None
+        assert hasattr(self, "_test_data_in") and self._test_data_in is not None
+        assert hasattr(self, "_test_data_out") and self._test_data_out is not None
 
         self._check_size()
 
@@ -106,8 +158,8 @@ class Scenario(ABC):
         Warns user if any of the sets is unusually small or empty
         """
         n_train = self.train_X.num_interactions
-        n_test_in = self.test_data_in.num_interactions
-        n_test_out = self.test_data_out.num_interactions
+        n_test_in = self._test_data_in.num_interactions
+        n_test_out = self._test_data_out.num_interactions
         n_test = n_test_in + n_test_out
         n_total = n_train + n_test
 

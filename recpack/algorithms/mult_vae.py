@@ -12,7 +12,7 @@ import numpy as np
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import vae_loss
 from recpack.algorithms.util import naive_sparse2tensor
-from recpack.splitters.splitter_base import batch
+from recpack.splitters.splitter_base import yield_batches
 
 logger = logging.getLogger("recpack")
 
@@ -176,7 +176,8 @@ class MultVAE(TorchMLAlgorithm):
             dropout=self.dropout,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -186,14 +187,13 @@ class MultVAE(TorchMLAlgorithm):
         :param train_data: Training data (UxI)
         :type train_data: [type]
         """
-        start_time = time.time()
         losses = []
 
         users = list(set(train_data.nonzero()[0]))
 
         np.random.shuffle(users)
 
-        for batch_idx, user_batch in enumerate(batch(users, self.batch_size)):
+        for batch_idx, user_batch in enumerate(yield_batches(users, self.batch_size)):
             X = naive_sparse2tensor(train_data[user_batch, :]).to(self.device)
 
             # Clear gradients
@@ -206,12 +206,7 @@ class MultVAE(TorchMLAlgorithm):
 
             self.steps += 1
 
-        end_time = time.time()
-
-        logger.info(
-            f"Processed one batch in {end_time-start_time} s."
-            f" Training Loss = {np.mean(losses)}"
-        )
+        return losses
 
     def _compute_loss(
         self,
@@ -285,7 +280,8 @@ class MultiVAETorch(nn.Module):
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.
-        self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
+        self.q_hid_bn_layer = nn.Linear(
+            dim_hidden_layer, dim_bottleneck_layer * 2)
 
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
@@ -332,7 +328,7 @@ class MultiVAETorch(nn.Module):
 
         # TODO This is a terrible hack. Do something about it.
         mu = h[:, : self.dim_bottleneck_layer]
-        logvar = h[:, self.dim_bottleneck_layer :]
+        logvar = h[:, self.dim_bottleneck_layer:]
         return mu, logvar
 
     def decode(self, z):

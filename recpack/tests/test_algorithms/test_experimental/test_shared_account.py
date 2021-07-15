@@ -31,13 +31,13 @@ def test_item_knn_sa_is_iknn():
     _in = scipy.sparse.csr_matrix(([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
     result = algo.predict(_in)
 
-    numpy.testing.assert_almost_equal(result, expected_similarities)
+    numpy.testing.assert_almost_equal(result.toarray(), expected_similarities)
 
     # Make sure similarities are added correctly.
     _in = scipy.sparse.csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 3))
     expected_out = [[0.5, 0.5, 4 / math.sqrt(6)]]
     result = algo.predict(_in)
-    numpy.testing.assert_almost_equal(result, expected_out)
+    numpy.testing.assert_almost_equal(result.toarray(), expected_out)
 
 
 def test_item_knn_sa():
@@ -63,10 +63,10 @@ def test_item_knn_sa():
     _in = scipy.sparse.csr_matrix(([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
     result = algo.predict(_in)
 
-    numpy.testing.assert_almost_equal(result, expected_similarities)
+    numpy.testing.assert_almost_equal(result.toarray(), expected_similarities)
 
     # Make sure similarities are added correctly.
     _in = scipy.sparse.csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 3))
     expected_out = [[0.5, 0.5, 4 / math.sqrt(6) / 2 ** 0.75]]
     result = algo.predict(_in)
-    numpy.testing.assert_almost_equal(result, expected_out)
+    numpy.testing.assert_almost_equal(result.toarray(), expected_out)

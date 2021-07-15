@@ -1,24 +1,22 @@
+from copy import deepcopy
 import logging
-import time
 from typing import List, Tuple
 
+import numpy as np
+from scipy.sparse import csr_matrix
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torch.optim as optim
 
-import numpy as np
-from scipy.sparse import csr_matrix
-
-from copy import deepcopy
-
-from recpack.splitters.splitter_base import batch
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.util import (
     swish,
     log_norm_pdf,
     naive_sparse2tensor,
 )
+from recpack.splitters.splitter_base import yield_batches
+
 
 logger = logging.getLogger("recpack")
 
@@ -134,7 +132,7 @@ class RecVAE(TorchMLAlgorithm):
         stopping_criterion: str = "ndcg",
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: int = 0.01,
+        min_improvement: float = 0.0,
         save_best_to_file: bool = False,
     ):
 
@@ -244,12 +242,10 @@ class RecVAE(TorchMLAlgorithm):
         optimizes a single part of the combined Neural network.
         The optimizer should be passed in the argument.
         """
-
-        start_time = time.time()
         losses = []
         np.random.shuffle(users)
 
-        for batch_idx, user_batch in enumerate(batch(users, self.batch_size)):
+        for batch_idx, user_batch in enumerate(yield_batches(users, self.batch_size)):
             X = naive_sparse2tensor(train_data[user_batch, :]).to(self.device)
 
             # Clear gradients
@@ -265,12 +261,7 @@ class RecVAE(TorchMLAlgorithm):
 
             self.steps += 1
 
-        end_time = time.time()
-
-        logger.info(
-            f"Processed one batch in {end_time-start_time} s."
-            f" Training Loss = {np.mean(losses)}"
-        )
+        return losses
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -286,12 +277,14 @@ class RecVAE(TorchMLAlgorithm):
         users = list(set(train_data.nonzero()[0]))
 
         for _ in range(self.n_enc_epochs):
-            self._train_partial(train_data, users, self.enc_optimizer)
+            losses = self._train_partial(train_data, users, self.enc_optimizer)
 
         self.model_.update_prior()
 
         for _ in range(self.n_dec_epochs):
-            self._train_partial(train_data, users, self.dec_optimizer)
+            losses = self._train_partial(train_data, users, self.dec_optimizer)
+
+        return losses
 
     def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
         """Predict scores for matrix X, given the selected users.
@@ -368,7 +361,8 @@ class CompositePrior(nn.Module):
         unif_prior = log_norm_pdf(z, self.mu_prior, self.logvar_uniform_prior)
 
         gaussians = [stnd_prior, post_prior, unif_prior]
-        gaussians = [g.add(np.log(w)) for g, w in zip(gaussians, self.mixture_weights)]
+        gaussians = [g.add(np.log(w))
+                     for g, w in zip(gaussians, self.mixture_weights)]
 
         density_per_gaussian = torch.stack(gaussians, dim=-1)
 
@@ -487,7 +481,8 @@ class RecVAETorch(nn.Module):
         """
         super(RecVAETorch, self).__init__()
 
-        self.encoder = Encoder(dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
+        self.encoder = Encoder(
+            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
         self.prior = CompositePrior(
             dim_hidden_layer, dim_bottleneck_layer, dim_input_layer
         )
@@ -544,4 +539,5 @@ class RecVAETorch(nn.Module):
         """
         The encoder in the prior is updated to the current encoder state.
         """
-        self.prior.encoder_old.load_state_dict(deepcopy(self.encoder.state_dict()))
+        self.prior.encoder_old.load_state_dict(
+            deepcopy(self.encoder.state_dict()))

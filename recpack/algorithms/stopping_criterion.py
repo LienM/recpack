@@ -7,6 +7,7 @@ from scipy.sparse import csr_matrix
 from recpack.algorithms.loss_functions import bpr_loss_wrapper, warp_loss_wrapper
 from recpack.metrics.dcg import ndcg_k
 from recpack.metrics.recall import recall_k
+from recpack.metrics.precision import precision_k
 
 logger = logging.getLogger("recpack")
 
@@ -87,6 +88,7 @@ class StoppingCriterion:
         "recall": {"loss_function": recall_k, "minimize": False, "k": 50},
         "ndcg": {"loss_function": ndcg_k, "minimize": False, "k": 50},
         "warp": {"loss_function": warp_loss_wrapper, "minimize": True},
+        "precision": {"loss_function": precision_k, "minimize": False},
     }
     """Available loss function options.
 
@@ -107,7 +109,7 @@ class StoppingCriterion:
         minimize: bool = False,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: float = 0.01,
+        min_improvement: float = 0.0,
         **kwargs,
     ):
 
@@ -145,12 +147,12 @@ class StoppingCriterion:
 
         if self.minimize:
             # If we try to minimize, smaller values of loss are better.
-            better = loss < self.best_value and (
+            better = loss <= self.best_value and (
                 abs(loss - self.best_value) > self.min_improvement
             )
         else:
             # If we try to maximize, larger values of loss are better.
-            better = loss > self.best_value and (
+            better = loss >= self.best_value and (
                 abs(loss - self.best_value) > self.min_improvement
             )
 
@@ -182,7 +184,7 @@ class StoppingCriterion:
         based on the name of the loss function.
 
         BPR and WARP loss will minimize a loss function,
-        Recall and NDCG will optimise a ranking metric,
+        Recall and NormalizedDiscountedCumulativeGain will optimise a ranking metric,
         with default @K=50
 
         keyword arguments of the criteria can be set by passing
@@ -217,8 +219,7 @@ class StoppingCriterion:
         """
 
         if criterion_name not in cls.FUNCTIONS:
-            raise ValueError(
-                f"stopping criterion {criterion_name} not supported")
+            raise ValueError(f"stopping criterion {criterion_name} not supported")
 
         # We will combine the two dicts, with kwargs getting precendence.
         return StoppingCriterion(**{**cls.FUNCTIONS[criterion_name], **kwargs})

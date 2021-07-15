@@ -61,6 +61,6 @@ html_static_path = ["_static"]
 
 # -- Options for MathJax --------
 mathjax_config = {
-    'extensions': ['tex2jax.js'],
-    'jax': ['input/TeX', 'output/HTML-CSS'],
+    "extensions": ["tex2jax.js"],
+    "jax": ["input/TeX", "output/HTML-CSS"],
 }

@@ -13,6 +13,8 @@ def test_coverageK(X_pred, X_true):
     # total number of items = 5
     np.testing.assert_almost_equal(metric.value, 4 / 5)
 
+    assert metric.results.shape[0] == 1
+
 
 def test_coverageK_empty_reco(X_pred, X_true_unrecommended_user):
     K = 2
@@ -24,3 +26,5 @@ def test_coverageK_empty_reco(X_pred, X_true_unrecommended_user):
     # user 2 gets recommended items 3 and 4
     # total number of items = 5
     np.testing.assert_almost_equal(metric.value, 4 / 5)
+
+    assert metric.results.shape[0] == 1

@@ -4,6 +4,8 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
+from unittest.mock import MagicMock, mock_open, patch
+import yaml
 
 from recpack.data.matrix import (
     to_csr_matrix,
@@ -437,3 +439,67 @@ def test_to_binary_csr3(m_csr, m_datam, m_csr_binary):
     result = to_csr_matrix((m_csr, m_datam), binary=True)
     assert matrix_equal(result[0], m_csr_binary)
     assert matrix_equal(result[1], m_csr_binary)
+
+
+def test_save(larger_mat):
+    mocker = mock_open()
+    open_name = "recpack.data.matrix.open"
+    mocker2 = MagicMock()
+    with patch("recpack.data.matrix.pd.DataFrame.to_csv", mocker2):
+
+        with patch(open_name, mocker):
+            larger_mat.save("test_data")
+
+    mocker.assert_called_once_with("test_data_properties.yaml", "w")
+
+    handle = mocker()
+    # handle.call
+    assert handle.write.call_count == 1
+    handle.write.assert_called_once_with(
+        yaml.safe_dump(larger_mat.properties.to_dict())
+    )
+
+    assert mocker2.call_count == 1
+    mocker2.assert_called_once_with("test_data.csv", header=True, index=False)
+
+
+def test_load(larger_mat):
+
+    mocker2 = MagicMock(return_value=larger_mat._df)
+    with patch("recpack.data.matrix.pd.read_csv", mocker2):
+        with patch(
+            "recpack.data.matrix.open",
+            mock_open(read_data=yaml.safe_dump(larger_mat.properties.to_dict())),
+        ) as mocker:
+            im = InteractionMatrix.load("test_data")
+
+    mocker.assert_called_once_with("test_data_properties.yaml", "r")
+
+    assert mocker2.call_count == 1
+    mocker2.assert_called_once_with("test_data.csv")
+
+    assert im.shape == larger_mat.shape
+    assert im.active_users == larger_mat.active_users
+
+    # Added to check bug loading shape of InteractionMatrix
+    prop = im.properties
+
+
+def test_add(larger_mat):
+    double_mat = larger_mat + larger_mat
+
+    assert double_mat.num_interactions == larger_mat.num_interactions * 2
+    assert double_mat.active_users == larger_mat.active_users
+    np.testing.assert_array_equal(
+        double_mat.binary_values.toarray(), larger_mat.binary_values.toarray()
+    )
+    assert (
+        double_mat._df[double_mat.INTERACTION_IX].nunique()
+        == 2 * larger_mat._df[larger_mat.INTERACTION_IX].nunique()
+    )
+    np.testing.assert_array_equal(double_mat._df.columns, larger_mat._df.columns)
+
+
+def test_add_mismatch(mat, larger_mat):
+    with pytest.raises(ValueError):
+        mat + larger_mat

@@ -1,10 +1,47 @@
 import numpy as np
 import pandas as pd
 import pytest
+import torch
+from torch.autograd import Variable
+import torch.nn as nn
 import scipy.sparse as sp
 
 
 from recpack.data.matrix import InteractionMatrix
+
+INPUT_SIZE = 1000
+USER_IX = InteractionMatrix.USER_IX
+ITEM_IX = InteractionMatrix.ITEM_IX
+TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
+
+
+@pytest.fixture(scope="function")
+def input_size():
+    return INPUT_SIZE
+
+
+@pytest.fixture(scope="function")
+def inputs():
+    torch.manual_seed(400)
+    return Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
+
+
+@pytest.fixture(scope="function")
+def targets():
+    torch.manual_seed(400)
+    return Variable(torch.randint(0, 2, (INPUT_SIZE,))).long()
+
+
+@pytest.fixture(scope="function")
+def small_mat_unigram():
+    data = {
+        TIMESTAMP_IX: np.random.randint(0, 10, size=10),
+        ITEM_IX: [0, 0, 0, 0, 0, 1, 2, 3, 4, 5],
+        USER_IX: np.random.randint(0, 10, size=10),
+    }
+    df = pd.DataFrame.from_dict(data)
+
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
 
 @pytest.fixture(scope="function")
@@ -52,44 +89,6 @@ def purchases():
 
 
 @pytest.fixture(scope="function")
-def labels():
-    labels = sp.csr_matrix(([1], ([0], [0])), shape=(1, 5))
-
-    return labels
-
-
-@pytest.fixture(scope="function")
-def labels_more_durable_items():
-    labels = sp.csr_matrix(([1, 1], ([0, 0], [0, 3])), shape=(1, 5))
-
-    return labels
-
-
-@pytest.fixture(scope="function")
-def metadata():
-    data_dict = {
-        "title": ["item_1", "Rosemary", "", "item_2", "Pepper"],
-        "item_id": [0, 1, 2, 3, 4],
-    }
-
-    return pd.DataFrame.from_dict(data_dict)
-
-
-@pytest.fixture(scope="function")
-def metadata_tags_matrix():
-    """constructs a matrix, with 3 tags: sport, news and celeb
-    encoded as columns 1, 2 and 3 in the matrix"""
-    items, tags, values = (
-        [0, 0, 1, 2, 3, 4],
-        [0, 1, 1, 0, 2, 1],
-        [1, 1, 1, 1, 1, 1],
-    )
-
-    mat = sp.csr_matrix((values, (items, tags)), shape=(5, 3))
-    return mat
-
-
-@pytest.fixture(scope="function")
 def larger_matrix():
     num_interactions = 2000
     num_users = 500
@@ -121,3 +120,27 @@ def data():
     pred = sp.csr_matrix((pred_values, (pred_users, pred_items)), shape=(10, 5))
 
     return pred
+
+
+@pytest.fixture(scope="function")
+def p2v_embedding():
+    # the target values for our predictions
+    # we have five users, the target is the last item the user bought
+    # values = [1] * 5
+    # users = [0, 1, 2, 3, 4]
+    # items = [0, 1, 2, 3, 4]
+    # target = sp.csr_matrix((values, (users, items)))
+    # target = InteractionMatrix.from_csr_matrix(target)
+
+    # pre-defined embedding vectors
+    embedding = [
+        [0.5, 0.5, 0.0, 0.0, 0.0],
+        [0.4, 0.4, 0.1, 0.0, 0.0],
+        [0.0, 0.0, 0.0, 0.5, 0.5],
+        [0.0, 0.0, 0.5, 0.5, 0.0],
+        [1.0, 0.0, 0.0, 0.0, 0.0],
+    ]
+    embedding = np.array(embedding)
+    embedding = torch.from_numpy(embedding)
+    embedding = nn.Embedding.from_pretrained(embedding)
+    return embedding

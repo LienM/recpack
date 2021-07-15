@@ -3,6 +3,7 @@ import scipy.sparse
 import tempfile
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.autograd import Variable
 
 from typing import Callable
@@ -17,26 +18,6 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 # Inspiration for these tests came from:
 # https://medium.com/@keeper6928/how-to-unit-test-machine-learning-code-57cf6fd81765
-
-
-INPUT_SIZE = 1000
-
-
-@pytest.fixture(scope="function")
-def input_size():
-    return INPUT_SIZE
-
-
-@pytest.fixture(scope="function")
-def inputs():
-    torch.manual_seed(400)
-    return Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
-
-
-@pytest.fixture(scope="function")
-def targets():
-    torch.manual_seed(400)
-    return Variable(torch.randint(0, 2, (INPUT_SIZE,))).long()
 
 
 @pytest.fixture(scope="function")
@@ -61,7 +42,7 @@ def mult_vae():
 def _training_step(
     model: nn.Module,
     loss_fn: Callable,
-    optim: torch.optim.Optimizer,
+    optim: optim.Optimizer,
     inputs: Variable,
     targets: Variable,
     device: torch.device,
@@ -90,7 +71,8 @@ def _training_step(
 def test_training_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix)
 
-    params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
+    params = [np for np in mult_vae.model_.named_parameters()
+              if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -106,7 +88,8 @@ def test_training_epoch(mult_vae, larger_matrix):
 def test_evaluation_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix)
 
-    params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
+    params = [np for np in mult_vae.model_.named_parameters()
+              if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -144,7 +127,7 @@ def test_multi_vae_forward(input_size, inputs, targets):
     _training_step(
         mult_vae,
         vae_loss,
-        torch.optim.Adam(mult_vae.parameters()),
+        optim.Adam(mult_vae.parameters()),
         inputs,
         targets,
         device,
