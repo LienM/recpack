@@ -5,7 +5,7 @@ import time
 from unittest.mock import MagicMock, mock_open, patch
 import yaml
 
-from recpack.pipeline import PipelineBuilder, ALGORITHM_REGISTRY, METRIC_REGISTRY
+from recpack.pipelines import PipelineBuilder, ALGORITHM_REGISTRY, METRIC_REGISTRY
 
 
 # ---- TEST REGISTRIES
@@ -243,7 +243,7 @@ def test_save(pipeline_builder, mat):
     mocker3 = MagicMock()
     with patch("recpack.data.matrix.pd.DataFrame.to_csv", mocker3):
         with patch("recpack.data.matrix.open", mocker2):
-            with patch("recpack.pipeline.open", mocker):
+            with patch("recpack.pipelines.pipeline.open", mocker):
                 pipeline_builder.save()
 
     assert mocker2.call_count == 3
@@ -274,11 +274,13 @@ def test_load(pipeline_builder, mat):
     mocker2 = mock_open(read_data=yaml.safe_dump(mat.properties.to_dict()))
     mocker3 = MagicMock(return_value=mat._df)
 
-    pb2 = PipelineBuilder(folder_name=pipeline_builder.folder_name, base_path=pipeline_builder.base_path)
+    pb2 = PipelineBuilder(
+        folder_name=pipeline_builder.folder_name, base_path=pipeline_builder.base_path
+    )
 
     with patch("recpack.data.matrix.pd.read_csv", mocker3):
         with patch("recpack.data.matrix.open", mocker2):
-            with patch("recpack.pipeline.open", mocker):
+            with patch("recpack.pipelines.pipeline.open", mocker):
 
                 pb2.load()
 
@@ -311,7 +313,7 @@ def test_pipeline_save_metrics(pipeline_builder):
     pipeline.run()
 
     mocker = MagicMock()
-    with patch("recpack.pipeline.pd.DataFrame.to_json", mocker):
+    with patch("recpack.pipelines.pipeline.pd.DataFrame.to_json", mocker):
         pipeline.save_metrics()
 
         mocker.assert_called_once_with(
