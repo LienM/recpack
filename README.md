@@ -129,12 +129,20 @@ When creating the pipeline you will connect all the components and select metric
 import recpack.pipelines
 # Construct a pipeline which computes NDCG and Recall @ 10, 20, 50 and 100
 # Only a single algorithm is evaluated, but you could select multiple algorithms to be evaluated at the same time.
-p = recpack.pipelines.Pipeline([algo], ['NDCG', 'Recall'], [10,20,50,100])
+pipeline_builder = recpack.pipelines.PipelineBuilder('demo')
+pipeline_builder.set_train_data(scenario.training_data)
+pipeline_builder.set_test_data(scenario.test_data)
 
-p.run(scenario.training_data, scenario.test_data)
+pipeline_builder.add_algorithm('Popularity')
+pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 30])
+pipeline_builder.add_metric('RecallK', [10, 20, 30])
+
+pipeline = pipeline_builder.build()
+
+pipeline.run()
 
 # Get the metric results.
 # This will be a dict with the results of the run.
 # Turning it into a dataframe makes reading easier
-pd.DataFrame.from_dict(p.get()) 
+pd.DataFrame.from_dict(pipeline.get_metrics()) 
 ```
