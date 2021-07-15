@@ -1,9 +1,11 @@
 from math import ceil
-from typing import Iterator, List, Union
+from typing import Iterator, List
 
 import numpy as np
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_matrix
 import torch
+
+from recpack.data.matrix import to_binary
 
 
 def swish(x):
@@ -82,3 +84,30 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
         sampled_matrices.append(sampled_mat)
 
     return sampled_matrices
+
+
+def union_csr_matrices(a: csr_matrix, b: csr_matrix) -> csr_matrix:
+    """Combine entries of 2 binary csr_matrices.
+
+
+    :param a: Binary csr_matrix
+    :type a: csr_matrix
+    :param b: Binary csr_matrix
+    :type b: csr_matrix
+    :return: The union of a and b
+    :rtype csr_matrix:
+    """
+    return to_binary(a + b)
+
+
+def invert(x: np.array):
+    """Invert an array.
+
+    :param x: [description]
+    :type x: [type]
+    :return: [description]
+    :rtype: [type]
+    """
+    ret = np.zeros(x.shape)
+    ret[x.nonzero()] = 1 / x[x.nonzero()]
+    return ret
