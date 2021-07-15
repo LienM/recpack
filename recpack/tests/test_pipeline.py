@@ -106,7 +106,7 @@ def test_pipeline_builder(mat):
 
     assert (
         error.value.args[0]
-        == "No validation data available to perform the requested hyper parameter optimisation"
+        == "No validation data available to perform the requested hyperparameter optimisation"
         ", can't construct pipeline."
     )
 
@@ -123,6 +123,19 @@ def test_pipeline_builder(mat):
     assert pipeline.train_data.shape == mat.shape
     assert pipeline.test_data is not None
     assert pipeline.validation_data is not None
+
+
+def test_pipeline_builder_no_validation_torch(pipeline_builder):
+    pipeline_builder.add_algorithm("BPRMF", params={"learning_rate": 0.1})
+
+    print(pipeline_builder.algorithms)
+    with pytest.raises(RuntimeError) as error:
+        pipeline_builder.build()
+
+    assert error.value.args[0] == (
+        "No validation data available to perform the requested hyperparameter optimisation"
+        ", can't construct pipeline."
+    )
 
 
 def test_pipeline_builder_no_optimisation(mat):
@@ -251,22 +264,16 @@ def test_save(pipeline_builder, mat):
         f"{pipeline_builder.path}/{pipeline_builder.name}/config.yaml", "w"
     )
     handler = mocker()
-    handler.write.assert_called_with(
-        yaml.safe_dump(pipeline_builder._pipeline_config)
-    )
+    handler.write.assert_called_with(yaml.safe_dump(pipeline_builder._pipeline_config))
 
 
 def test_load(pipeline_builder, mat):
 
-    mocker = mock_open(
-        read_data=yaml.safe_dump(pipeline_builder._pipeline_config)
-    )
+    mocker = mock_open(read_data=yaml.safe_dump(pipeline_builder._pipeline_config))
     mocker2 = mock_open(read_data=yaml.safe_dump(mat.properties.to_dict()))
     mocker3 = MagicMock(return_value=mat._df)
 
-    pb2 = PipelineBuilder(
-        name=pipeline_builder.name, path=pipeline_builder.path
-    )
+    pb2 = PipelineBuilder(name=pipeline_builder.name, path=pipeline_builder.path)
 
     with patch("recpack.data.matrix.pd.read_csv", mocker3):
         with patch("recpack.data.matrix.open", mocker2):
@@ -295,3 +302,17 @@ def test_pipeline(pipeline_builder):
     assert len(metrics) == len(pipeline.algorithms)
 
     assert len(metrics[list(metrics.keys())[0]]) == len(pipeline.metrics)
+
+
+def test_pipeline_save_metrics(pipeline_builder):
+    pipeline = pipeline_builder.build()
+
+    pipeline.run()
+
+    mocker = MagicMock()
+    with patch("recpack.pipeline.pd.DataFrame.to_json", mocker):
+        pipeline.save_metrics()
+
+        mocker.assert_called_once_with(
+            f"{pipeline_builder.results_directory}/results.json"
+        )
