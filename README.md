@@ -134,8 +134,8 @@ pipeline_builder.set_train_data(scenario.training_data)
 pipeline_builder.set_test_data(scenario.test_data)
 
 pipeline_builder.add_algorithm('Popularity')
-pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 30])
-pipeline_builder.add_metric('RecallK', [10, 20, 30])
+pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
+pipeline_builder.add_metric('RecallK', [10, 20, 30, 100])
 
 pipeline = pipeline_builder.build()
 

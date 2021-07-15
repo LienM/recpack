@@ -11,52 +11,55 @@ import numpy as np
 from sklearn.model_selection import ParameterGrid
 from tqdm.auto import tqdm
 
-import recpack.algorithms
-import recpack.metrics
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.data.matrix import InteractionMatrix
 
+from recpack.pipelines.registries import MetricRegistry, AlgorithmRegistry
 
 logger = logging.getLogger("recpack")
 
 
-class Registry:
-    def __init__(self, src):
-        self.registered = {}
-        self.src = src
-
-    def __getitem__(self, key: str) -> type:
-        return self.get(key)
-
-    def __contains__(self, key: str) -> bool:
-        try:
-            self.get(key)
-            return True
-        except AttributeError:
-            return False
-
-    def get(self, name: str) -> type:
-        if name in self.registered:
-            return self.registered[name]
-        else:
-            return getattr(self.src, name)
-
-    def register(self, name: str, c: type):
-        self.registered[name] = c
-
-
-class AlgorithmRegistry(Registry):
-    def __init__(self):
-        super().__init__(recpack.algorithms)
-
-
-class MetricRegistry(Registry):
-    def __init__(self):
-        super().__init__(recpack.metrics)
-
-
 ALGORITHM_REGISTRY = AlgorithmRegistry()
+"""Registry for algorithms.
+
+Contains the Recpack algorithms by default,
+and allows registration of new algorithms via the `register` function.
+
+Example::
+
+    from recpack.pipelines import ALGORITHM_REGISTRY
+
+    # Construct an ItemKNN object with parameter K=20
+    algo = ALGORITHM_REGISTRY.get('ItemKNN')(K=20)
+
+    from recpack.algorithms import ItemKNN
+    ALGORITHM_REGISTRY.register('HelloWorld', ItemKNN)
+
+    # Also construct an ItemKNN object with parameter K=20
+    algo = ALGORITHM_REGISTRY.get('HelloWorld')(K=20)
+"""
+
+
 METRIC_REGISTRY = MetricRegistry()
+"""Registry for metrics.
+
+Contains the Recpack metrics by default,
+and allows registration of new metrics via the `register` function.
+
+Example::
+
+    from recpack.pipelines import METRIC_REGISTRY
+
+    # Construct a Recall object with parameter K=20
+    algo = METRIC_REGISTRY.get('Recall')(K=20)
+
+    from recpack.algorithms import Recall
+    METRIC_REGISTRY.register('HelloWorld', Recall)
+
+    # Also construct a Recall object with parameter K=20
+    algo = METRIC_REGISTRY.get('HelloWorld')(K=20)
+
+"""
 
 
 class MetricAccumulator:
@@ -211,14 +214,37 @@ class Pipeline(object):
                 m.calculate(test_out.binary_values, recommendations)
                 self._metric_acc.add(m, algo.identifier, m.name)
 
-    def get_metrics(self):
+    def get_metrics(self) -> Dict[str, Dict[str, float]]:
+        """Get the metrics for the pipeline.
+
+        Returns a nested dict, with structure:
+        <algorithm> -> <metric> -> value
+
+        It can be easily rendered into a well readable table using pandas::
+
+            import pandas as pd
+
+            pd.DataFrame.from_dict(pipeline.get_metrics())
+
+        :return: Metric values as a nested dict.
+        :rtype: Dict[str, Dict[str, float]]
+        """
         return self._metric_acc.metrics
 
-    def save_metrics(self):
+    def save_metrics(self) -> None:
+        """Save the metrics in a json file
+
+        The file will be saved in the experiment directory.
+        """
         df = pd.DataFrame.from_dict(self.get_metrics())
         df.to_json(f"{self.results_directory}/results.json")
 
-    def get_num_users(self):
+    def get_num_users(self) -> int:
+        """Get the amount of users used in the evaluation.
+
+        :return: The number of users used in the evaluation.
+        :rtype: int
+        """
         return self._metric_acc.num_users
 
 
@@ -252,8 +278,12 @@ class PipelineBuilder(object):
         self._train_file_path = f"{self.base_path}/{self.folder_name}/train"
         self._test_in_file_path = f"{self.base_path}/{self.folder_name}/test_in"
         self._test_out_file_path = f"{self.base_path}/{self.folder_name}/test_out"
-        self._validation_in_file_path = f"{self.base_path}/{self.folder_name}/validation_in"
-        self._validation_out_file_path = f"{self.base_path}/{self.folder_name}/validation_out"
+        self._validation_in_file_path = (
+            f"{self.base_path}/{self.folder_name}/validation_in"
+        )
+        self._validation_out_file_path = (
+            f"{self.base_path}/{self.folder_name}/validation_out"
+        )
         self.results_directory = f"{self.base_path}/{self.folder_name}"
 
     def _parse_arg(self, arg: Union[type, str]) -> str:

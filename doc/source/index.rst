@@ -10,6 +10,7 @@ Welcome to Recpack's documentation!
    recpack.splitters
    recpack.metrics
    recpack.postprocessing
+   recpack.pipelines
    guides
 
 Indices and tables
