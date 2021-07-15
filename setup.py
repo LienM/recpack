@@ -12,6 +12,7 @@ setup(
         "scipy==1.6.0",
         "scikit-learn==0.24.1",
         "pandas==1.2.1",
+        "PyYAML==5.4.1=",
         "torch==1.7.1",
         "torchtest==0.5",
         "tqdm==4.46.0",
