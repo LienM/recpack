@@ -56,7 +56,7 @@ pages:
     - sphinx-autogen -o source/generated/ source/recpack.preprocessing.rst -t source/_templates/
     - sphinx-autogen -o source/generated/ source/recpack.splitters.rst -t source/_templates/
     - sphinx-autogen -o source/generated/ source/recpack.postprocessing.rst -t source/_templates/
-    - sphinx-autogen -o source/generated/ source/recpack.pipeline.rst -t source/_templates/
+    - sphinx-autogen -o source/generated/ source/recpack.pipelines.rst -t source/_templates/
     # Render HTML
     - make html
     # Move the build to public
