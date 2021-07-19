@@ -70,5 +70,5 @@ publish:pypi:
     - pip install twine
     - python setup.py bdist_wheel
     - python3 -m twine upload --repository gitlab dist/*
-  # only:
-  #   - tags
+  only:
+    - tags
