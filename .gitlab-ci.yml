@@ -65,7 +65,8 @@ publish:pypi:
   needs:
     - test
   script:
-    - sed 's/<<env.CI_JOB_TOKEN>>/$CI_JOB_TOKEN/' .pypirc > ~/.pypirc
+    - sed "s/<<env.CI_JOB_TOKEN>>/${CI_JOB_TOKEN}/" .pypirc > ~/.pypirc
+    - cat ~/.pypirc
     - pip install twine
     - python setup.py bdist_wheel
     - python3 -m twine upload --repository gitlab dist/*
