@@ -33,19 +33,6 @@ test:
     # - pip install tox flake8 # you can also use tox
     # - tox -e py36,flake8
 
-run:
-  script:
-    - python setup.py bdist_wheel
-    # an alternative approach is to install and run:
-    - pip install dist/*
-    # run the command here
-  artifacts:
-    paths:
-      - dist/*.whl
-  only:
-    - master
-    - tags
-
 pages:
   script:
     - pip install sphinx sphinx-rtd-theme
@@ -71,8 +58,7 @@ pages:
 publish:
   script:
     - pip install twine
+    - python setup.py bdist_wheel
     - python3 -m twine upload --repository gitlab dist/*
-  dependencies:
-    - run
   only:
     - tags
