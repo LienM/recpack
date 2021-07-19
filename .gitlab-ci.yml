@@ -44,6 +44,7 @@ run:
       - dist/*.whl
   only:
     - master
+    - tags
 
 pages:
   script:
@@ -66,3 +67,12 @@ pages:
       - public
   only:
     - master
+
+publish:
+  script:
+    - pip install twine
+    - python3 -m twine upload --repository gitlab dist/*
+  dependencies:
+    - run
+  only:
+    - tags
