@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="recpack",
-    version="0.1.1-preview2",
+    version="0.1.1",
     python_requires=">=3.6",
     packages=find_packages(),
     # tests_require=["pytest"],
