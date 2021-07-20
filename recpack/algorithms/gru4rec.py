@@ -220,6 +220,9 @@ class GRU4Rec(TorchMLAlgorithm):
             # positives shape = (batch_size x |max_hist_length|)
             # targets shape = (batch_size x |max_hist_length|)
             # negatives shape = (batch_size x |max_hist_length| x self.U)
+            positives_batch = positives_batch.to(self.device)
+            targets_batch = targets_batch.to(self.device)
+            negatives_batch = negatives_batch.to(self.device)
 
             batch_loss = 0
             true_batch_size = positives_batch.shape[0]
@@ -228,7 +231,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
             # Generate vertical chunks of BPTT width
             for input_chunk, target_chunk, neg_chunk in self._chunk(
-                positives_batch.to(self.device), targets_batch.to(self.device), negatives_batch.to(self.device)
+                positives_batch, targets_batch, negatives_batch
             ):
                 input_mask = input_chunk != self.pad_token
                 # Remove rows with only pad tokens from chunk and from hidden.
