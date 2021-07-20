@@ -27,25 +27,18 @@ before_script:
   - pip install .
 
 test:
+  stage: test
+  needs: []
   script:
     - pytest --cov=recpack recpack/tests/ --cov-config=.coveragerc
     # - python setup.py test
     # - pip install tox flake8 # you can also use tox
     # - tox -e py36,flake8
 
-run:
-  script:
-    - python setup.py bdist_wheel
-    # an alternative approach is to install and run:
-    - pip install dist/*
-    # run the command here
-  artifacts:
-    paths:
-      - dist/*.whl
-  only:
-    - master
-
 pages:
+  stage: deploy
+  needs:
+    - test
   script:
     - pip install sphinx sphinx-rtd-theme
     - cd doc
@@ -66,3 +59,15 @@ pages:
       - public
   only:
     - master
+
+publish:pypi:
+  stage: deploy
+  needs:
+    - test
+  script:
+    - sed "s/<<env.CI_JOB_TOKEN>>/${CI_JOB_TOKEN}/" .pypirc > ~/.pypirc
+    - pip install twine
+    - python setup.py bdist_wheel
+    - python3 -m twine upload --repository gitlab dist/*
+  only:
+    - tags
