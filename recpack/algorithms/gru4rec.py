@@ -1,5 +1,6 @@
 import logging
 from math import ceil
+import time
 from typing import Tuple, List, Iterator
 
 import numpy as np
@@ -217,12 +218,16 @@ class GRU4Rec(TorchMLAlgorithm):
             targets_batch,
             negatives_batch,
         ) in self.fit_sampler.sample(X):
+            st = time.time()
             # positives shape = (batch_size x |max_hist_length|)
             # targets shape = (batch_size x |max_hist_length|)
             # negatives shape = (batch_size x |max_hist_length| x self.U)
             positives_batch = positives_batch.to(self.device)
             targets_batch = targets_batch.to(self.device)
             negatives_batch = negatives_batch.to(self.device)
+
+            print(f"Takes {time.time() - st} seconds to convert to GPU")
+            
 
             batch_loss = 0
             true_batch_size = positives_batch.shape[0]
@@ -272,7 +277,7 @@ class GRU4Rec(TorchMLAlgorithm):
                     self.optimizer.step()
 
                 hidden = hidden.detach()
-
+            print(f"Takes {time.time() - st} seconds to process batch")
             losses.append(batch_loss)
 
         return losses
