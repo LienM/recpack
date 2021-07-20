@@ -295,13 +295,14 @@ class SequenceMiniBatchSampler(Sampler):
     def sample(
         self, X: InteractionMatrix
     ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor]]:
-        item_histories = list(X.sorted_item_history)
+        # item_histories = list(X.sorted_item_history)
         # Do I introduce bias if I sort them by length?
-        item_histories.sort(key=lambda x: len(x[1]), reverse=True)
+        # item_histories.sort(key=lambda x: len(x[1]), reverse=True)
 
         # Generate batches of users. Take maximum len of history in batch
-        for batch in get_batches(item_histories, self.batch_size):
+        for batch in get_batches(X.sorted_item_history, self.batch_size):
             # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.
+            batch.sort(key=lambda x: len(x[1]), reverse=True)
             max_hist_len = len(batch[0][1])
             batch_size = len(batch)
 
@@ -392,27 +393,19 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
             # set last item to padding, otherwise 1st item is rolled till here
             targets_batch[:, -1] = self.pad_token
 
-            for batch_ix in range(0, positives_batch.shape[0]):
-                negatives_col = negatives_batch[batch_ix]
+            while True:
+                mask = np.equal(negatives_batch, targets_batch[:, :, None])
 
-                while True:
+                num_incorrect = np.sum(mask)
 
-                    # Fix the negatives. We only care about exact matches: same location in the sequence.
-                    mask = np.apply_along_axis(
-                        lambda col: col == targets_batch[batch_ix], 0, negatives_col
-                    )
-                    num_incorrect = np.sum(mask)
-
-                    if num_incorrect > 0:
-                        new_negatives = np.random.randint(
+                if num_incorrect:
+                    new_negatives = np.random.randint(
                             0, num_items, size=(num_incorrect,)
                         )
-                        negatives_col[mask] = new_negatives
-                    else:
-                        # Exit the while loop
-                        break
 
-                negatives_batch[batch_ix] = negatives_col
+                    negatives_batch[mask] = new_negatives
+                else:
+                    break
 
             yield (
                 uid_batch,
