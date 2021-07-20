@@ -382,7 +382,7 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
 
         # Generate batches of users. Take maximum len of history in batch
         for uid_batch, positives_batch in super().sample(X):
-
+            print(positives_batch.shape)
             negatives_batch = np.random.randint(
                 0, num_items, (*positives_batch.shape, self.U)
             )
