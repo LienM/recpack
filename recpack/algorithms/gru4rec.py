@@ -229,7 +229,6 @@ class GRU4Rec(TorchMLAlgorithm):
             negatives_batch = negatives_batch.to(self.device)
 
             print(f"Takes {time.time() - st} seconds to convert to GPU")
-            
 
             batch_loss = 0
             true_batch_size = positives_batch.shape[0]
@@ -325,7 +324,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
     def _predict(self, X: InteractionMatrix):
         X_pred = lil_matrix(X.shape)
-
+        print("Predict?")
         for uid_batch, positives_batch in self.predict_sampler.sample(X):
             batch_size = positives_batch.shape[0]
             hidden = self.model_.init_hidden(batch_size)
