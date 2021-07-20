@@ -167,6 +167,8 @@ class GRU4Rec(TorchMLAlgorithm):
             dropout=self.dropout,
         ).to(self.device)
 
+        print(self.device)
+
         if self.optimization_algorithm == "sgd":
             self.optimizer = optim.SGD(
                 self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum
