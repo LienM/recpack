@@ -215,6 +215,10 @@ class Prod2Vec(TorchMLAlgorithm):
             positives_batch,
             negatives_batch,
         ) in self._skipgram_sample_pairs(X):
+            positives_batch = positives_batch.to(self.device)
+            focus_batch = focus_batch.to(self.device)
+            negatives_batch = negatives_batch.to(self.device)
+
             self.optimizer.zero_grad()
 
             positive_sim = self.model_(
