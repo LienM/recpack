@@ -248,7 +248,7 @@ class Prod2Vec(TorchMLAlgorithm):
         K = self.K + 1
         batch_size = 1000
 
-        embedding = self.model_.input_embeddings.weight.detach().numpy()
+        embedding = self.model_.input_embeddings.weight.cpu().detach().numpy()
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
