@@ -419,7 +419,7 @@ class GRU4RecTorch(nn.Module):
             seq_lengths = (x != self.pad_token).sum(axis=1)
 
             padded_emb_x = nn.utils.rnn.pack_padded_sequence(
-                emb_x, seq_lengths, batch_first=True
+                emb_x, seq_lengths.cpu(), batch_first=True
             )
 
             padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
