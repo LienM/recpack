@@ -182,7 +182,7 @@ class Prod2VecClustered(Prod2Vec):
         # this is not enough of a problem to add more complex solutions.
         K = self.K + 1
 
-        embedding = self.model_.input_embeddings.weight.detach().numpy()
+        embedding = self.model_.input_embeddings.weight.cpu().detach().numpy()
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
