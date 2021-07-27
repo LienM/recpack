@@ -214,11 +214,21 @@ class GRU4Rec(TorchMLAlgorithm):
                     loss = self._compute_loss(
                         output, true_target_chunk, true_neg_chunk, true_input_mask)
 
+                    print("Chunk loss", loss.item())
+
+                    print("Model params before", self.model_.parameters())
+
                     batch_loss += loss.item()
                     loss.backward()
+
+                    print("Model params after", self.model_.parameters())
+
                     if self.clipnorm:
                         nn.utils.clip_grad_norm_(
                             self.model_.parameters(), self.clipnorm)
+
+                    print("Model params after clipping",
+                          self.model_.parameters())
 
                     self.optimizer.step()
 
@@ -253,13 +263,18 @@ class GRU4Rec(TorchMLAlgorithm):
         X_pred = lil_matrix(X.shape)
         for uid_batch, positives_batch in self.predict_sampler.sample(X):
             batch_size = positives_batch.shape[0]
-            hidden = self.model_.init_hidden(batch_size)
-            output, hidden = self.model_(positives_batch.to(
-                self.device), hidden.to(self.device))
             # Use only the final prediction
             # Last item is the last non padding token per row.
             last_item_in_hist = (
                 positives_batch != self.pad_token).sum(axis=1) - 1
+
+            hidden = self.model_.init_hidden(batch_size)
+            output, hidden = self.model_(positives_batch.to(
+                self.device), hidden.to(self.device))
+
+            output = output.detach().cpu()
+
+            print(output.size())
 
             # Item scores is a matrix with the scores for each item
             # based on the last item in the sequence
