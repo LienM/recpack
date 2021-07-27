@@ -26,12 +26,11 @@ def session_rnn():
 
 
 # def test_session_rnn_compute_loss(session_rnn):
-# TODO Add test for compute_loss with Cross-Entropy
-#     pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
-#     neg_sim_as_tensor = torch.FloatTensor(
-#         [[0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]).t().unsqueeze(1)
+#     # pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
+#     # neg_sim_as_tensor = torch.FloatTensor(
+#     #     [[0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]).t().unsqueeze(1)
 
-#     true_input_mask = torch.BoolTensor([[True, True, True]]).t()
+#     # true_input_mask = torch.BoolTensor([[True, True, True]]).t()
 
 #     loss = session_rnn._compute_loss(
 #         pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
@@ -92,10 +91,6 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
 
     X_pred = session_rnn.predict(matrix_sessions)
     scores = X_pred.toarray()
-
-    print(list(matrix_sessions.sorted_item_history))
-
-    print(scores)
 
     top_item = scores.argmax(axis=1)
 

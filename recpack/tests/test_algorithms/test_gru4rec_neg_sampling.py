@@ -7,14 +7,14 @@ import torch
 from unittest.mock import MagicMock
 
 from recpack.data.matrix import InteractionMatrix
-from recpack.algorithms.gru4rec import GRU4Rec
+from recpack.algorithms.gru4rec import GRU4RecNegSampling
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 from recpack.tests.test_algorithms.test_loss_functions import sigmoid
 
 
 @pytest.fixture(scope="function")
 def session_rnn():
-    rnn = GRU4Rec(
+    rnn = GRU4RecNegSampling(
         seed=42,
         batch_size=3,
         embedding_size=5,

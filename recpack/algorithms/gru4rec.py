@@ -7,6 +7,7 @@ import numpy as np
 from scipy.sparse.lil import lil_matrix
 import torch
 import torch.nn as nn
+from torch.nn.modules.rnn import GRU
 import torch.optim as optim
 from tqdm import tqdm
 
@@ -28,7 +29,244 @@ from recpack.data.matrix import InteractionMatrix
 logger = logging.getLogger("recpack")
 
 
-class GRU4RecCrossEntropy(TorchMLAlgorithm):
+class GRU4Rec(TorchMLAlgorithm):
+    # TODO Docs
+    """Base class for GRU4Rec.
+
+    :param num_layers: Number of hidden layers in the RNN. Defaults to 1
+    :type num_layers: int, optional
+    :param hidden_size: Number of neurons in the hidden layer(s). Defaults to 100
+    :type hidden_size: int, optional
+    :param embedding_size: Size of item embeddings. Defaults to 250
+    :type embedding_size: int, optional
+    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout
+    :type dropout: float
+    :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad".
+        Defaults to adagrad.
+    :type optimization_algorithm: str, optional
+    :param batch_size: Number of examples in a mini-batch
+        Defaults to 512.
+    :type batch_size: int, optional
+    :param learning_rate: Gradient descent initial learning rate
+        Defaults to 0.03
+    :type learning_rate: float, optional
+    :param momentum: Momentum when using the sgd optimizer
+        Defaults to 0.0
+    :type momentum: float, optional
+    :param clipnorm: Clip the gradient's l2 norm, None for no clipping
+        Defaults to 1.0
+    :type clipnorm: float, optional
+    :param seed: Seed for random number generator
+        Defaults to 2
+    :type seed: int, optional
+    :param bptt: Number of backpropagation through time steps
+        Defaults to 1
+    :type bptt: int, optional
+    :param max_epochs: Max training runs through entire dataset
+        Defaults to 5
+    :type max_epochs: int, optional
+    """
+
+    def __init__(
+        self,
+        num_layers: int = 1,
+        hidden_size: int = 100,
+        embedding_size: int = 250,
+        dropout: float = 0.0,
+        optimization_algorithm: str = "adagrad",
+        batch_size: int = 512,
+        learning_rate: float = 0.03,
+        momentum: float = 0.0,
+        clipnorm: float = 1.0,
+        seed: int = 2,
+        bptt: int = 1,
+        max_epochs: int = 5,
+        save_best_to_file: bool = False,
+        keep_last: bool = True,
+        stopping_criterion: str = "recall",
+    ):
+        super().__init__(
+            batch_size,
+            max_epochs,
+            learning_rate,
+            stopping_criterion=stopping_criterion,
+            stop_early=False,
+            seed=seed,
+            save_best_to_file=save_best_to_file,
+            keep_last=keep_last,
+        )
+
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+        self.embedding_size = embedding_size
+        self.dropout = dropout
+        self.optimization_algorithm = optimization_algorithm
+        self.momentum = momentum
+        self.clipnorm = clipnorm
+        self.bptt = bptt
+
+    def _init_model(self, X: InteractionMatrix) -> None:
+        if self.seed:
+            torch.manual_seed(self.seed)
+            np.random.seed(self.seed)
+
+        # Invalid item ID. Used to mask inputs to the RNN
+        self.num_items = X.shape[1]
+        self.pad_token = self.num_items
+
+        self.model_ = GRU4RecTorch(
+            self.num_items,
+            self.hidden_size,
+            self.embedding_size,
+            self.pad_token,
+            num_layers=self.num_layers,
+            dropout=self.dropout,
+        ).to(self.device)
+
+        if self.optimization_algorithm == "sgd":
+            self.optimizer = optim.SGD(
+                self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum
+            )
+        elif self.optimization_algorithm == "adagrad":
+            self.optimizer = optim.Adagrad(
+                self.model_.parameters(), lr=self.learning_rate
+            )
+
+    def _transform_fit_input(
+        self,
+        X: InteractionMatrix,
+        validation_data: Tuple[InteractionMatrix, InteractionMatrix],
+    ):
+        """Transform the input matrices of the training function to the expected types
+
+        :param X: The interactions matrix
+        :type X: Matrix
+        :param validation_data: The tuple with validation_in and validation_out data
+        :type validation_data: Tuple[Matrix, Matrix]
+        :return: The transformed matrices
+        :rtype: Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]
+        """
+        if not isinstance(X, InteractionMatrix):
+            raise TypeError(
+                "GRU4Rec requires training and validation data to be an instance of InteractionMatrix."
+            )
+
+        return X, validation_data
+
+    def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
+        return X
+
+    # TODO Figure out what is shared
+    # def _train_epoch(self, X: InteractionMatrix) -> List[float]:
+
+    #     losses = []
+
+    #     for (
+    #         _,
+    #         positives_batch,
+    #         targets_batch,
+    #     ) in self.fit_sampler.sample(X):
+    #         # st = time.time()
+    #         # positives shape = (batch_size x |max_hist_length|)
+    #         # targets shape = (batch_size x |max_hist_length|)
+    #         positives_batch = positives_batch.to(self.device)
+    #         targets_batch = targets_batch.to(self.device)
+
+    #         # print(f"Takes {time.time() - st} seconds to convert to GPU")
+
+    #         batch_loss = 0
+    #         true_batch_size = positives_batch.shape[0]
+    #         # Want to reuse this between chunks of the same batch of sequences
+    #         hidden = self.model_.init_hidden(true_batch_size).to(self.device)
+
+    #         # Generate vertical chunks of BPTT width
+    #         for input_chunk, target_chunk in self._chunk(
+    #             positives_batch, targets_batch
+    #         ):
+    #             input_mask = input_chunk != self.pad_token
+    #             # Remove rows with only pad tokens from chunk and from hidden.
+    #             # We can do this because the array is sorted.
+    #             true_rows = input_mask.any(axis=1)
+    #             true_input_chunk = input_chunk[true_rows]
+    #             true_hidden = hidden[:, true_rows, :]
+    #             true_input_mask = input_mask[true_rows]
+    #             true_target_chunk = target_chunk[true_rows]
+
+    #             # If there are any values remaining
+    #             if true_input_chunk.any():
+    #                 self.optimizer.zero_grad()
+    #                 output, hidden[:, true_rows, :] = self.model_(
+    #                     true_input_chunk, true_hidden
+    #                 )
+
+    #                 # TODO Account for larger bptt?
+    #                 loss = self._compute_loss(
+    #                     output[true_input_mask], true_target_chunk[true_input_mask]
+    #                 )
+
+    #                 batch_loss += loss.item()
+    #                 loss.backward()
+    #                 if self.clipnorm:
+    #                     nn.utils.clip_grad_norm_(
+    #                         self.model_.parameters(), self.clipnorm)
+
+    #                 self.optimizer.step()
+
+    #             hidden = hidden.detach()
+    #         # print(f"Takes {time.time() - st} seconds to process batch")
+    #         losses.append(batch_loss)
+
+    #     return losses
+
+    def _compute_loss(self, *args, **kwargs):
+
+        return NotImplementedError()
+
+    def _chunk(self, *tensors: torch.LongTensor) -> Iterator[Tuple[torch.LongTensor, ...]]:
+        """Split tensors into chunks of self.bptt width, or max hist len width.
+
+        The input tensors of  shape (batch_size, max_hist_length, 1 or U)
+        are sliced on axis 1 into tensors of shape (batch_size, chunk_size, 1 or U)
+
+        # TODO Improve docs
+        :return: Zipped split tensors.
+        :rtype: list of tuples, with 1 entry in the tuple per input tensor.
+        """
+        max_hist_len = tensors[0].shape[1]
+
+        chunk_size = ceil(max_hist_len / self.bptt)
+
+        split_tensors = [t.tensor_split(chunk_size, axis=1) for t in tensors]
+
+        return zip(*split_tensors)
+
+    def _predict(self, X: InteractionMatrix):
+        X_pred = lil_matrix(X.shape)
+        for uid_batch, positives_batch in self.predict_sampler.sample(X):
+            batch_size = positives_batch.shape[0]
+            hidden = self.model_.init_hidden(batch_size)
+            output, hidden = self.model_(positives_batch.to(
+                self.device), hidden.to(self.device))
+            # Use only the final prediction
+            # Last item is the last non padding token per row.
+            last_item_in_hist = (
+                positives_batch != self.pad_token).sum(axis=1) - 1
+
+            # Item scores is a matrix with the scores for each item
+            # based on the last item in the sequence
+            item_scores = output[
+                torch.arange(0, batch_size, dtype=int), last_item_in_hist
+            ]
+
+            X_pred[uid_batch.detach().cpu().numpy()] = (
+                item_scores.detach().cpu().numpy()[:, :-1]
+            )
+
+        return X_pred.tocsr()
+
+
+class GRU4RecCrossEntropy(GRU4Rec):
+    # TODO Docs
     """A recurrent neural network for session-based recommendations.
 
     The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
@@ -115,54 +353,27 @@ class GRU4RecCrossEntropy(TorchMLAlgorithm):
         stopping_criterion: str = "recall",
     ):
         super().__init__(
-            batch_size,
-            max_epochs,
-            learning_rate,
-            # TODO Figure out early stopping for the RNN
-            stopping_criterion=stopping_criterion,
-            stop_early=False,
+            num_layers=num_layers,
+            hidden_size=hidden_size,
+            embedding_size=embedding_size,
+            dropout=dropout,
+            optimization_algorithm=optimization_algorithm,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            momentum=momentum,
+            clipnorm=clipnorm,
             seed=seed,
+            bptt=bptt,
+            max_epochs=max_epochs,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
+            stopping_criterion=stopping_criterion,
         )
 
-        self.num_layers = num_layers
-        self.hidden_size = hidden_size
-        self.embedding_size = embedding_size
-        self.dropout = dropout
-        self.optimization_algorithm = optimization_algorithm
-        self.momentum = momentum
-        self.clipnorm = clipnorm
-        self.bptt = bptt
+        self._criterion = nn.CrossEntropyLoss()
 
     def _init_model(self, X: InteractionMatrix) -> None:
-        if self.seed:
-            torch.manual_seed(self.seed)
-            np.random.seed(self.seed)
-
-        # Invalid item ID. Used to mask inputs to the RNN
-        self.num_items = X.shape[1]
-        self.pad_token = self.num_items
-
-        self.model_ = GRU4RecTorch(
-            self.num_items,
-            self.hidden_size,
-            self.embedding_size,
-            self.pad_token,
-            num_layers=self.num_layers,
-            dropout=self.dropout,
-        ).to(self.device)
-
-        print(self.device)
-
-        if self.optimization_algorithm == "sgd":
-            self.optimizer = optim.SGD(
-                self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum
-            )
-        elif self.optimization_algorithm == "adagrad":
-            self.optimizer = optim.Adagrad(
-                self.model_.parameters(), lr=self.learning_rate
-            )
+        super()._init_model(X)
 
         self.predict_sampler = SequenceMiniBatchSampler(
             self.pad_token, batch_size=self.batch_size
@@ -171,32 +382,6 @@ class GRU4RecCrossEntropy(TorchMLAlgorithm):
         self.fit_sampler = SequenceMiniBatchPositivesTargetsSampler(
             self.pad_token, batch_size=self.batch_size
         )
-
-        self._criterion = nn.CrossEntropyLoss()
-
-    def _transform_fit_input(
-        self,
-        X: InteractionMatrix,
-        validation_data: Tuple[InteractionMatrix, InteractionMatrix],
-    ):
-        """Transform the input matrices of the training function to the expected types
-
-        :param X: The interactions matrix
-        :type X: Matrix
-        :param validation_data: The tuple with validation_in and validation_out data
-        :type validation_data: Tuple[Matrix, Matrix]
-        :return: The transformed matrices
-        :rtype: Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]
-        """
-        if not isinstance(X, InteractionMatrix):
-            raise TypeError(
-                "GRU4Rec requires training and validation data to be an instance of InteractionMatrix."
-            )
-
-        return X, validation_data
-
-    def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
-        return X
 
     def _train_epoch(self, X: InteractionMatrix) -> List[float]:
 
@@ -207,13 +392,13 @@ class GRU4RecCrossEntropy(TorchMLAlgorithm):
             positives_batch,
             targets_batch,
         ) in self.fit_sampler.sample(X):
-            st = time.time()
+            # st = time.time()
             # positives shape = (batch_size x |max_hist_length|)
             # targets shape = (batch_size x |max_hist_length|)
             positives_batch = positives_batch.to(self.device)
             targets_batch = targets_batch.to(self.device)
 
-            print(f"Takes {time.time() - st} seconds to convert to GPU")
+            # print(f"Takes {time.time() - st} seconds to convert to GPU")
 
             batch_loss = 0
             true_batch_size = positives_batch.shape[0]
@@ -254,7 +439,7 @@ class GRU4RecCrossEntropy(TorchMLAlgorithm):
                     self.optimizer.step()
 
                 hidden = hidden.detach()
-            print(f"Takes {time.time() - st} seconds to process batch")
+            # print(f"Takes {time.time() - st} seconds to process batch")
             losses.append(batch_loss)
 
         return losses
@@ -265,55 +450,10 @@ class GRU4RecCrossEntropy(TorchMLAlgorithm):
         targets: torch.LongTensor,
     ) -> torch.Tensor:
 
-        print(output)
-        print(targets)        
-
         return self._criterion(output, targets)
 
-    def _chunk(self, *tensors: torch.LongTensor) -> Iterator[Tuple[torch.LongTensor, ...]]:
-        """Split tensors into chunks of self.bptt width, or max hist len width.
 
-        The input tensors of  shape (batch_size, max_hist_length, 1 or U)
-        are sliced on axis 1 into tensors of shape (batch_size, chunk_size, 1 or U)
-
-        :return: Zipped split tensors.
-        :rtype: list of tuples, with 1 entry in the tuple per input tensor.
-        """
-        max_hist_len = tensors[0].shape[1]
-
-        chunk_size = ceil(max_hist_len / self.bptt)
-
-        split_tensors = [t.tensor_split(chunk_size, axis=1) for t in tensors]
-
-        return zip(*split_tensors)
-
-    def _predict(self, X: InteractionMatrix):
-        X_pred = lil_matrix(X.shape)
-        print("Predict?")
-        for uid_batch, positives_batch in self.predict_sampler.sample(X):
-            batch_size = positives_batch.shape[0]
-            hidden = self.model_.init_hidden(batch_size)
-            output, hidden = self.model_(positives_batch.to(
-                self.device), hidden.to(self.device))
-            # Use only the final prediction
-            # Last item is the last non padding token per row.
-            last_item_in_hist = (
-                positives_batch != self.pad_token).sum(axis=1) - 1
-
-            # Item scores is a matrix with the scores for each item
-            # based on the last item in the sequence
-            item_scores = output[
-                torch.arange(0, batch_size, dtype=int), last_item_in_hist
-            ]
-
-            X_pred[uid_batch.detach().cpu().numpy()] = (
-                item_scores.detach().cpu().numpy()[:, :-1]
-            )
-
-        return X_pred.tocsr()
-
-
-class GRU4Rec(TorchMLAlgorithm):
+class GRU4RecNegSampling(GRU4Rec):
     """A recurrent neural network for session-based recommendations.
 
     The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
@@ -406,27 +546,25 @@ class GRU4Rec(TorchMLAlgorithm):
         stopping_criterion: str = "recall",
     ):
         super().__init__(
-            batch_size,
-            max_epochs,
-            learning_rate,
-            # TODO Figure out early stopping for the RNN
-            stopping_criterion=stopping_criterion,
-            stop_early=False,
+            num_layers=num_layers,
+            hidden_size=hidden_size,
+            embedding_size=embedding_size,
+            dropout=dropout,
+            optimization_algorithm=optimization_algorithm,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            momentum=momentum,
+            clipnorm=clipnorm,
             seed=seed,
+            bptt=bptt,
+            max_epochs=max_epochs,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
+            stopping_criterion=stopping_criterion,
         )
 
-        self.num_layers = num_layers
-        self.hidden_size = hidden_size
-        self.embedding_size = embedding_size
-        self.dropout = dropout
         self.loss_fn = loss_fn
         self.U = U
-        self.optimization_algorithm = optimization_algorithm
-        self.momentum = momentum
-        self.clipnorm = clipnorm
-        self.bptt = bptt
 
         self._criterion = {
             "top1": top1_loss,
@@ -436,33 +574,7 @@ class GRU4Rec(TorchMLAlgorithm):
         }[self.loss_fn]
 
     def _init_model(self, X: InteractionMatrix) -> None:
-        if self.seed:
-            torch.manual_seed(self.seed)
-            np.random.seed(self.seed)
-
-        # Invalid item ID. Used to mask inputs to the RNN
-        self.num_items = X.shape[1]
-        self.pad_token = self.num_items
-
-        self.model_ = GRU4RecTorch(
-            self.num_items,
-            self.hidden_size,
-            self.embedding_size,
-            self.pad_token,
-            num_layers=self.num_layers,
-            dropout=self.dropout,
-        ).to(self.device)
-
-        print(self.device)
-
-        if self.optimization_algorithm == "sgd":
-            self.optimizer = optim.SGD(
-                self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum
-            )
-        elif self.optimization_algorithm == "adagrad":
-            self.optimizer = optim.Adagrad(
-                self.model_.parameters(), lr=self.learning_rate
-            )
+        super()._init_model(X)
 
         self.predict_sampler = SequenceMiniBatchSampler(
             self.pad_token, batch_size=self.batch_size
@@ -471,30 +583,6 @@ class GRU4Rec(TorchMLAlgorithm):
         self.fit_sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(
             self.U, self.pad_token, batch_size=self.batch_size
         )
-
-    def _transform_fit_input(
-        self,
-        X: InteractionMatrix,
-        validation_data: Tuple[InteractionMatrix, InteractionMatrix],
-    ):
-        """Transform the input matrices of the training function to the expected types
-
-        :param X: The interactions matrix
-        :type X: Matrix
-        :param validation_data: The tuple with validation_in and validation_out data
-        :type validation_data: Tuple[Matrix, Matrix]
-        :return: The transformed matrices
-        :rtype: Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]
-        """
-        if not isinstance(X, InteractionMatrix):
-            raise TypeError(
-                "GRU4Rec requires training and validation data to be an instance of InteractionMatrix."
-            )
-
-        return X, validation_data
-
-    def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
-        return X
 
     def _train_epoch(self, X: InteractionMatrix) -> List[float]:
 
@@ -506,7 +594,7 @@ class GRU4Rec(TorchMLAlgorithm):
             targets_batch,
             negatives_batch,
         ) in self.fit_sampler.sample(X):
-            st = time.time()
+            # st = time.time()
             # positives shape = (batch_size x |max_hist_length|)
             # targets shape = (batch_size x |max_hist_length|)
             # negatives shape = (batch_size x |max_hist_length| x self.U)
@@ -514,7 +602,7 @@ class GRU4Rec(TorchMLAlgorithm):
             targets_batch = targets_batch.to(self.device)
             negatives_batch = negatives_batch.to(self.device)
 
-            print(f"Takes {time.time() - st} seconds to convert to GPU")
+            # print(f"Takes {time.time() - st} seconds to convert to GPU")
 
             batch_loss = 0
             true_batch_size = positives_batch.shape[0]
@@ -550,6 +638,9 @@ class GRU4Rec(TorchMLAlgorithm):
                     # negative scores has shape (batch_size x bptt x U)
                     negative_scores = torch.gather(output, 2, true_neg_chunk)
 
+                    # print(output[true_input_mask])
+                    # print(true_target_chunk[true_input_mask])
+
                     loss = self._compute_loss(
                         positive_scores.squeeze(
                             -1), negative_scores, true_input_mask
@@ -564,7 +655,7 @@ class GRU4Rec(TorchMLAlgorithm):
                     self.optimizer.step()
 
                 hidden = hidden.detach()
-            print(f"Takes {time.time() - st} seconds to process batch")
+            # print(f"Takes {time.time() - st} seconds to process batch")
             losses.append(batch_loss)
 
         return losses
@@ -590,48 +681,6 @@ class GRU4Rec(TorchMLAlgorithm):
         )
 
         return self._criterion(positive_scores_flat[true_input_mask_flat], negative_scores_flat[true_input_mask_flat])
-
-    def _chunk(self, *tensors: torch.LongTensor) -> Iterator[Tuple[torch.LongTensor, ...]]:
-        """Split tensors into chunks of self.bptt width, or max hist len width.
-
-        The input tensors of  shape (batch_size, max_hist_length, 1 or U)
-        are sliced on axis 1 into tensors of shape (batch_size, chunk_size, 1 or U)
-
-        :return: Zipped split tensors.
-        :rtype: list of tuples, with 1 entry in the tuple per input tensor.
-        """
-        max_hist_len = tensors[0].shape[1]
-
-        chunk_size = ceil(max_hist_len / self.bptt)
-
-        split_tensors = [t.tensor_split(chunk_size, axis=1) for t in tensors]
-
-        return zip(*split_tensors)
-
-    def _predict(self, X: InteractionMatrix):
-        X_pred = lil_matrix(X.shape)
-        print("Predict?")
-        for uid_batch, positives_batch in self.predict_sampler.sample(X):
-            batch_size = positives_batch.shape[0]
-            hidden = self.model_.init_hidden(batch_size)
-            output, hidden = self.model_(positives_batch.to(
-                self.device), hidden.to(self.device))
-            # Use only the final prediction
-            # Last item is the last non padding token per row.
-            last_item_in_hist = (
-                positives_batch != self.pad_token).sum(axis=1) - 1
-
-            # Item scores is a matrix with the scores for each item
-            # based on the last item in the sequence
-            item_scores = output[
-                torch.arange(0, batch_size, dtype=int), last_item_in_hist
-            ]
-
-            X_pred[uid_batch.detach().cpu().numpy()] = (
-                item_scores.detach().cpu().numpy()[:, :-1]
-            )
-
-        return X_pred.tocsr()
 
 
 class GRU4RecTorch(nn.Module):
