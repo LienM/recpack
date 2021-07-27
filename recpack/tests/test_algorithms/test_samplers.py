@@ -12,7 +12,7 @@ from recpack.algorithms.samplers import (
 from recpack.data.matrix import to_binary
 
 
-@pytest.mark.parametrize("U, batch_size", [(1, 3), (3, 1), (3, 2), (1, 1), (6, 6), (100, 6)])
+@pytest.mark.parametrize("U, batch_size", [(1, 3), (3, 1), (3, 2), (1, 1), (6, 6), (100, 6), (0, 6)])
 def test_sequence_mini_batch_pos_tar_neg_sampling(matrix_sessions, U, batch_size):
     pad_token = matrix_sessions.shape[1] + 1
 
@@ -32,6 +32,7 @@ def test_sequence_mini_batch_pos_tar_neg_sampling(matrix_sessions, U, batch_size
 
         # Check sequence length
         assert pos_batch.shape[1] == neg_batch.shape[1]
+
         # Check number of negatives
         assert neg_batch.shape[2] == U
 

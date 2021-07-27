@@ -20,8 +20,7 @@ from recpack.algorithms.loss_functions import (
 )
 from recpack.algorithms.samplers import (
     SequenceMiniBatchPositivesTargetsNegativesSampler,
-    SequenceMiniBatchSampler,
-    SequenceMiniBatchPositivesTargetsSampler
+    SequenceMiniBatchSampler
 )
 from recpack.data.matrix import InteractionMatrix
 
@@ -84,6 +83,7 @@ class GRU4Rec(TorchMLAlgorithm):
         save_best_to_file: bool = False,
         keep_last: bool = True,
         stopping_criterion: str = "recall",
+        U: int = 0,
     ):
         super().__init__(
             batch_size,
@@ -104,6 +104,7 @@ class GRU4Rec(TorchMLAlgorithm):
         self.momentum = momentum
         self.clipnorm = clipnorm
         self.bptt = bptt
+        self.U = U
 
     def _init_model(self, X: InteractionMatrix) -> None:
         if self.seed:
@@ -132,6 +133,14 @@ class GRU4Rec(TorchMLAlgorithm):
                 self.model_.parameters(), lr=self.learning_rate
             )
 
+        self.predict_sampler = SequenceMiniBatchSampler(
+            self.pad_token, batch_size=self.batch_size
+        )
+
+        self.fit_sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(
+            self.U, self.pad_token, batch_size=self.batch_size
+        )
+
     def _transform_fit_input(
         self,
         X: InteractionMatrix,
@@ -156,71 +165,71 @@ class GRU4Rec(TorchMLAlgorithm):
     def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
         return X
 
-    # TODO Figure out what is shared
-    # def _train_epoch(self, X: InteractionMatrix) -> List[float]:
+    def _train_epoch(self, X: InteractionMatrix) -> List[float]:
 
-    #     losses = []
+        losses = []
 
-    #     for (
-    #         _,
-    #         positives_batch,
-    #         targets_batch,
-    #     ) in self.fit_sampler.sample(X):
-    #         # st = time.time()
-    #         # positives shape = (batch_size x |max_hist_length|)
-    #         # targets shape = (batch_size x |max_hist_length|)
-    #         positives_batch = positives_batch.to(self.device)
-    #         targets_batch = targets_batch.to(self.device)
+        for (
+            _,
+            positives_batch,
+            targets_batch,
+            negatives_batch,
+        ) in self.fit_sampler.sample(X):
+            # st = time.time()
+            # positives shape = (batch_size x |max_hist_length|)
+            # targets shape = (batch_size x |max_hist_length|)
+            # negatives shape = (batch_size x |max_hist_length| x self.U)
+            positives_batch = positives_batch.to(self.device)
+            targets_batch = targets_batch.to(self.device)
+            negatives_batch = negatives_batch.to(self.device)
 
-    #         # print(f"Takes {time.time() - st} seconds to convert to GPU")
+            # print(f"Takes {time.time() - st} seconds to convert to GPU")
 
-    #         batch_loss = 0
-    #         true_batch_size = positives_batch.shape[0]
-    #         # Want to reuse this between chunks of the same batch of sequences
-    #         hidden = self.model_.init_hidden(true_batch_size).to(self.device)
+            batch_loss = 0
+            true_batch_size = positives_batch.shape[0]
+            # Want to reuse this between chunks of the same batch of sequences
+            hidden = self.model_.init_hidden(true_batch_size).to(self.device)
 
-    #         # Generate vertical chunks of BPTT width
-    #         for input_chunk, target_chunk in self._chunk(
-    #             positives_batch, targets_batch
-    #         ):
-    #             input_mask = input_chunk != self.pad_token
-    #             # Remove rows with only pad tokens from chunk and from hidden.
-    #             # We can do this because the array is sorted.
-    #             true_rows = input_mask.any(axis=1)
-    #             true_input_chunk = input_chunk[true_rows]
-    #             true_hidden = hidden[:, true_rows, :]
-    #             true_input_mask = input_mask[true_rows]
-    #             true_target_chunk = target_chunk[true_rows]
+            # Generate vertical chunks of BPTT width
+            for input_chunk, target_chunk, neg_chunk in self._chunk(
+                positives_batch, targets_batch, negatives_batch
+            ):
+                input_mask = input_chunk != self.pad_token
+                # Remove rows with only pad tokens from chunk and from hidden.
+                # We can do this because the array is sorted.
+                true_rows = input_mask.any(axis=1)
+                true_input_chunk = input_chunk[true_rows]
+                true_target_chunk = target_chunk[true_rows]
+                true_neg_chunk = neg_chunk[true_rows]
+                true_hidden = hidden[:, true_rows, :]
+                true_input_mask = input_mask[true_rows]
 
-    #             # If there are any values remaining
-    #             if true_input_chunk.any():
-    #                 self.optimizer.zero_grad()
-    #                 output, hidden[:, true_rows, :] = self.model_(
-    #                     true_input_chunk, true_hidden
-    #                 )
+                # If there are any values remaining
+                if true_input_chunk.any():
+                    self.optimizer.zero_grad()
+                    output, hidden[:, true_rows, :] = self.model_(
+                        true_input_chunk, true_hidden
+                    )
 
-    #                 # TODO Account for larger bptt?
-    #                 loss = self._compute_loss(
-    #                     output[true_input_mask], true_target_chunk[true_input_mask]
-    #                 )
+                    loss = self._compute_loss(
+                        output, true_target_chunk, true_neg_chunk, true_input_mask)
 
-    #                 batch_loss += loss.item()
-    #                 loss.backward()
-    #                 if self.clipnorm:
-    #                     nn.utils.clip_grad_norm_(
-    #                         self.model_.parameters(), self.clipnorm)
+                    batch_loss += loss.item()
+                    loss.backward()
+                    if self.clipnorm:
+                        nn.utils.clip_grad_norm_(
+                            self.model_.parameters(), self.clipnorm)
 
-    #                 self.optimizer.step()
+                    self.optimizer.step()
 
-    #             hidden = hidden.detach()
-    #         # print(f"Takes {time.time() - st} seconds to process batch")
-    #         losses.append(batch_loss)
+                hidden = hidden.detach()
+            # print(f"Takes {time.time() - st} seconds to process batch")
+            losses.append(batch_loss)
 
-    #     return losses
+        return losses
 
-    def _compute_loss(self, *args, **kwargs):
-
-        return NotImplementedError()
+    def _compute_loss(self, *args, **kwargs) -> torch.Tensor:
+        raise NotImplementedError()
 
     def _chunk(self, *tensors: torch.LongTensor) -> Iterator[Tuple[torch.LongTensor, ...]]:
         """Split tensors into chunks of self.bptt width, or max hist len width.
@@ -368,89 +377,20 @@ class GRU4RecCrossEntropy(GRU4Rec):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             stopping_criterion=stopping_criterion,
+            U=0
         )
 
         self._criterion = nn.CrossEntropyLoss()
 
-    def _init_model(self, X: InteractionMatrix) -> None:
-        super()._init_model(X)
-
-        self.predict_sampler = SequenceMiniBatchSampler(
-            self.pad_token, batch_size=self.batch_size
-        )
-
-        self.fit_sampler = SequenceMiniBatchPositivesTargetsSampler(
-            self.pad_token, batch_size=self.batch_size
-        )
-
-    def _train_epoch(self, X: InteractionMatrix) -> List[float]:
-
-        losses = []
-
-        for (
-            _,
-            positives_batch,
-            targets_batch,
-        ) in self.fit_sampler.sample(X):
-            # st = time.time()
-            # positives shape = (batch_size x |max_hist_length|)
-            # targets shape = (batch_size x |max_hist_length|)
-            positives_batch = positives_batch.to(self.device)
-            targets_batch = targets_batch.to(self.device)
-
-            # print(f"Takes {time.time() - st} seconds to convert to GPU")
-
-            batch_loss = 0
-            true_batch_size = positives_batch.shape[0]
-            # Want to reuse this between chunks of the same batch of sequences
-            hidden = self.model_.init_hidden(true_batch_size).to(self.device)
-
-            # Generate vertical chunks of BPTT width
-            for input_chunk, target_chunk in self._chunk(
-                positives_batch, targets_batch
-            ):
-                input_mask = input_chunk != self.pad_token
-                # Remove rows with only pad tokens from chunk and from hidden.
-                # We can do this because the array is sorted.
-                true_rows = input_mask.any(axis=1)
-                true_input_chunk = input_chunk[true_rows]
-                true_hidden = hidden[:, true_rows, :]
-                true_input_mask = input_mask[true_rows]
-                true_target_chunk = target_chunk[true_rows]
-
-                # If there are any values remaining
-                if true_input_chunk.any():
-                    self.optimizer.zero_grad()
-                    output, hidden[:, true_rows, :] = self.model_(
-                        true_input_chunk, true_hidden
-                    )
-
-                    # TODO Account for larger bptt?
-                    loss = self._compute_loss(
-                        output[true_input_mask], true_target_chunk[true_input_mask]
-                    )
-
-                    batch_loss += loss.item()
-                    loss.backward()
-                    if self.clipnorm:
-                        nn.utils.clip_grad_norm_(
-                            self.model_.parameters(), self.clipnorm)
-
-                    self.optimizer.step()
-
-                hidden = hidden.detach()
-            # print(f"Takes {time.time() - st} seconds to process batch")
-            losses.append(batch_loss)
-
-        return losses
-
     def _compute_loss(
         self,
-        output: torch.Tensor,
-        targets: torch.LongTensor,
+        output: torch.FloatTensor,
+        targets_chunk: torch.LongTensor,
+        negatives_chunk: torch.LongTensor,
+        true_input_mask: torch.BoolTensor
     ) -> torch.Tensor:
 
-        return self._criterion(output, targets)
+        return self._criterion(output[true_input_mask], targets_chunk[true_input_mask])
 
 
 class GRU4RecNegSampling(GRU4Rec):
@@ -561,10 +501,10 @@ class GRU4RecNegSampling(GRU4Rec):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             stopping_criterion=stopping_criterion,
+            U=U
         )
 
         self.loss_fn = loss_fn
-        self.U = U
 
         self._criterion = {
             "top1": top1_loss,
@@ -573,104 +513,28 @@ class GRU4RecNegSampling(GRU4Rec):
             "bpr-max": bpr_max_loss,
         }[self.loss_fn]
 
-    def _init_model(self, X: InteractionMatrix) -> None:
-        super()._init_model(X)
-
-        self.predict_sampler = SequenceMiniBatchSampler(
-            self.pad_token, batch_size=self.batch_size
-        )
-
-        self.fit_sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(
-            self.U, self.pad_token, batch_size=self.batch_size
-        )
-
-    def _train_epoch(self, X: InteractionMatrix) -> List[float]:
-
-        losses = []
-
-        for (
-            _,
-            positives_batch,
-            targets_batch,
-            negatives_batch,
-        ) in self.fit_sampler.sample(X):
-            # st = time.time()
-            # positives shape = (batch_size x |max_hist_length|)
-            # targets shape = (batch_size x |max_hist_length|)
-            # negatives shape = (batch_size x |max_hist_length| x self.U)
-            positives_batch = positives_batch.to(self.device)
-            targets_batch = targets_batch.to(self.device)
-            negatives_batch = negatives_batch.to(self.device)
-
-            # print(f"Takes {time.time() - st} seconds to convert to GPU")
-
-            batch_loss = 0
-            true_batch_size = positives_batch.shape[0]
-            # Want to reuse this between chunks of the same batch of sequences
-            hidden = self.model_.init_hidden(true_batch_size).to(self.device)
-
-            # Generate vertical chunks of BPTT width
-            for input_chunk, target_chunk, neg_chunk in self._chunk(
-                positives_batch, targets_batch, negatives_batch
-            ):
-                input_mask = input_chunk != self.pad_token
-                # Remove rows with only pad tokens from chunk and from hidden.
-                # We can do this because the array is sorted.
-                true_rows = input_mask.any(axis=1)
-                true_input_chunk = input_chunk[true_rows]
-                true_target_chunk = target_chunk[true_rows]
-                true_neg_chunk = neg_chunk[true_rows]
-                true_hidden = hidden[:, true_rows, :]
-                true_input_mask = input_mask[true_rows]
-
-                # If there are any values remaining
-                if true_input_chunk.any():
-                    self.optimizer.zero_grad()
-                    output, hidden[:, true_rows, :] = self.model_(
-                        true_input_chunk, true_hidden
-                    )
-                    # Select score for positive and negative sample for all tokens
-                    # For each target, gather the score predicted in output.
-                    # positive_scores has shape (batch_size x bptt x 1)
-                    positive_scores = torch.gather(
-                        output, 2, true_target_chunk.unsqueeze(-1)
-                    )
-                    # negative scores has shape (batch_size x bptt x U)
-                    negative_scores = torch.gather(output, 2, true_neg_chunk)
-
-                    # print(output[true_input_mask])
-                    # print(true_target_chunk[true_input_mask])
-
-                    loss = self._compute_loss(
-                        positive_scores.squeeze(
-                            -1), negative_scores, true_input_mask
-                    )
-
-                    batch_loss += loss.item()
-                    loss.backward()
-                    if self.clipnorm:
-                        nn.utils.clip_grad_norm_(
-                            self.model_.parameters(), self.clipnorm)
-
-                    self.optimizer.step()
-
-                hidden = hidden.detach()
-            # print(f"Takes {time.time() - st} seconds to process batch")
-            losses.append(batch_loss)
-
-        return losses
-
     def _compute_loss(
         self,
-        positive_scores: torch.LongTensor,
-        negative_scores: torch.LongTensor,
-        true_input_mask: torch.BoolTensor,
+        output: torch.FloatTensor,
+        targets_chunk: torch.LongTensor,
+        negatives_chunk: torch.LongTensor,
+        true_input_mask: torch.BoolTensor
     ) -> torch.Tensor:
+
+        # Select score for positive and negative sample for all tokens
+        # For each target, gather the score predicted in output.
+        # positive_scores has shape (batch_size x bptt x 1)
+        positive_scores = torch.gather(
+            output, 2, targets_chunk.unsqueeze(-1)
+        ).squeeze(-1)
+        # negative scores has shape (batch_size x bptt x U)
+        negative_scores = torch.gather(output, 2, negatives_chunk)
 
         assert true_input_mask.shape == positive_scores.shape
 
         true_batch_size, max_hist_len = positive_scores.shape
 
+        # Check if I need to do all this flattening
         true_input_mask_flat = true_input_mask.view(
             true_batch_size * max_hist_len)
 

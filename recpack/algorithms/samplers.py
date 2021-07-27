@@ -322,76 +322,6 @@ class SequenceMiniBatchSampler(Sampler):
             yield (torch.LongTensor(uid_batch), torch.LongTensor(positives_batch))
 
 
-class SequenceMiniBatchPositivesTargetsSampler(SequenceMiniBatchSampler):
-    # TODO Fix documentation
-    """Samples `U` negatives for every positive in a sequence.
-
-    This approach allows to learn multiple times from the same positive interactions.
-    Because the sequence-aspect is important here, we only eliminate collisions
-    in the exact same location in the sequence.
-    As a result, a sample that occurs at a later or earlier time in the sequence
-    may be sampled as a negative for all other locations in the sequence.
-
-    Handles sequences of unequal length by padding them with `pad_token`.
-
-    :param pad_token: Token used to indicate that this location in the sequence
-        contains a padding element.
-    :type pad_token: int
-    :param batch_size: The number of sequences returned per batch, defaults to 100
-    :type batch_size: int, optional
-    """
-
-    def __init__(self, pad_token: int, batch_size: int = 100) -> None:
-        super().__init__(pad_token, batch_size)
-
-    def sample(
-        self, X: InteractionMatrix
-    ) -> Iterator[
-        Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]
-    ]:
-        """Sample positives, targets and negatives from the input matrix.
-
-        Yields tuples of:
-
-        - uids: 1D tensor with the user ids in this batch.
-          Shape = (batch_size,)
-        - positives: 2D tensor with row per user, and history item_ids in order on each row.
-          Rows are sorted, such that longest histories are higher in the tensor.
-          Histories shorter than the width of the tensor are filled up with padding tokens.
-          Shape = (batch_size, max_hist_len(batch))
-        - targets: 2D tensor with targets to predict for each user.
-          This is the positives, but rolled 1 position to the left.
-          Such that the target of the first positive is the second positive in the sequence.
-          Each sequence ends with a padding token as target,
-          since there is no knowledge of the next item at the end of the sequence.
-          Shape = (batch size, max_hist_len(batch))
-        - negatives: 3D tensor, with negative examples for each positive.
-          For each positive self.U negatives are sampled, these negatives are checked against only the target item.
-          Shape = (batch_size, max_hist_len(batch), self.U)
-
-
-        :param X: Interaction matrix to generate samples from.
-        :type X: InteractionMatrix
-        :yield: tuples of (uids, positives, targets, negatives)
-        :rtype: Iterator[ Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor] ]
-        """
-
-        num_items = X.shape[1]
-
-        # Generate batches of users. Take maximum len of history in batch
-        for uid_batch, positives_batch in super().sample(X):
-            targets_batch = positives_batch.numpy().copy()
-            targets_batch = np.roll(positives_batch, -1, axis=1)
-            # set last item to padding, otherwise 1st item is rolled till here
-            targets_batch[:, -1] = self.pad_token
-
-            yield (
-                uid_batch,
-                positives_batch,
-                torch.LongTensor(targets_batch),
-            )
-
-
 class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler):
     """Samples `U` negatives for every positive in a sequence.
 
@@ -453,7 +383,6 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
 
         # Generate batches of users. Take maximum len of history in batch
         for uid_batch, positives_batch in super().sample(X):
-            print(positives_batch.shape)
             negatives_batch = np.random.randint(
                 0, num_items, (*positives_batch.shape, self.U)
             )
