@@ -263,7 +263,13 @@ class GRU4Rec(TorchMLAlgorithm):
 
         return losses
 
-    def _compute_loss(self, *args, **kwargs) -> torch.Tensor:
+    def _compute_loss(
+        self,
+        output: torch.FloatTensor,
+        targets_chunk: torch.LongTensor,
+        negatives_chunk: torch.LongTensor,
+        true_input_mask: torch.BoolTensor,
+    ) -> torch.Tensor:
         raise NotImplementedError()
 
     def _chunk(
@@ -575,7 +581,7 @@ class GRU4RecNegSampling(GRU4Rec):
         loss_fn: str = "bpr",
         optimization_algorithm: str = "adagrad",
         momentum: float = 0.0,
-        clipnorm: float = 1.0,        
+        clipnorm: float = 1.0,
         bptt: int = 1,
         U: int = 50,
         batch_size: int = 512,

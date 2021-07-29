@@ -30,7 +30,6 @@ def test_get_batches():
     for batch in get_batches(iter(test_array), batch_size=10):
         assert (len(batch) == 10 or len(batch) < 10) and len(batch) != 0
         cnt += len(batch)
-        print(batch)
 
     assert cnt == 500
 

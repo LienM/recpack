@@ -181,6 +181,5 @@ def test_filter_items_str_repr(filter_input, filter_class, name):
 )
 def test_prev_int_str_repr(filter_input):
     myfilter = filters.RemovePreviousInteractions(filter_input)
-    print(myfilter)
 
     assert "RemovePreviousInteractions" in myfilter.__str__()

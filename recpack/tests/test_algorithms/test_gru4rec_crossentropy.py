@@ -104,7 +104,6 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
     # All items should have a score
     assert len(set(X_pred.nonzero()[1])) == matrix_sessions.shape[1]
 
-    print(top_item)
     # Rnn should be able to learn simple repeating patterns
     assert top_item[0] == 1
     assert top_item[1] == 2

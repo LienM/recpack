@@ -27,33 +27,72 @@ def session_rnn():
     return rnn
 
 
-# TODO Fix test
-# def test_session_rnn_compute_loss(session_rnn):
+def test_session_rnn_compute_loss(session_rnn):
 
-#     pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
-#     neg_sim_as_tensor = torch.FloatTensor(
-#         [[0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]).t().unsqueeze(1)
+    output = torch.FloatTensor(
+        [[[0, 0.1, 0.8, 0.1, 0],
+          [0, 0.8, 0.2, 0, 0]],
 
-#     true_input_mask = torch.BoolTensor([[True, True, True]]).t()
+         [[0, 0.1, 0.8, 0.1, 0],
+          [0, 0.8, 0.2, 0, 0]],
 
-#     loss = session_rnn._compute_loss(
-#         pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
+         [[0, 0.1, 0.8, 0.1, 0],
+          [0, 0, 0, 0, 1]]])
 
-#     expected_loss = (
-#         -(np.log(sigmoid(0.5)) + np.log(sigmoid(0)) + np.log(sigmoid(-0.5))) / 3
-#     )
-#     np.testing.assert_almost_equal(loss, expected_loss)
+    targets_chunk = torch.LongTensor([[2, 1],
+                                      [2, 1],
+                                      [2, 4]])
 
-#     # Block out the middle element
-#     true_input_mask = torch.BoolTensor([[True, False, True]]).t()
+    negatives_chunk = torch.LongTensor([[[1, 3],
+                                         [2, 2]],
 
-#     loss = session_rnn._compute_loss(
-#         pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
+                                        [[1, 3],
+                                         [2, 3]],
 
-#     expected_loss = (
-#         -(np.log(sigmoid(0.5)) + np.log(sigmoid(-0.5))) / 2
-#     )
-#     np.testing.assert_almost_equal(loss, expected_loss)
+                                        [[3, 0],
+                                         [3, 3]]])
+
+    true_input_mask = torch.BoolTensor([
+        [True, True],
+        [True, True],
+        [True, True]
+    ])
+
+    loss = session_rnn._compute_loss(
+        output, targets_chunk, negatives_chunk, true_input_mask)
+
+    expected_loss = (
+        -(
+            np.log(sigmoid(0.8 - 0.1)) + np.log(sigmoid(0.8 - 0.1)) +
+            np.log(sigmoid(0.8 - 0.2)) + np.log(sigmoid(0.8 - 0.2)) +
+            np.log(sigmoid(0.8 - 0.1)) + np.log(sigmoid(0.8 - 0.1)) +
+            np.log(sigmoid(0.8 - 0.2)) + np.log(sigmoid(0.8 - 0.0)) +
+            np.log(sigmoid(0.8 - 0.1)) + np.log(sigmoid(0.8 - 0.0)) +
+            np.log(sigmoid(1.0 - 0.0)) + np.log(sigmoid(1.0 - 0.0))
+        ) / 12
+    )
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+    # Block out the middle element
+    true_input_mask = torch.BoolTensor([
+        [True, True],
+        [False, False],
+        [True, True]
+    ])
+    loss = session_rnn._compute_loss(
+        output, targets_chunk, negatives_chunk, true_input_mask)
+
+    expected_loss = (
+        -(
+            np.log(sigmoid(0.8 - 0.1)) + np.log(sigmoid(0.8 - 0.1)) +
+            np.log(sigmoid(0.8 - 0.2)) + np.log(sigmoid(0.8 - 0.2)) +
+            # np.log(sigmoid(0.8 - 0.1)) + np.log(sigmoid(0.8 - 0.1)) +
+            # np.log(sigmoid(0.8 - 0.2)) + np.log(sigmoid(0.8 - 0.0)) +
+            np.log(sigmoid(0.8 - 0.1)) + np.log(sigmoid(0.8 - 0.0)) +
+            np.log(sigmoid(1.0 - 0.0)) + np.log(sigmoid(1.0 - 0.0))
+        ) / 8
+    )
+    np.testing.assert_almost_equal(loss, expected_loss)
 
 
 def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
@@ -69,9 +108,6 @@ def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
 
         session_rnn._train_epoch(matrix_sessions)
         assert_changed(params_before, params, device)
-
-
-# TODO Test if we update with information for all users when bptt > 1.
 
 
 def test_session_rnn_evaluation_epoch(session_rnn, matrix_sessions):
@@ -96,10 +132,6 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
     X_pred = session_rnn.predict(matrix_sessions)
     scores = X_pred.toarray()
 
-    print(list(matrix_sessions.sorted_item_history))
-
-    print(scores)
-
     top_item = scores.argmax(axis=1)
 
     # Prediction matrix should have same shape as input matrix
@@ -112,7 +144,6 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
     # All items should have a score
     assert len(set(X_pred.nonzero()[1])) == matrix_sessions.shape[1]
 
-    print(top_item)
     # Rnn should be able to learn simple repeating patterns
     assert top_item[0] == 1
     assert top_item[1] == 2
