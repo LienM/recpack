@@ -88,7 +88,6 @@ Recurrent Neural Networks
 .. autosummary::
     :toctree: generated/
 
-    GRU4Rec
     GRU4RecNegSampling
     GRU4RecCrossEntropy
 
@@ -112,6 +111,7 @@ For more information on how to create your own recpack algorithm, see :ref:`guid
     base.TopKItemSimilarityMatrixAlgorithm
     base.FactorizationAlgorithm
     base.TorchMLAlgorithm
+    GRU4Rec
 
 Stopping Criterion
 --------------------
@@ -159,7 +159,7 @@ As such recpack contains a number of commonly used sampling methods.
 
 .. autosummary::
     :toctree: generated/
-    
+
     samplers.PositiveNegativeSampler
     samplers.BootstrapSampler
     samplers.WarpSampler
