@@ -29,7 +29,34 @@ logger = logging.getLogger("recpack")
 
 
 class GRU4Rec(TorchMLAlgorithm):
-    """Base class for GRU4Rec.
+    """Base class for recurrent neural networks for session-based recommendations.
+
+    The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
+    "Session-based Recommendations with Recurrent Neural Networks" and
+    "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations"
+
+    The algorithm makes recommendations by training a recurrent neural network to
+    predict the next action of a user, and using the most likely next actions as
+    recommendations. At the heart of it is a Gated Recurrent Unit (GRU), a recurrent
+    network architecture that is able to form long-term memories.
+
+    Predictions are made by processing a user's actions so far one by one,
+    in chronological order::
+
+                                          iid_3_predictions
+                                                  |
+                 0 --> [ GRU ] --> [ GRU ] --> [ GRU ]
+                          |           |           |
+                        iid_0       iid_1       iid_2
+
+    here 'iid' are item ids, which can represent page views, purchases, or some other
+    action. The GRU builds up a memory of the actions so far and predicts what the
+    next action will be based on what other users with similar histories did next.
+    While originally devised to make recommendations based on (often short) user
+    sessions, the algorithm can be used with long user histories as well.
+
+    For the mathematical details of GRU see "Empirical Evaluation of Gated Recurrent
+    Neural Networks on Sequence Modeling" by Chung et al.
 
     :param num_layers: Number of hidden layers in the RNN. Defaults to 1
     :type num_layers: int, optional
@@ -113,7 +140,7 @@ class GRU4Rec(TorchMLAlgorithm):
         min_improvement: float = 0.0,
         seed: int = 2,
         save_best_to_file: bool = False,
-        keep_last: bool = True,
+        keep_last: bool = False,
     ):
         super().__init__(
             batch_size,
@@ -275,14 +302,13 @@ class GRU4Rec(TorchMLAlgorithm):
     def _chunk(
         self, *tensors: torch.LongTensor
     ) -> Iterator[Tuple[torch.LongTensor, ...]]:
-        """Split tensors into chunks of self.bptt width, or max hist len width.
+        """Split tensors into chunks of self.bptt width.
+        Chunks can be of width self.bptt - 1 if max_hist_len % self. bptt != 0.
 
-        The input tensors of  shape (batch_size, max_hist_length, 1 or U)
-        are sliced on axis 1 into tensors of shape (batch_size, chunk_size, 1 or U)
-
-        # TODO Improve docs
-        :return: Zipped split tensors.
-        :rtype: list of tuples, with 1 entry in the tuple per input tensor.
+        :param tensors: Tensors to be chunked.
+        :type tensors: torch.LongTensor
+        :yield: Tuple of chunked tensors, one chunk of each of the input tensors.
+        :rtype: Iterator[Tuple[torch.LongTensor, ...]]
         """
         max_hist_len = tensors[0].shape[1]
 
@@ -430,7 +456,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
         min_improvement: float = 0.0,
         seed: int = 2,
         save_best_to_file: bool = False,
-        keep_last: bool = True,
+        keep_last: bool = False,
     ):
         super().__init__(
             num_layers=num_layers,
@@ -565,11 +591,6 @@ class GRU4RecNegSampling(GRU4Rec):
     :param keep_last: Retain last model, rather than best
         (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
-
-
-
-
-
     """
 
     def __init__(
@@ -593,7 +614,7 @@ class GRU4RecNegSampling(GRU4Rec):
         min_improvement: float = 0.0,
         seed: int = 2,
         save_best_to_file: bool = False,
-        keep_last: bool = True,
+        keep_last: bool = False,
     ):
         super().__init__(
             num_layers=num_layers,
