@@ -193,17 +193,6 @@ class UserInteractionTimeSplitter(Splitter):
         # in_users = []
         # out_users = []
 
-        # for uid, user_history in tqdm(data.sorted_interaction_history):
-
-        #     last_interaction = user_history[-1]
-
-        #     last_interaction_time = data.get_timestamp(last_interaction)
-
-        #     if last_interaction_time < self.t:
-        #         in_users.append(uid)
-
-        #     else:
-        #         out_users.append(uid)
 
         data_in = data.users_in(in_users)
         data_out = data.users_in(out_users)
