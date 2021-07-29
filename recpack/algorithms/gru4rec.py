@@ -20,7 +20,7 @@ from recpack.algorithms.loss_functions import (
 )
 from recpack.algorithms.samplers import (
     SequenceMiniBatchPositivesTargetsNegativesSampler,
-    SequenceMiniBatchSampler
+    SequenceMiniBatchSampler,
 )
 from recpack.data.matrix import InteractionMatrix
 
@@ -212,14 +212,16 @@ class GRU4Rec(TorchMLAlgorithm):
                     )
 
                     loss = self._compute_loss(
-                        output, true_target_chunk, true_neg_chunk, true_input_mask)
+                        output, true_target_chunk, true_neg_chunk, true_input_mask
+                    )
 
                     batch_loss += loss.item()
                     loss.backward()
 
                     if self.clipnorm:
                         nn.utils.clip_grad_norm_(
-                            self.model_.parameters(), self.clipnorm)
+                            self.model_.parameters(), self.clipnorm
+                        )
 
                     self.optimizer.step()
 
@@ -232,7 +234,9 @@ class GRU4Rec(TorchMLAlgorithm):
     def _compute_loss(self, *args, **kwargs) -> torch.Tensor:
         raise NotImplementedError()
 
-    def _chunk(self, *tensors: torch.LongTensor) -> Iterator[Tuple[torch.LongTensor, ...]]:
+    def _chunk(
+        self, *tensors: torch.LongTensor
+    ) -> Iterator[Tuple[torch.LongTensor, ...]]:
         """Split tensors into chunks of self.bptt width, or max hist len width.
 
         The input tensors of  shape (batch_size, max_hist_length, 1 or U)
@@ -256,14 +260,14 @@ class GRU4Rec(TorchMLAlgorithm):
             batch_size = positives_batch.shape[0]
             # Use only the final prediction
             # Last item is the last non padding token per row.
-            last_item_in_hist = (
-                positives_batch != self.pad_token).sum(axis=1) - 1
+            last_item_in_hist = (positives_batch != self.pad_token).sum(axis=1) - 1
 
             hidden = self.model_.init_hidden(batch_size)
-            output, hidden = self.model_(positives_batch.to(
-                self.device), hidden.to(self.device))
+            output, hidden = self.model_(
+                positives_batch.to(self.device), hidden.to(self.device)
+            )
 
-            output = output.detach().cpu())
+            output = output.detach().cpu()
 
             # Item scores is a matrix with the scores for each item
             # based on the last item in the sequence
@@ -381,7 +385,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             stopping_criterion=stopping_criterion,
-            U=0
+            U=0,
         )
 
         self._criterion = nn.CrossEntropyLoss()
@@ -391,7 +395,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
         output: torch.FloatTensor,
         targets_chunk: torch.LongTensor,
         negatives_chunk: torch.LongTensor,
-        true_input_mask: torch.BoolTensor
+        true_input_mask: torch.BoolTensor,
     ) -> torch.Tensor:
 
         return self._criterion(output[true_input_mask], targets_chunk[true_input_mask])
@@ -505,7 +509,7 @@ class GRU4RecNegSampling(GRU4Rec):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             stopping_criterion=stopping_criterion,
-            U=U
+            U=U,
         )
 
         self.loss_fn = loss_fn
@@ -522,15 +526,15 @@ class GRU4RecNegSampling(GRU4Rec):
         output: torch.FloatTensor,
         targets_chunk: torch.LongTensor,
         negatives_chunk: torch.LongTensor,
-        true_input_mask: torch.BoolTensor
+        true_input_mask: torch.BoolTensor,
     ) -> torch.Tensor:
 
         # Select score for positive and negative sample for all tokens
         # For each target, gather the score predicted in output.
         # positive_scores has shape (batch_size x bptt x 1)
-        positive_scores = torch.gather(
-            output, 2, targets_chunk.unsqueeze(-1)
-        ).squeeze(-1)
+        positive_scores = torch.gather(output, 2, targets_chunk.unsqueeze(-1)).squeeze(
+            -1
+        )
         # negative scores has shape (batch_size x bptt x U)
         negative_scores = torch.gather(output, 2, negatives_chunk)
 
@@ -539,16 +543,17 @@ class GRU4RecNegSampling(GRU4Rec):
         true_batch_size, max_hist_len = positive_scores.shape
 
         # Check if I need to do all this flattening
-        true_input_mask_flat = true_input_mask.view(
-            true_batch_size * max_hist_len)
+        true_input_mask_flat = true_input_mask.view(true_batch_size * max_hist_len)
 
-        positive_scores_flat = positive_scores.view(
-            true_batch_size * max_hist_len, 1)
+        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, 1)
         negative_scores_flat = negative_scores.view(
             true_batch_size * max_hist_len, negative_scores.shape[2]
         )
 
-        return self._criterion(positive_scores_flat[true_input_mask_flat], negative_scores_flat[true_input_mask_flat])
+        return self._criterion(
+            positive_scores_flat[true_input_mask_flat],
+            negative_scores_flat[true_input_mask_flat],
+        )
 
 
 class GRU4RecTorch(nn.Module):
@@ -587,8 +592,7 @@ class GRU4RecTorch(nn.Module):
         self.drop = nn.Dropout(dropout, inplace=True)
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
-        self.emb = nn.Embedding(
-            num_items + 1, embedding_size, padding_idx=pad_token)
+        self.emb = nn.Embedding(num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
             embedding_size,
             hidden_size,
@@ -629,8 +633,7 @@ class GRU4RecTorch(nn.Module):
 
             padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
 
-            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(
-                padded_rnn_x, batch_first=True)
+            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(padded_rnn_x, batch_first=True)
 
         else:
             rnn_x, hidden = self.rnn(emb_x, hidden)
@@ -643,13 +646,11 @@ class GRU4RecTorch(nn.Module):
         return out, hidden
 
     def init_weights(self) -> None:
-        """Initializes all model parameters uniformly.
-        """
+        """Initializes all model parameters uniformly."""
         initrange = 0.01
         for param in self.parameters():
             nn.init.uniform_(param, -initrange, initrange)
 
     def init_hidden(self, batch_size: int) -> torch.Tensor:
-        """Returns an initial, zero-valued hidden state with shape (L B, H).
-        """
+        """Returns an initial, zero-valued hidden state with shape (L B, H)."""
         return torch.zeros((self.rnn.num_layers, batch_size, self.hidden_size))
