@@ -19,12 +19,13 @@ def session_rnn():
         batch_size=3,
         embedding_size=5,
         hidden_size=10,
-        U=3,
+        U=25,
         bptt=2,
         learning_rate=0.1,
-        loss_fn="bpr"
+        loss_fn="bpr",
     )
     return rnn
+
 
 # TODO Fix test
 # def test_session_rnn_compute_loss(session_rnn):
