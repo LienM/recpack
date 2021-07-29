@@ -82,6 +82,15 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
     EASE
 
 
+Recurrent Neural Networks
+-------------------------
+
+.. autosummary::
+    :toctree: generated/
+
+    GRU4RecNegSampling
+    GRU4RecCrossEntropy
+
 .. _algorithm-base-classes:
 
 Abstract Base Classes
@@ -102,6 +111,7 @@ For more information on how to create your own recpack algorithm, see :ref:`guid
     base.TopKItemSimilarityMatrixAlgorithm
     base.FactorizationAlgorithm
     base.TorchMLAlgorithm
+    GRU4Rec
 
 Stopping Criterion
 --------------------
@@ -136,6 +146,9 @@ we also provide metric wrappers around the raw loss functions.
     loss_functions.bpr_loss
     loss_functions.bpr_loss_wrapper
     loss_functions.vae_loss
+    loss_functions.bpr_max_loss
+    loss_functions.top1_loss
+    loss_functions.top1_max_loss
 
 Samplers
 ----------
@@ -146,10 +159,12 @@ As such recpack contains a number of commonly used sampling methods.
 
 .. autosummary::
     :toctree: generated/
-    
+
     samplers.PositiveNegativeSampler
     samplers.BootstrapSampler
     samplers.WarpSampler
+    samplers.SequenceMiniBatchSampler
+    samplers.SequenceMiniBatchPositivesTargetsNegativesSampler
 
 
 Utility Functions
@@ -194,3 +209,4 @@ from recpack.algorithms.wmf import WeightedMatrixFactorization
 
 from recpack.algorithms.p2v import Prod2Vec
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
+from recpack.algorithms.gru4rec import GRU4Rec, GRU4RecNegSampling, GRU4RecCrossEntropy

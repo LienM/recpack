@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, Iterator
+from typing import Tuple, Iterator, List
 import warnings
 
 import numpy as np
@@ -187,7 +187,7 @@ class Prod2Vec(TorchMLAlgorithm):
         )
 
     def _init_model(self, X: Matrix) -> None:
-        self.model_ = SkipGram(X.shape[1], self.embedding_size)
+        self.model_ = SkipGram(X.shape[1], self.embedding_size).to(self.device)
         self.optimizer = optim.Adam(
             self.model_.parameters(), lr=self.learning_rate)
 
@@ -215,6 +215,10 @@ class Prod2Vec(TorchMLAlgorithm):
             positives_batch,
             negatives_batch,
         ) in self._skipgram_sample_pairs(X):
+            positives_batch = positives_batch.to(self.device)
+            focus_batch = focus_batch.to(self.device)
+            negatives_batch = negatives_batch.to(self.device)
+
             self.optimizer.zero_grad()
 
             positive_sim = self.model_(
@@ -244,7 +248,7 @@ class Prod2Vec(TorchMLAlgorithm):
         K = self.K + 1
         batch_size = 1000
 
-        embedding = self.model_.input_embeddings.weight.detach().numpy()
+        embedding = self.model_.input_embeddings.weight.cpu().detach().numpy()
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
@@ -264,10 +268,8 @@ class Prod2Vec(TorchMLAlgorithm):
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
-    def _batch_predict(self, X: csr_matrix) -> csr_matrix:
+    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
         scores = X @ self.similarity_matrix_
-        if not isinstance(scores, csr_matrix):
-            scores = csr_matrix(scores)
         return scores
 
     def _skipgram_sample_pairs(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
@@ -281,6 +283,7 @@ class Prod2Vec(TorchMLAlgorithm):
         :yield: focus_batch, positive_samples_batch, negative_samples_batch
         :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
         """
+        # TODO Should I add this to samplers?
         # Window, then extract focus (middle element) and context (all other elements).
         windowed_sequences = window(X.sorted_item_history, self.window_size)
         context = np.hstack(

@@ -182,7 +182,7 @@ class Prod2VecClustered(Prod2Vec):
         # this is not enough of a problem to add more complex solutions.
         K = self.K + 1
 
-        embedding = self.model_.input_embeddings.weight.detach().numpy()
+        embedding = self.model_.input_embeddings.weight.cpu().detach().numpy()
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
@@ -241,7 +241,7 @@ class Prod2VecClustered(Prod2Vec):
         :return: array with a cluster label for every item. Shape = (|I|,)
         :rtype: np.array
         """
-        embedding = self.model_.input_embeddings.weight.detach().numpy()
+        embedding = self.model_.input_embeddings.weight.cpu().detach().numpy()
         kmeans = KMeans(self.num_clusters)
         cluster_assignments = kmeans.fit_predict(embedding)
         return cluster_assignments

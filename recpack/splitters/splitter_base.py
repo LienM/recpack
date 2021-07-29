@@ -182,20 +182,17 @@ class UserInteractionTimeSplitter(Splitter):
         :return: A 2-tuple containing the ``data_in`` and ``data_out`` matrices.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
-        in_users = []
-        out_users = []
 
-        for uid, user_history in tqdm(data.sorted_interaction_history):
+        max_ts_per_user = data.timestamps.max(level=0)
 
-            last_interaction = user_history[-1]
+        filt = (max_ts_per_user < self.t)
 
-            last_interaction_time = data.get_timestamp(last_interaction)
+        in_users = max_ts_per_user[filt].index.get_level_values(0).values.tolist()
+        out_users = max_ts_per_user[~filt].index.get_level_values(0).values.tolist()
 
-            if last_interaction_time < self.t:
-                in_users.append(uid)
+        # in_users = []
+        # out_users = []
 
-            else:
-                out_users.append(uid)
 
         data_in = data.users_in(in_users)
         data_out = data.users_in(out_users)

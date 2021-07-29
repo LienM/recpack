@@ -1,9 +1,10 @@
+from typing import Callable
+
 import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from tqdm import tqdm
 
 from recpack.algorithms.samplers import BootstrapSampler, WarpSampler
@@ -11,8 +12,9 @@ from recpack.algorithms.samplers import BootstrapSampler, WarpSampler
 
 def covariance_loss(H: nn.Embedding, W: nn.Embedding) -> torch.Tensor:
     # TODO: Refactor so it's not CML specific
-    """
-    Implementation of covariance loss as described in
+    """Covariance loss.
+
+    Convariance loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
 
@@ -69,7 +71,8 @@ def vae_loss(reconstructed_X, mu, logvar, X, anneal=1.0):
     """
 
     BCE = -torch.mean(torch.sum(F.log_softmax(reconstructed_X, 1) * X, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
+                                      mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD
 
@@ -81,8 +84,8 @@ def warp_loss(
     J: int,
     U: int,
 ) -> torch.Tensor:
-    """
-    Implementation of
+    """WARP loss 
+
     WARP loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
     http://www.cs.cornell.edu/~ylongqi/paper/HsiehYCLBE17.pdf
@@ -133,6 +136,15 @@ def warp_loss(
 def skipgram_negative_sampling_loss(
     positive_sim: torch.Tensor, negative_sim: torch.Tensor
 ) -> torch.Tensor:
+    """Skipgram Sampling Loss.
+
+    :param positive_sim: Similarity scores between focus and context item.
+    :type positive_sim: torch.Tensor
+    :param negative_sim: Similarity scores between focus and negative sample.
+    :type negative_sim: torch.Tensor
+    :return: Loss value.
+    :rtype: torch.Tensor
+    """
     pos_loss = positive_sim.sigmoid().log()
     neg_loss = negative_sim.neg().sigmoid().log().sum(-1)
 
@@ -140,7 +152,7 @@ def skipgram_negative_sampling_loss(
 
 
 def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
-    """Implementation of the Bayesian Personalized Ranking loss.
+    """Bayesian Personalized Ranking loss.
 
     BPR loss as defined in Rendle, Steffen, et al.
     "BPR: Bayesian personalized ranking from implicit feedback."
@@ -156,9 +168,11 @@ def bpr_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Te
     :return: The loss value of the bpr criterion
     :rtype: torch.Tensor
     """
+
     distance = positive_sim - negative_sim
     # Probability of ranking given parameters
     elementwise_bpr_loss = torch.log(torch.sigmoid(distance))
+
     # The goal is to minimize loss
     # If negative sim > positive sim -> distance is negative,
     # but loss is positive
@@ -282,12 +296,153 @@ def warp_loss_wrapper(
             .tolist(),
         ]
 
-        dist_pos_interaction = torch.tensor(dist_pos_interaction.A[0]).unsqueeze(-1)
+        dist_pos_interaction = torch.tensor(
+            dist_pos_interaction.A[0]).unsqueeze(-1)
         dist_neg_interaction_flat = torch.tensor(dist_neg_interaction.A[0])
-        dist_neg_interaction = dist_neg_interaction_flat.reshape(current_batch_size, -1)
+        dist_neg_interaction = dist_neg_interaction_flat.reshape(
+            current_batch_size, -1)
 
         losses.append(
             warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U)
         )
 
     return np.mean(losses)
+
+
+def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, reg: float = 1.0) -> torch.Tensor:
+    """Bayesian Personalized Ranking Max Loss.
+
+    This is a differentiable approximation to the BPR loss between the target item
+    and the negative sample with the highest score, with an added regularization
+    term. It can be defined as:
+
+    .. math::
+        L_{bpr-max} = -\\log \\sum\\limits_{j=1}^{N_S} s_j \\sigma(r_i - r_j) +
+        \\lambda \\sum\\limits_{j=1}^{N_S} s_j r_j^2
+
+    where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
+    score and :math:`r_j` is the score given to the sampled negative. The BPR loss
+    between target score and the maximum sampled score is approximated by computing
+    a softmax distribution over the negative samples and using the softmax values
+    :math:`s_j` as weights.
+
+    See the 2018 paper "Recurrent Neural Networks with Top-K Gains for Session-based
+    Recommendations" by Hidasi et al. for the motivation behind these changes to the
+    original BPR loss.
+
+    :param positive_scores: Output values assigned to positive samples
+    :type positive_scores: torch.Tensor
+    :param negative_scores: Output values assigned to negative samples
+    :type negative_scores: torch.Tensor
+    :param reg: Regularization weight, defaults to 1.0
+    :type reg: float, optional
+    :return: Computed BPR Max Loss
+    :rtype: torch.Tensor
+    """
+    # Mean over all samples
+    if negative_scores.ndim == 1:
+        negative_scores = negative_scores.unsqueeze(-1)
+
+    if positive_scores.ndim == 1:
+        positive_scores = positive_scores.unsqueeze(-1)
+
+    size = positive_scores.size()
+    if len(size) == 2 and size[0] < size[1]:
+        positive_scores = positive_scores.t()
+        negative_scores = negative_scores.t()
+
+    weights = torch.softmax(negative_scores, dim=1)
+    score_diff = weights * torch.sigmoid(positive_scores - negative_scores)
+    norm_penalty = weights * negative_scores ** 2
+
+    return (
+        -torch.log(score_diff.sum(dim=1)) + reg * norm_penalty.sum(dim=1)
+    ).mean()
+
+
+def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+    """TOP1 Loss.
+
+    This is a pairwise loss function similar to BPR loss, but with an added score
+    regularization term. It was devised specifically for use with the Session RNN.
+    It can be defined as:
+
+    .. math::
+        L_{top1} = \\frac{1}{N_S} \\sum\\limits_{j=1}^{N_S} \\sigma(r_j - r_i) + \\sigma(r_j^2)
+
+    where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
+    score and :math:`r_j` is the score given to the sampled negative item.
+
+    See the 2016 paper "Session-based Recommendations with Recurrent Neural Networks"
+    by Hidasi et al. for the motivation behind using it for top-k recommendations.
+
+    :param positive_scores: Output values assigned to positive samples
+    :type positive_scores: torch.Tensor
+    :param negative_scores: Output values assigned to negative samples
+    :type negative_scores: torch.Tensor
+    :return: Computed Top-1 Loss
+    :rtype: torch.Tensor
+    """
+    # Mean over all samples
+    if negative_scores.ndim == 1:
+        negative_scores = negative_scores.unsqueeze(-1)
+
+    if positive_scores.ndim == 1:
+        positive_scores = positive_scores.unsqueeze(-1)
+
+    size = positive_scores.size()
+    if len(size) == 2 and size[0] < size[1]:
+        positive_scores = positive_scores.t()
+        negative_scores = negative_scores.t()
+
+    score_diff = torch.sigmoid(negative_scores - positive_scores)
+    norm_penalty = torch.sigmoid(negative_scores ** 2)
+    return (score_diff + norm_penalty).mean()
+
+
+def top1_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:
+    """TOP1 Max Loss.
+
+    This is a differentiable approximation to the TOP1 loss between the target item
+    and the negative sample with the highest score. It can be defined as:
+
+    .. math::
+        L_{top1-max} = \\sum\\limits_{j=1}^{N_S} s_j\\left(\\sigma(r_j - r_i) + \\sigma(r_j^2)\\right)
+
+    where :math:`N_S` is the number of negative samples, :math:`r_i` is the target
+    score and :math:`r_j` is the score given to the sampled negative. The TOP1 loss
+    between target score and the maximum sampled score is approximated by computing
+    a softmax distribution over the negative samples and using the softmax values
+    :math:`s_j` as weights.
+
+    See the 2018 paper "Recurrent Neural Networks with Top-K Gains for Session-based
+    Recommendations" by Hidasi et al. for the motivation behind these changes to the
+    original TOP1 loss.
+
+    :param positive_scores: Output values assigned to positive samples
+    :type positive_scores: torch.Tensor
+    :param negative_scores: Output values assigned to negative samples
+    :type negative_scores: torch.Tensor
+    :return: Computed Top-1 Max Loss
+    :rtype: torch.Tensor
+    """
+    # Mean over all samples
+    if negative_scores.ndim == 1:
+        negative_scores = negative_scores.unsqueeze(-1)
+
+    if positive_scores.ndim == 1:
+        positive_scores = positive_scores.unsqueeze(-1)
+
+    size = positive_scores.size()
+    if len(size) == 2 and size[0] < size[1]:
+        positive_scores = positive_scores.t()
+        negative_scores = negative_scores.t()
+
+    weights = torch.softmax(negative_scores, dim=1)
+
+    score_diff = torch.sigmoid(negative_scores - positive_scores)
+
+    norm_penalty = torch.sigmoid(negative_scores ** 2)
+    loss_terms = (weights * (score_diff + norm_penalty)).sum(dim=1)
+
+    return loss_terms.mean()

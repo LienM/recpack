@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 
 from tqdm.auto import tqdm
 
@@ -165,7 +165,7 @@ class BPRMF(TorchMLAlgorithm):
 
         self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
 
-    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
         """Predict scores for matrix X, given the selected users.
 
         If there are no selected users, assumes X is a full matrix,
@@ -175,8 +175,8 @@ class BPRMF(TorchMLAlgorithm):
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: dense matrix of scores per user item pair.
-        :rtype: np.ndarray
+        :return: Sparse matrix of scores per user item pair.
+        :rtype: csr_matrix
         """
 
         if users is None:
@@ -185,7 +185,10 @@ class BPRMF(TorchMLAlgorithm):
         user_tensor = torch.LongTensor(users).to(self.device)
         item_tensor = torch.arange(X.shape[1]).to(self.device)
 
-        return self.model_(user_tensor, item_tensor).detach().cpu().numpy()
+        result = lil_matrix(X.shape)
+        result[users] = self.model_(user_tensor, item_tensor).detach().cpu().numpy()
+
+        return result.tocsr()
 
     def _train_epoch(self, train_data: csr_matrix):
         """train a single epoch. Uses sampler to generate samples,

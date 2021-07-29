@@ -8,8 +8,35 @@ from recpack.algorithms.util import (
     naive_sparse2tensor,
     naive_tensor2sparse,
     sample_rows,
+    get_batches,
     union_csr_matrices,
 )
+
+
+def test_get_batches():
+
+    test_array = range(0, 500)
+
+    cnt = 0
+
+    for batch in get_batches(test_array, batch_size=10):
+        assert (len(batch) == 10 or len(batch) < 10) and len(batch) != 0
+        cnt += len(batch)
+
+    assert cnt == 500
+
+    cnt = 0
+
+    for batch in get_batches(iter(test_array), batch_size=10):
+        assert (len(batch) == 10 or len(batch) < 10) and len(batch) != 0
+        cnt += len(batch)
+
+    assert cnt == 500
+
+    it = get_batches(iter(test_array), batch_size=10)
+
+    assert next(it) == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    assert next(it) == [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
 
 def test_csr_tensor_conversions(larger_matrix):

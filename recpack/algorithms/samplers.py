@@ -3,10 +3,11 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.data.matrix import to_binary
+from recpack.data.matrix import InteractionMatrix, to_binary
+from recpack.algorithms.util import get_batches
 
 
-def unigram_distribution(X: csr_matrix) -> np.array:
+def unigram_distribution(X: csr_matrix) -> np.ndarray:
     """Creates a unigram distribution based on the item frequency.
 
     Follows the advice outlined in https://arxiv.org/abs/1310.4546 to create this noise distribution:
@@ -17,7 +18,14 @@ def unigram_distribution(X: csr_matrix) -> np.array:
     return item_counts_powered / item_counts_powered.sum()
 
 
-class PositiveNegativeSampler:
+class Sampler:
+    pass
+
+
+# TODO Rename to TripletSampler?
+
+
+class PositiveNegativeSampler(Sampler):
     """Samples linked positive and negative interactions for users.
 
     Provides a :meth:`sample` method that samples positives and negatives.
@@ -189,9 +197,6 @@ class PositiveNegativeSampler:
                         probabilities=negative_sample_probabilities,
                     )
 
-                    # np.random.randint(
-                    #     0, X.shape[1], size=(true_batch_size,)
-                    # )
                     while True:
 
                         num_incorrect, negatives_mask = _spot_collisions(
@@ -266,24 +271,161 @@ class WarpSampler(PositiveNegativeSampler):
     :type exact: bool, optional
     """
 
-    def __init__(self, U=10, batch_size=100, exact=False):
+    def __init__(self, U=10, batch_size=100, exact=False) -> None:
         super().__init__(U=U, batch_size=batch_size, replace=False, exact=exact)
 
 
+class SequenceMiniBatchSampler(Sampler):
+    """Samples batches of user, input sequences.
+
+    Handles sequences of unequal length by padding them with `pad_token`.
+
+    :param pad_token: Token used to indicate that this location in the sequence
+        contains a padding element.
+    :type pad_token: int
+    :param batch_size: The number of sequences returned per batch, defaults to 100
+    :type batch_size: int, optional
+    """
+
+    def __init__(self, pad_token: int, batch_size: int = 100) -> None:
+        super().__init__()
+        self.pad_token = pad_token
+        self.batch_size = batch_size
+
+    def sample(
+        self, X: InteractionMatrix
+    ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor]]:
+        # item_histories = list(X.sorted_item_history)
+        # Do I introduce bias if I sort them by length?
+        # item_histories.sort(key=lambda x: len(x[1]), reverse=True)
+
+        # Generate batches of users. Take maximum len of history in batch
+        for batch in get_batches(X.sorted_item_history, self.batch_size):
+            # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.
+            batch.sort(key=lambda x: len(x[1]), reverse=True)
+            max_hist_len = len(batch[0][1])
+            batch_size = len(batch)
+
+            uid_batch = np.zeros((batch_size,), dtype=int)
+
+            # Initialize seq_batch with self.pad_token
+            positives_batch = (
+                np.ones((batch_size, max_hist_len), dtype=int) * self.pad_token
+            )
+
+            # Add sequences in batch
+            for batch_ix, (uid, hist) in enumerate(batch):
+                hist_len = hist.shape[0]
+                positives_batch[batch_ix, :hist_len] = hist
+                uid_batch[batch_ix] = uid
+
+            yield (torch.LongTensor(uid_batch), torch.LongTensor(positives_batch))
+
+
+class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler):
+    """Samples `U` negatives for every positive in a sequence.
+
+    This approach allows to learn multiple times from the same positive interactions.
+    Because the sequence-aspect is important here, we only eliminate collisions
+    in the exact same location in the sequence.
+    As a result, a sample that occurs at a later or earlier time in the sequence
+    may be sampled as a negative for all other locations in the sequence.
+
+    Handles sequences of unequal length by padding them with `pad_token`.
+
+    :param U: Number of negative samples for each positive
+    :type U: int
+    :param pad_token: Token used to indicate that this location in the sequence
+        contains a padding element.
+    :type pad_token: int
+    :param batch_size: The number of sequences returned per batch, defaults to 100
+    :type batch_size: int, optional
+    """
+
+    def __init__(self, U: int, pad_token: int, batch_size: int = 100) -> None:
+        super().__init__(pad_token, batch_size)
+        self.U = U
+
+    def sample(
+        self, X: InteractionMatrix
+    ) -> Iterator[
+        Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]
+    ]:
+        """Sample positives, targets and negatives from the input matrix.
+
+        Yields tuples of:
+
+        - uids: 1D tensor with the user ids in this batch.
+          Shape = (batch_size,)
+        - positives: 2D tensor with row per user, and history item_ids in order on each row.
+          Rows are sorted, such that longest histories are higher in the tensor.
+          Histories shorter than the width of the tensor are filled up with padding tokens.
+          Shape = (batch_size, max_hist_len(batch))
+        - targets: 2D tensor with targets to predict for each user.
+          This is the positives, but rolled 1 position to the left.
+          Such that the target of the first positive is the second positive in the sequence.
+          Each sequence ends with a padding token as target,
+          since there is no knowledge of the next item at the end of the sequence.
+          Shape = (batch size, max_hist_len(batch))
+        - negatives: 3D tensor, with negative examples for each positive.
+          For each positive self.U negatives are sampled, these negatives are checked against only the target item.
+          Shape = (batch_size, max_hist_len(batch), self.U)
+
+
+        :param X: Interaction matrix to generate samples from.
+        :type X: InteractionMatrix
+        :yield: tuples of (uids, positives, targets, negatives)
+        :rtype: Iterator[ Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor] ]
+        """
+
+        num_items = X.shape[1]
+
+        # Generate batches of users. Take maximum len of history in batch
+        for uid_batch, positives_batch in super().sample(X):
+            negatives_batch = np.random.randint(
+                0, num_items, (*positives_batch.shape, self.U)
+            )
+
+            targets_batch = np.roll(positives_batch, -1, axis=1)
+            # set last item to padding, otherwise 1st item is rolled till here
+            targets_batch[:, -1] = self.pad_token
+
+            while True:
+                mask = np.equal(negatives_batch, targets_batch[:, :, None])
+
+                num_incorrect = np.sum(mask)
+
+                if num_incorrect:
+                    new_negatives = np.random.randint(
+                        0, num_items, size=(num_incorrect,)
+                    )
+
+                    negatives_batch[mask] = new_negatives
+                else:
+                    break
+
+            yield (
+                uid_batch,
+                positives_batch,
+                torch.LongTensor(targets_batch),
+                torch.LongTensor(negatives_batch),
+            )
+
+
 def _spot_collisions(
-    users: np.array, negatives_batch: np.array, X: csr_matrix
-) -> Tuple[int, np.array]:
+    users: np.ndarray, negatives_batch: np.ndarray, X: csr_matrix
+) -> Tuple[int, np.ndarray]:
     """Spot collisions between the negative samples and the interactions in X.
 
     :param users: Ordered batch of users
-    :type users: np.array
+    :type users: np.ndarray
     :param negatives_batch: Ordered batch of negative items
-    :type negatives_batch: np.array
+    :type negatives_batch: np.ndarray
     :param X: Entirety of all user interactions
     :type X: csr_matrix
     :return: Tuple containing the number of incorrect negative samples,
         and the locations of these incorrect samples in the batch array
-    :rtype: Tuple[int, np.array]
+    :rtype: Tuple[int, np.ndarray]
     """
     # Eliminate the collisions, exactly.
     # Turn this batch of negatives into a csr_matrix

@@ -1,6 +1,7 @@
 import logging
 import time
 from typing import List, Tuple
+from scipy.sparse.lil import lil_matrix
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -234,24 +235,26 @@ class MultVAE(TorchMLAlgorithm):
 
         return loss
 
-    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
         """Predict scores for matrix X, given the selected users.
-
-        If there are no selected users, assumes X is a full matrix,
-        and users can be retrieved as the nonzero indices in the X matrix.
 
         :param X: Matrix of user item interactions
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
         :return: dense matrix of scores per user item pair.
-        :rtype: np.ndarray
+        :rtype: csr_matrix
         """
+        active_users = X[users]
 
-        in_tensor = naive_sparse2tensor(X).to(self.device)
+        in_tensor = naive_sparse2tensor(active_users).to(self.device)
 
         out_tensor, _, _ = self.model_(in_tensor)
-        return out_tensor.detach().cpu().numpy()
+
+        result = lil_matrix(X.shape)
+        result[users] = out_tensor.detach().cpu().numpy()
+
+        return result.tocsr()
 
 
 class MultiVAETorch(nn.Module):

@@ -5,14 +5,14 @@ import warnings
 
 import recpack.splitters.scenarios as scenarios
 from recpack.data.matrix import InteractionMatrix
-from scipy.sparse import csr_matrix
 
 USER_IX = InteractionMatrix.USER_IX
 ITEM_IX = InteractionMatrix.ITEM_IX
 TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
+
 @pytest.mark.parametrize("t, n", [(4, 1), (4, -2), (5, 1), (5, -2)])
-def test_strong_generalization_timed_most_recent(data_m_sessions, t, n):
+def test_strong_generalization_timed_most_recent_split(data_m_sessions, t, n):
     scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, n=n)
     scenario.split(data_m_sessions)
     tr = scenario.training_data
@@ -72,7 +72,8 @@ def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val
 
     # User earliest/latest interaction times, indexed by user
     last_action_val_in = val_data_in._df.groupby(USER_IX)[TIMESTAMP_IX].max()
-    first_action_val_out = val_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].min()
+    first_action_val_out = val_data_out._df.groupby(USER_IX)[
+        TIMESTAMP_IX].min()
     last_action_val_out = val_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].max()
     last_action_te_in = te_data_in._df.groupby(USER_IX)[TIMESTAMP_IX].max()
     first_action_te_out = te_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].min()

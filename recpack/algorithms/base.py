@@ -19,7 +19,7 @@ from recpack.algorithms.util import (
     get_batches,
     get_users,
 )
-from recpack.data.matrix import to_csr_matrix, Matrix
+from recpack.data.matrix import InteractionMatrix, to_csr_matrix, Matrix
 
 logger = logging.getLogger("recpack")
 
@@ -136,7 +136,7 @@ class Algorithm(BaseEstimator):
         """
         return to_csr_matrix(X, binary=True)
 
-    def _transform_predict_input(self, X):
+    def _transform_predict_input(self, X: Matrix) -> csr_matrix:
         """Transform the input of predict to expected type
 
         Data will be turned into a binary csr matrix.
@@ -298,6 +298,7 @@ class FactorizationAlgorithm(Algorithm):
 
     - ``user_embedding_`` contains the users embedded in a lower dimensional space,
       shape = ``|users| x num_components``
+
     - ``item_embedding_`` contains the items embedded in the same dimensions
       shape = ``num_components x |items|``
 
@@ -320,7 +321,7 @@ class FactorizationAlgorithm(Algorithm):
 
         Checks implemented:
 
-        - Checks if model is fitting, using the sklear check_is_fitted function,
+        - Checks if model is fitted, using the sklearn check_is_fitted function,
           https://scikit-learn.org/stable/modules/generated/sklearn.utils.validation.check_is_fitted.html
         - Checks if `num_components` is correct
         """
@@ -415,16 +416,16 @@ class TorchMLAlgorithm(Algorithm):
 
     def __init__(
         self,
-        batch_size,
-        max_epochs,
-        learning_rate,
+        batch_size: int,
+        max_epochs: int,
+        learning_rate: float,
         stopping_criterion: str,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: float = 0.01,
-        seed=None,
-        save_best_to_file=False,
-        keep_last=False
+        min_improvement: float = 0.0,
+        seed: int = None,
+        save_best_to_file: bool = False,
+        keep_last: bool = False
     ):
         # TODO batch_size * torch.cuda.device_count() if cuda else batch_size
         #   -> Multi GPU
@@ -475,7 +476,7 @@ class TorchMLAlgorithm(Algorithm):
         self.best_model.seek(0)
         self.model_ = torch.load(self.best_model)
 
-    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
+    def _evaluate(self, val_in: Matrix, val_out: Matrix) -> None:
         """Perform evaluation step
 
         Evaluation computes predictions by passing the ``val_in`` matrix to the model,
@@ -489,8 +490,10 @@ class TorchMLAlgorithm(Algorithm):
         :type val_out: csr_matrix
         """
         # Evaluate batched
+        val_in = self._transform_predict_input(val_in)
         X_pred_cpu = self._predict(val_in)
-        X_true = val_out
+        # StoppingCriterion expects csr_matrix as output
+        X_true = to_csr_matrix(val_out)
 
         better = self.stopping_criterion.update(X_true, X_pred_cpu)
 
@@ -498,7 +501,7 @@ class TorchMLAlgorithm(Algorithm):
             logger.info("Model improved. Storing better model.")
             self._save_best()
 
-    def _train_epoch(self, X: csr_matrix) -> None:
+    def _train_epoch(self, X: Matrix) -> None:
         """Perform a single training epoch
 
         A training epoch updates the internal model using the provided interactions.
@@ -507,7 +510,7 @@ class TorchMLAlgorithm(Algorithm):
         """
         raise NotImplementedError()
 
-    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> np.ndarray:
+    def _batch_predict(self, X: Matrix, users: List[int] = None) -> csr_matrix:
         """Predict scores for matrix X, given the selected users in this batch
 
         If there are no selected users, assumes X is a full matrix,
@@ -517,12 +520,12 @@ class TorchMLAlgorithm(Algorithm):
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: dense matrix of scores per user item pair.
-        :rtype: np.ndarray
+        :return: Sparse matrix of scores per user item pair.
+        :rtype: csr_matrix
         """
         raise NotImplementedError("Please implement this function")
 
-    def _predict(self, X: csr_matrix) -> csr_matrix:
+    def _predict(self, X: Matrix) -> csr_matrix:
         """Compute predictions per batch of users,
         to avoid going out of RAM on the GPU
 
@@ -534,14 +537,24 @@ class TorchMLAlgorithm(Algorithm):
         :rtype: csr_matrix
         """
         results = lil_matrix(X.shape)
-        for users in get_batches(get_users(X), batch_size=self.batch_size):
-            results[users] = self._batch_predict(X[users], users)
+        self.model_.eval()
+        with torch.no_grad():
+            for users in get_batches(get_users(X), batch_size=self.batch_size):
+                if isinstance(X, InteractionMatrix):
+                    batch = X.users_in(users)
+                else:
+                    batch = lil_matrix(X.shape)
+                    batch[users] = X[users]
+                    batch = batch.tocsr()
+
+
+                results[users] = self._batch_predict(batch, users=users)[users]
 
         logger.debug(f"shape of response ({results.shape})")
 
         return results.tocsr()
 
-    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]):
+    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]) -> Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]:
         """Transform the input matrices of the training function to the expected types
 
         All matrices get converted to binary csr matrices
@@ -555,7 +568,7 @@ class TorchMLAlgorithm(Algorithm):
         """
         return to_csr_matrix((X, validation_data), binary=True)
 
-    def _transform_predict_input(self, X):
+    def _transform_predict_input(self, X: Matrix) -> csr_matrix:
         return to_csr_matrix(X, binary=True)
 
     @property
@@ -665,7 +678,7 @@ class TorchMLAlgorithm(Algorithm):
 
         return self
 
-    def _check_prediction(self, X_pred: csr_matrix, X: csr_matrix) -> None:
+    def _check_prediction(self, X_pred: csr_matrix, X: Matrix) -> None:
         """Checks that the prediction matches expectations.
 
         Checks implemented

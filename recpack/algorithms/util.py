@@ -1,11 +1,13 @@
+from inspect import isgenerator
+from itertools import islice
 from math import ceil
-from typing import Iterator, List
+from typing import Iterator, List, Iterable
 
 import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.data.matrix import to_binary
+from recpack.data.matrix import Matrix, to_binary
 
 
 def swish(x):
@@ -38,25 +40,36 @@ def naive_tensor2sparse(tensor: torch.Tensor) -> csr_matrix:
     return csr_matrix(tensor.detach().numpy())
 
 
-def get_users(data):
+def get_users(data: Matrix) -> List[int]:
     return list(set(data.nonzero()[0]))
 
 
-def get_batches(users: List[int], batch_size=1000) -> Iterator[List[int]]:
+def get_batches(users: Iterable, batch_size=1000) -> Iterator[List]:
     """Get user ids in batches from a list of ids.
 
     The list of users will be split into batches of batch_size.
     The final batch might contain less users, as it will be the remainder.
 
     :param users: list of user ids that will be split
-    :type users: List[int]
+    :type users: Iterable
     :param batch_size: Size of each batch, defaults to 1000
     :type batch_size: int, optional
     :yield: Iterator of lists of users
-    :rtype: Iterator[List[int]]
+    :rtype: Iterator[List]
     """
-    for i in range(ceil(len(users) / batch_size)):
-        yield users[i * batch_size : min((i * batch_size) + batch_size, len(users))]
+    if not isgenerator(users):
+        users = iter(users)
+
+    while True:
+
+        batch = list(islice(users, 0, batch_size))
+        if batch:
+            yield batch
+        else:
+            break
+
+        # start_ix = end_ix
+        # end_ix += batch_size
 
 
 def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:

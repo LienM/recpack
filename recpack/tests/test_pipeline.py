@@ -129,7 +129,6 @@ def test_pipeline_builder(mat):
 def test_pipeline_builder_no_validation_torch(pipeline_builder):
     pipeline_builder.add_algorithm("BPRMF", params={"learning_rate": 0.1})
 
-    print(pipeline_builder.algorithms)
     with pytest.raises(RuntimeError) as error:
         pipeline_builder.build()
 

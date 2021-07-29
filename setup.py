@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="recpack",
-    version="0.1.1",
+    version="0.1.2",
     python_requires=">=3.6",
     packages=find_packages(),
     # tests_require=["pytest"],
@@ -14,7 +14,7 @@ setup(
         "scikit-learn==0.24.1",
         "pandas==1.2.1",
         "PyYAML==5.4.1",
-        "torch==1.7.1",
+        "torch==1.9.0",
         "torchtest==0.5",
         "tqdm==4.46.0",
         "dataclasses==0.6",

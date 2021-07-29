@@ -123,6 +123,9 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
+# Vscode project settings
+.vscode
+
 # mkdocs documentation
 /site
 
