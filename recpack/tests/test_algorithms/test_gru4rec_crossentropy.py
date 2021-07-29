@@ -25,31 +25,66 @@ def session_rnn():
     return rnn
 
 
-# def test_session_rnn_compute_loss(session_rnn):
-#     # pos_sim_as_tensor = torch.FloatTensor([[0.6, 0.3, 0.1]]).t()
-#     # neg_sim_as_tensor = torch.FloatTensor(
-#     #     [[0.1, 0.3, 0.6], [0.1, 0.3, 0.6]]).t().unsqueeze(1)
+def test_session_rnn_compute_loss(session_rnn):
 
-#     # true_input_mask = torch.BoolTensor([[True, True, True]]).t()
+    output = torch.FloatTensor(
+        [[[0, 0.1, 0.8, 0.1, 0],
+          [0, 0.8, 0.2, 0, 0]],
 
-#     loss = session_rnn._compute_loss(
-#         pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
+         [[0, 0.1, 0.8, 0.1, 0],
+          [0, 0.8, 0.2, 0, 0]],
 
-#     expected_loss = (
-#         -(np.log(sigmoid(0.5)) + np.log(sigmoid(0)) + np.log(sigmoid(-0.5))) / 3
-#     )
-#     np.testing.assert_almost_equal(loss, expected_loss)
+         [[0, 0.1, 0.8, 0.1, 0],
+          [0, 0, 0, 0, 1]]])
 
-#     # Block out the middle element
-#     true_input_mask = torch.BoolTensor([[True, False, True]]).t()
+    targets_chunk = torch.LongTensor([[2, 1],
+                                      [2, 1],
+                                      [2, 4]])
 
-#     loss = session_rnn._compute_loss(
-#         pos_sim_as_tensor, neg_sim_as_tensor, true_input_mask)
+    # Will be ignored
+    negatives_chunk = torch.LongTensor([])
 
-#     expected_loss = (
-#         -(np.log(sigmoid(0.5)) + np.log(sigmoid(-0.5))) / 2
-#     )
-#     np.testing.assert_almost_equal(loss, expected_loss)
+    true_input_mask = torch.BoolTensor([
+        [True, True],
+        [True, True],
+        [True, True]
+    ])
+
+    loss = session_rnn._compute_loss(
+        output, targets_chunk, negatives_chunk, true_input_mask)
+
+    expected_loss = (
+        (
+            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -1 + np.log(np.exp(0) + np.exp(1) + np.exp(0) + np.exp(0) + np.exp(0))
+        ) / 6
+    )
+    np.testing.assert_almost_equal(loss, expected_loss)
+
+    # Block out the middle element
+    true_input_mask = torch.BoolTensor([
+        [True, True],
+        [False, False],
+        [True, True]
+    ])
+    loss = session_rnn._compute_loss(
+        output, targets_chunk, negatives_chunk, true_input_mask)
+
+    expected_loss = (
+        (
+            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            # -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            # -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+            -1 + np.log(np.exp(0) + np.exp(1) + np.exp(0) + np.exp(0) + np.exp(0))
+        ) / 4
+    )
+    np.testing.assert_almost_equal(loss, expected_loss)
 
 
 def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
