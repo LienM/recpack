@@ -248,9 +248,8 @@ class GRU4Rec(TorchMLAlgorithm):
         """
         max_hist_len = tensors[0].shape[1]
 
-        chunk_size = ceil(max_hist_len / self.bptt)
-
-        split_tensors = [t.tensor_split(chunk_size, axis=1) for t in tensors]
+        num_chunks = ceil(max_hist_len / self.bptt)
+        split_tensors = [t.tensor_split(num_chunks, axis=1) for t in tensors]
 
         return zip(*split_tensors)
 
