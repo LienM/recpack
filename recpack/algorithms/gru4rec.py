@@ -214,21 +214,12 @@ class GRU4Rec(TorchMLAlgorithm):
                     loss = self._compute_loss(
                         output, true_target_chunk, true_neg_chunk, true_input_mask)
 
-                    print("Chunk loss", loss.item())
-
-                    print("Model params before", self.model_.parameters())
-
                     batch_loss += loss.item()
                     loss.backward()
-
-                    print("Model params after", self.model_.parameters())
 
                     if self.clipnorm:
                         nn.utils.clip_grad_norm_(
                             self.model_.parameters(), self.clipnorm)
-
-                    print("Model params after clipping",
-                          self.model_.parameters())
 
                     self.optimizer.step()
 
@@ -648,7 +639,8 @@ class GRU4RecTorch(nn.Module):
 
         self.drop(rnn_x)
 
-        out = self.act(self.lin(rnn_x))
+        out = self.lin(rnn_x)
+        # out = self.act(self.lin(rnn_x))
 
         return out, hidden
 
