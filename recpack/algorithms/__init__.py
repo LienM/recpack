@@ -40,6 +40,18 @@ they have interacted with.
     Prod2Vec
     Prod2VecClustered
 
+Hybrid Similarity Algorithms
+----------------------------
+
+Hybrid similarity algorithms use a combination of user and item similarities
+to generate recommendations.
+
+.. autosummary::
+    :toctree: generated/
+
+    KUNN
+
+
 Factorization Algorithms
 ------------------------------------
 
@@ -179,6 +191,7 @@ from recpack.algorithms.ease import EASE
 from recpack.algorithms.slim import SLIM
 
 from recpack.algorithms.nearest_neighbour import ItemKNN
+from recpack.algorithms.kunn import KUNN
 from recpack.algorithms.bprmf import BPRMF
 
 # from recpack.algorithms.metric_learning.cml import CML

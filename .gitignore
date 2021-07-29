@@ -150,3 +150,6 @@ results.json
 
 # Auto generated docs
 doc/source/generated/
+
+# Data downloaded through the Demo notebooks
+examples/data/*

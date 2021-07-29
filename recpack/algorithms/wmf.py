@@ -2,7 +2,6 @@ import logging
 
 import numpy as np
 from scipy.sparse import csr_matrix, diags, eye
-from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm
 
 from recpack.algorithms import Algorithm

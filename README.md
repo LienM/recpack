@@ -3,8 +3,24 @@ Python package for easy experimentation with recsys algorithms.
 
 ## Installation
 
+### From private Pypi repository
+Recpack is currently available only in a private pypi server, managed by gitlab.
+
+1. Create a gitlab access token
+    1. Go to preferences > access tokens
+    2. Create a new gitlab access token with at least 'read api' access.
+2. add the token to your ~/.bashrc or equivalent
+    1. export GITLAB_PYPI_TOKEN = 
+    2. export GITLAB_PYPI_TOKEN_NAME = 
+3. Install the package:
+   `pip install --extra-index-url "https://${GITLAB_PYPI_TOKEN_NAME}:${GITLAB_PYPI_TOKEN}@gitlab.com/api/v4/projects/17121765/packages/pypi/simple" recpack`
+4. To make installation easier, you can add the extra-index-url to the `PIP_EXTRA_INDEX_URL`. If you have more than 1 extra index url to use, you can specify them space separated as `"<index_1> <index_2>"`. Now you can just use `pip install recpack`
+
+
+### Building it yourself
 1. Clone repository
-2. In repository run `pip install .`
+2. check out tag needed
+3. run `pip install .`
 
 
 ## documentation
@@ -129,12 +145,20 @@ When creating the pipeline you will connect all the components and select metric
 import recpack.pipelines
 # Construct a pipeline which computes NDCG and Recall @ 10, 20, 50 and 100
 # Only a single algorithm is evaluated, but you could select multiple algorithms to be evaluated at the same time.
-p = recpack.pipelines.Pipeline([algo], ['NDCG', 'Recall'], [10,20,50,100])
+pipeline_builder = recpack.pipelines.PipelineBuilder('demo')
+pipeline_builder.set_train_data(scenario.training_data)
+pipeline_builder.set_test_data(scenario.test_data)
 
-p.run(scenario.training_data, scenario.test_data)
+pipeline_builder.add_algorithm('Popularity')
+pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
+pipeline_builder.add_metric('RecallK', [10, 20, 30, 100])
+
+pipeline = pipeline_builder.build()
+
+pipeline.run()
 
 # Get the metric results.
 # This will be a dict with the results of the run.
 # Turning it into a dataframe makes reading easier
-pd.DataFrame.from_dict(p.get()) 
+pd.DataFrame.from_dict(pipeline.get_metrics()) 
 ```

@@ -9,6 +9,8 @@ Welcome to Recpack's documentation!
    recpack.algorithms
    recpack.splitters
    recpack.metrics
+   recpack.postprocessing
+   recpack.pipelines
    guides
 
 Indices and tables

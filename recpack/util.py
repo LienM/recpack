@@ -45,7 +45,7 @@ def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
     return sparse_matrix
 
 
-def get_top_K_ranks(data: scipy.sparse.csr_matrix, k: int) -> scipy.sparse.csr_matrix:
+def get_top_K_ranks(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.sparse.csr_matrix:
     """
     Return csr_matrix of top K item ranks for every user.
 
@@ -80,7 +80,7 @@ def get_top_K_ranks(data: scipy.sparse.csr_matrix, k: int) -> scipy.sparse.csr_m
     return data_top_K
 
 
-def get_top_K_values(data: scipy.sparse.csr_matrix, k: int) -> scipy.sparse.csr_matrix:
+def get_top_K_values(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.sparse.csr_matrix:
     """
     Return csr_matrix of top K items for every user. Which is equal to the K nearest neighbours.
     @param data: Predicted affinity of users for items.
