@@ -89,6 +89,8 @@ Recurrent Neural Networks
     :toctree: generated/
 
     GRU4Rec
+    GRU4RecNegSampling
+    GRU4RecCrossEntropy
 
 .. _algorithm-base-classes:
 
@@ -144,6 +146,9 @@ we also provide metric wrappers around the raw loss functions.
     loss_functions.bpr_loss
     loss_functions.bpr_loss_wrapper
     loss_functions.vae_loss
+    loss_functions.bpr_max_loss
+    loss_functions.top1_loss
+    loss_functions.top1_max_loss
 
 Samplers
 ----------
@@ -158,6 +163,8 @@ As such recpack contains a number of commonly used sampling methods.
     samplers.PositiveNegativeSampler
     samplers.BootstrapSampler
     samplers.WarpSampler
+    samplers.SequenceMiniBatchSampler
+    samplers.SequenceMiniBatchPositivesTargetsNegativesSampler
 
 
 Utility Functions
@@ -202,4 +209,4 @@ from recpack.algorithms.wmf import WeightedMatrixFactorization
 
 from recpack.algorithms.p2v import Prod2Vec
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
-from recpack.algorithms.gru4rec import GRU4Rec
+from recpack.algorithms.gru4rec import GRU4Rec, GRU4RecNegSampling, GRU4RecCrossEntropy

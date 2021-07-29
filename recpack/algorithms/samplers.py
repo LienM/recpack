@@ -144,7 +144,7 @@ class PositiveNegativeSampler(Sampler):
         negative_sample_probabilities = self._get_distribution(X)
 
         for start in range(0, sample_size, self.batch_size):
-            sample_batch = samples[start: start + self.batch_size]
+            sample_batch = samples[start : start + self.batch_size]
 
             batch = positives[sample_batch]
             users = batch[:, 0]
@@ -349,8 +349,7 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
     def sample(
         self, X: InteractionMatrix
     ) -> Iterator[
-        Tuple[torch.LongTensor, torch.LongTensor,
-              torch.LongTensor, torch.LongTensor]
+        Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]
     ]:
         """Sample positives, targets and negatives from the input matrix.
 
@@ -386,8 +385,6 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
             negatives_batch = np.random.randint(
                 0, num_items, (*positives_batch.shape, self.U)
             )
-
-            targets_batch = positives_batch.numpy().copy()
 
             targets_batch = np.roll(positives_batch, -1, axis=1)
             # set last item to padding, otherwise 1st item is rolled till here
