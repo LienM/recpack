@@ -23,6 +23,7 @@ def session_rnn():
         bptt=2,
         learning_rate=0.1,
         loss_fn="bpr",
+        keep_last=True
     )
     return rnn
 

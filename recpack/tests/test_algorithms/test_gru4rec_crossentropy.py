@@ -21,6 +21,7 @@ def session_rnn():
         hidden_size=10,
         bptt=2,
         learning_rate=0.1,
+        keep_last=True
     )
     return rnn
 
