@@ -29,7 +29,6 @@ logger = logging.getLogger("recpack")
 
 
 class GRU4Rec(TorchMLAlgorithm):
-    # TODO Docs
     """Base class for GRU4Rec.
 
     :param num_layers: Number of hidden layers in the RNN. Defaults to 1
@@ -38,32 +37,60 @@ class GRU4Rec(TorchMLAlgorithm):
     :type hidden_size: int, optional
     :param embedding_size: Size of item embeddings. Defaults to 250
     :type embedding_size: int, optional
-    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout
+    :param dropout: Dropout applied to embeddings and hidden layer(s).
+        Defauls to 0 (no dropout)
     :type dropout: float
     :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad".
-        Defaults to adagrad.
+        Defaults to "adagrad"
     :type optimization_algorithm: str, optional
-    :param batch_size: Number of examples in a mini-batch
+    :param momentum: Momentum when using the sgd optimizer.
+        Defaults to 0.0
+    :type momentum: float, optional
+    :param clipnorm: Clip the gradient's l2 norm, None for no clipping.
+        Defaults to 1.0
+    :type clipnorm: float, optional
+    :param bptt: Number of backpropagation through time steps.
+        Defaults to 1
+    :type bptt: int, optional
+    :param U: Number of negatives to sample for every positive.
+        Defaults to 0
+    :type U: int, optional
+    :param batch_size: Number of examples in a mini-batch.
         Defaults to 512.
     :type batch_size: int, optional
+    :param max_epochs: Max training runs through entire dataset.
+        Defaults to 5
+    :type max_epochs: int, optional
     :param learning_rate: Gradient descent initial learning rate
         Defaults to 0.03
     :type learning_rate: float, optional
-    :param momentum: Momentum when using the sgd optimizer
-        Defaults to 0.0
-    :type momentum: float, optional
-    :param clipnorm: Clip the gradient's l2 norm, None for no clipping
-        Defaults to 1.0
-    :type clipnorm: float, optional
-    :param seed: Seed for random number generator
-        Defaults to 2
-    :type seed: int, optional
-    :param bptt: Number of backpropagation through time steps
-        Defaults to 1
-    :type bptt: int, optional
-    :param max_epochs: Max training runs through entire dataset
+    :param stopping_criterion: Name of the stopping criterion to use for training.
+        For available values,
+        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
+    :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
         Defaults to 5
-    :type max_epochs: int, optional
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.0
+    :type min_improvement: float, optional
+    :param seed: Seed to the randomizers, useful for reproducible results,
+        defaults to None
+    :type seed: int, optional
+    :param save_best_to_file: If true, the best model will be saved after training,
+        defaults to False
+    :type save_best_to_file: bool, optional
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
     """
 
     def __init__(
@@ -73,24 +100,29 @@ class GRU4Rec(TorchMLAlgorithm):
         embedding_size: int = 250,
         dropout: float = 0.0,
         optimization_algorithm: str = "adagrad",
-        batch_size: int = 512,
-        learning_rate: float = 0.03,
         momentum: float = 0.0,
         clipnorm: float = 1.0,
-        seed: int = 2,
         bptt: int = 1,
+        U: int = 0,
+        batch_size: int = 512,
         max_epochs: int = 5,
+        learning_rate: float = 0.03,
+        stopping_criterion: str = "recall",
+        stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: float = 0.0,
+        seed: int = 2,
         save_best_to_file: bool = False,
         keep_last: bool = True,
-        stopping_criterion: str = "recall",
-        U: int = 0,
     ):
         super().__init__(
             batch_size,
             max_epochs,
             learning_rate,
-            stopping_criterion=stopping_criterion,
-            stop_early=False,
+            stopping_criterion,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
             seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
@@ -259,7 +291,8 @@ class GRU4Rec(TorchMLAlgorithm):
             batch_size = positives_batch.shape[0]
             # Use only the final prediction
             # Last item is the last non padding token per row.
-            last_item_in_hist = (positives_batch != self.pad_token).sum(axis=1) - 1
+            last_item_in_hist = (
+                positives_batch != self.pad_token).sum(axis=1) - 1
 
             hidden = self.model_.init_hidden(batch_size)
             output, hidden = self.model_(
@@ -282,12 +315,14 @@ class GRU4Rec(TorchMLAlgorithm):
 
 
 class GRU4RecCrossEntropy(GRU4Rec):
-    # TODO Docs
     """A recurrent neural network for session-based recommendations.
 
     The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
     "Session-based Recommendations with Recurrent Neural Networks" and
-    "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations"
+    "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations".
+
+    This version implements the CrossEntropy variant of the algorithm. For negative sampling,
+    see :class:`GRU4RecNegSampling`.
 
     The algorithm makes recommendations by training a recurrent neural network to
     predict the next action of a user, and using the most likely next actions as
@@ -312,10 +347,6 @@ class GRU4RecCrossEntropy(GRU4Rec):
     For the mathematical details of GRU see "Empirical Evaluation of Gated Recurrent
     Neural Networks on Sequence Modeling" by Chung et al.
 
-    Note: The paper mentions both a GRU trained to optimise cross-entropy loss, as
-    methods that employ negative sampling. This is an implementation of the GRU
-    using cross-entropy loss.
-
     :param num_layers: Number of hidden layers in the RNN. Defaults to 1
     :type num_layers: int, optional
     :param hidden_size: Number of neurons in the hidden layer(s). Defaults to 100
@@ -327,27 +358,51 @@ class GRU4RecCrossEntropy(GRU4Rec):
     :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad".
         Defaults to adagrad.
     :type optimization_algorithm: str, optional
-    :param batch_size: Number of examples in a mini-batch
-        Defaults to 512.
-    :type batch_size: int, optional
-    :param learning_rate: Gradient descent initial learning rate
-        Defaults to 0.03
-    :type learning_rate: float, optional
     :param momentum: Momentum when using the sgd optimizer
         Defaults to 0.0
     :type momentum: float, optional
     :param clipnorm: Clip the gradient's l2 norm, None for no clipping
         Defaults to 1.0
     :type clipnorm: float, optional
-    :param seed: Seed for random number generator
-        Defaults to 2
-    :type seed: int, optional
-    :param bptt: Number of backpropagation through time steps
+    :param bptt: Number of backpropagation through time steps.
         Defaults to 1
     :type bptt: int, optional
-    :param max_epochs: Max training runs through entire dataset
+        :param batch_size: Number of examples in a mini-batch.
+        Defaults to 512.
+    :type batch_size: int, optional
+    :param max_epochs: Max training runs through entire dataset.
         Defaults to 5
     :type max_epochs: int, optional
+    :param learning_rate: Gradient descent initial learning rate
+        Defaults to 0.03
+    :type learning_rate: float, optional
+    :param stopping_criterion: Name of the stopping criterion to use for training.
+        For available values,
+        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
+    :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
+        Defaults to 5
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.0
+    :type min_improvement: float, optional
+    :param seed: Seed to the randomizers, useful for reproducible results,
+        defaults to None
+    :type seed: int, optional
+    :param save_best_to_file: If true, the best model will be saved after training,
+        defaults to False
+    :type save_best_to_file: bool, optional
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
     """
 
     def __init__(
@@ -357,16 +412,19 @@ class GRU4RecCrossEntropy(GRU4Rec):
         embedding_size: int = 250,
         dropout: float = 0.0,
         optimization_algorithm: str = "adagrad",
-        batch_size: int = 512,
-        learning_rate: float = 0.03,
         momentum: float = 0.0,
         clipnorm: float = 1.0,
-        seed: int = 2,
         bptt: int = 1,
+        batch_size: int = 512,
         max_epochs: int = 5,
+        learning_rate: float = 0.03,
+        stopping_criterion: str = "recall",
+        stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: float = 0.0,
+        seed: int = 2,
         save_best_to_file: bool = False,
         keep_last: bool = True,
-        stopping_criterion: str = "recall",
     ):
         super().__init__(
             num_layers=num_layers,
@@ -374,17 +432,20 @@ class GRU4RecCrossEntropy(GRU4Rec):
             embedding_size=embedding_size,
             dropout=dropout,
             optimization_algorithm=optimization_algorithm,
-            batch_size=batch_size,
-            learning_rate=learning_rate,
             momentum=momentum,
             clipnorm=clipnorm,
-            seed=seed,
             bptt=bptt,
+            U=0,
+            batch_size=batch_size,
             max_epochs=max_epochs,
+            learning_rate=learning_rate,
+            stopping_criterion=stopping_criterion,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+            seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
-            stopping_criterion=stopping_criterion,
-            U=0,
         )
 
         self._criterion = nn.CrossEntropyLoss()
@@ -406,6 +467,9 @@ class GRU4RecNegSampling(GRU4Rec):
     The algorithm, also known as GRU4Rec, was introduced in the 2016 and 2018 papers
     "Session-based Recommendations with Recurrent Neural Networks" and
     "Recurrent Neural Networks with Top-k Gains for Session-based Recommendations"
+
+    This version implements the Negative Sampling variant of the algorithm. For cross-entropy,
+    see :class:`GRU4RecCrossEntropy`.
 
     The algorithm makes recommendations by training a recurrent neural network to
     predict the next action of a user, and using the most likely next actions as
@@ -438,38 +502,68 @@ class GRU4RecNegSampling(GRU4Rec):
     :type hidden_size: int, optional
     :param embedding_size: Size of item embeddings. Defaults to 250
     :type embedding_size: int, optional
-    :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout
+    :param dropout: Dropout applied to embeddings and hidden layer(s).
+        Defauls to 0 (no dropout)
     :type dropout: float
     :param loss_fn: Loss function. One of "top1", "top1-max", "bpr",
         "bpr-max". Defaults to "bpr"
     :type loss_fn: str, optional
-    :param U: Number of negative samples used for bpr, bpr-max, top1, top1-max
-        loss calculation. Sampled uniformly random
-    :type U: int, optional
     :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad".
-        Defaults to adagrad.
+        Defaults to "adagrad"
     :type optimization_algorithm: str, optional
-    :param batch_size: Number of examples in a mini-batch
+    :param momentum: Momentum when using the sgd optimizer.
+        Defaults to 0.0
+    :type momentum: float, optional
+    :param clipnorm: Clip the gradient's l2 norm, None for no clipping.
+        Defaults to 1.0
+    :type clipnorm: float, optional
+    :param bptt: Number of backpropagation through time steps.
+        Defaults to 1
+    :type bptt: int, optional
+    :param U: Number of negatives to sample for every positive.
+        Defaults to 50
+    :type U: int, optional
+    :param batch_size: Number of examples in a mini-batch.
         Defaults to 512.
     :type batch_size: int, optional
+    :param max_epochs: Max training runs through entire dataset.
+        Defaults to 5
+    :type max_epochs: int, optional
     :param learning_rate: Gradient descent initial learning rate
         Defaults to 0.03
     :type learning_rate: float, optional
-    :param momentum: Momentum when using the sgd optimizer
-        Defaults to 0.0
-    :type momentum: float, optional
-    :param clipnorm: Clip the gradient's l2 norm, None for no clipping
-        Defaults to 1.0
-    :type clipnorm: float, optional
-    :param seed: Seed for random number generator
-        Defaults to 2
-    :type seed: int, optional
-    :param bptt: Number of backpropagation through time steps
-        Defaults to 1
-    :type bptt: int, optional
-    :param max_epochs: Max training runs through entire dataset
+    :param stopping_criterion: Name of the stopping criterion to use for training.
+        For available values,
+        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str
+    :param stop_early: If True, early stopping is enabled,
+        and after ``max_iter_no_change`` iterations where improvement of loss function
+        is below ``min_improvement`` the optimisation is stopped,
+        even if max_epochs is not reached.
+        Defaults to False
+    :type stop_early: bool, optional
+    :param max_iter_no_change: If early stopping is enabled,
+        stop after this amount of iterations without change.
         Defaults to 5
-    :type max_epochs: int, optional
+    :type max_iter_no_change: int, optional
+    :param min_improvement: If early stopping is enabled, no change is detected,
+        if the improvement is below this value.
+        Defaults to 0.0
+    :type min_improvement: float, optional
+    :param seed: Seed to the randomizers, useful for reproducible results,
+        defaults to None
+    :type seed: int, optional
+    :param save_best_to_file: If true, the best model will be saved after training,
+        defaults to False
+    :type save_best_to_file: bool, optional
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
+
+
+
+
+
     """
 
     def __init__(
@@ -479,18 +573,21 @@ class GRU4RecNegSampling(GRU4Rec):
         embedding_size: int = 250,
         dropout: float = 0.0,
         loss_fn: str = "bpr",
-        U: int = 50,
         optimization_algorithm: str = "adagrad",
-        batch_size: int = 512,
-        learning_rate: float = 0.03,
         momentum: float = 0.0,
-        clipnorm: float = 1.0,
-        seed: int = 2,
+        clipnorm: float = 1.0,        
         bptt: int = 1,
+        U: int = 50,
+        batch_size: int = 512,
         max_epochs: int = 5,
+        learning_rate: float = 0.03,
+        stopping_criterion: str = "recall",
+        stop_early: bool = False,
+        max_iter_no_change: int = 5,
+        min_improvement: float = 0.0,
+        seed: int = 2,
         save_best_to_file: bool = False,
         keep_last: bool = True,
-        stopping_criterion: str = "recall",
     ):
         super().__init__(
             num_layers=num_layers,
@@ -498,17 +595,20 @@ class GRU4RecNegSampling(GRU4Rec):
             embedding_size=embedding_size,
             dropout=dropout,
             optimization_algorithm=optimization_algorithm,
-            batch_size=batch_size,
-            learning_rate=learning_rate,
             momentum=momentum,
             clipnorm=clipnorm,
-            seed=seed,
             bptt=bptt,
+            U=U,
+            batch_size=batch_size,
             max_epochs=max_epochs,
+            learning_rate=learning_rate,
+            stopping_criterion=stopping_criterion,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+            seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
-            stopping_criterion=stopping_criterion,
-            U=U,
         )
 
         self.loss_fn = loss_fn
@@ -542,9 +642,11 @@ class GRU4RecNegSampling(GRU4Rec):
         true_batch_size, max_hist_len = positive_scores.shape
 
         # Check if I need to do all this flattening
-        true_input_mask_flat = true_input_mask.view(true_batch_size * max_hist_len)
+        true_input_mask_flat = true_input_mask.view(
+            true_batch_size * max_hist_len)
 
-        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, 1)
+        positive_scores_flat = positive_scores.view(
+            true_batch_size * max_hist_len, 1)
         negative_scores_flat = negative_scores.view(
             true_batch_size * max_hist_len, negative_scores.shape[2]
         )
@@ -591,7 +693,8 @@ class GRU4RecTorch(nn.Module):
         self.drop = nn.Dropout(dropout, inplace=True)
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
-        self.emb = nn.Embedding(num_items + 1, embedding_size, padding_idx=pad_token)
+        self.emb = nn.Embedding(
+            num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
             embedding_size,
             hidden_size,
@@ -601,7 +704,6 @@ class GRU4RecTorch(nn.Module):
         )
         # Also return the padding token
         self.lin = nn.Linear(hidden_size, num_items + 1)
-        self.act = nn.Softmax(dim=2)
         self.init_weights()
 
     def forward(
@@ -632,7 +734,8 @@ class GRU4RecTorch(nn.Module):
 
             padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
 
-            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(padded_rnn_x, batch_first=True)
+            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(
+                padded_rnn_x, batch_first=True)
 
         else:
             rnn_x, hidden = self.rnn(emb_x, hidden)
@@ -640,7 +743,6 @@ class GRU4RecTorch(nn.Module):
         self.drop(rnn_x)
 
         out = self.lin(rnn_x)
-        # out = self.act(self.lin(rnn_x))
 
         return out, hidden
 
