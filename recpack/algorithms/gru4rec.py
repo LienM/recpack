@@ -319,29 +319,31 @@ class GRU4Rec(TorchMLAlgorithm):
 
     def _predict(self, X: InteractionMatrix):
         X_pred = lil_matrix(X.shape)
-        for uid_batch, positives_batch in self.predict_sampler.sample(X):
-            batch_size = positives_batch.shape[0]
-            # Use only the final prediction
-            # Last item is the last non padding token per row.
-            last_item_in_hist = (
-                positives_batch != self.pad_token).sum(axis=1) - 1
+        self.model_.eval()
+        with torch.no_grad():
+            for uid_batch, positives_batch in self.predict_sampler.sample(X):
+                batch_size = positives_batch.shape[0]
+                # Use only the final prediction
+                # Last item is the last non padding token per row.
+                last_item_in_hist = (
+                    positives_batch != self.pad_token).sum(axis=1) - 1
 
-            hidden = self.model_.init_hidden(batch_size)
-            output, hidden = self.model_(
-                positives_batch.to(self.device), hidden.to(self.device)
-            )
+                hidden = self.model_.init_hidden(batch_size)
+                output, hidden = self.model_(
+                    positives_batch.to(self.device), hidden.to(self.device)
+                )
 
-            output = output.detach().cpu()
+                output = output.detach().cpu()
 
-            # Item scores is a matrix with the scores for each item
-            # based on the last item in the sequence
-            item_scores = output[
-                torch.arange(0, batch_size, dtype=int), last_item_in_hist
-            ]
+                # Item scores is a matrix with the scores for each item
+                # based on the last item in the sequence
+                item_scores = output[
+                    torch.arange(0, batch_size, dtype=int), last_item_in_hist
+                ]
 
-            X_pred[uid_batch.detach().cpu().numpy()] = (
-                item_scores.detach().cpu().numpy()[:, :-1]
-            )
+                X_pred[uid_batch.detach().cpu().numpy()] = (
+                    item_scores.detach().cpu().numpy()[:, :-1]
+                )
 
         return X_pred.tocsr()
 
