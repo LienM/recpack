@@ -251,8 +251,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
             # Generate vertical chunks of BPTT width
             for input_chunk, target_chunk, neg_chunk in self._chunk(
-                positives_batch, targets_batch, negatives_batch
-            ):
+                    self.bptt, positives_batch, targets_batch, negatives_batch):
                 input_mask = input_chunk != self.pad_token
                 # Remove rows with only pad tokens from chunk and from hidden.
                 # We can do this because the array is sorted.
@@ -300,7 +299,7 @@ class GRU4Rec(TorchMLAlgorithm):
         raise NotImplementedError()
 
     def _chunk(
-        self, *tensors: torch.LongTensor
+        self, chunk_size: int, *tensors: torch.LongTensor
     ) -> Iterator[Tuple[torch.LongTensor, ...]]:
         """Split tensors into chunks of self.bptt width.
         Chunks can be of width self.bptt - 1 if max_hist_len % self. bptt != 0.
@@ -312,7 +311,7 @@ class GRU4Rec(TorchMLAlgorithm):
         """
         max_hist_len = tensors[0].shape[1]
 
-        num_chunks = ceil(max_hist_len / self.bptt)
+        num_chunks = ceil(max_hist_len / chunk_size)
         split_tensors = [t.tensor_split(num_chunks, axis=1) for t in tensors]
 
         return zip(*split_tensors)
@@ -321,29 +320,45 @@ class GRU4Rec(TorchMLAlgorithm):
         X_pred = lil_matrix(X.shape)
         self.model_.eval()
         with torch.no_grad():
+            # Loop through users in batches
             for uid_batch, positives_batch in self.predict_sampler.sample(X):
                 batch_size = positives_batch.shape[0]
-                # Use only the final prediction
-                # Last item is the last non padding token per row.
-                last_item_in_hist = (
-                    positives_batch != self.pad_token).sum(axis=1) - 1
+                hidden = self.model_.init_hidden(batch_size).to(self.device)
 
-                hidden = self.model_.init_hidden(batch_size)
-                output, hidden = self.model_(
-                    positives_batch.to(self.device), hidden.to(self.device)
-                )
+                # Process the history in chunks, otherwise the linear layer goes OOM.
+                # 3M entries seemed a reasonable max
+                chunk_size = int(
+                    (3 * 10**9) / (self.batch_size * self.num_items))
+                for (input_chunk, ) in self._chunk(chunk_size, positives_batch.to(self.device)):
+                    input_mask = input_chunk != self.pad_token
+                    # Remove rows with only pad tokens from chunk and from hidden.
+                    # We can do this because the array is sorted.
+                    true_rows = input_mask.any(axis=1)
+                    true_input_chunk = input_chunk[true_rows]
+                    true_hidden = hidden[:, true_rows, :]
 
-                output = output.detach().cpu()
+                    # If there are any values remaining
+                    if true_input_chunk.any():
+                        output_chunk, hidden[:, true_rows, :] = self.model_(
+                            true_input_chunk, true_hidden
+                        )
+                        # Use only the prediction for the final iten, i.e. last non-padding ID.
+                        last_item_ix_in_chunk = (
+                            input_chunk != self.pad_token).sum(axis=1) - 1
 
-                # Item scores is a matrix with the scores for each item
-                # based on the last item in the sequence
-                item_scores = output[
-                    torch.arange(0, batch_size, dtype=int), last_item_in_hist
-                ]
+                        is_last_item_in_chunk = (last_item_ix_in_chunk >= 0)
+                        # Item scores is a matrix with the scores for each item
+                        # based on the last item in the sequence
+                        last_item_ix = last_item_ix_in_chunk[is_last_item_in_chunk]
+                        uid_batch_w_last_item = uid_batch[is_last_item_in_chunk].detach().cpu().numpy()
+                        item_scores = output_chunk[
+                            torch.arange(
+                                0, last_item_ix.shape[0], dtype=int), last_item_ix
+                        ].detach().cpu().numpy()
 
-                X_pred[uid_batch.detach().cpu().numpy()] = (
-                    item_scores.detach().cpu().numpy()[:, :-1]
-                )
+                        X_pred[uid_batch_w_last_item] = (
+                            item_scores[:, :-1]
+                        )
 
         return X_pred.tocsr()
 
