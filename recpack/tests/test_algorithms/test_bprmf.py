@@ -21,6 +21,19 @@ def test_bprmf(pageviews):
     assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
 
 
+def test_bprmf_topK(pageviews):
+    a = BPRMF(num_components=2, max_epochs=2, batch_size=1, predict_topK=1)
+
+    a.fit(pageviews, (pageviews, pageviews))
+
+    pred = a.predict(pageviews)
+
+    assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
+    print(pred.toarray())
+    # Each user should receive a single recommendation
+    assert pred.nonzero()[1].shape[0] == len(set(pageviews.nonzero()[0]))
+
+
 def test_bprmf_w_interaction_mat(pageviews_interaction_m):
     a = BPRMF(num_components=2, max_epochs=2, batch_size=1)
     a.fit(pageviews_interaction_m, (pageviews_interaction_m, pageviews_interaction_m))

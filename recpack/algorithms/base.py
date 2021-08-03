@@ -20,6 +20,7 @@ from recpack.algorithms.util import (
     get_users,
 )
 from recpack.data.matrix import InteractionMatrix, to_csr_matrix, Matrix
+from recpack.util import get_top_K_values
 
 logger = logging.getLogger("recpack")
 
@@ -51,8 +52,7 @@ class Algorithm(BaseEstimator):
         Constructed by recreating the initialisation call.
         Example: ``Algorithm(param_1=value)``
         """
-        paramstring = ",".join(
-            (f"{k}={v}" for k, v in self.get_params().items()))
+        paramstring = ",".join((f"{k}={v}" for k, v in self.get_params().items()))
         return self.name + "(" + paramstring + ")"
 
     def __str__(self):
@@ -262,8 +262,7 @@ class ItemSimilarityMatrixAlgorithm(Algorithm):
 
         missing = self.similarity_matrix_.shape[0] - len(items_with_score)
         if missing > 0:
-            warnings.warn(
-                f"{self.name} missing similar items for {missing} items.")
+            warnings.warn(f"{self.name} missing similar items for {missing} items.")
 
 
 class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
@@ -345,8 +344,7 @@ class FactorizationAlgorithm(Algorithm):
         :return: matrix with scores for each nonzero user.
         :rtype: csr_matrix
         """
-        assert X.shape == (
-            self.user_embedding_.shape[0], self.item_embedding_.shape[1])
+        assert X.shape == (self.user_embedding_.shape[0], self.item_embedding_.shape[1])
         # Get the nonzero users, for these we will recommend.
         users = list(set(X.nonzero()[0]))
         # result is a lil matrix, makes editing rows easy
@@ -412,6 +410,10 @@ class TorchMLAlgorithm(Algorithm):
     :param keep_last: Retain last model, rather than best
         (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -425,7 +427,8 @@ class TorchMLAlgorithm(Algorithm):
         min_improvement: float = 0.0,
         seed: int = None,
         save_best_to_file: bool = False,
-        keep_last: bool = False
+        keep_last: bool = False,
+        predict_topK: int = None,
     ):
         # TODO batch_size * torch.cuda.device_count() if cuda else batch_size
         #   -> Multi GPU
@@ -456,6 +459,8 @@ class TorchMLAlgorithm(Algorithm):
         self.device = torch.device("cuda" if cuda else "cpu")
 
         self.keep_last = keep_last
+
+        self.predict_topK = predict_topK
 
     def _init_model(self, X: Matrix) -> None:
         """Initialise the torch model that will learn the weights
@@ -525,6 +530,19 @@ class TorchMLAlgorithm(Algorithm):
         """
         raise NotImplementedError("Please implement this function")
 
+    def _get_top_k_recommendations(self, X_pred):
+        """Keep only the top K recommendations as configured by the predict_topK hyperparameter
+
+        :param X_pred: Recommendation scores
+        :type X_pred: csr_matrix? TODO
+        :return: The selected recommendation scores
+        :rtype: csr_matrix?
+        """
+        if self.predict_topK:
+            return get_top_K_values(X_pred, self.predict_topK)
+        else:
+            return X_pred
+
     def _predict(self, X: Matrix) -> csr_matrix:
         """Compute predictions per batch of users,
         to avoid going out of RAM on the GPU
@@ -547,14 +565,17 @@ class TorchMLAlgorithm(Algorithm):
                     batch[users] = X[users]
                     batch = batch.tocsr()
 
-
-                results[users] = self._batch_predict(batch, users=users)[users]
+                results[users] = self._get_top_k_recommendations(
+                    self._batch_predict(batch, users=users)[users]
+                )
 
         logger.debug(f"shape of response ({results.shape})")
 
         return results.tocsr()
 
-    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]) -> Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]:
+    def _transform_fit_input(
+        self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
+    ) -> Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]:
         """Transform the input matrices of the training function to the expected types
 
         All matrices get converted to binary csr matrices

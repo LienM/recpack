@@ -7,7 +7,7 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.2] - ![](https://img.shields.io/date/1627536503.svg?label=2021-7-29) 
+## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3) 
 * Added Gru4Rec algorithms 
     * GRU4RecNegSampling
     * GRU4RecCrossEntropy
@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * top_1_max_loss
 * Added sequence batch samplers
 * Cleanup of Torch class interface
+* Added `predict_topK` parameter to TorchMLAlgorithm baseclass and all children. This parameter is used to cut predictions in case a dense user x item matrix is too large to fit in memory.
 
 ## [0.1.1] - ![](https://img.shields.io/date/1626758338.svg?label=2021-7-20)
 * Added option to install recpack from gitlab pypi repository.

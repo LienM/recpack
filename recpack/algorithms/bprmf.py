@@ -115,6 +115,13 @@ class BPRMF(TorchMLAlgorithm):
         since sampling happens with replacement.
         Defaults to None
     :type sample_size: int, optional
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -132,6 +139,8 @@ class BPRMF(TorchMLAlgorithm):
         seed=None,
         save_best_to_file: bool = False,
         sample_size=None,
+        keep_last: bool = False,
+        predict_topK: int = None,
     ):
 
         super().__init__(
@@ -144,6 +153,8 @@ class BPRMF(TorchMLAlgorithm):
             min_improvement,
             seed,
             save_best_to_file,
+            keep_last=keep_last,
+            predict_topK=predict_topK,
         )
 
         self.num_components = num_components
