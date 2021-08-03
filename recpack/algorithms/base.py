@@ -533,10 +533,10 @@ class TorchMLAlgorithm(Algorithm):
     def _get_top_k_recommendations(self, X_pred):
         """Keep only the top K recommendations as configured by the predict_topK hyperparameter
 
-        :param X_pred: Recommendation scores
-        :type X_pred: csr_matrix? TODO
-        :return: The selected recommendation scores
-        :rtype: csr_matrix?
+        :param X_pred: Recommendation scores as a sparse matrix.
+        :type X_pred: csr_matrix
+        :return: The selected recommendation scores as a sparse matrix
+        :rtype: csr_matrix
         """
         if self.predict_topK:
             return get_top_K_values(X_pred, self.predict_topK)
