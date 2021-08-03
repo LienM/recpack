@@ -7,6 +7,7 @@ image: python:3.8.6
 # only cache local items.
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PIP_EXTRA_INDEX_URL: "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/api/v4/projects/27827958/packages/pypi/simple"
 
 # Pip's cache doesn't store the python packages
 # https://pip.pypa.io/en/stable/reference/pip_install/#caching
