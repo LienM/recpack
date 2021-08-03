@@ -333,7 +333,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
                 # Process the history in chunks, otherwise the linear layer goes OOM.
                 # 3M entries seemed a reasonable max
-                chunk_size = int((3 * 10 ** 9) / (self.batch_size * self.num_items))
+                chunk_size = int((10 ** 9) / (self.batch_size * self.num_items))
                 for (input_chunk,) in self._chunk(
                     chunk_size, positives_batch.to(self.device)
                 ):
