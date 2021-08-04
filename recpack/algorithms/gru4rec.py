@@ -4,12 +4,11 @@ import time
 from typing import Tuple, List, Iterator
 
 import numpy as np
-from scipy.sparse.lil import lil_matrix
+from scipy.sparse import csr_matrix, lil_matrix
+
 import torch
 import torch.nn as nn
-from torch.nn.modules.rnn import GRU
 import torch.optim as optim
-from tqdm import tqdm
 
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import (
@@ -118,6 +117,10 @@ class GRU4Rec(TorchMLAlgorithm):
     :param keep_last: Retain last model, rather than best
         (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -141,6 +144,7 @@ class GRU4Rec(TorchMLAlgorithm):
         seed: int = 2,
         save_best_to_file: bool = False,
         keep_last: bool = False,
+        predict_topK: int = None,
     ):
         super().__init__(
             batch_size,
@@ -153,6 +157,7 @@ class GRU4Rec(TorchMLAlgorithm):
             seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
+            predict_topK=predict_topK,
         )
 
         self.num_layers = num_layers
@@ -251,7 +256,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
             # Generate vertical chunks of BPTT width
             for input_chunk, target_chunk, neg_chunk in self._chunk(
-                positives_batch, targets_batch, negatives_batch
+                self.bptt, positives_batch, targets_batch, negatives_batch
             ):
                 input_mask = input_chunk != self.pad_token
                 # Remove rows with only pad tokens from chunk and from hidden.
@@ -300,7 +305,7 @@ class GRU4Rec(TorchMLAlgorithm):
         raise NotImplementedError()
 
     def _chunk(
-        self, *tensors: torch.LongTensor
+        self, chunk_size: int, *tensors: torch.LongTensor
     ) -> Iterator[Tuple[torch.LongTensor, ...]]:
         """Split tensors into chunks of self.bptt width.
         Chunks can be of width self.bptt - 1 if max_hist_len % self. bptt != 0.
@@ -312,36 +317,63 @@ class GRU4Rec(TorchMLAlgorithm):
         """
         max_hist_len = tensors[0].shape[1]
 
-        num_chunks = ceil(max_hist_len / self.bptt)
+        num_chunks = ceil(max_hist_len / chunk_size)
         split_tensors = [t.tensor_split(num_chunks, axis=1) for t in tensors]
 
         return zip(*split_tensors)
 
     def _predict(self, X: InteractionMatrix):
         X_pred = lil_matrix(X.shape)
-        for uid_batch, positives_batch in self.predict_sampler.sample(X):
-            batch_size = positives_batch.shape[0]
-            # Use only the final prediction
-            # Last item is the last non padding token per row.
-            last_item_in_hist = (
-                positives_batch != self.pad_token).sum(axis=1) - 1
+        self.model_.eval()
+        with torch.no_grad():
+            # Loop through users in batches
+            for uid_batch, positives_batch in self.predict_sampler.sample(X):
+                batch_size = positives_batch.shape[0]
+                hidden = self.model_.init_hidden(batch_size).to(self.device)
 
-            hidden = self.model_.init_hidden(batch_size)
-            output, hidden = self.model_(
-                positives_batch.to(self.device), hidden.to(self.device)
-            )
+                # Process the history in chunks, otherwise the linear layer goes OOM.
+                # 3M entries seemed a reasonable max
+                chunk_size = int((10 ** 9) / (self.batch_size * self.num_items))
+                for (input_chunk,) in self._chunk(
+                    chunk_size, positives_batch.to(self.device)
+                ):
+                    input_mask = input_chunk != self.pad_token
+                    # Remove rows with only pad tokens from chunk and from hidden.
+                    # We can do this because the array is sorted.
+                    true_rows = input_mask.any(axis=1)
+                    true_input_chunk = input_chunk[true_rows]
+                    true_hidden = hidden[:, true_rows, :]
 
-            output = output.detach().cpu()
+                    # If there are any values remaining
+                    if true_input_chunk.any():
+                        output_chunk, hidden[:, true_rows, :] = self.model_(
+                            true_input_chunk, true_hidden
+                        )
+                        # Use only the prediction for the final iten, i.e. last non-padding ID.
+                        last_item_ix_in_chunk = (input_chunk != self.pad_token).sum(
+                            axis=1
+                        ) - 1
 
-            # Item scores is a matrix with the scores for each item
-            # based on the last item in the sequence
-            item_scores = output[
-                torch.arange(0, batch_size, dtype=int), last_item_in_hist
-            ]
+                        is_last_item_in_chunk = last_item_ix_in_chunk >= 0
+                        # Item scores is a matrix with the scores for each item
+                        # based on the last item in the sequence
+                        last_item_ix = last_item_ix_in_chunk[is_last_item_in_chunk]
+                        uid_batch_w_last_item = (
+                            uid_batch[is_last_item_in_chunk].detach().cpu().numpy()
+                        )
+                        item_scores = (
+                            output_chunk[
+                                torch.arange(0, last_item_ix.shape[0], dtype=int),
+                                last_item_ix,
+                            ]
+                            .detach()
+                            .cpu()
+                            .numpy()
+                        )
 
-            X_pred[uid_batch.detach().cpu().numpy()] = (
-                item_scores.detach().cpu().numpy()[:, :-1]
-            )
+                        X_pred[uid_batch_w_last_item] = self._get_top_k_recommendations(
+                            csr_matrix(item_scores[:, :-1])
+                        )
 
         return X_pred.tocsr()
 
@@ -435,6 +467,10 @@ class GRU4RecCrossEntropy(GRU4Rec):
     :param keep_last: Retain last model, rather than best
         (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -457,6 +493,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
         seed: int = 2,
         save_best_to_file: bool = False,
         keep_last: bool = False,
+        predict_topK: int = None,
     ):
         super().__init__(
             num_layers=num_layers,
@@ -478,6 +515,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
             seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
+            predict_topK=predict_topK,
         )
 
         self._criterion = nn.CrossEntropyLoss()
@@ -591,6 +629,10 @@ class GRU4RecNegSampling(GRU4Rec):
     :param keep_last: Retain last model, rather than best
         (according to stopping criterion value on validation data), defaults to False
     :type keep_last: bool, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -615,6 +657,7 @@ class GRU4RecNegSampling(GRU4Rec):
         seed: int = 2,
         save_best_to_file: bool = False,
         keep_last: bool = False,
+        predict_topK: int = None,
     ):
         super().__init__(
             num_layers=num_layers,
@@ -636,6 +679,7 @@ class GRU4RecNegSampling(GRU4Rec):
             seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
+            predict_topK=predict_topK,
         )
 
         self.loss_fn = loss_fn
@@ -669,11 +713,9 @@ class GRU4RecNegSampling(GRU4Rec):
         true_batch_size, max_hist_len = positive_scores.shape
 
         # Check if I need to do all this flattening
-        true_input_mask_flat = true_input_mask.view(
-            true_batch_size * max_hist_len)
+        true_input_mask_flat = true_input_mask.view(true_batch_size * max_hist_len)
 
-        positive_scores_flat = positive_scores.view(
-            true_batch_size * max_hist_len, 1)
+        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, 1)
         negative_scores_flat = negative_scores.view(
             true_batch_size * max_hist_len, negative_scores.shape[2]
         )
@@ -720,8 +762,7 @@ class GRU4RecTorch(nn.Module):
         self.drop = nn.Dropout(dropout, inplace=True)
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
-        self.emb = nn.Embedding(
-            num_items + 1, embedding_size, padding_idx=pad_token)
+        self.emb = nn.Embedding(num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
             embedding_size,
             hidden_size,
@@ -761,8 +802,7 @@ class GRU4RecTorch(nn.Module):
 
             padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
 
-            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(
-                padded_rnn_x, batch_first=True)
+            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(padded_rnn_x, batch_first=True)
 
         else:
             rnn_x, hidden = self.rnn(emb_x, hidden)

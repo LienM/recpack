@@ -21,7 +21,22 @@ def session_rnn():
         hidden_size=10,
         bptt=2,
         learning_rate=0.1,
-        keep_last=True
+        keep_last=True,
+    )
+    return rnn
+
+
+@pytest.fixture(scope="function")
+def session_rnn_topK():
+    rnn = GRU4RecCrossEntropy(
+        seed=42,
+        batch_size=3,
+        embedding_size=5,
+        hidden_size=10,
+        bptt=2,
+        learning_rate=0.1,
+        keep_last=True,
+        predict_topK=1,
     )
     return rnn
 
@@ -29,62 +44,59 @@ def session_rnn():
 def test_session_rnn_compute_loss(session_rnn):
 
     output = torch.FloatTensor(
-        [[[0, 0.1, 0.8, 0.1, 0],
-          [0, 0.8, 0.2, 0, 0]],
+        [
+            [[0, 0.1, 0.8, 0.1, 0], [0, 0.8, 0.2, 0, 0]],
+            [[0, 0.1, 0.8, 0.1, 0], [0, 0.8, 0.2, 0, 0]],
+            [[0, 0.1, 0.8, 0.1, 0], [0, 0, 0, 0, 1]],
+        ]
+    )
 
-         [[0, 0.1, 0.8, 0.1, 0],
-          [0, 0.8, 0.2, 0, 0]],
-
-         [[0, 0.1, 0.8, 0.1, 0],
-          [0, 0, 0, 0, 1]]])
-
-    targets_chunk = torch.LongTensor([[2, 1],
-                                      [2, 1],
-                                      [2, 4]])
+    targets_chunk = torch.LongTensor([[2, 1], [2, 1], [2, 4]])
 
     # Will be ignored
     negatives_chunk = torch.LongTensor([])
 
-    true_input_mask = torch.BoolTensor([
-        [True, True],
-        [True, True],
-        [True, True]
-    ])
+    true_input_mask = torch.BoolTensor([[True, True], [True, True], [True, True]])
 
     loss = session_rnn._compute_loss(
-        output, targets_chunk, negatives_chunk, true_input_mask)
+        output, targets_chunk, negatives_chunk, true_input_mask
+    )
 
     expected_loss = (
-        (
-            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -1 + np.log(np.exp(0) + np.exp(1) + np.exp(0) + np.exp(0) + np.exp(0))
-        ) / 6
-    )
+        -0.8
+        + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        + -0.8
+        + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        + -0.8
+        + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        + -0.8
+        + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        + -0.8
+        + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        + -1
+        + np.log(np.exp(0) + np.exp(1) + np.exp(0) + np.exp(0) + np.exp(0))
+    ) / 6
     np.testing.assert_almost_equal(loss, expected_loss)
 
     # Block out the middle element
-    true_input_mask = torch.BoolTensor([
-        [True, True],
-        [False, False],
-        [True, True]
-    ])
+    true_input_mask = torch.BoolTensor([[True, True], [False, False], [True, True]])
     loss = session_rnn._compute_loss(
-        output, targets_chunk, negatives_chunk, true_input_mask)
+        output, targets_chunk, negatives_chunk, true_input_mask
+    )
 
     expected_loss = (
-        (
-            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            # -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            # -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
-            -1 + np.log(np.exp(0) + np.exp(1) + np.exp(0) + np.exp(0) + np.exp(0))
-        ) / 4
-    )
+        -0.8
+        + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        + -0.8
+        + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        +
+        # -0.8 + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+        # -0.8 + np.log(np.exp(0.2) + np.exp(0) + np.exp(0.8) + np.exp(0) + np.exp(0)) +
+        -0.8
+        + np.log(np.exp(0.1) + np.exp(0.1) + np.exp(0.8) + np.exp(0) + np.exp(0))
+        + -1
+        + np.log(np.exp(0) + np.exp(1) + np.exp(0) + np.exp(0) + np.exp(0))
+    ) / 4
     np.testing.assert_almost_equal(loss, expected_loss)
 
 
@@ -139,6 +151,32 @@ def test_session_rnn_predict(session_rnn, matrix_sessions):
 
     # All items should have a score
     assert len(set(X_pred.nonzero()[1])) == matrix_sessions.shape[1]
+
+    # Rnn should be able to learn simple repeating patterns
+    assert top_item[0] == 1
+    assert top_item[1] == 2
+    assert top_item[2] == 2
+    assert top_item[3] == 2
+    assert top_item[4] == 1
+
+
+def test_session_rnn_predict_topK(session_rnn_topK, matrix_sessions):
+    session_rnn_topK.fit(matrix_sessions, (matrix_sessions, matrix_sessions))
+
+    X_pred = session_rnn_topK.predict(matrix_sessions)
+    scores = X_pred.toarray()
+
+    top_item = scores.argmax(axis=1)
+
+    # Prediction matrix should have same shape as input matrix
+    assert isinstance(X_pred, csr_matrix)
+    assert X_pred.shape == matrix_sessions.shape
+
+    # All users with a history should have predictions
+    assert set(matrix_sessions.values.nonzero()[0]) == set(X_pred.nonzero()[0])
+
+    # Each user should receive only a single recommendation
+    assert X_pred.nonzero()[1].shape[0] == len(set(matrix_sessions.nonzero()[0]))
 
     # Rnn should be able to learn simple repeating patterns
     assert top_item[0] == 1

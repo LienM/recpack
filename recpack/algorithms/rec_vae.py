@@ -114,6 +114,13 @@ class RecVAE(TorchMLAlgorithm):
     :param save_best_to_file: If True, the best model is saved to disk after fit.
         Defaults to False.
     :type save_best_to_file: bool, optional
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -134,6 +141,8 @@ class RecVAE(TorchMLAlgorithm):
         max_iter_no_change: int = 5,
         min_improvement: float = 0.0,
         save_best_to_file: bool = False,
+        keep_last: bool = False,
+        predict_topK: int = None,
     ):
 
         super().__init__(
@@ -146,6 +155,8 @@ class RecVAE(TorchMLAlgorithm):
             min_improvement,
             seed,
             save_best_to_file=save_best_to_file,
+            keep_last=keep_last,
+            predict_topK=predict_topK,
         )
 
         self.n_enc_epochs = n_enc_epochs
@@ -363,8 +374,7 @@ class CompositePrior(nn.Module):
         unif_prior = log_norm_pdf(z, self.mu_prior, self.logvar_uniform_prior)
 
         gaussians = [stnd_prior, post_prior, unif_prior]
-        gaussians = [g.add(np.log(w))
-                     for g, w in zip(gaussians, self.mixture_weights)]
+        gaussians = [g.add(np.log(w)) for g, w in zip(gaussians, self.mixture_weights)]
 
         density_per_gaussian = torch.stack(gaussians, dim=-1)
 
@@ -483,8 +493,7 @@ class RecVAETorch(nn.Module):
         """
         super(RecVAETorch, self).__init__()
 
-        self.encoder = Encoder(
-            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
+        self.encoder = Encoder(dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
         self.prior = CompositePrior(
             dim_hidden_layer, dim_bottleneck_layer, dim_input_layer
         )
@@ -541,5 +550,4 @@ class RecVAETorch(nn.Module):
         """
         The encoder in the prior is updated to the current encoder state.
         """
-        self.prior.encoder_old.load_state_dict(
-            deepcopy(self.encoder.state_dict()))
+        self.prior.encoder_old.load_state_dict(deepcopy(self.encoder.state_dict()))

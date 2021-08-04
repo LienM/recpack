@@ -102,6 +102,13 @@ class MultVAE(TorchMLAlgorithm):
         Defaults to 0.01
     :param save_best_to_file: If True, the best model is saved to disk after fit.
     :type save_best_to_file: bool, optional
+    :param keep_last: Retain last model, rather than best
+        (according to stopping criterion value on validation data), defaults to False
+    :type keep_last: bool, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -120,6 +127,8 @@ class MultVAE(TorchMLAlgorithm):
         max_iter_no_change: int = 5,
         min_improvement: int = 0.01,
         save_best_to_file=False,
+        keep_last: bool = False,
+        predict_topK: int = None,
     ):
 
         super().__init__(
@@ -132,6 +141,8 @@ class MultVAE(TorchMLAlgorithm):
             min_improvement,
             seed,
             save_best_to_file=save_best_to_file,
+            keep_last=keep_last,
+            predict_topK=predict_topK,
         )
 
         self.dim_hidden_layer = dim_hidden_layer
@@ -177,8 +188,7 @@ class MultVAE(TorchMLAlgorithm):
             dropout=self.dropout,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(
-            self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -283,8 +293,7 @@ class MultiVAETorch(nn.Module):
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.
-        self.q_hid_bn_layer = nn.Linear(
-            dim_hidden_layer, dim_bottleneck_layer * 2)
+        self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
 
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
@@ -331,7 +340,7 @@ class MultiVAETorch(nn.Module):
 
         # TODO This is a terrible hack. Do something about it.
         mu = h[:, : self.dim_bottleneck_layer]
-        logvar = h[:, self.dim_bottleneck_layer:]
+        logvar = h[:, self.dim_bottleneck_layer :]
         return mu, logvar
 
     def decode(self, z):

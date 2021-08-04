@@ -130,6 +130,10 @@ class Prod2Vec(TorchMLAlgorithm):
         Uniform distribution will sample all items equally likely.
         Unigram distribution puts more weight on popular items. Defaults to "uniform"
     :type distribution: str, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     """
 
     def __init__(
@@ -141,7 +145,7 @@ class Prod2Vec(TorchMLAlgorithm):
         K: int = 200,
         batch_size: int = 1000,
         learning_rate: float = 0.01,
-        clipnorm: float = 1.,
+        clipnorm: float = 1.0,
         max_epochs: int = 10,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
@@ -152,6 +156,7 @@ class Prod2Vec(TorchMLAlgorithm):
         exact: bool = False,
         keep_last: bool = False,
         distribution="uniform",
+        predict_topK: int = None,
     ):
         super().__init__(
             batch_size,
@@ -164,6 +169,7 @@ class Prod2Vec(TorchMLAlgorithm):
             seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
+            predict_topK=predict_topK,
         )
 
         self.embedding_size = embedding_size
@@ -188,8 +194,7 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size).to(self.device)
-        self.optimizer = optim.Adam(
-            self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
         if self.similarity_matrix_ is None:
@@ -224,8 +229,7 @@ class Prod2Vec(TorchMLAlgorithm):
             positive_sim = self.model_(
                 focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1)
             )
-            negative_sim = self.model_(
-                focus_batch.unsqueeze(-1), negatives_batch)
+            negative_sim = self.model_(focus_batch.unsqueeze(-1), negatives_batch)
 
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
@@ -240,7 +244,9 @@ class Prod2Vec(TorchMLAlgorithm):
 
         return losses
 
-    def _compute_loss(self, positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
+    def _compute_loss(
+        self, positive_sim: torch.Tensor, negative_sim: torch.Tensor
+    ) -> torch.Tensor:
         return skipgram_negative_sampling_loss(positive_sim, negative_sim)
 
     def _create_similarity_matrix(self, X: InteractionMatrix) -> None:
@@ -257,11 +263,10 @@ class Prod2Vec(TorchMLAlgorithm):
         item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
         for batch in range(0, num_items, batch_size):
-            Y = embedding[batch: batch + batch_size]
-            item_cosine_similarity_batch = csr_matrix(
-                cosine_similarity(Y, embedding))
+            Y = embedding[batch : batch + batch_size]
+            item_cosine_similarity_batch = csr_matrix(cosine_similarity(Y, embedding))
 
-            item_cosine_similarity_[batch: batch + batch_size] = get_top_K_values(
+            item_cosine_similarity_[batch : batch + batch_size] = get_top_K_values(
                 item_cosine_similarity_batch, K
             )
         # no self similarity, set diagonal to zero
@@ -272,7 +277,9 @@ class Prod2Vec(TorchMLAlgorithm):
         scores = X @ self.similarity_matrix_
         return scores
 
-    def _skipgram_sample_pairs(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
+    def _skipgram_sample_pairs(
+        self, X: InteractionMatrix
+    ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
         """Creates a training dataset using the skipgrams and negative sampling method.
 
         First, the sequences of items (iid) are grouped per user (uid).
@@ -289,7 +296,7 @@ class Prod2Vec(TorchMLAlgorithm):
         context = np.hstack(
             (
                 windowed_sequences[:, : self.window_size],
-                windowed_sequences[:, self.window_size + 1:],
+                windowed_sequences[:, self.window_size + 1 :],
             )
         )
         focus = windowed_sequences[:, self.window_size]
@@ -314,7 +321,9 @@ class Prod2Vec(TorchMLAlgorithm):
             positives=positives,
         )
 
-    def _transform_fit_input(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]) -> Tuple[Matrix, Tuple[csr_matrix, csr_matrix]]:
+    def _transform_fit_input(
+        self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
+    ) -> Tuple[Matrix, Tuple[csr_matrix, csr_matrix]]:
         return X, to_csr_matrix(validation_data, binary=True)
 
 
@@ -331,10 +340,11 @@ class SkipGram(nn.Module):
         nn.init.normal_(self.input_embeddings.weight, std=self.std)
         nn.init.normal_(self.output_embeddings.weight, std=self.std)
 
-    def forward(self, focus_item_batch: torch.LongTensor, context_items_batch: torch.LongTensor) -> torch.Tensor:
+    def forward(
+        self, focus_item_batch: torch.LongTensor, context_items_batch: torch.LongTensor
+    ) -> torch.Tensor:
         # Create a (batch_size, embedding_dim, 1) tensor
-        focus_vector = torch.movedim(
-            self.input_embeddings(focus_item_batch), 1, 2)
+        focus_vector = torch.movedim(self.input_embeddings(focus_item_batch), 1, 2)
         # Expected of size (batch_size, 1, embedding_dim)
         context_vectors = self.output_embeddings(context_items_batch)
         return torch.bmm(context_vectors, focus_vector).squeeze(-1)
