@@ -19,6 +19,6 @@ setup(
         "tqdm>=4.46.0, ==4.*",
         "dataclasses==0.6",
     ]
-    + ["pytest==5.4.1", "pytest-cov==2.8.1"],
+    + ["pytest>=6.2.4, ==6.*", "pytest-cov>=2.12.1, ==2.*"],
     entry_points={"console_scripts": ["run_pipeline = recpack.cli:run_pipeline"]},
 )
