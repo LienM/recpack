@@ -1,12 +1,12 @@
 import numpy as np
-import scipy
 from scipy.sparse import diags
-import scipy.sparse
+from scipy.sparse.csr import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import Normalizer
 
 from recpack.data.matrix import Matrix, to_csr_matrix
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
+from recpack.util import get_top_K_values
 
 
 class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
@@ -96,16 +96,26 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     """
 
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
-    """The supported Similarity options"""
+    """The supported similarity options"""
 
-    def __init__(self, K=200, normalize=False, similarity: str = "cosine"):
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount=1, row_normalize=False, sim_normalize=False, normalize=False):
         super().__init__(K)
+
+        # Raise DeprecationWarning for normalize, renamed to row_normalize
+
         self.normalize = normalize
         if similarity not in self.SUPPORTED_SIMILARITIES:
             raise ValueError(f"similarity {similarity} not supported")
         self.similarity = similarity
 
-    def _compute_conditional_probability(self, X):
+        #TODO Use pop_discount
+        self.pop_discount = pop_discount
+        # TODO Use row_normalize
+        self.row_normalize = row_normalize
+        # TODO Use sim_normalize
+        self.sim_normalize = sim_normalize
+
+    def _compute_conditional_probability(self, X: csr_matrix) -> csr_matrix:
         # Cooccurence matrix
         co_mat = X.T @ X
 
@@ -119,7 +129,7 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         return item_cond_prob_similarities
 
-    def _compute_cosine(self, X):
+    def _compute_cosine(self, X: csr_matrix) -> csr_matrix:
         # X.T otherwise we are doing a user KNN
         item_cosine_similarities = cosine_similarity(X.T, dense_output=False)
 
@@ -128,37 +138,32 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         return item_cosine_similarities
 
-    def _fit(self, X: Matrix):
+    def _fit(self, X: csr_matrix):
         """Fit a cosine similarity matrix from item to item"""
-        X = to_csr_matrix(X, binary=True)
 
         if self.similarity == "cosine":
             item_similarities = self._compute_cosine(X)
         elif self.similarity == "conditional_probability":
             item_similarities = self._compute_conditional_probability(X)
 
-        # resolve top K per item
-        # Get indices of top K items per item
-        indices = [
-            (i, j)
-            for i, best_items_row in enumerate(
-                np.argpartition(item_similarities.toarray(), -self.K)
-            )
-            for j in best_items_row[-self.K :]
-        ]
-        # Create a mask matrix which will be pointwise multiplied with the
-        # similarity matrix.
-        mask = scipy.sparse.csr_matrix(
-            ([1 for i in range(len(indices))], (list(zip(*indices))))
-        )
-
-        item_similarities = item_similarities.multiply(mask)
+        item_similarities = get_top_K_values(item_similarities, self.K)
 
         if self.normalize:
             # normalize such that sum per row = 1
             transformer = Normalizer(norm="l1")
-            item_similarities = scipy.sparse.csr_matrix(
+            item_similarities = csr_matrix(
                 transformer.transform(item_similarities)
             )
 
         self.similarity_matrix_ = item_similarities
+
+
+class ItemPNN(ItemKNN):
+    """
+    Item-based nearest neighbour method with probabilistic
+    neighbour selection, rather than top-K.
+
+    :param ItemKNN: [description]
+    :type ItemKNN: [type]
+    """
+    pass
