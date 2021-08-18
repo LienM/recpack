@@ -1,9 +1,10 @@
 from inspect import isgenerator
 from itertools import islice
 from math import ceil
-from typing import Iterator, List, Iterable
+from typing import Iterator, List, Iterable, Union
 
 import numpy as np
+from numpy.lib.arraysetops import isin
 from scipy.sparse import csr_matrix
 import torch
 
@@ -113,7 +114,7 @@ def union_csr_matrices(a: csr_matrix, b: csr_matrix) -> csr_matrix:
     return to_binary(a + b)
 
 
-def invert(x: np.array):
+def invert(x: Union[np.ndarray, csr_matrix]) -> Union[np.ndarray, csr_matrix]:
     """Invert an array.
 
     :param x: [description]
@@ -121,6 +122,11 @@ def invert(x: np.array):
     :return: [description]
     :rtype: [type]
     """
-    ret = np.zeros(x.shape)
+    if isinstance(x, np.ndarray):
+        ret = np.zeros(x.shape)
+    elif isinstance(x, csr_matrix):
+        ret = csr_matrix(x.shape)
+    else:
+        raise TypeError("Unsupported type for argument x.")
     ret[x.nonzero()] = 1 / x[x.nonzero()]
     return ret

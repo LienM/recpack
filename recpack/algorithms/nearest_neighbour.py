@@ -7,6 +7,7 @@ from sklearn.preprocessing import Normalizer
 from recpack.data.matrix import Matrix, to_csr_matrix
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 from recpack.util import get_top_K_values
+from recpack.algorithms.util import invert
 
 
 class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
@@ -98,17 +99,16 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
     """The supported similarity options"""
 
-    def __init__(self, K=200, similarity: str = "cosine", pop_discount=1, row_normalize=False, sim_normalize=False, normalize=False):
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, row_normalize=False, sim_normalize=False, normalize=False):
         super().__init__(K)
 
-        # Raise DeprecationWarning for normalize, renamed to row_normalize
+        # TODO Raise DeprecationWarning for normalize, renamed to row_normalize
 
         self.normalize = normalize
         if similarity not in self.SUPPORTED_SIMILARITIES:
             raise ValueError(f"similarity {similarity} not supported")
         self.similarity = similarity
 
-        #TODO Use pop_discount
         self.pop_discount = pop_discount
         # TODO Use row_normalize
         self.row_normalize = row_normalize
@@ -120,10 +120,16 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         co_mat = X.T @ X
 
         # Adding 1 additive smoothing to occurrences to avoid division by 0
-        A = diags(1 / (co_mat.diagonal() + 1))
+        A = invert(diags(co_mat.diagonal()).tocsr())
 
-        # This has all item similarities
-        item_cond_prob_similarities = A @ co_mat
+        # We're trying to get a matrix S of P(j|i) where j is the column index,
+        # i is the row index, so that we can later do X * S to obtain predictions.
+
+        if self.pop_discount:
+            # This has all item similarities
+            item_cond_prob_similarities = A @ co_mat @ A.power(self.pop_discount)
+        else:
+            item_cond_prob_similarities = A @ co_mat
         # Set diagonal to 0, because we don't support self similarity
         item_cond_prob_similarities.setdiag(0)
 
@@ -150,10 +156,9 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         if self.normalize:
             # normalize such that sum per row = 1
-            transformer = Normalizer(norm="l1")
-            item_similarities = csr_matrix(
-                transformer.transform(item_similarities)
-            )
+            transformer = Normalizer(norm="l1", copy=False)
+            transformer.transform(item_similarities)
+            
 
         self.similarity_matrix_ = item_similarities
 
