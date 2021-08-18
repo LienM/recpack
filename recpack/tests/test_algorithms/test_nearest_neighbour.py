@@ -68,6 +68,16 @@ def test_item_knn_normalize(data):
         algo.similarity_matrix_.sum(axis=1), 1)
 
 
+def test_item_knn_row_normalize(data):
+
+    algo = ItemKNN(K=2, row_normalize=True)
+
+    algo.fit(data)
+
+    numpy.testing.assert_array_almost_equal(
+        algo.similarity_matrix_.sum(axis=1), 1)
+
+
 def test_item_knn_empty_col(data_empty_col):
     algo = ItemKNN(K=2)
 

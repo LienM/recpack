@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from scipy.sparse import diags
 from scipy.sparse.csr import csr_matrix
@@ -102,16 +104,23 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, row_normalize=False, sim_normalize=False, normalize=False):
         super().__init__(K)
 
-        # TODO Raise DeprecationWarning for normalize, renamed to row_normalize
-
-        self.normalize = normalize
         if similarity not in self.SUPPORTED_SIMILARITIES:
             raise ValueError(f"similarity {similarity} not supported")
         self.similarity = similarity
 
+        if self.similarity != "conditional_probability" and pop_discount:
+            warnings.warn("Argument pop_discount is incompatible with all similarity \
+                functions except conditional probability. This argument will be ignored, \
+                not popularity discounting will be applied.", DeprecationWarning)
+
         self.pop_discount = pop_discount
-        # TODO Use row_normalize
-        self.row_normalize = row_normalize
+
+        # TODO Raise DeprecationWarning for normalize, renamed to row_normalize
+        if normalize:
+            warnings.warn("Use of argument normalize is deprecated. Use row_normalize instead.")
+
+        # Row_normalize takes precedence
+        self.row_normalize = row_normalize if row_normalize else normalize
         # TODO Use sim_normalize
         self.sim_normalize = sim_normalize
 
@@ -127,7 +136,8 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         if self.pop_discount:
             # This has all item similarities
-            item_cond_prob_similarities = A @ co_mat @ A.power(self.pop_discount)
+            item_cond_prob_similarities = A @ co_mat @ A.power(
+                self.pop_discount)
         else:
             item_cond_prob_similarities = A @ co_mat
         # Set diagonal to 0, because we don't support self similarity
@@ -154,11 +164,10 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         item_similarities = get_top_K_values(item_similarities, self.K)
 
-        if self.normalize:
-            # normalize such that sum per row = 1
+        if self.row_normalize:
+            # Normalize such that sum per row = 1
             transformer = Normalizer(norm="l1", copy=False)
             transformer.transform(item_similarities)
-            
 
         self.similarity_matrix_ = item_similarities
 
