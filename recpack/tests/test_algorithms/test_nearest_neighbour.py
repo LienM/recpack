@@ -111,8 +111,10 @@ def test_item_knn_conditional_probability(data):
     )
 
 
-def test_item_knn_conditional_probability(data):
-    algo = ItemKNN(K=2, similarity="conditional_probability", pop_discount=1)
+@pytest.mark.parametrize("pop_discount", [1, 0.2, 0.5])
+def test_item_knn_conditional_probability_w_pop_discount(data, pop_discount):
+    algo = ItemKNN(K=2, similarity="conditional_probability",
+                   pop_discount=pop_discount)
 
     algo.fit(data)
     # similarity is computed as count(i^j) / (count(i) * count(j) ^ pop_discount)
@@ -130,9 +132,9 @@ def test_item_knn_conditional_probability(data):
     # fmt: off
     expected_similarities = numpy.array(
         [
-            [0, 1 / (2 * 2), 2 / (2 * 3)],
-            [1 / (2 * 2), 0, 2 / (2 * 3)],
-            [2 / (3 * 2), 2 / (3 * 2), 0]
+            [0, 1 / (2 * 2**pop_discount), 2 / (2 * 3**pop_discount)],
+            [1 / (2 * 2**pop_discount), 0, 2 / (2 * 3**pop_discount)],
+            [2 / (3 * 2**pop_discount), 2 / (3 * 2**pop_discount), 0]
         ]
     )
     # fmt: on
