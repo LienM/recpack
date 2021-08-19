@@ -101,7 +101,7 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
     """The supported similarity options"""
 
-    def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, row_normalize=False, sim_normalize=False, normalize=False):
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, normalize_X=False, normalize_sim=False, normalize=False):
         super().__init__(K)
 
         if similarity not in self.SUPPORTED_SIMILARITIES:
@@ -115,14 +115,12 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         self.pop_discount = pop_discount
 
-        # TODO Raise DeprecationWarning for normalize, renamed to row_normalize
         if normalize:
-            warnings.warn("Use of argument normalize is deprecated. Use row_normalize instead.")
+            warnings.warn("Use of argument normalize is deprecated. Use normalize_sim instead.")
 
-        # Row_normalize takes precedence
-        self.row_normalize = row_normalize if row_normalize else normalize
-        # TODO Use sim_normalize
-        self.sim_normalize = sim_normalize
+        self.normalize_X = normalize_X
+        # Sim_normalize takes precedence.
+        self.normalize_sim = normalize_sim if normalize_sim else normalize
 
     def _compute_conditional_probability(self, X: csr_matrix) -> csr_matrix:
         # Cooccurence matrix
@@ -156,6 +154,10 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
     def _fit(self, X: csr_matrix):
         """Fit a cosine similarity matrix from item to item"""
+        transformer = Normalizer(norm="l1", copy=False)
+
+        if self.normalize_X:
+            X = transformer.transform(X)
 
         if self.similarity == "cosine":
             item_similarities = self._compute_cosine(X)
@@ -164,10 +166,10 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         item_similarities = get_top_K_values(item_similarities, self.K)
 
-        if self.row_normalize:
+        # j, M (*, j) = 1
+        if self.normalize_sim:
             # Normalize such that sum per row = 1
-            transformer = Normalizer(norm="l1", copy=False)
-            transformer.transform(item_similarities)
+            item_similarities = transformer.transform(item_similarities)
 
         self.similarity_matrix_ = item_similarities
 

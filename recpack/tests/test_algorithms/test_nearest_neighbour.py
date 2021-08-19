@@ -1,7 +1,8 @@
 import math
-import numpy
+import numpy as np
 import pytest
 import scipy.sparse
+from scipy.sparse.csr import csr_matrix
 
 from recpack.algorithms import ItemKNN
 
@@ -32,14 +33,14 @@ def test_item_knn(data):
 
     algo.fit(data)
 
-    expected_similarities = numpy.array(
+    expected_similarities = np.array(
         [
             [0, 0.5, 2 / math.sqrt(6)],
             [0.5, 0, 2 / math.sqrt(6)],
             [2 / math.sqrt(6), 2 / math.sqrt(6), 0],
         ]
     )
-    numpy.testing.assert_almost_equal(
+    np.testing.assert_almost_equal(
         algo.similarity_matrix_.toarray(), expected_similarities
     )
 
@@ -49,32 +50,69 @@ def test_item_knn(data):
         ([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
     result = algo.predict(_in)
 
-    numpy.testing.assert_almost_equal(result.toarray(), expected_similarities)
+    np.testing.assert_almost_equal(result.toarray(), expected_similarities)
 
     # Make sure similarities are added correctly.
     _in = scipy.sparse.csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 3))
     expected_out = [[0.5, 0.5, 4 / math.sqrt(6)]]
     result = algo.predict(_in)
-    numpy.testing.assert_almost_equal(result.toarray(), expected_out)
+    np.testing.assert_almost_equal(result.toarray(), expected_out)
 
 
 def test_item_knn_normalize(data):
-
+    # Should perform sim_normalize.
     algo = ItemKNN(K=2, normalize=True)
 
     algo.fit(data)
 
-    numpy.testing.assert_array_almost_equal(
+    np.testing.assert_array_almost_equal(
         algo.similarity_matrix_.sum(axis=1), 1)
 
 
-def test_item_knn_row_normalize(data):
+def test_item_knn_normalize_X(data):
 
-    algo = ItemKNN(K=2, row_normalize=True)
+    algo = ItemKNN(K=2, similarity="cosine", normalize_X=True)
 
     algo.fit(data)
 
-    numpy.testing.assert_array_almost_equal(
+    # data matrix looks like
+    # 0 1 1
+    # 1 0 1
+    # 1 1 1
+
+    # normalized data matrix looks like
+    # 0 0.5 0.5
+    # 0.5 0 0.5
+    # 0.33 0.33 0.33
+
+    # Dot products
+    a = 1 / (3 * 3)
+    b = 1 / (3 * 3) + 1 / (2 * 2)
+    c = (1 / 3 * 3) + 1 / (2 * 2) * 2
+
+    # Item norms
+    d = math.sqrt((1 / 2)**2 + (1 / 3)**2)
+    e = d
+    f = math.sqrt(2 * (1 / 2)**2 + (1 / 3)**2)
+
+    expected_similarities = np.array([
+        [0, a / (d * e), b / (d * f)],
+        [a / (d * e), 0, b / (e * f)],
+        [b / (d * f), b / (e * f), 0]
+    ])
+
+    np.testing.assert_almost_equal(
+        algo.similarity_matrix_.toarray(), expected_similarities
+    )
+
+
+def test_item_knn_normalize_sim(data):
+
+    algo = ItemKNN(K=2, normalize_sim=True)
+
+    algo.fit(data)
+
+    np.testing.assert_array_almost_equal(
         algo.similarity_matrix_.sum(axis=1), 1)
 
 
@@ -82,11 +120,11 @@ def test_item_knn_empty_col(data_empty_col):
     algo = ItemKNN(K=2)
 
     algo.fit(data_empty_col)
-    expected_similarities = numpy.array(
+    expected_similarities = np.array(
         [[0.0, 0.0, 0.0], [0.0, 0, 2 /
                            math.sqrt(6)], [0.0, 2 / math.sqrt(6), 0]]
     )
-    numpy.testing.assert_almost_equal(
+    np.testing.assert_almost_equal(
         algo.similarity_matrix_.toarray(), expected_similarities
     )
 
@@ -108,7 +146,7 @@ def test_item_knn_conditional_probability(data):
     # 2 2 3
 
     # fmt: off
-    expected_similarities = numpy.array(
+    expected_similarities = np.array(
         [
             [0, 1 / 2, 2 / 2],
             [1 / 2, 0, 2 / 2],
@@ -116,7 +154,7 @@ def test_item_knn_conditional_probability(data):
         ]
     )
     # fmt: on
-    numpy.testing.assert_almost_equal(
+    np.testing.assert_almost_equal(
         algo.similarity_matrix_.toarray(), expected_similarities
     )
 
@@ -140,7 +178,7 @@ def test_item_knn_conditional_probability_w_pop_discount(data, pop_discount):
     # 2 2 3
 
     # fmt: off
-    expected_similarities = numpy.array(
+    expected_similarities = np.array(
         [
             [0, 1 / (2 * 2**pop_discount), 2 / (2 * 3**pop_discount)],
             [1 / (2 * 2**pop_discount), 0, 2 / (2 * 3**pop_discount)],
@@ -148,6 +186,6 @@ def test_item_knn_conditional_probability_w_pop_discount(data, pop_discount):
         ]
     )
     # fmt: on
-    numpy.testing.assert_almost_equal(
+    np.testing.assert_almost_equal(
         algo.similarity_matrix_.toarray(), expected_similarities
     )
