@@ -141,6 +141,8 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         # Sim_normalize takes precedence.
         self.normalize_sim = normalize_sim if normalize_sim else normalize
 
+        self.normalize = normalize
+
     def _compute_conditional_probability(self, X: csr_matrix) -> csr_matrix:
         # Cooccurence matrix
         co_mat = X.T @ X
@@ -165,13 +167,12 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     def _compute_cosine(self, X: csr_matrix) -> csr_matrix:
         # X.T otherwise we are doing a user KNN
         item_cosine_similarities = cosine_similarity(X.T, dense_output=False)
-
         item_cosine_similarities.setdiag(0)
         # Set diagonal to 0, because we don't want to support self similarity
 
         return item_cosine_similarities
 
-    def _fit(self, X: csr_matrix):
+    def _fit(self, X: csr_matrix) -> None:
         """Fit a cosine similarity matrix from item to item"""
         transformer = Normalizer(norm="l1", copy=False)
 
@@ -198,7 +199,47 @@ class ItemPNN(ItemKNN):
     Item-based nearest neighbour method with probabilistic
     neighbour selection, rather than top-K.
 
-    :param ItemKNN: [description]
-    :type ItemKNN: [type]
+    :param K: [description], defaults to 200
+    :type K: int, optional
+    :param similarity: [description], defaults to "cosine"
+    :type similarity: str, optional
+    :param pop_discount: [description], defaults to False
+    :type pop_discount: bool, optional
+    :param normalize_X: [description], defaults to False
+    :type normalize_X: bool, optional
+    :param normalize_sim: [description], defaults to False
+    :type normalize_sim: bool, optional
     """
+
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, normalize_X=False, normalize_sim=False):
+
+        super().__init__(K=K, similarity=similarity, pop_discount=pop_discount,
+                         normalize_X=normalize_X, normalize_sim=normalize_sim, )
+
+    def _fit(self, X: csr_matrix) -> None:
+        """Fit a cosine similarity matrix from item to item"""
+        transformer = Normalizer(norm="l1", copy=False)
+
+        if self.normalize_X:
+            X = transformer.transform(X)
+
+        if self.similarity == "cosine":
+            item_similarities = self._compute_cosine(X)
+        elif self.similarity == "conditional_probability":
+            item_similarities = self._compute_conditional_probability(X)
+
+        item_similarities = get_top_K_values(item_similarities, self.K)
+
+        # j, M (*, j) = 1
+        if self.normalize_sim:
+            # Normalize such that sum per row = 1
+            item_similarities = transformer.transform(item_similarities)
+
+        self.similarity_matrix_ = item_similarities
+
+    def _predict(self, X: csr_matrix) -> csr_matrix:
+        pass
+
+
+def get_K_values(X, K, pdf):
     pass
