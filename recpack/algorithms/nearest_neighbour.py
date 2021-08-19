@@ -90,18 +90,36 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         make sure to pick a value below the number of columns of the matrix to fit on.
         Defaults to 200
     :type K: int, optional
-    :param normalize: Normalize scores per row in the similarity matrix,
-        defaults to False
-    :type normalize: bool, optional
     :param similarity: Which similarity measure to use,
         can be one of ["cosine", "conditional_probability"], defaults to "cosine"
     :type similarity: str, optional
+    :param pop_discount: [description], defaults to False
+    :type pop_discount: bool, optional
+    :param normalize_X: Normalize rows in the interaction matrix so that the contribution of
+        users who have viewed more items is smaller, defaults to False
+    :type normalize_X: bool, optional
+    :param normalize_sim: Normalize scores per row in the similarity matrix to counteract
+        artificially large similarity scores when the predictive item is rare, defaults to False.
+    :type normalize_sim: bool, optional
+    :param normalize: DEPRECATED. Use normalize_sim instead.
+        Defaults to False
+    :type normalize: bool, optional
+    :raises ValueError: If an unsupported similarity measure is passed.
     """
 
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
     """The supported similarity options"""
 
     def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, normalize_X=False, normalize_sim=False, normalize=False):
+        """
+        [summary]
+
+        :param K: [description], defaults to 200
+        :type K: int, optional
+        :param similarity: [description], defaults to "cosine"
+        :type similarity: str, optional
+
+        """
         super().__init__(K)
 
         if similarity not in self.SUPPORTED_SIMILARITIES:
@@ -116,7 +134,8 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         self.pop_discount = pop_discount
 
         if normalize:
-            warnings.warn("Use of argument normalize is deprecated. Use normalize_sim instead.")
+            warnings.warn(
+                "Use of argument normalize is deprecated. Use normalize_sim instead.")
 
         self.normalize_X = normalize_X
         # Sim_normalize takes precedence.
