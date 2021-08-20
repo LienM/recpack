@@ -1,9 +1,7 @@
-from collections import defaultdict
 import logging
 
 import numpy as np
-import scipy.sparse
-
+from scipy.sparse import csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -38,14 +36,14 @@ def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
 
     if shape is None:
         shape = df[user_ix].max() + 1, df[item_ix].max() + 1
-    sparse_matrix = scipy.sparse.csr_matrix(
+    sparse_matrix = csr_matrix(
         (values, indices), shape=shape, dtype=values.dtype
     )
 
     return sparse_matrix
 
 
-def get_top_K_ranks(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.sparse.csr_matrix:
+def get_top_K_ranks(data: csr_matrix, k: int = None) -> csr_matrix:
     """
     Return csr_matrix of top K item ranks for every user.
 
@@ -59,7 +57,7 @@ def get_top_K_ranks(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.spars
     U, I, V = [], [], []
     for row_ix, (le, ri) in enumerate(
             zip(data.indptr[:-1], data.indptr[1:])):
-        K_row_pick = min(k, ri - le) if k is not None else ri-le
+        K_row_pick = min(k, ri - le) if k is not None else ri - le
 
         if K_row_pick != 0:
 
@@ -75,12 +73,12 @@ def get_top_K_ranks(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.spars
                 I.append(col_ix)
                 V.append(rank + 1)
 
-    data_top_K = scipy.sparse.csr_matrix((V, (U, I)), shape=data.shape)
+    data_top_K = csr_matrix((V, (U, I)), shape=data.shape)
 
     return data_top_K
 
 
-def get_top_K_values(data: scipy.sparse.csr_matrix, k: int = None) -> scipy.sparse.csr_matrix:
+def get_top_K_values(data: csr_matrix, k: int = None) -> csr_matrix:
     """
     Return csr_matrix of top K items for every user. Which is equal to the K nearest neighbours.
     @param data: Predicted affinity of users for items.

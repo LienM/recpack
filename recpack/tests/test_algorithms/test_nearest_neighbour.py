@@ -1,10 +1,14 @@
 import math
+import operator
+
 import numpy as np
 import pytest
-import scipy.sparse
 from scipy.sparse.csr import csr_matrix
 
 from recpack.algorithms import ItemKNN
+from recpack.data.matrix import to_binary
+from recpack.algorithms.nearest_neighbour import ItemPNN
+
 
 
 @pytest.fixture(scope="function")
@@ -12,7 +16,7 @@ def data():
     values = [1] * 7
     users = [0, 0, 1, 1, 2, 2, 2]
     items = [1, 2, 0, 2, 0, 1, 2]
-    d = scipy.sparse.csr_matrix((values, (users, items)), shape=(4, 3))
+    d = csr_matrix((values, (users, items)), shape=(4, 3))
 
     return d
 
@@ -22,7 +26,7 @@ def data_empty_col():
     values = [1] * 5
     users = [0, 0, 1, 1, 2]
     items = [1, 2, 2, 1, 2]
-    d = scipy.sparse.csr_matrix((values, (users, items)))
+    d = csr_matrix((values, (users, items)))
 
     return d
 
@@ -46,14 +50,14 @@ def test_item_knn(data):
 
     # Make sure the similarities recommended are the cosine similarities as computed.
     # If we create users with a single item seen in order.
-    _in = scipy.sparse.csr_matrix(
+    _in = csr_matrix(
         ([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
     result = algo.predict(_in)
 
     np.testing.assert_almost_equal(result.toarray(), expected_similarities)
 
     # Make sure similarities are added correctly.
-    _in = scipy.sparse.csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 3))
+    _in = csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 3))
     expected_out = [[0.5, 0.5, 4 / math.sqrt(6)]]
     result = algo.predict(_in)
     np.testing.assert_almost_equal(result.toarray(), expected_out)
@@ -189,3 +193,36 @@ def test_item_knn_conditional_probability_w_pop_discount(data, pop_discount):
     np.testing.assert_almost_equal(
         algo.similarity_matrix_.toarray(), expected_similarities
     )
+
+
+@pytest.mark.parametrize("K, pdf", [
+    (1, "uniform"), (2, "uniform"), 
+    (1, "empirical"), (2, "empirical"),
+    (1, "softmax_empirical"), (2, "softmax_empirical")
+])
+def test_item_pnn_uniform(data, K, pdf):
+    algo = ItemPNN(K=K, similarity="cosine", pdf=pdf)
+
+    algo.fit(data)
+
+    # Test number of nonzeroes
+    sims = algo.similarity_matrix_
+    binary_sims = to_binary(sims)
+
+    np.testing.assert_array_equal(binary_sims.sum(axis=1).A, K)
+
+
+def test_item_pnn_uniform(larger_matrix):
+    K = 10
+    algo = ItemPNN(K=K, similarity="cosine", pdf="uniform")
+
+    algo.fit(larger_matrix)
+
+    # Test number of nonzeroes
+    sims = algo.similarity_matrix_.copy()
+    binary_sims = to_binary(sims)
+    # Test is not exactly the same between two runs
+    algo.fit(larger_matrix)
+    sims2 = algo.similarity_matrix_.copy()
+
+    np.testing.assert_array_compare(operator.__ne__, sims, sims2)

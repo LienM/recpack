@@ -1,3 +1,4 @@
+from typing import Union, List
 import warnings
 
 import numpy as np
@@ -6,7 +7,6 @@ from scipy.sparse.csr import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import Normalizer
 
-from recpack.data.matrix import Matrix, to_csr_matrix
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 from recpack.util import get_top_K_values
 from recpack.algorithms.util import invert
@@ -210,11 +210,35 @@ class ItemPNN(ItemKNN):
     :param normalize_sim: [description], defaults to False
     :type normalize_sim: bool, optional
     """
+    # TODO Import in recpack.algorithms
+    # TODO Add documentation
+    SUPPORTED_SAMPLING_FUNCTIONS = [
+        "empirical", "uniform", "softmax_empirical"]
+    """The supported similarity options"""
 
-    def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, normalize_X=False, normalize_sim=False):
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, normalize_X=False, normalize_sim=False, pdf: str = "empirical"):
 
         super().__init__(K=K, similarity=similarity, pop_discount=pop_discount,
-                         normalize_X=normalize_X, normalize_sim=normalize_sim, )
+                         normalize_X=normalize_X, normalize_sim=normalize_sim)
+
+        if pdf not in self.SUPPORTED_SAMPLING_FUNCTIONS:
+            raise ValueError(f"Sampling function {pdf} not supported")
+
+        # TODO Add a random seed to make results reproducable
+        self.pdf = pdf
+
+    def _set_pdf(self, pdf: str, X: csr_matrix) -> List[float]:
+        if pdf == "empirical":
+            item_counts = X.sum(axis=0).A[0, :]
+            p = item_counts / item_counts.sum()
+        elif pdf == "uniform":
+            p = [1.0 / X.shape[1]] * X.shape[1]
+        elif pdf == "softmax_empirical":
+            softmax_item_counts = np.exp(X.sum(axis=0).A[0, :])
+            p = softmax_item_counts / softmax_item_counts.sum()
+        else:
+            raise ValueError(f"Sampling function {pdf} not supported")
+        return p
 
     def _fit(self, X: csr_matrix) -> None:
         """Fit a cosine similarity matrix from item to item"""
@@ -228,7 +252,9 @@ class ItemPNN(ItemKNN):
         elif self.similarity == "conditional_probability":
             item_similarities = self._compute_conditional_probability(X)
 
-        item_similarities = get_top_K_values(item_similarities, self.K)
+        self.pdf_ = self._set_pdf(self.pdf, X)
+
+        item_similarities = get_K_values(item_similarities, self.K, self.pdf_)
 
         # j, M (*, j) = 1
         if self.normalize_sim:
@@ -237,9 +263,29 @@ class ItemPNN(ItemKNN):
 
         self.similarity_matrix_ = item_similarities
 
-    def _predict(self, X: csr_matrix) -> csr_matrix:
-        pass
+    # def _predict(self, X: csr_matrix) -> csr_matrix:
+    #     pass
 
 
 def get_K_values(X, K, pdf):
-    pass
+    items = np.arange(0, X.shape[1], dtype=int)
+
+    U, I, V = [], [], []
+
+    for row_ix in range(0, X.shape[0]):
+        # Select one more, so that we can eliminate the item itself.
+        selected_K = np.random.choice(items, size=K + 1, p=pdf, replace=False)
+
+        try:
+            mismatch = np.where(selected_K == row_ix)[0][0]
+        except IndexError:
+            mismatch = -1
+
+        selected_K = np.delete(selected_K, mismatch)
+
+        U.extend([row_ix] * K)
+        I.extend(selected_K)
+        V.extend([1] * K)
+
+    data_K = csr_matrix((V, (U, I)), shape=X.shape)
+    return data_K.multiply(X)
