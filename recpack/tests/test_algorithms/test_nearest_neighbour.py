@@ -10,7 +10,6 @@ from recpack.data.matrix import to_binary
 from recpack.algorithms.nearest_neighbour import ItemPNN
 
 
-
 @pytest.fixture(scope="function")
 def data():
     values = [1] * 7
@@ -196,11 +195,11 @@ def test_item_knn_conditional_probability_w_pop_discount(data, pop_discount):
 
 
 @pytest.mark.parametrize("K, pdf", [
-    (1, "uniform"), (2, "uniform"), 
-    (1, "empirical"), (2, "empirical"),
+    (1, "uniform"), (2, "uniform"),
+    (1, "empirical"), # (2, "empirical"),  # Cannot run 2 empirical because it leads to fewer nonzero values than needed
     (1, "softmax_empirical"), (2, "softmax_empirical")
 ])
-def test_item_pnn_uniform(data, K, pdf):
+def test_item_pnn(data, K, pdf):
     algo = ItemPNN(K=K, similarity="cosine", pdf=pdf)
 
     algo.fit(data)
@@ -212,7 +211,7 @@ def test_item_pnn_uniform(data, K, pdf):
     np.testing.assert_array_equal(binary_sims.sum(axis=1).A, K)
 
 
-def test_item_pnn_uniform(larger_matrix):
+def test_item_pnn_uniform_larger(larger_matrix):
     K = 10
     algo = ItemPNN(K=K, similarity="cosine", pdf="uniform")
 
@@ -226,3 +225,23 @@ def test_item_pnn_uniform(larger_matrix):
     sims2 = algo.similarity_matrix_.copy()
 
     np.testing.assert_array_compare(operator.__ne__, sims, sims2)
+
+
+@pytest.mark.parametrize("K, pdf", [
+    (1, "uniform"), (2, "uniform"),
+    (1, "empirical"), # (2, "empirical"),  # Cannot run 2 empirical because it leads to fewer nonzero values than needed
+    (1, "softmax_empirical"), (2, "softmax_empirical")
+])
+def test_item_pnn_compute_df(K, pdf):
+    algo = ItemPNN(K=K, similarity="cosine", pdf=pdf)
+
+    X = csr_matrix([
+        [0.5, 0.2, 0.3],
+        [0.2, 0.3, 0.5],
+        [0.5, 0.5, 0]
+    ])
+
+    p = algo._compute_pdf(pdf, X)
+
+    np.testing.assert_almost_equal(np.sum(p), X.shape[1])
+    np.testing.assert_array_almost_equal(np.sum(p, axis=1), 1)

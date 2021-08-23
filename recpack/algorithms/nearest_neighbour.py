@@ -125,10 +125,9 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
                 functions except conditional probability. This argument will be ignored, \
                 popularity discounting won't be applied.", UserWarning)
 
-        if type(pop_discount) == float:
-            if pop_discount < 0 or pop_discount > 1:
-                raise ValueError(
-                    "Invalid value for pop_discount. Value should be between 0 and 1.")
+        if type(pop_discount) == float and (pop_discount < 0 or pop_discount > 1):
+            raise ValueError(
+                "Invalid value for pop_discount. Value should be between 0 and 1.")
 
         self.pop_discount = pop_discount
 
@@ -308,19 +307,19 @@ class ItemPNN(ItemKNN):
         # TODO Add a random seed to make results reproducable
         self.pdf = pdf
 
-    def _compute_pdf(self, pdf: str, X: csr_matrix) -> List[float]:
+    def _compute_pdf(self, pdf: str, X: csr_matrix) -> np.ndarray:
         # TODO Outside of the class maybe?
-        # TODO Fix this computation
+        X = X.toarray()
         if pdf == "empirical":
-            item_counts = X.sum(axis=0).A[0, :]
-            p = item_counts / item_counts.sum()
+            p = X / X.sum(axis=1)[:, None]
         elif pdf == "uniform":
-            p = [1.0 / X.shape[1]] * X.shape[1]
+            p = np.ones(X.shape) / X.shape[1]
         elif pdf == "softmax_empirical":
-            softmax_item_counts = np.exp(X.sum(axis=0).A[0, :])
-            p = softmax_item_counts / softmax_item_counts.sum()
+            softmax_item_sims = np.exp(X)
+            p = softmax_item_sims / softmax_item_sims.sum(axis=1)[:, None]
         else:
             raise ValueError(f"Sampling function {pdf} not supported")
+
         return p
 
     def _fit(self, X: csr_matrix) -> None:
@@ -350,7 +349,7 @@ class ItemPNN(ItemKNN):
     #     pass
 
 
-def get_K_values(X: csr_matrix, K: int, pdf: List[float]) -> csr_matrix:
+def get_K_values(X: csr_matrix, K: int, pdf: np.ndarray) -> csr_matrix:
     """Select K values random values for every row in X, sampled according to the probabilities in pdf.
     All other values in the row are set to zero.
 
@@ -369,7 +368,8 @@ def get_K_values(X: csr_matrix, K: int, pdf: List[float]) -> csr_matrix:
 
     for row_ix in range(0, X.shape[0]):
         # Select one more, so that we can eliminate the item itself.
-        selected_K = np.random.choice(items, size=K + 1, p=pdf, replace=False)
+        selected_K = np.random.choice(
+            items, size=K + 1, p=pdf[row_ix, :], replace=False)
 
         try:
             # Eliminate the item itself if it was selected.
