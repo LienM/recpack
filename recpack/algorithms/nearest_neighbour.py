@@ -1,5 +1,5 @@
-from typing import Union, List
 import warnings
+from typing import List, Optional
 
 import numpy as np
 from scipy.sparse import diags
@@ -8,8 +8,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import Normalizer
 
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
-from recpack.util import get_top_K_values
 from recpack.algorithms.util import invert
+from recpack.util import get_top_K_values
 
 
 class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
@@ -94,9 +94,9 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         can be one of ["cosine", "conditional_probability"], defaults to "cosine"
     :type similarity: str, optional
     :param pop_discount: Power applied to the comparing item in the denominator, to discount contributions
-        of very popular items. Should be between 0 and 1. If False, apply no discounting.
-        Defaults to False.
-    :type pop_discount: Union[float, bool], optional
+        of very popular items. Should be between 0 and 1. If None, apply no discounting.
+        Defaults to None.
+    :type pop_discount: Optional[float], optional
     :param normalize_X: Normalize rows in the interaction matrix so that the contribution of
         users who have viewed more items is smaller, defaults to False
     :type normalize_X: bool, optional
@@ -112,7 +112,7 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
     """The supported similarity options"""
 
-    def __init__(self, K=200, similarity: str = "cosine", pop_discount: Union[float, bool] = False,
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount: Optional[float] = None,
                  normalize_X: bool = False, normalize_sim: bool = False, normalize: bool = False):
         super().__init__(K)
 
@@ -126,7 +126,8 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
                 popularity discounting won't be applied.", UserWarning)
 
         if type(pop_discount) == float and pop_discount < 0 or pop_discount > 1:
-            raise ValueError("Invalid value for pop_discount. Value should be between 0 and 1.")
+            raise ValueError(
+                "Invalid value for pop_discount. Value should be between 0 and 1.")
 
         self.pop_discount = pop_discount
 
@@ -277,9 +278,9 @@ class ItemPNN(ItemKNN):
         can be one of ["cosine", "conditional_probability"], defaults to "cosine"
     :type similarity: str, optional
     :param pop_discount: Power applied to the comparing item in the denominator, to discount contributions
-        of very popular items. Should be between 0 and 1. If False, apply no discounting.
-        Defaults to False.
-    :type pop_discount: bool, optional
+        of very popular items. Should be between 0 and 1. If None, apply no discounting.
+        Defaults to None.
+    :type pop_discount: Optional[float], optional
     :param normalize_X: Normalize rows in the interaction matrix so that the contribution of
         users who have viewed more items is smaller, defaults to False
     :type normalize_X: bool, optional
@@ -295,7 +296,7 @@ class ItemPNN(ItemKNN):
         "empirical", "uniform", "softmax_empirical"]
     """The supported similarity options"""
 
-    def __init__(self, K=200, similarity: str = "cosine", pop_discount=False, normalize_X=False, normalize_sim=False, pdf: str = "empirical"):
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount: Optional[float] = None, normalize_X: bool = False, normalize_sim: bool = False, pdf: str = "empirical"):
 
         super().__init__(K=K, similarity=similarity, pop_discount=pop_discount,
                          normalize_X=normalize_X, normalize_sim=normalize_sim)
@@ -347,7 +348,19 @@ class ItemPNN(ItemKNN):
     #     pass
 
 
-def get_K_values(X, K, pdf):
+def get_K_values(X: csr_matrix, K: int, pdf: List[float]) -> csr_matrix:
+    """Select K values random values for every row in X, sampled according to the probabilities in pdf.
+    All other values in the row are set to zero.
+
+    :param X: Matrix from which we will select K values in every row.
+    :type X: csr_matrix
+    :param K: Amount of values to select.
+    :type K: int
+    :param pdf: List of probabilities of every item in X. Should sum to 1.
+    :type pdf: List[float]
+    :return: Matrix with K values per row.
+    :rtype: csr_matrix
+    """
     items = np.arange(0, X.shape[1], dtype=int)
 
     U, I, V = [], [], []
