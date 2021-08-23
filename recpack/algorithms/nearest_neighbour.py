@@ -125,9 +125,10 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
                 functions except conditional probability. This argument will be ignored, \
                 popularity discounting won't be applied.", UserWarning)
 
-        if type(pop_discount) == float and pop_discount < 0 or pop_discount > 1:
-            raise ValueError(
-                "Invalid value for pop_discount. Value should be between 0 and 1.")
+        if type(pop_discount) == float:
+            if pop_discount < 0 or pop_discount > 1:
+                raise ValueError(
+                    "Invalid value for pop_discount. Value should be between 0 and 1.")
 
         self.pop_discount = pop_discount
 
@@ -308,6 +309,7 @@ class ItemPNN(ItemKNN):
         self.pdf = pdf
 
     def _compute_pdf(self, pdf: str, X: csr_matrix) -> List[float]:
+        # TODO Outside of the class maybe?
         # TODO Fix this computation
         if pdf == "empirical":
             item_counts = X.sum(axis=0).A[0, :]
