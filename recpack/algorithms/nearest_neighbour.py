@@ -352,12 +352,10 @@ class ItemPNN(ItemKNN):
 
         self.similarity_matrix_ = item_similarities
 
-    # def _predict(self, X: csr_matrix) -> csr_matrix:
-    #     pass
 
 
 def get_K_values(X: csr_matrix, K: int, pdf: np.ndarray) -> csr_matrix:
-    """Select K values random values for every row in X, sampled according to the probabilities in pdf.
+    """Select K random values for every row in X, sampled according to the probabilities in pdf.
     All other values in the row are set to zero.
 
     :param X: Matrix from which we will select K values in every row.
