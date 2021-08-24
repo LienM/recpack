@@ -296,7 +296,13 @@ class ItemPNN(ItemKNN):
         "empirical", "uniform", "softmax_empirical"]
     """The supported similarity options"""
 
-    def __init__(self, K=200, similarity: str = "cosine", pop_discount: Optional[float] = None, normalize_X: bool = False, normalize_sim: bool = False, pdf: str = "empirical"):
+    def __init__(self,
+                 K=200,
+                 similarity: str = "cosine",
+                 pop_discount: Optional[float] = None,
+                 normalize_X: bool = False,
+                 normalize_sim: bool = False,
+                 pdf: str = "empirical"):
 
         super().__init__(K=K, similarity=similarity, pop_discount=pop_discount,
                          normalize_X=normalize_X, normalize_sim=normalize_sim)
@@ -307,15 +313,16 @@ class ItemPNN(ItemKNN):
         # TODO Add a random seed to make results reproducable
         self.pdf = pdf
 
-    def _compute_pdf(self, pdf: str, X: csr_matrix) -> np.ndarray:
+    def _compute_pdf(self, pdf: str, sim_matrix: csr_matrix) -> np.ndarray:
         # TODO Outside of the class maybe?
-        X = X.toarray()
+        sim_matrix = sim_matrix.toarray()
         if pdf == "empirical":
-            p = X / X.sum(axis=1)[:, None]
+            # Add the None dimension at the end to do a row-wise division. Otherwise the default is column-wise.
+            p = sim_matrix / sim_matrix.sum(axis=1)[:, None]
         elif pdf == "uniform":
-            p = np.ones(X.shape) / X.shape[1]
+            p = np.ones(sim_matrix.shape) / sim_matrix.shape[1]
         elif pdf == "softmax_empirical":
-            softmax_item_sims = np.exp(X)
+            softmax_item_sims = np.exp(sim_matrix)
             p = softmax_item_sims / softmax_item_sims.sum(axis=1)[:, None]
         else:
             raise ValueError(f"Sampling function {pdf} not supported")
@@ -357,8 +364,8 @@ def get_K_values(X: csr_matrix, K: int, pdf: np.ndarray) -> csr_matrix:
     :type X: csr_matrix
     :param K: Amount of values to select.
     :type K: int
-    :param pdf: List of probabilities of every item in X. Should sum to 1.
-    :type pdf: List[float]
+    :param pdf: np.ndarray of probabilities of items in X, given another item. Rows should sum to 1.
+    :type pdf: np.ndarray
     :return: Matrix with K values per row.
     :rtype: csr_matrix
     """
