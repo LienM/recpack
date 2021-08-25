@@ -7,6 +7,20 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Additions
+* __Datasets__
+    * `filename` parameter for almost all datasets received a default value
+    * After initializing a dataset, the code will make sure the specified path exists, creating directories that were missing.
+### Breaking changes:
+
+* __Datasets__:
+    * The filename parameter behaviour has changed. 
+    This parameter used to expect the full path to the file. 
+    It now is expected to be just the filename. 
+    The directory where the file is stored, or where the downloaded file should be put is configured using the `path` parameter.
+
 ## [0.1.3]
 * Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor.
 
