@@ -80,6 +80,11 @@ def test_ensure_path_exists():
     p.rmdir()
 
 
+def test_error_no_default_filename():
+    with pytest.raises(ValueError):
+        _ = datasets.Dataset()
+
+
 def test_add_filter():
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     filename = "citeulike_sample.dat"
