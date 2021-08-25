@@ -61,6 +61,7 @@ Classes
 import numpy as np
 import os
 import pandas as pd
+from pathlib import Path
 from typing import List
 from urllib.request import urlretrieve
 import zipfile
@@ -100,8 +101,12 @@ class Dataset:
 
     A Dataset is transformed into an InteractionMatrix
 
-    :param filename: Path to datafile.
-    :type filename: str
+    :param filename: name of the datafile.
+    :type filename: Optional[str]
+    :param path: The path to the data directory, the file will be looked for in this directory.
+        And if not present, downloaded there as well.
+        Defaults to `/path`
+    :type path: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
     """
@@ -113,14 +118,39 @@ class Dataset:
     TIMESTAMP_IX = "seconds_since_epoch"
     """name of the column in the loaded DataFrame with timestamp, in seconds since epoch"""
 
-    def __init__(self, filename: str, preprocess_default=True):
+    DEFAULT_FILENAME = None
+    """Default filename that will be used if it is not specified by the user."""
+
+    def __init__(
+        self, filename: str = None, path: str = "data", preprocess_default=True
+    ):
         self.filename = filename
+        if not self.filename:
+            if self.DEFAULT_FILENAME:
+                self.filename = self.DEFAULT_FILENAME
+            else:
+                raise ValueError("No filename specified, and no default known.")
+
+        self.path = path
         self.preprocessor = DataFramePreprocessor(
             self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX
         )
         if preprocess_default:
             for f in self._default_filters:
                 self.add_filter(f)
+
+        self._ensure_path_exists()
+
+    @property
+    def file_path(self):
+        """The fully classified path to the file that should be loaded from/saved to."""
+        # TODO: correctness check?
+        return os.path.join(self.path, self.filename)
+
+    def _ensure_path_exists(self):
+        """Constructs directory if path is not present on disk."""
+        p = Path(self.path)
+        p.mkdir(exist_ok=True)
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -157,7 +187,7 @@ class Dataset:
                 Defaults to False.
         :type force: bool, optional
         """
-        if not os.path.exists(self.filename) or force:
+        if not os.path.exists(self.file_path) or force:
             self._download_dataset()
 
     def _download_dataset(self):
@@ -227,9 +257,9 @@ class ThirtyMusicSessions(Dataset):
         """
         # self.fetch_dataset()
 
-        df = pd.read_csv(self.filename)
-        df.drop(columns=['numtracks', 'playtime', 'uid'], inplace=True)
-        df = df.astype({self.TIMESTAMP_IX: 'int32'})
+        df = pd.read_csv(self.file_path)
+        df.drop(columns=["numtracks", "playtime", "uid"], inplace=True)
+        df = df.astype({self.TIMESTAMP_IX: "int32"})
         return df
 
 
@@ -253,6 +283,9 @@ class CiteULike(Dataset):
     TIMESTAMP_IX = None
     """The dataset has no notion of time, so there is no timestamp column present in the DataFrame."""
 
+    DEFAULT_FILENAME = "users.dat"
+    """Default filename that will be used if it is not specified by the user."""
+
     @property
     def _default_filters(self) -> List[Filter]:
         """The default filters for the CiteULike dataset
@@ -269,12 +302,12 @@ class CiteULike(Dataset):
 
     def _download_dataset(self):
         """Download thee users.dat file from the github repository.
-        The file is saved at the specified `self.filename`
+        The file is saved at the specified `self.file_path`
         """
         DATASETURL = (
             "https://raw.githubusercontent.com/js05212/citeulike-a/master/users.dat"
         )
-        _fetch_remote(DATASETURL, self.filename)
+        _fetch_remote(DATASETURL, self.file_path)
 
     def load_dataframe(self) -> pd.DataFrame:
         """Load the data from file, and return as a Pandas DataFrame.
@@ -291,11 +324,10 @@ class CiteULike(Dataset):
         self.fetch_dataset()
 
         u_i_pairs = []
-        with open(self.filename, "r") as f:
+        with open(self.file_path, "r") as f:
 
             for user, line in enumerate(f.readlines()):
-                item_cnt = line.strip("\n").split(
-                    " ")[0]  # First element is a count
+                item_cnt = line.strip("\n").split(" ")[0]  # First element is a count
                 items = line.strip("\n").split(" ")[1:]
                 assert len(items) == int(item_cnt)
 
@@ -351,6 +383,9 @@ class MovieLens25M(Dataset):
     RATING_IX = "rating"
     """Name of the column in the DataFrame that contains the rating a user gave to the item."""
 
+    DEFAULT_FILENAME = "ratings.csv"
+    """Default filename that will be used if it is not specified by the user."""
+
     @property
     def _default_filters(self) -> List[Filter]:
         """The default filters for the Movielens 25M dataset
@@ -370,22 +405,19 @@ class MovieLens25M(Dataset):
     def _download_dataset(self):
         """Downloads the dataset.
 
-        Downloads the zipfile, and extracts the ratings file to `self.filename`
+        Downloads the zipfile, and extracts the ratings file to `self.file_path`
         """
         DATASETURL = "http://files.grouplens.org/datasets/movielens/ml-25m.zip"
 
-        # Get the directory part of the file specified
-        dir_f = os.path.dirname(self.filename)
-
-        # Download the zip into the directory
-        _fetch_remote(DATASETURL, os.path.join(dir_f, "ml-25m.zip"))
+        # Download the zip into the data directory
+        _fetch_remote(DATASETURL, os.path.join(self.path, "ml-25m.zip"))
 
         # Extract the ratings file which we will use
-        with zipfile.ZipFile(os.path.join(dir_f, "ml-25m.zip"), "r") as zip_ref:
-            zip_ref.extract("ml-25m/ratings.csv", dir_f)
+        with zipfile.ZipFile(os.path.join(self.path, "ml-25m.zip"), "r") as zip_ref:
+            zip_ref.extract("ml-25m/ratings.csv", self.path)
 
         # Rename the ratings file to the specified filename
-        os.rename(os.path.join(dir_f, "ml-25m/ratings.csv"), self.filename)
+        os.rename(os.path.join(self.path, "ml-25m/ratings.csv"), self.file_path)
 
     def load_dataframe(self) -> pd.DataFrame:
         """Load the data from file, and return as a Pandas DataFrame.
@@ -399,7 +431,7 @@ class MovieLens25M(Dataset):
 
         self.fetch_dataset()
         df = pd.read_csv(
-            self.filename,
+            self.file_path,
             dtype={
                 self.USER_IX: np.int64,
                 self.TIMESTAMP_IX: np.int64,
@@ -432,6 +464,9 @@ class RecsysChallenge2015(Dataset):
     USER_IX = "session"
     """Name of the column in the DataFrame that contains user identifiers."""
 
+    DEFAULT_FILENAME = "yoochoose-clicks.dat"
+    """Default filename that will be used if it is not specified by the user."""
+
     def _download_dataset(self):
         """Downloading this dataset is not supported."""
         raise NotImplementedError(
@@ -448,8 +483,7 @@ class RecsysChallenge2015(Dataset):
         :rtype: List[Filter]
         """
         return [
-            MinUsersPerItem(5, self.USER_IX, self.ITEM_IX,
-                            count_duplicates=True),
+            MinUsersPerItem(5, self.USER_IX, self.ITEM_IX, count_duplicates=True),
         ]
 
     def load_dataframe(self) -> pd.DataFrame:
@@ -465,7 +499,7 @@ class RecsysChallenge2015(Dataset):
         self.fetch_dataset()
 
         df = pd.read_csv(
-            self.filename,
+            self.file_path,
             names=[self.USER_IX, self.TIMESTAMP_IX, self.ITEM_IX],
             dtype={
                 self.USER_IX: np.int64,
