@@ -80,11 +80,6 @@ class DataFramePreprocessor:
     :type timestamp_ix: str, optional
     """
 
-    ITEM_IX = "iid"
-    """Column name of the item_id column, after processing"""
-    USER_IX = "uid"
-    """Column name of the item_id column, after processing"""
-
     def __init__(self, item_ix, user_ix, timestamp_ix=None):
         self.item_id_mapping = dict()
         self.user_id_mapping = dict()
@@ -188,14 +183,14 @@ class DataFramePreprocessor:
         interaction_ms = []
 
         for df in dfs:
-            df.loc[:, DataFramePreprocessor.ITEM_IX] = self._map_items(df)
-            df.loc[:, DataFramePreprocessor.USER_IX] = self._map_users(df)
+            df.loc[:, InteractionMatrix.ITEM_IX] = self._map_items(df)
+            df.loc[:, InteractionMatrix.USER_IX] = self._map_users(df)
 
             # Convert input data into internal data objects
             interaction_m = InteractionMatrix(
                 df,
-                DataFramePreprocessor.ITEM_IX,
-                DataFramePreprocessor.USER_IX,
+                InteractionMatrix.ITEM_IX,
+                InteractionMatrix.USER_IX,
                 timestamp_ix=self.timestamp_ix,
                 shape=self.shape,
             )
