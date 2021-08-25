@@ -102,7 +102,6 @@ class Dataset:
     A Dataset is transformed into an InteractionMatrix
 
     :param path: The path to the data directory.
-        And if not present, downloaded there as well.
         Defaults to `data`
     :type path: Optional[str]
     :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
@@ -276,7 +275,6 @@ class CiteULike(Dataset):
     - Each remaining  item has been interacted with by at least 5 users
 
     :param path: The path to the data directory.
-        And if not present, downloaded there as well.
         Defaults to `data`
     :type path: Optional[str]
     :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
@@ -374,7 +372,6 @@ class MovieLens25M(Dataset):
         d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
     :param path: The path to the data directory.
-        And if not present, downloaded there as well.
         Defaults to `data`
     :type path: Optional[str]
     :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
@@ -466,7 +463,6 @@ class RecsysChallenge2015(Dataset):
     - Each remaining  item has been interacted with by at least 5 users.
 
     :param path: The path to the data directory.
-        And if not present, downloaded there as well.
         Defaults to `data`
     :type path: Optional[str]
     :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
