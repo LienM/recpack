@@ -101,11 +101,12 @@ class Dataset:
 
     A Dataset is transformed into an InteractionMatrix
 
-    :param filename: name of the datafile.
+    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: Optional[str]
     :param path: The path to the data directory, the file will be looked for in this directory.
         And if not present, downloaded there as well.
-        Defaults to `/path`
+        Defaults to `data`
     :type path: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
@@ -274,8 +275,13 @@ class CiteULike(Dataset):
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
-    :param filename: Path to datafile.
-    :type filename: str
+    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: Optional[str]
+    :param path: The path to the data directory, the file will be looked for in this directory.
+        And if not present, downloaded there as well.
+        Defaults to `data`
+    :type path: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
     """
@@ -367,8 +373,13 @@ class MovieLens25M(Dataset):
         d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
         d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
-    :param filename: Path to datafile.
-    :type filename: str
+    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: Optional[str]
+    :param path: The path to the data directory, the file will be looked for in this directory.
+        And if not present, downloaded there as well.
+        Defaults to `data`
+    :type path: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
 
@@ -454,8 +465,13 @@ class RecsysChallenge2015(Dataset):
 
     - Each remaining  item has been interacted with by at least 5 users.
 
-    :param filename: Path to datafile.
-    :type filename: str
+    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: Optional[str]
+    :param path: The path to the data directory, the file will be looked for in this directory.
+        And if not present, downloaded there as well.
+        Defaults to `data`
+    :type path: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
 
