@@ -10,16 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Additions
-* __Datasets__
+* __data/datasets__
     * `filename` parameter for almost all datasets received a default value
     * After initializing a dataset, the code will make sure the specified path exists, creating directories that were missing.
 ### Breaking changes:
 
-* __Datasets__:
+* __data/datasets__:
     * The filename parameter behaviour has changed. 
     This parameter used to expect the full path to the file. 
     It now is expected to be just the filename. 
     The directory where the file is stored, or where the downloaded file should be put is configured using the `path` parameter.
+
+* __preprocessing.preprocessors__:
+    * Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor. You should use `InteractionMatrix.USER_IX` and `InteractionMatrix.ITEM_IX` instead.
 
 ## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3) 
 * Added Gru4Rec algorithms 
