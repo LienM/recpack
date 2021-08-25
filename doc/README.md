@@ -14,6 +14,7 @@ In order to render documentation locally, the class pages need to be autogenerat
 * `sphinx-autogen -o source/generated/ source/recpack.preproccessing.rst -t source/_templates/`
 * `sphinx-autogen -o source/generated/ source/recpack.splitters.rst -t source/_templates/`
 * `sphinx-autogen -o source/generated/ source/recpack.postprocessing.rst -t source/_templates/`
+* `sphinx-autogen -o source/generated/ source/recpack.pipelines.rst -t source/_templates/`
 
 
 The docs can then be rendered using the make file.

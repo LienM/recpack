@@ -21,6 +21,20 @@ def test_algorithm_registry():
     assert "NMF" in ALGORITHM_REGISTRY
 
 
+def test_adding_key():
+    class NewAlgorithm:
+        def __init__(self):
+            self.hello = "World"
+
+    ALGORITHM_REGISTRY.register("hello", NewAlgorithm)
+    assert "hello" in ALGORITHM_REGISTRY
+    assert ALGORITHM_REGISTRY["hello"]().hello == "World"
+
+    # Don't allow duplicate
+    with pytest.raises(KeyError):
+        ALGORITHM_REGISTRY.register("hello", NewAlgorithm)
+
+
 # ---- TEST PIPELINE
 @pytest.fixture()
 def pipeline_builder(mat):
