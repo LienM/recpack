@@ -11,15 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Additions
 * __data/datasets__
-    * `filename` parameter for almost all datasets now has a default value
+    * `filename` parameter now has a default value for almost all datasets. 
     * After initializing a dataset, the code will make sure the specified path exists, and create directories if they were missing.
+
 ### Breaking changes:
 
 * __data/datasets__:
     * The filename parameter behaviour has changed. 
     This parameter used to expect the full path to the file. 
-    It now is expected to be just the filename. 
-    The directory where the file is stored, or where the downloaded file should be put is configured using the `path` parameter.
+    It now expects just the filename, the directory is specified using `path`.
 
 * __preprocessing.preprocessors__:
     * Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor. You should use `InteractionMatrix.USER_IX` and `InteractionMatrix.ITEM_IX` instead.
