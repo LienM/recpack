@@ -1,10 +1,12 @@
+from typing import Dict
+
 import recpack.algorithms
 import recpack.metrics
 
 
 class Registry:
     def __init__(self, src):
-        self.registered = {}
+        self.registered: Dict[str, type] = {}
         self.src = src
 
     def __getitem__(self, key: str) -> type:
