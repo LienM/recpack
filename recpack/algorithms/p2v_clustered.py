@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple
+from typing import Tuple, Optional
 import warnings
 
 import numpy as np
@@ -149,11 +149,11 @@ class Prod2VecClustered(Prod2Vec):
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: float = 0.01,
-        seed=None,
-        save_best_to_file=False,
-        replace=False,
-        exact=False,
-        keep_last=False,
+        seed: Optional[int] = None,
+        save_best_to_file: bool = False,
+        replace: bool = False,
+        exact: bool = False,
+        keep_last: bool = False,
     ):
         super().__init__(
             embedding_size,

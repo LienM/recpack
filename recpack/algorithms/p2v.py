@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, Iterator, List
+from typing import Tuple, Iterator, List, Optional
 import warnings
 
 import numpy as np
@@ -150,7 +150,7 @@ class Prod2Vec(TorchMLAlgorithm):
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: float = 0.0,
-        seed: int = None,
+        seed: Optional[int] = None,
         save_best_to_file: bool = False,
         replace: bool = False,
         exact: bool = False,

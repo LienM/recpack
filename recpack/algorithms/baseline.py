@@ -1,13 +1,12 @@
 from collections import Counter
 import random
+import sys
 
 import numpy as np
 from scipy.sparse import csr_matrix
-import numpy.random
 
 
 from recpack.algorithms.base import Algorithm
-from recpack.data.matrix import Matrix, to_csr_matrix
 
 
 class Random(Algorithm):
@@ -49,10 +48,12 @@ class Random(Algorithm):
         super().__init__()
         self.items = None
         self.K = K
-        self.seed = seed
 
-        if self.seed is not None:
-            random.seed(self.seed)
+        if seed is not None:
+            self.seed = seed
+        else:
+            self.seed = random.randrange(sys.maxsize)
+        random.seed(self.seed)
 
     def _fit(self, X: csr_matrix):
         self.items_ = list(set(X.nonzero()[1]))
@@ -74,7 +75,8 @@ class Random(Algorithm):
             for i in np.random.choice(self.items_, size=self.K, replace=False)
         ]
         user_idxs, item_idxs, scores = list(zip(*score_list))
-        score_matrix = csr_matrix((scores, (user_idxs, item_idxs)), shape=X.shape)
+        score_matrix = csr_matrix(
+            (scores, (user_idxs, item_idxs)), shape=X.shape)
 
         return score_matrix
 
@@ -118,24 +120,21 @@ class Popularity(Algorithm):
     :type K: int, optional
     """
 
-    def __init__(self, K=200):
+    def __init__(self, K: int = 200):
         super().__init__()
         self.K = K
 
-    def _fit(self, X: Matrix):
+    def _fit(self, X: csr_matrix):
         #  Values in the matrix X are considered as counts of visits
         #  If your data contains ratings, you should make them binary before fitting
-        X = to_csr_matrix(X)
         items = list(X.nonzero()[1])
         sorted_scores = Counter(items).most_common()
         self.sorted_scores_ = [
             (item, score / sorted_scores[0][1]) for item, score in sorted_scores
         ]
 
-    def _predict(self, X: Matrix):
+    def _predict(self, X: csr_matrix) -> csr_matrix:
         """For each user predict the K most popular items"""
-        X = to_csr_matrix(X)
-
         items, values = zip(*self.sorted_scores_[: self.K])
 
         users = set(X.nonzero()[0])

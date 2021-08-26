@@ -1,7 +1,7 @@
 import logging
 from math import ceil
 import time
-from typing import Tuple, List, Iterator
+from typing import Tuple, List, Iterator, Optional
 
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
@@ -141,7 +141,7 @@ class GRU4Rec(TorchMLAlgorithm):
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: float = 0.0,
-        seed: int = 2,
+        seed: Optional[int] = None,
         save_best_to_file: bool = False,
         keep_last: bool = False,
         predict_topK: int = None,
@@ -171,10 +171,6 @@ class GRU4Rec(TorchMLAlgorithm):
         self.U = U
 
     def _init_model(self, X: InteractionMatrix) -> None:
-        if self.seed:
-            torch.manual_seed(self.seed)
-            np.random.seed(self.seed)
-
         # Invalid item ID. Used to mask inputs to the RNN
         self.num_items = X.shape[1]
         self.pad_token = self.num_items

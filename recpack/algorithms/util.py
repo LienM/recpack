@@ -1,10 +1,8 @@
 from inspect import isgenerator
 from itertools import islice
-from math import ceil
 from typing import Iterator, List, Iterable, Union
 
 import numpy as np
-from numpy.lib.arraysetops import isin
 from scipy.sparse import csr_matrix
 import torch
 

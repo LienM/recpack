@@ -290,6 +290,9 @@ class ItemPNN(ItemKNN):
     :param pdf: Which probability distribution to use,
         can be one of ["empirical", "uniform", "softmax_empirical"], defaults to "empirical"
     :type pdf: str, optional
+    :param seed: Seed to the randomizers, useful for reproducible results,
+        defaults to None
+    :type seed: int, optional    
     :raises ValueError: If an unsupported similarity measure or probability distribution is passed.
     """
     SUPPORTED_SAMPLING_FUNCTIONS = [
@@ -302,7 +305,8 @@ class ItemPNN(ItemKNN):
                  pop_discount: Optional[float] = None,
                  normalize_X: bool = False,
                  normalize_sim: bool = False,
-                 pdf: str = "empirical"):
+                 pdf: str = "empirical",
+                 seed: Optional[int] = None):
 
         super().__init__(K=K, similarity=similarity, pop_discount=pop_discount,
                          normalize_X=normalize_X, normalize_sim=normalize_sim)
@@ -352,10 +356,12 @@ class ItemPNN(ItemKNN):
 
         self.similarity_matrix_ = item_similarities
 
+    # def _predict(self, X: csr_matrix) -> csr_matrix:
+    #     pass
 
 
 def get_K_values(X: csr_matrix, K: int, pdf: np.ndarray) -> csr_matrix:
-    """Select K random values for every row in X, sampled according to the probabilities in pdf.
+    """Select K values random values for every row in X, sampled according to the probabilities in pdf.
     All other values in the row are set to zero.
 
     :param X: Matrix from which we will select K values in every row.
