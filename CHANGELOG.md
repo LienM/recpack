@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * __pipelines__:
     * Extended and updated documentation on registring your own algorithms and metrics.
+### Breaking Changes
+* __preprocessing__:
+    * Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor.
 
 ## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3) 
 * Added Gru4Rec algorithms 
