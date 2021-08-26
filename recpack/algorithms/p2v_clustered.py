@@ -115,7 +115,7 @@ class Prod2VecClustered(Prod2Vec):
     :type min_improvement: float, optional
     :param seed: Seed for random sampling. Useful for reproducible results,
         defaults to None
-    :type seed: bool, optional
+    :type seed: int, optional
     :param save_best_to_file: If true, the best model will be saved after training.
         Defaults to False
     :type save_best_to_file: bool, optional
@@ -136,16 +136,16 @@ class Prod2VecClustered(Prod2Vec):
 
     def __init__(
         self,
-        embedding_size: int,
-        num_neg_samples: int,
-        window_size: int,
-        stopping_criterion: str,
-        K=200,
-        num_clusters=5,
-        Kcl=2,
-        batch_size=1000,
-        learning_rate=0.01,
-        max_epochs=10,
+        embedding_size: int = 300,
+        num_neg_samples: int = 10,
+        window_size: int = 2,
+        stopping_criterion: str = "precision",
+        K: int = 200,
+        num_clusters: int = 5,
+        Kcl: int = 2,
+        batch_size: int = 1000,
+        learning_rate: float = 0.01,
+        max_epochs: int = 10,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: float = 0.01,

@@ -1,8 +1,14 @@
-from recpack.algorithms.base import Algorithm, TorchMLAlgorithm
-from recpack.algorithms import ItemKNN
-import scipy.sparse
-import numpy as np
 import warnings
+
+import numpy as np
+import pytest
+import scipy.sparse
+
+
+from recpack.algorithms.base import Algorithm
+from recpack.algorithms import (
+    ItemKNN, MultVAE, RecVAE, BPRMF, Random,
+    NMFItemToItem, NMF, GRU4Rec, Prod2Vec, Prod2VecClustered, ItemPNN)
 
 
 def test_check_prediction():
@@ -44,3 +50,21 @@ def test_check_fit_complete(pageviews):
         assert len(w) >= 1
 
         assert "1 items" in str(w[-1].message)
+
+
+@pytest.mark.parametrize("algo", [ItemPNN, RecVAE, MultVAE, BPRMF, Random,
+                                  NMFItemToItem, NMF, GRU4Rec, Prod2Vec, Prod2VecClustered])
+def test_seed_is_set_consistently_None(algo):
+
+    a = algo()
+    assert hasattr(a, "seed")
+
+
+@pytest.mark.parametrize("algo", [ItemPNN, RecVAE, MultVAE, BPRMF, Random,
+                                  NMFItemToItem, NMF, GRU4Rec, Prod2Vec, Prod2VecClustered])
+def test_seed_is_set_consistently_42(algo):
+
+    a = algo(seed=42)
+    assert hasattr(a, "seed")
+
+    assert a.seed == 42

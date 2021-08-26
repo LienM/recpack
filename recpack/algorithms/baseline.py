@@ -49,11 +49,10 @@ class Random(Algorithm):
         self.items = None
         self.K = K
 
-        if seed is not None:
-            self.seed = seed
-        else:
-            self.seed = random.randrange(sys.maxsize)
-        random.seed(self.seed)
+        if seed is None:
+            seed = random.randrange(sys.maxsize)
+        random.seed(seed)
+        self.seed = seed
 
     def _fit(self, X: csr_matrix):
         self.items_ = list(set(X.nonzero()[1]))

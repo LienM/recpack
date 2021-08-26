@@ -113,7 +113,7 @@ class Prod2Vec(TorchMLAlgorithm):
     :type min_improvement: float, optional
     :param seed: Seed for random sampling. Useful for reproducible results,
         defaults to None
-    :type seed: bool, optional
+    :type seed: int, optional
     :param save_best_to_file: If true, the best model will be saved after training.
         Defaults to False
     :type save_best_to_file: bool, optional

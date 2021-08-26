@@ -292,7 +292,7 @@ class ItemPNN(ItemKNN):
     :type pdf: str, optional
     :param seed: Seed to the randomizers, useful for reproducible results,
         defaults to None
-    :type seed: int, optional    
+    :type seed: int, optional
     :raises ValueError: If an unsupported similarity measure or probability distribution is passed.
     """
     SUPPORTED_SAMPLING_FUNCTIONS = [
@@ -314,8 +314,13 @@ class ItemPNN(ItemKNN):
         if pdf not in self.SUPPORTED_SAMPLING_FUNCTIONS:
             raise ValueError(f"Sampling function {pdf} not supported")
 
-        # TODO Add a random seed to make results reproducable
         self.pdf = pdf
+
+        if seed is None:
+            seed = np.random.get_state()[1][0]
+
+        np.random.seed(seed)
+        self.seed = seed
 
     def _compute_pdf(self, pdf: str, sim_matrix: csr_matrix) -> np.ndarray:
         # TODO Outside of the class maybe?

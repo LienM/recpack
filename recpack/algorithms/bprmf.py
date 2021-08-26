@@ -86,7 +86,7 @@ class BPRMF(TorchMLAlgorithm):
     :type learning_rate: float, optional
     :param seed: Seed to fix random numbers, to make results reproducible,
                     defaults to None
-    :type seed: int, optional,
+    :type seed: int, optional
     :param stopping_criterion: Which criterion to use optimise the parameters,
         a string which indicates the name of the stopping criterion.
         Which criterions are available can be found at
@@ -126,17 +126,17 @@ class BPRMF(TorchMLAlgorithm):
 
     def __init__(
         self,
-        num_components=100,
-        lambda_h=0.0,
-        lambda_w=0.0,
-        batch_size=1_000,
-        max_epochs=20,
-        learning_rate=0.01,
+        num_components: int = 100,
+        lambda_h: float = 0.0,
+        lambda_w: float = 0.0,
+        batch_size: int = 1_000,
+        max_epochs: int = 20,
+        learning_rate: float = 0.01,
         stopping_criterion: str = "bpr",
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: int = 0.01,
-        seed=None,
+        min_improvement: float = 0.01,
+        seed: int = None,
         save_best_to_file: bool = False,
         sample_size=None,
         keep_last: bool = False,

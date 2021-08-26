@@ -40,18 +40,18 @@ class NMFItemToItem(ItemSimilarityMatrixAlgorithm):
     :param num_components: The size of the latent dimension
     :type num_components: int
 
-    :param random_state: The seed for the random state to allow for comparison,
-                            defaults to 42
-    :type random_state: int, optional
+    :param seed: The seed for the random state to allow for comparison,
+                            defaults to None
+    :type seed: int, optional
     """
 
-    def __init__(self, num_components=100, random_state=42):
+    def __init__(self, num_components: int =100, seed: int =None):
         super().__init__()
         self.num_components = num_components
-        self.random_state = random_state
+        self.seed = seed
 
     def _fit(self, X: scipy.sparse.csr_matrix):
-        self.model_ = NMF(self.num_components, self.random_state)
+        self.model_ = NMF(self.num_components, self.seed)
         self.model_.fit(X)
 
         self.similarity_matrix_ = (
@@ -93,18 +93,18 @@ class SVDItemToItem(ItemSimilarityMatrixAlgorithm):
     :param num_components: The size of the latent dimension
     :type num_components: int
 
-    :param random_state: The seed for the random state to allow for comparison,
-                            defaults to 42
-    :type random_state: int, optional
+    :param seed: The seed for the random state to allow for comparison,
+                            defaults to None
+    :type seed: int, optional
     """
 
-    def __init__(self, num_components=100, random_state=42):
+    def __init__(self, num_components: int = 100, seed: int = None):
         super().__init__()
         self.num_components = num_components
-        self.random_state = random_state
+        self.seed = seed
 
     def _fit(self, X: scipy.sparse.csr_matrix):
-        self.model_ = SVD(self.num_components, self.random_state)
+        self.model_ = SVD(self.num_components, self.seed)
         self.model_.fit(X)
 
         self.similarity_matrix_ = (
