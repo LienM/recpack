@@ -114,10 +114,10 @@ class Pipeline(object):
 
     Results can be accessed via the :meth:`get_metrics` method.
 
-    :param algorithms: List of algorithms to evaluate in this pipeline.
+    :param algorithms: List of Algorithm entries to evaluate in this pipeline.
     :type algorithms: List[AlgorithmEntry]
-    :param metric_names: List of Metric entries to evaluate each algorithm on.
-    :type metric_names: List[MetricEntry]
+    :param metrics: List of Metric entries to evaluate each algorithm on.
+    :type metrics: List[MetricEntry]
     :param train_data: The data to train models on.
     :type train_data: InteractionMatrix
     :param validation_data: The data to use for optimising parameters,
@@ -254,22 +254,21 @@ class PipelineBuilder(object):
     The builder contains functions to set specific values for the pipeline.
     Save and Load make it possible to easily recreate pipelines.
 
-    :param name: The name of the pipeline.
-        The filename the pipeline is saved to is based on this name.
+    :param folder_name: The name of the folder where pipeline information will be stored.
         If no name is specified, the timestamp of creation is used.
-    :type name: string
+    :type folder_name: Optional[str]
     :param base_path: The base_path to store pipeline in,
         defaults to the current working directory.
-    :type base_path: str
+    :type base_path: Optional[str]
     """
 
-    def __init__(self, folder_name=None, base_path=os.getcwd()):
+    def __init__(self, folder_name: str = None, base_path: str = None):
 
         self.folder_name = folder_name
         if self.folder_name is None:
             self.folder_name = datetime.datetime.now().isoformat()
 
-        self.base_path = base_path
+        self.base_path = base_path or os.getcwd()
 
         self.metrics = {}
         self.algorithms = []

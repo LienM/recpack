@@ -579,6 +579,7 @@ For every batch, the loss and resulting gradients are computed and the embedding
             # All automated thanks to torch.
             self.optimizer.step()
             self.steps += 1
+        return losses
 
 
 _batch_predict
@@ -607,7 +608,7 @@ It then computes the matrix multiplication of its embeddings.
         :return: dense matrix of scores per user item pair.
         :rtype: np.ndarray
         """
-
+        X_pred = lil_matrix(X.shape)
         if users is None:
             users = get_users(X)
 
@@ -615,6 +616,91 @@ It then computes the matrix multiplication of its embeddings.
         user_tensor = torch.LongTensor(users).to(self.device)
         item_tensor = torch.arange(X.shape[1]).to(self.device)
 
-        return self.model_(user_tensor, item_tensor).detach().cpu().numpy()
+        X_pred[users] = self.model_(user_tensor, item_tensor).detach().cpu().numpy()
+        return X_pred.tocsr()
 
 And that's all for implementing SillyMF!
+
+.. _guides-algorithms-use-pipeline:
+
+Compare your algorithm to the state of the art
+----------------------------------------------
+
+Now that you have learned how to create your own algorithm, you obviously want to know how well it performs compared to state of the art recommendation algorithms.
+Recpack provides pipeline functionality, which simplifies running experiments as well as making them reproducible.
+
+And because we want you to use your own algorithms with the recpack pipelines, we have made it easy to setup a pipeline with a new algorithm.
+
+The first step to use an algorithm is to make sure it is registered in the `recpack.pipelines.ALGORITHM_REGISTRY`.
+Registering a new is done using the `register` function. Which takes two arguments, the name of the class to register, and the type.
+
+::
+
+    from recpack.pipelines import ALGORITHM_REGISTRY
+
+    ALGORITHM_REGISTRY.register(SillyMF.__name__, SillyMF)
+
+Once the algorithm is registered, you can use it when constructing a pipeline.
+As an example we will compare the SillyMF algorithm to an ItemKNN algorithm, and the EASE algorithm.
+
+::
+
+    from recpack.data.datasets import MovieLens25M
+    from recpack.pipelines import PipelineBuilder
+    from recpack.splitters.scenarios import StrongGeneralization
+
+    # Get data to test on
+    dataset = MovieLens25M("data/ml25.csv", preprocess_default=False)
+    # This will apply default preprocessing
+    im = dataset.load_interaction_matrix()
+
+    # Data splitting scenario
+    scenario = StrongGeneralization(frac_users_train=0.7, frac_interactions_in=0.8, validation=True)
+
+    # Construct our pipeline object
+    pipeline_builder = PipelineBuilder()
+
+    pipeline_builder.set_train_data(scenario.training_data)
+    pipeline_builder.set_test_data(scenario.test_data)
+    pipeline_builder.set_validation_data(scenario.validation_data)
+
+    # Add the baseline algorithms
+    # Grid parameters will be optimised using grid search before final evaluation
+    pipeline_builder.add_algorithm('ItemKNN', grid={'K': [100, 200, 400, 800]})
+    pipeline_builder.add_algorithm('EASE', grid={'l2': [10, 100, 1000], 'alpha': [0, 0.1, 0.5]})
+
+    # Add our new algorithm
+    # Optimising learning rate and num_components
+    # setting fixed values for max_epochs and batch_size
+    pipeline_builder.add_algorithm(
+        'SillyMF',
+        grid={
+            'learning_rate': [0.1, 0.01, 0.3], 
+            'num_components': [100, 200, 400]
+        },
+        params={
+            'max_epochs': 5,
+            'batch_size': 1024
+        }
+    )
+
+    # Add NDCG and Recall to be evaluated at 10, 20, 50 and 100
+    pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
+    pipeline_builder.add_metric('RecallK', [10, 20, 50, 100])
+
+    # Set the optimisation metric, this metric will be used to select the best values from grid for each algorithm
+    pipeline_builder.set_optimisation_metric('RecallK', 20)
+
+    # Construct pipeline
+    pipeline = pipeline_builder.build()
+
+    # Run pipeline, will first do optimisation, and then evaluation
+    pipeline.run()
+
+    # Get the metric results.
+    # This will be a dict with the results of the run.
+    # Turning it into a dataframe makes reading easier
+    pd.DataFrame.from_dict(pipeline.get_metrics()).T
+
+And there you have it, hopefully the new algorithm is better than the baseline algorithms!
+For more information on the Pipelines, see :class:`recpack.pipelines`.
