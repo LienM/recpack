@@ -17,7 +17,7 @@ Example
 ---------
 
 Loading a dataset only takes a couple of lines.
-If the file specified does not exist, the dataset is downloaded and written into this file.
+If the file specified does not exist, the dataset is downloaded and written to this file.
 Subsequent loading of the dataset then happens from this file. ::
 
     from recpack.data.datasets import MovieLens25M
@@ -104,7 +104,7 @@ class Dataset:
     :param path: The path to the data directory.
         Defaults to `data`
     :type path: Optional[str]
-    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
@@ -277,7 +277,7 @@ class CiteULike(Dataset):
     :param path: The path to the data directory.
         Defaults to `data`
     :type path: Optional[str]
-    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
@@ -374,7 +374,7 @@ class MovieLens25M(Dataset):
     :param path: The path to the data directory.
         Defaults to `data`
     :type path: Optional[str]
-    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
@@ -465,7 +465,7 @@ class RecsysChallenge2015(Dataset):
     :param path: The path to the data directory.
         Defaults to `data`
     :type path: Optional[str]
-    :param filename: name of the datafile, if no name is provided the dataset default will be used if known.
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
