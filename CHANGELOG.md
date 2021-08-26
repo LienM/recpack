@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Additions
 * __data/datasets__
-    * `filename` parameter for almost all datasets received a default value
-    * After initializing a dataset, the code will make sure the specified path exists, creating directories that were missing.
+    * `filename` parameter for almost all datasets now has a default value
+    * After initializing a dataset, the code will make sure the specified path exists, and create directories if they were missing.
 ### Breaking changes:
 
 * __data/datasets__:
