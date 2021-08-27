@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import pytest
 from tempfile import NamedTemporaryFile
 
@@ -22,8 +23,12 @@ def test_fetch_dataset(demo_data):
 
     with NamedTemporaryFile() as f:
 
+        p = Path(f.name)
+        filename = p.name
+        path = str(p.parent)
+
         # We'll test using citeulike style data
-        d = datasets.CiteULike(f.name)
+        d = datasets.CiteULike(path=path, filename=filename)
 
         def download_mock():
             with open(f.name, "w") as fw:
@@ -67,12 +72,24 @@ def test_fetch_dataset(demo_data):
         assert df_bis.shape == df.shape
 
 
-def test_add_filter():
-    path_to_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "datasets/citeulike_sample.dat"
-    )
+def test_ensure_path_exists():
+    d = datasets.CiteULike()
 
-    d = datasets.CiteULike(path_to_file)
+    p = Path(d.path)
+    assert p.exists()
+    p.rmdir()
+
+
+def test_error_no_default_filename():
+    with pytest.raises(ValueError):
+        _ = datasets.Dataset()
+
+
+def test_add_filter():
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    filename = "citeulike_sample.dat"
+
+    d = datasets.CiteULike(path=path, filename=filename)
 
     d.add_filter(NMostPopular(3, d.ITEM_IX))
 
@@ -82,11 +99,10 @@ def test_add_filter():
 
 
 def test_add_filter_w_index():
-    path_to_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "datasets/citeulike_sample.dat"
-    )
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    filename = "citeulike_sample.dat"
 
-    d = datasets.CiteULike(path_to_file)
+    d = datasets.CiteULike(path=path, filename=filename)
 
     d.add_filter(NMostPopular(3, d.ITEM_IX), index=0)
 
@@ -96,11 +112,10 @@ def test_add_filter_w_index():
 
 def test_citeulike():
     # To get sample we used head -1000 users.dat
-    path_to_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "datasets/citeulike_sample.dat"
-    )
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    filename = "citeulike_sample.dat"
 
-    d = datasets.CiteULike(path_to_file)
+    d = datasets.CiteULike(path=path, filename=filename)
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX]).all()
@@ -116,11 +131,11 @@ def test_citeulike():
 
 def test_movielens25m():
     # To get sample we used head -10000 ratings.csv
-    path_to_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "datasets/ml-25m_sample.csv"
-    )
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    filename = "ml-25m_sample.csv"
 
-    d = datasets.MovieLens25M(path_to_file)
+    d = datasets.MovieLens25M(path=path, filename=filename)
+    print(d.file_path)
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()
@@ -136,12 +151,8 @@ def test_movielens25m():
 
 def test_recsys_challenge_2015():
     # To get sample we used head -1000 ratings.csv
-    path_to_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        "datasets/yoochoose-clicks_sample.dat",
-    )
-
-    d = datasets.RecsysChallenge2015(path_to_file)
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    d = datasets.RecsysChallenge2015(path=path)
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.TIMESTAMP_IX, d.ITEM_IX]).all()
