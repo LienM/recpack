@@ -8,8 +8,8 @@
     pipeline.PipelineBuilder
     pipeline.Pipeline
 
-    pipeline.ALGORITHM_REGISTRY
-    pipeline.METRIC_REGISTRY
+    registries.AlgorithmRegistry
+    registries.MetricRegistry
 
 
 In order to simplify running an experiment,
@@ -46,6 +46,39 @@ An example of usage is::
     # This will be a dict with the results of the run.
     # Turning it into a dataframe makes reading easier
     pd.DataFrame.from_dict(pipeline.get_metrics())
+
+
+If you want to use the pipelines with your own algorithms or metrics, you should register them using the registries.
+For info on the functions see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
+
+Example to register an algorithm::
+
+    from recpack.pipelines import ALGORITHM_REGISTRY
+    from recpack.algorithms import ItemKNN
+
+    # Create a new algorithm, that is just a copy of ItemKNN
+    class NewAlgorithm(ItemKNN):
+        pass
+
+    ALGORITHM_REGISTRY.register('NewAlgorithm', NewAlgorithm)
+
+    # Construct a NewAlgorithm object from the registry
+    algo = ALGORITHM_REGISTRY.get('NewAlgorithm')(K=20)
+
+
+Example to register a metric::
+
+    from recpack.pipelines import METRIC_REGISTRY
+    from recpack.algorithms import Recall
+
+    # Define a new metric (that is just a copy of Recall)
+    class NewMetric(Recall):
+        pass
+
+    METRIC_REGISTRY.register('NewMetric', NewMetric)
+
+    # Construct a NewMetric object with parameter K=20
+    algo = METRIC_REGISTRY.get('NewMetric')(K=20)
 """
 
 from recpack.pipelines.pipeline import (

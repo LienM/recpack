@@ -10,13 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Additions
-* __data/datasets__
+* __data.datasets__
     * `filename` parameter now has a default value for almost all datasets. 
     * After initializing a dataset, the code will make sure the specified path exists, and create directories if they were missing.
+* __pipelines__
+    * Updated documentation of registries to clarify the use of self written algorithms and metrics in a pipeline.
+* __Getting Started Guides__
+    * Updated the guide on writing your own algorithm with a section on how to compare the new algorithm using pipelines.
 
 ### Breaking changes:
 
-* __data/datasets__:
+* __data.datasets__:
     * The filename parameter behaviour has changed. 
     This parameter used to expect the full path to the file. 
     It now expects just the filename, the directory is specified using `path`.

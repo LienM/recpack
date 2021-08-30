@@ -64,7 +64,7 @@ Example::
 
 class MetricAccumulator:
     """
-    Register metrics here for clean showing later on.
+    Add metrics here for clean showing later on.
     """
 
     def __init__(self):
@@ -74,7 +74,8 @@ class MetricAccumulator:
         return self.acc[key]
 
     def add(self, metric, algorithm_name, metric_name):
-        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        logger.debug(
+            f"Metric {metric_name} created for algorithm {algorithm_name}")
         self.acc[algorithm_name][metric_name] = metric
 
     @property
@@ -114,10 +115,13 @@ class Pipeline(object):
 
     Results can be accessed via the :meth:`get_metrics` method.
 
-    :param algorithms: List of algorithms to evaluate in this pipeline.
+    :param algorithms: List of AlgorithmEntry objects to evaluate in this pipeline.
+        An AlgorithmEntry defines which algorithm to train, with which fixed parameters (params)
+        and which parameters to optimize (grid).
     :type algorithms: List[AlgorithmEntry]
-    :param metric_names: List of Metric entries to evaluate each algorithm on.
-    :type metric_names: List[MetricEntry]
+    :param metrics: List of MetricEntry objects to evaluate each algorithm on.
+        A MetricEntry defines which metric and value of the parameter K (number of recommendations).
+    :type metrics: List[MetricEntry]
     :param train_data: The data to train models on.
     :type train_data: InteractionMatrix
     :param validation_data: The data to use for optimising parameters,
@@ -158,7 +162,8 @@ class Pipeline(object):
         # Construct grid:
         optimisation_params = ParameterGrid(algorithm.grid)
         for p in optimisation_params:
-            algo = ALGORITHM_REGISTRY.get(algorithm.name)(**p, **algorithm.params)
+            algo = ALGORITHM_REGISTRY.get(
+                algorithm.name)(**p, **algorithm.params)
 
             # validation data in case of TorchML!
             if isinstance(algo, TorchMLAlgorithm):
@@ -190,7 +195,8 @@ class Pipeline(object):
 
         for algorithm in tqdm(self.algorithms):
             # optimisation:
-            optimal_params = self._optimise(algorithm, self.optimisation_metric)
+            optimal_params = self._optimise(
+                algorithm, self.optimisation_metric)
 
             # Train again.
             algo = ALGORITHM_REGISTRY.get(algorithm.name)(**optimal_params)
@@ -254,22 +260,21 @@ class PipelineBuilder(object):
     The builder contains functions to set specific values for the pipeline.
     Save and Load make it possible to easily recreate pipelines.
 
-    :param name: The name of the pipeline.
-        The filename the pipeline is saved to is based on this name.
+    :param folder_name: The name of the folder where pipeline information will be stored.
         If no name is specified, the timestamp of creation is used.
-    :type name: string
+    :type folder_name: Optional[str]
     :param base_path: The base_path to store pipeline in,
         defaults to the current working directory.
-    :type base_path: str
+    :type base_path: Optional[str]
     """
 
-    def __init__(self, folder_name=None, base_path=os.getcwd()):
+    def __init__(self, folder_name: str = None, base_path: str = None):
 
         self.folder_name = folder_name
         if self.folder_name is None:
             self.folder_name = datetime.datetime.now().isoformat()
 
-        self.base_path = base_path
+        self.base_path = base_path or os.getcwd()
 
         self.metrics = {}
         self.algorithms = []
@@ -291,7 +296,8 @@ class PipelineBuilder(object):
             arg = arg.__name__
 
         elif type(arg) != str:
-            raise TypeError(f"Argument should be string or type, not {type(arg)}!")
+            raise TypeError(
+                f"Argument should be string or type, not {type(arg)}!")
 
         return arg
 
@@ -416,10 +422,12 @@ class PipelineBuilder(object):
 
     def _check_readiness(self):
         if len(self.metrics) == 0:
-            raise RuntimeError("No metrics specified, can't construct pipeline")
+            raise RuntimeError(
+                "No metrics specified, can't construct pipeline")
 
         if len(self.algorithms) == 0:
-            raise RuntimeError("No algorithms specified, can't construct pipeline")
+            raise RuntimeError(
+                "No algorithms specified, can't construct pipeline")
 
         if not hasattr(self, "optimisation_metric") and np.any(
             [len(algo.grid) > 0 for algo in self.algorithms]
@@ -431,10 +439,12 @@ class PipelineBuilder(object):
 
         # Check availability of data
         if not hasattr(self, "train_data"):
-            raise RuntimeError("No training data available, can't construct pipeline.")
+            raise RuntimeError(
+                "No training data available, can't construct pipeline.")
 
         if not hasattr(self, "test_data"):
-            raise RuntimeError("No test data available, can't construct pipeline.")
+            raise RuntimeError(
+                "No test data available, can't construct pipeline.")
 
         # If there are parameters to optimise,
         # there needs to be validation data available.
@@ -442,7 +452,8 @@ class PipelineBuilder(object):
             any([len(algo.grid) > 0 for algo in self.algorithms])
             or any(
                 [
-                    issubclass(ALGORITHM_REGISTRY.get(algo.name), TorchMLAlgorithm)
+                    issubclass(ALGORITHM_REGISTRY.get(
+                        algo.name), TorchMLAlgorithm)
                     for algo in self.algorithms
                 ]
             )
@@ -461,7 +472,8 @@ class PipelineBuilder(object):
         if hasattr(self, "validation_data") and any(
             [d.shape != shape for d in self.validation_data]
         ):
-            raise RuntimeError("Shape mismatch between validation and training data")
+            raise RuntimeError(
+                "Shape mismatch between validation and training data")
 
     def build(self) -> Pipeline:
         """Construct a pipeline object, given the set values.
@@ -481,7 +493,8 @@ class PipelineBuilder(object):
             self.train_data,
             self.validation_data if hasattr(self, "validation_data") else None,
             self.test_data,
-            self.optimisation_metric if hasattr(self, "optimisation_metric") else None,
+            self.optimisation_metric if hasattr(
+                self, "optimisation_metric") else None,
         )
 
     def _save_data(self):
@@ -537,7 +550,7 @@ class PipelineBuilder(object):
             pass
 
     def load(self):
-        """Load the settings from file into the correct members."""
+        """Load the settings from file into the correct attributes."""
 
         with open(self._config_file_path, "r") as infile:
             d = yaml.safe_load(infile)
@@ -550,6 +563,7 @@ class PipelineBuilder(object):
 
         if d["optimisation_metric"]:
             opt = d["optimisation_metric"]
-            self.set_optimisation_metric(opt["name"], opt["K"], opt["minimise"])
+            self.set_optimisation_metric(
+                opt["name"], opt["K"], opt["minimise"])
 
         self._load_data(d)
