@@ -29,8 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     This parameter used to expect the full path to the file. 
     It now expects just the filename, the directory is specified using `path`.
 
-## [0.1.3]
-* Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor.
+* __preprocessing.preprocessors__:
+    * Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor. You should use `InteractionMatrix.USER_IX` and `InteractionMatrix.ITEM_IX` instead.
 
 ## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3) 
 * Added Gru4Rec algorithms 
