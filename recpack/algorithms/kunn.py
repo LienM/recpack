@@ -25,7 +25,7 @@ class KUNN(Algorithm):
     Scores are computed as a sum of item and user similarity.
 
     user KNN are computed using
-    
+
     .. math::
 
         sim(u,v) = \\sum_{i \\in I} { \\frac{ R_{ui} R_{vi}}{\\sqrt{c(u) c(v) c(i)}}}
@@ -34,9 +34,9 @@ class KUNN(Algorithm):
 
 
     .. math::
-        
+
         sim(i,j) = \\sum_{u \\in U} { \\frac{ R_{ui} R_{vi}}{\\sqrt{c(i) c(u) c(j)}}}
-       
+
     Similarity is computed as
 
     .. math::
@@ -50,7 +50,7 @@ class KUNN(Algorithm):
         S_U(u, i) = \\sum_{v \\in KNN(u)} \\frac{R_{vi} * sim(u,v)}{\\sqrt{c(i)}}
 
     and item similarity is computed as
-    
+
     .. math::
 
         S_I(u, i) = \\sum_{j \\in KNN(i)} \\frac{R_{uj} * sim(i, j)}{\\sqrt{c(u)}}
@@ -93,13 +93,15 @@ class KUNN(Algorithm):
         :rtype: csr_matrix
         """
 
-        knn_u = self._fit_user_knn(X)  # Memorised training interactions are used in `_fit_user_knn` as well
+        # Memorised training interactions are used in `_fit_user_knn` as well
+        knn_u = self._fit_user_knn(X)
 
         users_to_predict = get_users(X)
 
         # Combine the memoized training interactions with the predict interactions
         # We will only use this combination for the user we are trying to predict for!
-        combined_interactions = union_csr_matrices(self.training_interactions_, X)
+        combined_interactions = union_csr_matrices(
+            self.training_interactions_, X)
 
         # Compute user similarity,
         # Formula (10) in paper.
@@ -118,7 +120,8 @@ class KUNN(Algorithm):
         item_counts = self.training_interactions_.sum(axis=0)
 
         user_similarity = csr_matrix(
-            knn_u @ self.training_interactions_.multiply(invert(np.sqrt(item_counts)))
+            knn_u @ self.training_interactions_.multiply(
+                invert(np.sqrt(item_counts)))
         )
 
         # Compute item similarities
@@ -129,7 +132,8 @@ class KUNN(Algorithm):
         # And dividing by sqrt(c(u)), the square root of the user's interactions.
         user_counts = combined_interactions.sum(axis=1)
         item_similarity = csr_matrix(
-            combined_interactions.multiply(invert(np.sqrt(user_counts))) @ self.knn_i_
+            combined_interactions.multiply(
+                invert(np.sqrt(user_counts))) @ self.knn_i_
         )
 
         similarity = item_similarity + user_similarity
@@ -166,13 +170,14 @@ class KUNN(Algorithm):
     def _fit_user_knn(self, X: csr_matrix) -> csr_matrix:
         """Helper method to compute the User KNN, used in the KUNN implementation.
         The memoized training interactions are used to compute the user similarities.
-        
+
         """
 
         users_to_predict = get_users(X)
 
         # Combine the memoized training interactions with the predict interactions
-        combined_interactions = union_csr_matrices(self.training_interactions_, X)
+        combined_interactions = union_csr_matrices(
+            self.training_interactions_, X)
 
         # Cut combined interactions to only nonzero users in prediction matrix.
         mask = np.zeros(combined_interactions.shape[0])
@@ -192,7 +197,8 @@ class KUNN(Algorithm):
 
         # Count the number of interactions per user for which we need to predict
         # This count is based on the union of train and predict data
-        pred_user_interaction_counts = combined_interactions_selected_users.sum(axis=1)
+        pred_user_interaction_counts = combined_interactions_selected_users.sum(
+            axis=1)
 
         # Counts based on only training data
         train_user_counts = self.training_interactions_.sum(axis=1)

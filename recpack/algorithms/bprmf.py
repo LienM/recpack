@@ -86,7 +86,7 @@ class BPRMF(TorchMLAlgorithm):
     :type learning_rate: float, optional
     :param seed: Seed to fix random numbers, to make results reproducible,
                     defaults to None
-    :type seed: int, optional,
+    :type seed: int, optional
     :param stopping_criterion: Which criterion to use optimise the parameters,
         a string which indicates the name of the stopping criterion.
         Which criterions are available can be found at
@@ -126,17 +126,17 @@ class BPRMF(TorchMLAlgorithm):
 
     def __init__(
         self,
-        num_components=100,
-        lambda_h=0.0,
-        lambda_w=0.0,
-        batch_size=1_000,
-        max_epochs=20,
-        learning_rate=0.01,
+        num_components: int = 100,
+        lambda_h: float = 0.0,
+        lambda_w: float = 0.0,
+        batch_size: int = 1_000,
+        max_epochs: int = 20,
+        learning_rate: float = 0.01,
         stopping_criterion: str = "bpr",
         stop_early: bool = False,
         max_iter_no_change: int = 5,
-        min_improvement: int = 0.01,
-        seed=None,
+        min_improvement: float = 0.01,
+        seed: int = None,
         save_best_to_file: bool = False,
         sample_size=None,
         keep_last: bool = False,
@@ -148,11 +148,11 @@ class BPRMF(TorchMLAlgorithm):
             max_epochs,
             learning_rate,
             stopping_criterion,
-            stop_early,
-            max_iter_no_change,
-            min_improvement,
-            seed,
-            save_best_to_file,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+            seed=seed,
+            save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             predict_topK=predict_topK,
         )
@@ -174,7 +174,8 @@ class BPRMF(TorchMLAlgorithm):
             num_users, num_items, num_components=self.num_components
         ).to(self.device)
 
-        self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.SGD(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
         """Predict scores for matrix X, given the selected users.
@@ -197,7 +198,8 @@ class BPRMF(TorchMLAlgorithm):
         item_tensor = torch.arange(X.shape[1]).to(self.device)
 
         result = lil_matrix(X.shape)
-        result[users] = self.model_(user_tensor, item_tensor).detach().cpu().numpy()
+        result[users] = self.model_(
+            user_tensor, item_tensor).detach().cpu().numpy()
 
         return result.tocsr()
 
@@ -268,15 +270,17 @@ class MFModule(nn.Module):
     :type num_components: int, optional
     """
 
-    def __init__(self, num_users, num_items, num_components=100):
+    def __init__(self, num_users: int, num_items: int, num_components: int = 100):
         super().__init__()
 
         self.num_components = num_components
         self.num_users = num_users
         self.num_items = num_items
 
-        self.user_embedding_ = nn.Embedding(num_users, num_components)  # User embedding
-        self.item_embedding_ = nn.Embedding(num_items, num_components)  # Item embedding
+        self.user_embedding_ = nn.Embedding(
+            num_users, num_components)  # User embedding
+        self.item_embedding_ = nn.Embedding(
+            num_items, num_components)  # Item embedding
 
         self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start

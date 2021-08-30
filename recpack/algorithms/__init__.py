@@ -35,10 +35,12 @@ they have interacted with.
 
     SLIM
     ItemKNN
+    ItemPNN
     NMFItemToItem
     SVDItemToItem
     Prod2Vec
     Prod2VecClustered
+    
 
 Hybrid Similarity Algorithms
 ----------------------------
@@ -197,7 +199,7 @@ from recpack.algorithms.factorization_item_similarity import (
 from recpack.algorithms.ease import EASE
 from recpack.algorithms.slim import SLIM
 
-from recpack.algorithms.nearest_neighbour import ItemKNN
+from recpack.algorithms.nearest_neighbour import ItemKNN, ItemPNN
 from recpack.algorithms.kunn import KUNN
 from recpack.algorithms.bprmf import BPRMF
 

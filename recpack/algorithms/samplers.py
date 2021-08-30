@@ -144,7 +144,7 @@ class PositiveNegativeSampler(Sampler):
         negative_sample_probabilities = self._get_distribution(X)
 
         for start in range(0, sample_size, self.batch_size):
-            sample_batch = samples[start : start + self.batch_size]
+            sample_batch = samples[start: start + self.batch_size]
 
             batch = positives[sample_batch]
             users = batch[:, 0]
@@ -349,7 +349,8 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
     def sample(
         self, X: InteractionMatrix
     ) -> Iterator[
-        Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]
+        Tuple[torch.LongTensor, torch.LongTensor,
+              torch.LongTensor, torch.LongTensor]
     ]:
         """Sample positives, targets and negatives from the input matrix.
 

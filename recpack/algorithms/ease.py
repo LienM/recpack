@@ -108,7 +108,8 @@ class EASE(ItemSimilarityMatrixAlgorithm):
 
         # Compute P
         XTX = (X.T @ X).toarray()
-        P = np.linalg.inv(XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
+        P = np.linalg.inv(
+            XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
 
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))

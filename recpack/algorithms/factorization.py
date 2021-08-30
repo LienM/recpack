@@ -1,4 +1,5 @@
-import scipy.sparse
+from typing import Optional
+from scipy.sparse import csr_matrix, diags
 import sklearn.decomposition
 
 from recpack.algorithms.base import (
@@ -39,10 +40,9 @@ class NMF(FactorizationAlgorithm):
 
     :param num_components: The size of the latent dimension
     :type num_components: int
-
-    :param random_state: The seed for the random state to allow for comparison,
-                            defaults to 42
-    :type random_state: int, optional
+    :param seed: The seed for the random state to allow for comparison,
+                            defaults to None
+    :type seed: Optional[int], optional
     :param alpha: Regularization parameter, defines how much regularization is applied.
     :type alpha: float, optional
     :param l1_ratio: Defines how much L1 normalisation is used,
@@ -53,20 +53,20 @@ class NMF(FactorizationAlgorithm):
     :type l1_ratio: float, optional
     """
 
-    def __init__(self, num_components=100, random_state=42, alpha=0.0, l1_ratio=0.0):
+    def __init__(self, num_components: int = 100, seed: Optional[int] = None, alpha: float = 0.0, l1_ratio: float = 0.0):
         super().__init__(num_components)
-        self.random_state = random_state
+        self.seed = seed
         self.alpha = alpha
         self.l1_ratio = l1_ratio
 
-    def _fit(self, X: scipy.sparse.csr_matrix):
+    def _fit(self, X: csr_matrix):
 
         # Using Sklearn NMF implementation. For info and parameters:
         # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html
         model = sklearn.decomposition.NMF(
             n_components=self.num_components,
             init="random",
-            random_state=self.random_state,
+            random_state=self.seed,
             alpha=self.alpha,
             l1_ratio=self.l1_ratio,
         )
@@ -79,8 +79,6 @@ class NMF(FactorizationAlgorithm):
         # Post conditions
         assert self.user_embedding_.shape == (X.shape[0], self.num_components)
         assert self.item_embedding_.shape == (self.num_components, X.shape[1])
-
-        return self
 
 
 class SVD(FactorizationAlgorithm):
@@ -117,20 +115,19 @@ class SVD(FactorizationAlgorithm):
 
     :param num_components: The size of the latent dimension
     :type num_components: int
-
-    :param random_state: The seed for the random state to allow for comparison
-    :type random_state: int
+    :param seed: The seed for the random state to allow for comparison, defaults to None
+    :type seed: Optional[int]
     """
 
-    def __init__(self, num_components=100, random_state=42):
+    def __init__(self, num_components: int = 100, seed: Optional[int] = None):
         super().__init__(num_components=num_components)
 
-        self.random_state = random_state
+        self.seed = seed
 
-    def _fit(self, X: scipy.sparse.csr_matrix):
+    def _fit(self, X: csr_matrix):
 
         model = sklearn.decomposition.TruncatedSVD(
-            n_components=self.num_components, n_iter=7, random_state=self.random_state
+            n_components=self.num_components, n_iter=7, random_state=self.seed
         )
         # Factorization computes U x Sigma x V
         # U are the user features,
@@ -138,11 +135,9 @@ class SVD(FactorizationAlgorithm):
         self.user_embedding_ = model.fit_transform(X)
 
         V = model.components_
-        sigma = scipy.sparse.diags(model.singular_values_)
+        sigma = diags(model.singular_values_)
         self.item_embedding_ = sigma @ V
 
         # Post conditions
         assert self.user_embedding_.shape == (X.shape[0], self.num_components)
         assert self.item_embedding_.shape == (self.num_components, X.shape[1])
-
-        return self

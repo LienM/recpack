@@ -1,6 +1,6 @@
 from copy import deepcopy
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
@@ -75,7 +75,7 @@ class RecVAE(TorchMLAlgorithm):
                             the decoder network each epoch.
     :type n_dec_epochs: int
     :param seed: Random seed for Torch, provided for reproducibility,
-                    defaults to 42.
+                    defaults to None.
     :type seed: int, optional
     :param learning_rate: Learning rate, defaults to 1e-4
     :type learning_rate: float, optional
@@ -125,17 +125,17 @@ class RecVAE(TorchMLAlgorithm):
 
     def __init__(
         self,
-        batch_size=500,
-        max_epochs=200,
-        learning_rate=5e-4,
-        n_enc_epochs=3,
-        n_dec_epochs=1,
-        seed=42,
-        dim_bottleneck_layer=200,
-        dim_hidden_layer=600,
-        gamma=0.005,
-        beta=None,
-        dropout=0.5,
+        batch_size: int = 500,
+        max_epochs: int = 200,
+        learning_rate: float = 5e-4,
+        n_enc_epochs: int = 3,
+        n_dec_epochs: int = 1,
+        seed: Optional[int] = None,
+        dim_bottleneck_layer: int = 200,
+        dim_hidden_layer: int = 600,
+        gamma: Optional[float] = 0.005,
+        beta: Optional[float] = None,
+        dropout: float = 0.5,
         stopping_criterion: str = "ndcg",
         stop_early: bool = False,
         max_iter_no_change: int = 5,
@@ -150,10 +150,10 @@ class RecVAE(TorchMLAlgorithm):
             max_epochs,
             learning_rate,
             stopping_criterion,
-            stop_early,
-            max_iter_no_change,
-            min_improvement,
-            seed,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+            seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             predict_topK=predict_topK,
@@ -374,7 +374,8 @@ class CompositePrior(nn.Module):
         unif_prior = log_norm_pdf(z, self.mu_prior, self.logvar_uniform_prior)
 
         gaussians = [stnd_prior, post_prior, unif_prior]
-        gaussians = [g.add(np.log(w)) for g, w in zip(gaussians, self.mixture_weights)]
+        gaussians = [g.add(np.log(w))
+                     for g, w in zip(gaussians, self.mixture_weights)]
 
         density_per_gaussian = torch.stack(gaussians, dim=-1)
 
@@ -493,7 +494,8 @@ class RecVAETorch(nn.Module):
         """
         super(RecVAETorch, self).__init__()
 
-        self.encoder = Encoder(dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
+        self.encoder = Encoder(
+            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
         self.prior = CompositePrior(
             dim_hidden_layer, dim_bottleneck_layer, dim_input_layer
         )
@@ -550,4 +552,5 @@ class RecVAETorch(nn.Module):
         """
         The encoder in the prior is updated to the current encoder state.
         """
-        self.prior.encoder_old.load_state_dict(deepcopy(self.encoder.state_dict()))
+        self.prior.encoder_old.load_state_dict(
+            deepcopy(self.encoder.state_dict()))

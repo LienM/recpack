@@ -67,7 +67,7 @@ class MultVAE(TorchMLAlgorithm):
     :param learning_rate: Learning rate, defaults to 1e-4
     :type learning_rate: [type], optional
     :param seed: Random seed for Torch, provided for reproducibility,
-                    defaults to 42.
+                    defaults to None.
     :type seed: int, optional
     :param dim_bottleneck_layer: Size of the latent representation,
                                     defaults to 200
@@ -113,16 +113,16 @@ class MultVAE(TorchMLAlgorithm):
 
     def __init__(
         self,
-        batch_size=500,
-        max_epochs=200,
-        learning_rate=1e-4,
-        seed=42,
-        dim_bottleneck_layer=200,
-        dim_hidden_layer=600,
-        max_beta=0.2,
-        anneal_steps=200000,
-        dropout=0.5,
-        stopping_criterion="ndcg",
+        batch_size: int = 500,
+        max_epochs: int = 200,
+        learning_rate: float = 1e-4,
+        seed: int = None,
+        dim_bottleneck_layer: int = 200,
+        dim_hidden_layer: int = 600,
+        max_beta: float = 0.2,
+        anneal_steps: int = 200000,
+        dropout: float = 0.5,
+        stopping_criterion: str = "ndcg",
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: int = 0.01,
@@ -136,10 +136,10 @@ class MultVAE(TorchMLAlgorithm):
             max_epochs,
             learning_rate,
             stopping_criterion,
-            stop_early,
-            max_iter_no_change,
-            min_improvement,
-            seed,
+            stop_early=stop_early,
+            max_iter_no_change=max_iter_no_change,
+            min_improvement=min_improvement,
+            seed=seed,
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             predict_topK=predict_topK,
@@ -188,7 +188,8 @@ class MultVAE(TorchMLAlgorithm):
             dropout=self.dropout,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -293,7 +294,8 @@ class MultiVAETorch(nn.Module):
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.
-        self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
+        self.q_hid_bn_layer = nn.Linear(
+            dim_hidden_layer, dim_bottleneck_layer * 2)
 
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
@@ -340,7 +342,7 @@ class MultiVAETorch(nn.Module):
 
         # TODO This is a terrible hack. Do something about it.
         mu = h[:, : self.dim_bottleneck_layer]
-        logvar = h[:, self.dim_bottleneck_layer :]
+        logvar = h[:, self.dim_bottleneck_layer:]
         return mu, logvar
 
     def decode(self, z):
