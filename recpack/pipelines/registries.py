@@ -5,6 +5,12 @@ import recpack.metrics
 
 
 class Registry:
+    """
+    A Registry is a wrapper for a dictionary that maps
+    names to Python types (most often classes).
+    """
+
+
     def __init__(self, src):
         self.registered: Dict[str, type] = {}
         self.src = src
@@ -34,7 +40,7 @@ class Registry:
             return False
 
     def get(self, key: str) -> type:
-        """Retrieve the type for the given key.
+        """Retrieve the value for this key. This value is a Python type (most often a class).
 
         :param key: The key to fetch
         :type key: str
@@ -47,9 +53,9 @@ class Registry:
             return getattr(self.src, key)
 
     def register(self, key: str, c: type):
-        """Register a new class.
+        """Register a new Python type (most often a class).
 
-        After registration, the key can be used to fetch the class from the registry.
+        After registration, the key can be used to fetch the Python type from the registry.
 
         :param key: key to register the type at. Needs to be unique to the registry.
         :type key: str
