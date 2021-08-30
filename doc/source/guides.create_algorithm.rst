@@ -629,10 +629,10 @@ Compare your algorithm to the state of the art
 Now that you have learned how to create your own algorithm, you obviously want to know how well it performs compared to state of the art recommendation algorithms.
 Recpack provides pipeline functionality, which simplifies running experiments as well as making them reproducible.
 
-And because we want you to use your own algorithms with the recpack pipelines, we have made it easy to setup a pipeline with a new algorithm.
+Because we want you to use your own algorithms with the recpack pipelines, we have made it easy to set up a pipeline with your own algorithm.
 
-The first step to use an algorithm is to make sure it is registered in the `recpack.pipelines.ALGORITHM_REGISTRY`.
-Registering a new is done using the `register` function. Which takes two arguments, the name of the class to register, and the type.
+The first (and only) step to using a new algorithm is to make sure it is registered in the `recpack.pipelines.ALGORITHM_REGISTRY`.
+Registering a new algorithm is done using the `register` function. This function takes two arguments: the name of the algorithm to register and the class.
 
 ::
 
@@ -648,6 +648,9 @@ As an example we will compare the SillyMF algorithm to an ItemKNN algorithm, and
     from recpack.data.datasets import MovieLens25M
     from recpack.pipelines import PipelineBuilder
     from recpack.splitters.scenarios import StrongGeneralization
+    from recpack.pipelines import ALGORITHM_REGISTRY
+
+    ALGORITHM_REGISTRY.register(SillyMF.__name__, SillyMF)
 
     # Get data to test on
     dataset = MovieLens25M("data/ml25.csv", preprocess_default=False)
@@ -703,4 +706,4 @@ As an example we will compare the SillyMF algorithm to an ItemKNN algorithm, and
     pd.DataFrame.from_dict(pipeline.get_metrics()).T
 
 And there you have it, hopefully the new algorithm is better than the baseline algorithms!
-For more information on the Pipelines, see :class:`recpack.pipelines`.
+For more information on how to use pipelines, see :class:`recpack.pipelines`.
