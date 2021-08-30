@@ -329,7 +329,8 @@ class GRU4Rec(TorchMLAlgorithm):
 
                 # Process the history in chunks, otherwise the linear layer goes OOM.
                 # 3M entries seemed a reasonable max
-                chunk_size = int((10 ** 9) / (self.batch_size * self.num_items))
+                chunk_size = int(
+                    (10 ** 9) / (self.batch_size * self.num_items))
                 for (input_chunk,) in self._chunk(
                     chunk_size, positives_batch.to(self.device)
                 ):
@@ -355,11 +356,13 @@ class GRU4Rec(TorchMLAlgorithm):
                         # based on the last item in the sequence
                         last_item_ix = last_item_ix_in_chunk[is_last_item_in_chunk]
                         uid_batch_w_last_item = (
-                            uid_batch[is_last_item_in_chunk].detach().cpu().numpy()
+                            uid_batch[is_last_item_in_chunk].detach(
+                            ).cpu().numpy()
                         )
                         item_scores = (
                             output_chunk[
-                                torch.arange(0, last_item_ix.shape[0], dtype=int),
+                                torch.arange(
+                                    0, last_item_ix.shape[0], dtype=int),
                                 last_item_ix,
                             ]
                             .detach()
@@ -709,9 +712,11 @@ class GRU4RecNegSampling(GRU4Rec):
         true_batch_size, max_hist_len = positive_scores.shape
 
         # Check if I need to do all this flattening
-        true_input_mask_flat = true_input_mask.view(true_batch_size * max_hist_len)
+        true_input_mask_flat = true_input_mask.view(
+            true_batch_size * max_hist_len)
 
-        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, 1)
+        positive_scores_flat = positive_scores.view(
+            true_batch_size * max_hist_len, 1)
         negative_scores_flat = negative_scores.view(
             true_batch_size * max_hist_len, negative_scores.shape[2]
         )
@@ -758,7 +763,8 @@ class GRU4RecTorch(nn.Module):
         self.drop = nn.Dropout(dropout, inplace=True)
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
-        self.emb = nn.Embedding(num_items + 1, embedding_size, padding_idx=pad_token)
+        self.emb = nn.Embedding(
+            num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
             embedding_size,
             hidden_size,
@@ -798,7 +804,8 @@ class GRU4RecTorch(nn.Module):
 
             padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
 
-            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(padded_rnn_x, batch_first=True)
+            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(
+                padded_rnn_x, batch_first=True)
 
         else:
             rnn_x, hidden = self.rnn(emb_x, hidden)

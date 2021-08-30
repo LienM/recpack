@@ -109,7 +109,8 @@ class WeightedMatrixFactorization(Algorithm):
         """
         self.num_users, self.num_items = X.shape
         self.known_users = set(X.nonzero()[0])
-        self.user_factors_, self.item_factors_ = self._alternating_least_squares(X)
+        self.user_factors_, self.item_factors_ = self._alternating_least_squares(
+            X)
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Prediction scores are calculated as the dotproduct of
@@ -160,11 +161,13 @@ class WeightedMatrixFactorization(Algorithm):
         :return: Generated user- and item-factors based on the input matrix X.
         """
         user_factors = (
-            np.random.rand(self.num_users, self.num_components).astype(np.float32)
+            np.random.rand(
+                self.num_users, self.num_components).astype(np.float32)
             * 0.01
         )
         item_factors = (
-            np.random.rand(self.num_items, self.num_components).astype(np.float32)
+            np.random.rand(
+                self.num_items, self.num_components).astype(np.float32)
             * 0.01
         )
 
@@ -238,7 +241,8 @@ class WeightedMatrixFactorization(Algorithm):
         #  For each x, let us define the diagonal n × n matrix Cx where Cx_yy = c_xy
         cx = C[x]
         Cx = diags(C[x].toarray().flatten(), 0)
-        A = YtY + (Y.T @ Cx) @ Y + self.regularization * np.eye(self.num_components)
+        A = YtY + (Y.T @ Cx) @ Y + self.regularization * \
+            np.eye(self.num_components)
 
         # accumulate Yt(Cx + I)Px in b
         cx[cx > 0] = 1  # now Px is represented as cx

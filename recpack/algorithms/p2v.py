@@ -194,7 +194,8 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size).to(self.device)
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model_.parameters(), lr=self.learning_rate)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
         if self.similarity_matrix_ is None:
@@ -229,7 +230,8 @@ class Prod2Vec(TorchMLAlgorithm):
             positive_sim = self.model_(
                 focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1)
             )
-            negative_sim = self.model_(focus_batch.unsqueeze(-1), negatives_batch)
+            negative_sim = self.model_(
+                focus_batch.unsqueeze(-1), negatives_batch)
 
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
@@ -263,10 +265,11 @@ class Prod2Vec(TorchMLAlgorithm):
         item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
         for batch in range(0, num_items, batch_size):
-            Y = embedding[batch : batch + batch_size]
-            item_cosine_similarity_batch = csr_matrix(cosine_similarity(Y, embedding))
+            Y = embedding[batch: batch + batch_size]
+            item_cosine_similarity_batch = csr_matrix(
+                cosine_similarity(Y, embedding))
 
-            item_cosine_similarity_[batch : batch + batch_size] = get_top_K_values(
+            item_cosine_similarity_[batch: batch + batch_size] = get_top_K_values(
                 item_cosine_similarity_batch, K
             )
         # no self similarity, set diagonal to zero
@@ -296,7 +299,7 @@ class Prod2Vec(TorchMLAlgorithm):
         context = np.hstack(
             (
                 windowed_sequences[:, : self.window_size],
-                windowed_sequences[:, self.window_size + 1 :],
+                windowed_sequences[:, self.window_size + 1:],
             )
         )
         focus = windowed_sequences[:, self.window_size]
@@ -344,7 +347,8 @@ class SkipGram(nn.Module):
         self, focus_item_batch: torch.LongTensor, context_items_batch: torch.LongTensor
     ) -> torch.Tensor:
         # Create a (batch_size, embedding_dim, 1) tensor
-        focus_vector = torch.movedim(self.input_embeddings(focus_item_batch), 1, 2)
+        focus_vector = torch.movedim(
+            self.input_embeddings(focus_item_batch), 1, 2)
         # Expected of size (batch_size, 1, embedding_dim)
         context_vectors = self.output_embeddings(context_items_batch)
         return torch.bmm(context_vectors, focus_vector).squeeze(-1)

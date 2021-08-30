@@ -45,7 +45,7 @@ class NMFItemToItem(ItemSimilarityMatrixAlgorithm):
     :type seed: int, optional
     """
 
-    def __init__(self, num_components: int =100, seed: int =None):
+    def __init__(self, num_components: int = 100, seed: int = None):
         super().__init__()
         self.num_components = num_components
         self.seed = seed
