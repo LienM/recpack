@@ -7,10 +7,18 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30) 
 
 ### Additions
-* __data/datasets__
+* __algorithms.nearest_neighbour__
+    * Add ItemPNN, it's ItemKNN, but instead of selecting the top K neighbours, they are sampled from a uniform, softmax-empirical or empirical distribution of item similarities.
+    * Add a few options to ItemKNN:
+        * pop_discount: Discount relationships with popular items to avoid a large popularity bias
+        * sim_normalize: Renamed normalize to sim_normalize. Normalize rows in the similarity matrix to counteract
+        artificially large similarity scores when the predictive item is rare, defaults to False.
+        * normalize_X: Normalize rows in the interaction matrix so that the contribution of
+        users who have viewed more items is smaller
+* __data.datasets__
     * `filename` parameter now has a default value for almost all datasets. 
     * After initializing a dataset, the code will make sure the specified path exists, and create directories if they were missing.
 
