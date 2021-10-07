@@ -212,7 +212,8 @@ class FractionInteractionSplitter(Splitter):
     :param in_frac: Fraction of events to end up in the first return value.
     :type in_frac: float
     :param seed: Seed the random generator. Set this value
-        if you require reproducible results. Defaults to 42.
+        if you require reproducible results.
+        Defaults to None, which results in a random seed.
     :type seed: int, optional
     """
 

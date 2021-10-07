@@ -173,7 +173,7 @@ class Algorithm(BaseEstimator):
 
         self._check_fit_complete()
         end = time.time()
-        logger.info(f"fitting {self.name} complete - Took {end - start :.3}s")
+        logger.info(f"Fitting {self.name} complete - Took {end - start :.3}s")
         return self
 
     def predict(self, X: Matrix) -> csr_matrix:
@@ -688,9 +688,8 @@ class TorchMLAlgorithm(Algorithm):
                     self._evaluate(val_in, val_out)
                     end_time = time.time()
                     logger.info(
-                        f"evaluation at end of {epoch} took {end_time-start_time :.2f} s."
+                        f"Evaluation at end of {epoch} took {end_time-start_time :.2f} s."
                     )
-
         except EarlyStoppingException:
             pass
 
@@ -705,7 +704,7 @@ class TorchMLAlgorithm(Algorithm):
 
         self._check_fit_complete()
         end = time.time()
-        logger.info(f"fitting {self.name} complete - Took {end - start :.3}s")
+        logger.info(f"Fitting {self.name} complete - Took {end - start :.3}s")
 
         return self
 

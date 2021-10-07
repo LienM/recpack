@@ -82,3 +82,35 @@ def test_strong_generalization_timed_split_w_validation_has_validation_users(
 
     assert val_data_out.num_active_users > 0
     assert val_data_in.num_active_users > 0
+
+
+@pytest.mark.parametrize("frac_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])
+def test_strong_generalization_timed_split_seed(data_m, frac_users_in, t):
+
+    t_validation = t - 10
+    # First scenario uses a random seed
+    scenario_1 = scenarios.StrongGeneralizationTimed(
+        frac_users_in, t, t_validation=t_validation, validation=True
+    )
+    seed = scenario_1.seed
+    scenario_1.split(data_m)
+
+    # second scenario uses same seed as the previous one
+    scenario_2 = scenarios.StrongGeneralizationTimed(
+        frac_users_in, t, t_validation=t_validation, validation=True, seed=seed
+    )
+    scenario_2.split(data_m)
+
+    assert (
+        scenario_1.training_data.num_interactions
+        == scenario_2.training_data.num_interactions
+    )
+
+    assert (
+        scenario_1.test_data_in.num_interactions
+        == scenario_2.test_data_in.num_interactions
+    )
+    assert (
+        scenario_1.test_data_out.num_interactions
+        == scenario_2.test_data_out.num_interactions
+    )

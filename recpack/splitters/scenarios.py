@@ -62,6 +62,9 @@ class StrongGeneralization(Scenario):
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
+    :param seed: The seed to use for the random components of the splitter.
+        If None, a random seed will be used. Defaults to None
+    :type seed: int, optional
     """
 
     def __init__(
@@ -71,14 +74,9 @@ class StrongGeneralization(Scenario):
         validation=False,
         seed=None,
     ):
-        super().__init__(validation=validation)
+        super().__init__(validation=validation, seed=seed)
         self.frac_users_train = frac_users_train
         self.frac_interactions_in = frac_interactions_in
-
-        if seed is None:
-            # Set seed if it was not set before.
-            seed = np.random.get_state()[1][0]
-        self.seed = seed
 
         self.strong_gen = splitter_base.StrongGeneralizationSplitter(
             frac_users_train, seed=self.seed
@@ -188,6 +186,9 @@ class WeakGeneralization(Scenario):
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
+    :param seed: The seed to use for the random components of the splitter.
+        If None, a random seed will be used. Defaults to None
+    :type seed: int, optional
     """
 
     def __init__(
@@ -197,12 +198,7 @@ class WeakGeneralization(Scenario):
         validation=False,
         seed=None,
     ):
-        super().__init__(validation=validation)
-
-        if seed is None:
-            # Set seed if it was not set before.
-            seed = np.random.get_state()[1][0]
-        self.seed = seed
+        super().__init__(validation=validation, seed=seed)
 
         self.frac_interactions_train = frac_interactions_train
 
@@ -317,12 +313,23 @@ class Timed(Scenario):
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
+    :param seed: Seed for randomisation parts of the scenario.
+        Timed scenario is deterministic, so changing seed should not matter.
+        Defaults to None, so random seed will be generated.
+    :type seed: int, optional
+
     """
 
     def __init__(
-        self, t, t_validation=None, delta_out=None, delta_in=None, validation=False
+        self,
+        t,
+        t_validation=None,
+        delta_out=None,
+        delta_in=None,
+        validation=False,
+        seed=None,
     ):
-        super().__init__(validation=validation)
+        super().__init__(validation=validation, seed=seed)
         self.t = t
         self.delta_out = delta_out
         self.delta_in = delta_in
@@ -450,6 +457,9 @@ class StrongGeneralizationTimed(Scenario):
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
+    :param seed: The seed to use for the random components of the splitter.
+        If None, a random seed will be used. Defaults to None
+    :type seed: int, optional
     """
 
     def __init__(
@@ -462,16 +472,12 @@ class StrongGeneralizationTimed(Scenario):
         validation=False,
         seed=None,
     ):
-        super().__init__(validation=validation)
+        super().__init__(validation=validation, seed=seed)
         self.frac_users_in = frac_users_in
         self.t = t
         self.delta_out = delta_out
         self.delta_in = delta_in
         self.t_validation = t_validation
-        if seed is None:
-            # Set seed if it was not set before.
-            seed = np.random.get_state()[1][0]
-        self.seed = seed
         if self.validation and not self.t_validation:
             raise Exception(
                 "t_validation should be provided when using validation split."
@@ -584,12 +590,22 @@ class StrongGeneralizationTimedMostRecent(Scenario):
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
+    :param seed: Seed for randomisation parts of the scenario.
+        This scenario is deterministic, so changing seed should not matter.
+        Defaults to None, so random seed will be generated.
+    :type seed: int, optional
+
     """
 
     def __init__(
-        self, t: float, t_validation: float = None, n: int = 1, validation: bool = False
+        self,
+        t: float,
+        t_validation: float = None,
+        n: int = 1,
+        validation: bool = False,
+        seed=None,
     ):
-        super().__init__(validation=validation)
+        super().__init__(validation=validation, seed=seed)
         self.t = t
         self.t_validation = t_validation
         self.n = n
@@ -681,10 +697,14 @@ class NextItemPrediction(Scenario):
     :param validation: Assign a portion of the training dataset to validation data if True,
         else split without validation data into only a training and test dataset.
     :type validation: boolean, optional
+    :param seed: Seed for randomisation parts of the scenario.
+        This scenario is deterministic, so changing seed should not matter.
+        Defaults to None, so random seed will be generated.
+    :type seed: int, optional
     """
 
-    def __init__(self, validation=False):
-        super().__init__(validation=validation)
+    def __init__(self, validation=False, seed=None):
+        super().__init__(validation=validation, seed=seed)
         self.most_recent_splitter = splitter_base.MostRecentSplitter(1)
 
     def _split(self, data):
