@@ -52,8 +52,7 @@ class Algorithm(BaseEstimator):
         Constructed by recreating the initialisation call.
         Example: ``Algorithm(param_1=value)``
         """
-        paramstring = ",".join(
-            (f"{k}={v}" for k, v in self.get_params().items()))
+        paramstring = ",".join((f"{k}={v}" for k, v in self.get_params().items()))
         return self.name + "(" + paramstring + ")"
 
     def __str__(self):
@@ -263,8 +262,7 @@ class ItemSimilarityMatrixAlgorithm(Algorithm):
 
         missing = self.similarity_matrix_.shape[0] - len(items_with_score)
         if missing > 0:
-            warnings.warn(
-                f"{self.name} missing similar items for {missing} items.")
+            warnings.warn(f"{self.name} missing similar items for {missing} items.")
 
 
 class TopKItemSimilarityMatrixAlgorithm(ItemSimilarityMatrixAlgorithm):
@@ -346,8 +344,7 @@ class FactorizationAlgorithm(Algorithm):
         :return: matrix with scores for each nonzero user.
         :rtype: csr_matrix
         """
-        assert X.shape == (
-            self.user_embedding_.shape[0], self.item_embedding_.shape[1])
+        assert X.shape == (self.user_embedding_.shape[0], self.item_embedding_.shape[1])
         # Get the nonzero users, for these we will recommend.
         users = list(set(X.nonzero()[0]))
         # result is a lil matrix, makes editing rows easy
@@ -452,7 +449,8 @@ class TorchMLAlgorithm(Algorithm):
         self.min_improvement = min_improvement
 
         if seed is None:
-            # Cannot use torch.seed() because numpy requires a seed to be 2**32, whereas torch uses 2**64.
+            # Cannot use torch.seed() because numpy requires a seed to be 2**32,
+            # whereas torch uses 2**64.
             seed = np.random.get_state()[1][0]
 
         torch.manual_seed(seed)
@@ -686,7 +684,13 @@ class TorchMLAlgorithm(Algorithm):
                 # Make sure no grads are computed while evaluating
                 self.model_.eval()
                 with torch.no_grad():
+                    start_time = time.time()
                     self._evaluate(val_in, val_out)
+                    end_time = time.time()
+                    logger.info(
+                        f"evaluation at end of {epoch} took {end_time-start_time :.2f} s."
+                    )
+
         except EarlyStoppingException:
             pass
 
