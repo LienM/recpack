@@ -7,6 +7,10 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] 
+
+* Scenarios with random components, can now get a seed set, to allow exact recreation of splits.
+
 ## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30) 
 
 ### Additions

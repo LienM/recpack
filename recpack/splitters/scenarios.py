@@ -1,3 +1,5 @@
+import numpy as np
+
 from recpack.data.matrix import InteractionMatrix
 from recpack.splitters.scenario_base import Scenario
 import recpack.splitters.splitter_base as splitter_base
@@ -63,16 +65,26 @@ class StrongGeneralization(Scenario):
     """
 
     def __init__(
-        self, frac_users_train: float, frac_interactions_in: float, validation=False
+        self,
+        frac_users_train: float,
+        frac_interactions_in: float,
+        validation=False,
+        seed=None,
     ):
         super().__init__(validation=validation)
         self.frac_users_train = frac_users_train
         self.frac_interactions_in = frac_interactions_in
 
+        if seed is None:
+            # Set seed if it was not set before.
+            seed = np.random.get_state()[1][0]
+        self.seed = seed
+
         self.strong_gen = splitter_base.StrongGeneralizationSplitter(
-            frac_users_train)
+            frac_users_train, seed=self.seed
+        )
         self.interaction_split = splitter_base.FractionInteractionSplitter(
-            frac_interactions_in
+            frac_interactions_in, seed=self.seed
         )
 
     def _split(self, data: InteractionMatrix) -> None:
@@ -183,13 +195,19 @@ class WeakGeneralization(Scenario):
         frac_interactions_train: float,
         frac_interactions_validation: float = 0,
         validation=False,
+        seed=None,
     ):
-
         super().__init__(validation=validation)
+
+        if seed is None:
+            # Set seed if it was not set before.
+            seed = np.random.get_state()[1][0]
+        self.seed = seed
+
         self.frac_interactions_train = frac_interactions_train
 
         self.interaction_split = splitter_base.FractionInteractionSplitter(
-            frac_interactions_train + frac_interactions_validation
+            frac_interactions_train + frac_interactions_validation, seed=self.seed
         )
 
         assert (frac_interactions_train + frac_interactions_validation) < 1
@@ -203,7 +221,8 @@ class WeakGeneralization(Scenario):
             self.frac_interactions_validation = frac_interactions_validation
             self.validation_splitter = splitter_base.FractionInteractionSplitter(
                 frac_interactions_train
-                / (frac_interactions_train + frac_interactions_validation)
+                / (frac_interactions_train + frac_interactions_validation),
+                seed=self.seed,
             )
 
     def _split(self, data: InteractionMatrix):
@@ -213,8 +232,7 @@ class WeakGeneralization(Scenario):
         :param data: Interaction matrix to be split.
         :type data: InteractionMatrix
         """
-        train_val_data, self._test_data_out = self.interaction_split.split(
-            data)
+        train_val_data, self._test_data_out = self.interaction_split.split(data)
 
         if self.validation:
             self.train_X, self._validation_data_out = self.validation_splitter.split(
@@ -314,8 +332,7 @@ class Timed(Scenario):
                 "t_validation should be provided when requesting a validation dataset."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, delta_out, delta_in)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
 
         if self.validation:
             assert self.t_validation < self.t
@@ -443,6 +460,7 @@ class StrongGeneralizationTimed(Scenario):
         delta_out=None,
         delta_in=None,
         validation=False,
+        seed=None,
     ):
         super().__init__(validation=validation)
         self.frac_users_in = frac_users_in
@@ -450,16 +468,20 @@ class StrongGeneralizationTimed(Scenario):
         self.delta_out = delta_out
         self.delta_in = delta_in
         self.t_validation = t_validation
+        if seed is None:
+            # Set seed if it was not set before.
+            seed = np.random.get_state()[1][0]
+        self.seed = seed
         if self.validation and not self.t_validation:
             raise Exception(
                 "t_validation should be provided when using validation split."
             )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(
-            t, delta_out, delta_in)
+        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
 
         self.strong_gen = splitter_base.StrongGeneralizationSplitter(
-            frac_users_in)
+            frac_users_in, seed=self.seed
+        )
 
         if self.validation:
             assert self.t_validation < self.t
@@ -482,8 +504,7 @@ class StrongGeneralizationTimed(Scenario):
         tr_val_data, _ = self.timestamp_spl.split(tr_val_data)
 
         if self.validation:
-            train_data, validation_data = self.validation_splitter.split(
-                tr_val_data)
+            train_data, validation_data = self.validation_splitter.split(tr_val_data)
             # Split validation data into input and output on t_validation
             (
                 self._validation_data_in,
@@ -494,8 +515,7 @@ class StrongGeneralizationTimed(Scenario):
         else:
             self.train_X = tr_val_data
 
-        self._test_data_in, self._test_data_out = self.timestamp_spl.split(
-            te_data)
+        self._test_data_in, self._test_data_out = self.timestamp_spl.split(te_data)
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
@@ -674,12 +694,13 @@ class NextItemPrediction(Scenario):
         :param data: Interaction matrix to be split. Must contain timestamps.
         :type data: InteractionMatrix
         """
-        train_val_data, self._test_data_out = self.most_recent_splitter.split(
-            data)
+        train_val_data, self._test_data_out = self.most_recent_splitter.split(data)
         if self.validation:
             train_val_data, self._validation_data_out = self.most_recent_splitter.split(
-                train_val_data)
+                train_val_data
+            )
             _, self._validation_data_in = self.most_recent_splitter.split(
-                train_val_data)
+                train_val_data
+            )
         _, self._test_data_in = self.most_recent_splitter.split(train_val_data)
         self.train_X = train_val_data

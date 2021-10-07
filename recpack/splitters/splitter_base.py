@@ -103,6 +103,11 @@ class StrongGeneralizationSplitter(Splitter):
         super().__init__()
         self.in_frac = in_frac
         self.out_frac = 1 - in_frac
+
+        if seed is None:
+            # Set seed if it was not set before.
+            seed = np.random.get_state()[1][0]
+
         self.seed = seed
         self.error_margin = error_margin
 
@@ -185,14 +190,13 @@ class UserInteractionTimeSplitter(Splitter):
 
         max_ts_per_user = data.timestamps.max(level=0)
 
-        filt = (max_ts_per_user < self.t)
+        filt = max_ts_per_user < self.t
 
         in_users = max_ts_per_user[filt].index.get_level_values(0).values.tolist()
         out_users = max_ts_per_user[~filt].index.get_level_values(0).values.tolist()
 
         # in_users = []
         # out_users = []
-
 
         data_in = data.users_in(in_users)
         data_out = data.users_in(out_users)
@@ -212,9 +216,13 @@ class FractionInteractionSplitter(Splitter):
     :type seed: int, optional
     """
 
-    def __init__(self, in_frac, seed: int = 42):
+    def __init__(self, in_frac, seed: int = None):
         super().__init__()
         self.in_frac = in_frac
+
+        if seed is None:
+            # Set seed if it was not set before.
+            seed = np.random.get_state()[1][0]
 
         self.seed = seed
 
