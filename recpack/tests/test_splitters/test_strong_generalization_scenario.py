@@ -102,3 +102,36 @@ def test_strong_generalization_split_w_validation(
 
     assert val_data_out.active_users == val_data_in.active_users
     assert te_data_out.active_users == te_data_in.active_users
+
+
+@pytest.mark.parametrize(
+    "frac_users_train, frac_interactions_in", [(0.7, 0.5), (0, 0.5)]
+)
+def test_strong_generalization_split_seed(
+    data_m, frac_users_train, frac_interactions_in
+):
+
+    # First scenario uses a random seed
+    scenario_1 = scenarios.StrongGeneralization(frac_users_train, frac_interactions_in)
+    seed = scenario_1.seed
+    scenario_1.split(data_m)
+
+    # second scenario uses same seed as the previous one
+    scenario_2 = scenarios.StrongGeneralization(
+        frac_users_train, frac_interactions_in, seed=seed
+    )
+    scenario_2.split(data_m)
+
+    assert (
+        scenario_1.training_data.num_interactions
+        == scenario_2.training_data.num_interactions
+    )
+
+    assert (
+        scenario_1.test_data_in.num_interactions
+        == scenario_2.test_data_in.num_interactions
+    )
+    assert (
+        scenario_1.test_data_out.num_interactions
+        == scenario_2.test_data_out.num_interactions
+    )

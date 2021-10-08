@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import numpy as np
 from typing import Tuple, Union
 from warnings import warn
 
@@ -17,12 +18,21 @@ class Scenario(ABC):
 
     :param validation: Create a validation dataset when True, else split into training and test datasets.
     :type validation: boolean, optional
+    :param seed: Seed for randomisation parts of the scenario.
+        Defaults to None, so random seed will be generated.
+    :type seed: int, optional
     """
 
-    def __init__(self, validation=False):
+    def __init__(self, validation=False, seed=None):
+        if seed is None:
+            # Set seed if it was not set before.
+            seed = np.random.get_state()[1][0]
+        self.seed = seed
         self.validation = validation
         if validation:
-            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8)
+            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(
+                0.8, seed=self.seed
+            )
 
     @abstractmethod
     def _split(self, data_m: InteractionMatrix) -> None:

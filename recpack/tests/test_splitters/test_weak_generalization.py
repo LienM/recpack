@@ -78,3 +78,43 @@ def test_weak_generalization_split_w_validation(
     assert val_data_in.active_users == val_data_out.active_users
     # tr = val_data_in
     assert val_data_in.values.nnz == tr.values.nnz
+
+
+@pytest.mark.parametrize(
+    "frac_interactions_train, frac_interactions_validation", [(0.5, 0.25), (0.25, 0.25)]
+)
+def test_strong_generalization_timed_split_seed(
+    data_m, frac_interactions_train, frac_interactions_validation
+):
+
+    # First scenario uses a random seed
+    scenario_1 = scenarios.WeakGeneralization(
+        frac_interactions_train,
+        frac_interactions_validation=frac_interactions_validation,
+        validation=True,
+    )
+    seed = scenario_1.seed
+    scenario_1.split(data_m)
+
+    # second scenario uses same seed as the previous one
+    scenario_2 = scenarios.WeakGeneralization(
+        frac_interactions_train,
+        frac_interactions_validation=frac_interactions_validation,
+        validation=True,
+        seed=seed,
+    )
+    scenario_2.split(data_m)
+
+    assert (
+        scenario_1.training_data.num_interactions
+        == scenario_2.training_data.num_interactions
+    )
+
+    assert (
+        scenario_1.test_data_in.num_interactions
+        == scenario_2.test_data_in.num_interactions
+    )
+    assert (
+        scenario_1.test_data_out.num_interactions
+        == scenario_2.test_data_out.num_interactions
+    )
