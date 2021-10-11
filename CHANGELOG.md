@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __preprocessing.preprocessors__:
     * Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor. You should use `InteractionMatrix.USER_IX` and `InteractionMatrix.ITEM_IX` instead.
 
+* __util__:
+    * `get_top_K_values` and `get_top_K_ranks` parameter `k` changed to `K` so it is in line with rest of Recpack.
+
 ## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3) 
 * Added Gru4Rec algorithms 
     * GRU4RecNegSampling
