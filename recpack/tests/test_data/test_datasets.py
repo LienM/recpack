@@ -167,3 +167,46 @@ def test_recsys_challenge_2015():
     # We can't just download this dataset, since it requires Kaggle access
     with pytest.raises(NotImplementedError):
         d._download_dataset()
+
+
+def test_dummy_dataset():
+    d = datasets.DummyDataset(seed=42)
+
+    # This should do nothing, also not raise an error
+    d._download_dataset()
+
+    df = d.load_dataframe()
+    df2 = d.load_dataframe()
+
+    # Loading twice gives the same reproducible results
+    assert (df[d.USER_IX] == df2[d.USER_IX]).all()
+    assert (df[d.ITEM_IX] == df2[d.ITEM_IX]).all()
+    assert (df[d.TIMESTAMP_IX] == df2[d.TIMESTAMP_IX]).all()
+
+    assert df.shape[0] == d.NUM_INTERACTIONS
+    items_kept = (
+        (
+            df.drop_duplicates([d.USER_IX, d.ITEM_IX])
+            .groupby(d.ITEM_IX)[d.USER_IX]
+            .count()
+            >= 2
+        )
+        .reset_index()
+        .rename(columns={d.USER_IX: "enough_interactions"})
+    )
+    df_after_filter_1 = df.merge(
+        items_kept[items_kept.enough_interactions], on=d.ITEM_IX
+    )
+
+    users_removed = (
+        df_after_filter_1.drop_duplicates([d.USER_IX, d.ITEM_IX])
+        .groupby(d.USER_IX)[d.ITEM_IX]
+        .count()
+        < 2
+    ).sum()
+
+    im = d.load_interaction_matrix()
+    assert im.shape == (
+        df[d.USER_IX].nunique() - users_removed,
+        items_kept.enough_interactions.sum(),
+    )
