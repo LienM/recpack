@@ -2,8 +2,6 @@ import enum
 
 import numpy as np
 
-import numba
-
 from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
 from recpack.data.matrix import Matrix, to_csr_matrix
 from scipy.sparse import csr_matrix
@@ -54,11 +52,9 @@ class DAMIBCover(ItemSimilarityMatrixAlgorithm):
         return csr_matrix(predictions)
 
 
-# @numba.njit(parallel=True)
 def get_predictions(X, M, p, agg):
     predictions = np.zeros(X.shape, dtype=np.float32)
     # For every user
-    # for u in numba.prange(X.shape[0]):
     for u in set(X.nonzero()[0]):
         # Items this user has interacted with [0, 1, 0] -> indices = 2
         indices = X[u].toarray()[0]
@@ -69,7 +65,6 @@ def get_predictions(X, M, p, agg):
     return predictions
 
 
-@numba.njit()
 def get_prediction_u(similarities, p, agg):
     predictions = np.zeros((similarities.shape[1]), dtype=np.float32)
     filtered = filter_best_subsets(similarities, p)
@@ -93,7 +88,6 @@ def get_prediction_u(similarities, p, agg):
     return predictions
 
 
-@numba.njit()
 def filter_best_subsets(similarities, p):
     sort_indices = np.empty(similarities.shape, dtype=np.int32)
     for j in range(sort_indices.shape[1]):
