@@ -220,11 +220,11 @@ class DummyDataset(Dataset):
     """Small randomly generated dummy dataset that allows testing of pipelines
     and other components without needing to load a full scale dataset.
 
-    :param path: The path to the data directory.
+    :param path: The path to the data directory. UNUSED because dataset is generated and not read from file.
         Defaults to `data`
     :type path: Optional[str]
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
-        If the dataset does not have a default filename, a ValueError will be raised.
+        UNUSED because dataset is generated and not read from file.
     :type filename: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
