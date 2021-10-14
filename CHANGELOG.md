@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Scenarios with random components, can now get a seed set, to allow exact recreation of splits.
 * Added DummyDataset for easy testing purposes.
-
+* Removed dependency on numba
+    * Removed numba decorators in shared account implementation. 
+      It's potentially slower now, which we don't consider a problem since it is in the experimental module.
 ## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30) 
 
 ### Additions
