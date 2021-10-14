@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.1] 
 
 * Scenarios with random components, can now get a seed set, to allow exact recreation of splits.
-
+* `optimisation_results` property added to Pipeline to allow users to inspect the results for the different hyperparameters that were tried.
 ## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30) 
 
 ### Additions
