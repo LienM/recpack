@@ -216,6 +216,101 @@ class Dataset:
         return self.preprocessor.process(df)
 
 
+class DummyDataset(Dataset):
+    """Small randomly generated dummy dataset that allows testing of pipelines
+    and other components without needing to load a full scale dataset.
+
+    :param path: The path to the data directory. UNUSED because dataset is generated and not read from file.
+        Defaults to `data`
+    :type path: Optional[str]
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
+        UNUSED because dataset is generated and not read from file.
+    :type filename: Optional[str]
+    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :type preprocess_default: bool, optional
+    :param seed: Seed for the random data generation. Defaults to None.
+    :type seed: int, optional
+    """
+
+    USER_IX = "user_id"
+    """Name of the column in the DataFrame that contains user identifiers."""
+    ITEM_IX = "item_id"
+    """Name of the column in the DataFrame that contains item identifiers."""
+    TIMESTAMP_IX = "timestamp"
+    """Name of the column in the DataFrame that contains time of interaction in seconds since epoch."""
+
+    DEFAULT_FILENAME = "dummy_input.csv"
+
+    NUM_USERS = 100
+    NUM_ITEMS = 20
+    NUM_INTERACTIONS = 500
+
+    MIN_T = 0
+    MAX_T = 500
+
+    def __init__(
+        self,
+        path: str = "data",
+        filename: str = None,
+        preprocess_default=True,
+        seed=None,
+    ):
+        super().__init__(path, filename, preprocess_default)
+
+        self.seed = seed
+        if self.seed is None:
+            self.seed = seed = np.random.get_state()[1][0]
+
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the Dummy dataset
+
+        Filters users and items that do not have enough interactions.
+        At least 2 users per item and 2 interactions per user.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinUsersPerItem(2, self.ITEM_IX, self.USER_IX),
+            MinItemsPerUser(2, self.ITEM_IX, self.USER_IX),
+        ]
+
+    def _download_dataset(self):
+        # There is no downloading necessary.
+        pass
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return as a Pandas DataFrame.
+
+        Downloads the data file if it is not yet present.
+        The output will contain a dataframe with a user_id and item_id column.
+        Each interaction is stored in a separate row.
+
+        :return: The interactions as a dataframe, with a row for each interaction.
+        :rtype: pandas.DataFrame
+        """
+        np.random.seed(self.seed)
+
+        input_dict = {
+            self.USER_IX: [
+                np.random.randint(0, self.NUM_USERS)
+                for _ in range(0, self.NUM_INTERACTIONS)
+            ],
+            self.ITEM_IX: [
+                np.random.randint(0, self.NUM_ITEMS)
+                for _ in range(0, self.NUM_INTERACTIONS)
+            ],
+            self.TIMESTAMP_IX: [
+                np.random.randint(self.MIN_T, self.MAX_T)
+                for _ in range(0, self.NUM_INTERACTIONS)
+            ],
+        }
+
+        df = pd.DataFrame.from_dict(input_dict)
+        return df
+
+
 class ThirtyMusicSessions(Dataset):
     # TODO Write documentation
 
