@@ -74,8 +74,7 @@ class MetricAccumulator:
         return self.acc[key]
 
     def add(self, metric, algorithm_name, metric_name):
-        logger.debug(
-            f"Metric {metric_name} created for algorithm {algorithm_name}")
+        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
         self.acc[algorithm_name][metric_name] = metric
 
     @property
@@ -151,6 +150,9 @@ class Pipeline(object):
         self.optimisation_metric = optimisation_metric
 
         self._metric_acc = MetricAccumulator()
+        # All dataframes from optimisation are accumulated in this list
+        # To give it back to the user.
+        self._optimisation_results = []
 
     def _optimise(self, algorithm, metric_entry: OptimisationMetricEntry):
         # TODO: investigate using advanced optimisers
@@ -162,8 +164,7 @@ class Pipeline(object):
         # Construct grid:
         optimisation_params = ParameterGrid(algorithm.grid)
         for p in optimisation_params:
-            algo = ALGORITHM_REGISTRY.get(
-                algorithm.name)(**p, **algorithm.params)
+            algo = ALGORITHM_REGISTRY.get(algorithm.name)(**p, **algorithm.params)
 
             # validation data in case of TorchML!
             if isinstance(algo, TorchMLAlgorithm):
@@ -180,14 +181,16 @@ class Pipeline(object):
                 {
                     "identifier": algo.identifier,
                     "params": {**p, **algorithm.params},
-                    "value": metric.value,
+                    metric_entry.name: metric.value,
                 }
             )
 
         # Sort by metric value
         optimal_params = sorted(
-            results, key=lambda x: x["value"], reverse=~metric_entry.minimise
+            results, key=lambda x: x[metric_entry.name], reverse=~metric_entry.minimise
         )[0]["params"]
+
+        self._optimisation_results.extend(results)
         return optimal_params
 
     def run(self):
@@ -195,8 +198,7 @@ class Pipeline(object):
 
         for algorithm in tqdm(self.algorithms):
             # optimisation:
-            optimal_params = self._optimise(
-                algorithm, self.optimisation_metric)
+            optimal_params = self._optimise(algorithm, self.optimisation_metric)
 
             # Train again.
             algo = ALGORITHM_REGISTRY.get(algorithm.name)(**optimal_params)
@@ -253,6 +255,13 @@ class Pipeline(object):
         """
         return self._metric_acc.num_users
 
+    @property
+    def optimisation_results(self):
+        """The results for each of the evaluated algorithm,
+        parameter combinations tried during optimisation
+        """
+        return pd.DataFrame.from_records(self._optimisation_results)
+
 
 class PipelineBuilder(object):
     """Builder to facilitate construction of pipelines.
@@ -296,8 +305,7 @@ class PipelineBuilder(object):
             arg = arg.__name__
 
         elif type(arg) != str:
-            raise TypeError(
-                f"Argument should be string or type, not {type(arg)}!")
+            raise TypeError(f"Argument should be string or type, not {type(arg)}!")
 
         return arg
 
@@ -422,12 +430,10 @@ class PipelineBuilder(object):
 
     def _check_readiness(self):
         if len(self.metrics) == 0:
-            raise RuntimeError(
-                "No metrics specified, can't construct pipeline")
+            raise RuntimeError("No metrics specified, can't construct pipeline")
 
         if len(self.algorithms) == 0:
-            raise RuntimeError(
-                "No algorithms specified, can't construct pipeline")
+            raise RuntimeError("No algorithms specified, can't construct pipeline")
 
         if not hasattr(self, "optimisation_metric") and np.any(
             [len(algo.grid) > 0 for algo in self.algorithms]
@@ -439,12 +445,10 @@ class PipelineBuilder(object):
 
         # Check availability of data
         if not hasattr(self, "train_data"):
-            raise RuntimeError(
-                "No training data available, can't construct pipeline.")
+            raise RuntimeError("No training data available, can't construct pipeline.")
 
         if not hasattr(self, "test_data"):
-            raise RuntimeError(
-                "No test data available, can't construct pipeline.")
+            raise RuntimeError("No test data available, can't construct pipeline.")
 
         # If there are parameters to optimise,
         # there needs to be validation data available.
@@ -452,8 +456,7 @@ class PipelineBuilder(object):
             any([len(algo.grid) > 0 for algo in self.algorithms])
             or any(
                 [
-                    issubclass(ALGORITHM_REGISTRY.get(
-                        algo.name), TorchMLAlgorithm)
+                    issubclass(ALGORITHM_REGISTRY.get(algo.name), TorchMLAlgorithm)
                     for algo in self.algorithms
                 ]
             )
@@ -472,8 +475,7 @@ class PipelineBuilder(object):
         if hasattr(self, "validation_data") and any(
             [d.shape != shape for d in self.validation_data]
         ):
-            raise RuntimeError(
-                "Shape mismatch between validation and training data")
+            raise RuntimeError("Shape mismatch between validation and training data")
 
     def build(self) -> Pipeline:
         """Construct a pipeline object, given the set values.
@@ -493,8 +495,7 @@ class PipelineBuilder(object):
             self.train_data,
             self.validation_data if hasattr(self, "validation_data") else None,
             self.test_data,
-            self.optimisation_metric if hasattr(
-                self, "optimisation_metric") else None,
+            self.optimisation_metric if hasattr(self, "optimisation_metric") else None,
         )
 
     def _save_data(self):
@@ -563,7 +564,6 @@ class PipelineBuilder(object):
 
         if d["optimisation_metric"]:
             opt = d["optimisation_metric"]
-            self.set_optimisation_metric(
-                opt["name"], opt["K"], opt["minimise"])
+            self.set_optimisation_metric(opt["name"], opt["K"], opt["minimise"])
 
         self._load_data(d)
