@@ -257,8 +257,8 @@ class Pipeline(object):
 
     @property
     def optimisation_results(self):
-        """The results for each of the evaluated algorithm,
-        parameter combinations tried during optimisation
+        """Contains a result for each of the hyperparameter combinations tried out, 
+        for each of the algorithms evaluated.
         """
         return pd.DataFrame.from_records(self._optimisation_results)
 
