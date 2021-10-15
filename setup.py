@@ -8,7 +8,6 @@ setup(
     packages=find_packages(),
     # tests_require=["pytest"],
     install_requires=[
-        "numba>=0.53.1, ==0.53.*",
         "numpy>=1.20.2, ==1.*",
         "scipy>=1.6.0, ==1.*",
         "scikit-learn>=0.24.1, ==0.24.*",

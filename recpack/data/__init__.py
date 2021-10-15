@@ -41,6 +41,7 @@ Recpack provides a selection of datasets ready for use.
     :toctree: generated/
 
     datasets.Dataset
+    datasets.DummyDataset
     datasets.CiteULike
     datasets.MovieLens25M
     datasets.RecsysChallenge2015
