@@ -51,6 +51,23 @@ def pipeline_builder(mat):
     return pb
 
 
+@pytest.fixture()
+def pipeline_builder_optimisation(mat):
+    name = "test_builder"
+
+    pb = PipelineBuilder(name)
+    pb.add_metric("CalibratedRecallK", 2)
+    pb.add_metric("CalibratedRecallK", 3)
+    pb.add_algorithm("ItemKNN", grid={"K": [1, 2, 3]})
+    pb.add_algorithm("EASE", grid={"l2": [2, 10]})
+    pb.set_train_data(mat)
+    pb.set_optimisation_metric("CalibratedRecallK", 2)
+    pb.set_test_data((mat, mat))
+    pb.set_validation_data((mat, mat))
+
+    return pb
+
+
 def test_pipeline_builder(mat):
     pb = PipelineBuilder()
     assert pb.base_path == os.getcwd()
@@ -332,3 +349,18 @@ def test_pipeline_save_metrics(pipeline_builder):
         mocker.assert_called_once_with(
             f"{pipeline_builder.results_directory}/results.json"
         )
+
+
+def test_pipeline_optimisation_results(pipeline_builder_optimisation):
+    pipeline = pipeline_builder_optimisation.build()
+
+    pipeline.run()
+
+    metrics = pipeline.get_metrics()
+    assert len(metrics) == len(pipeline.algorithms)
+
+    assert len(metrics[list(metrics.keys())[0]]) == len(pipeline.metrics)
+
+    # 3 parameters tried for knn and 2 for ease.
+    print(pipeline.optimisation_results)
+    assert pipeline.optimisation_results.shape[0] == 5
