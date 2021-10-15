@@ -515,7 +515,7 @@ class RecsysChallenge2015(Dataset):
             names=[self.USER_IX, self.TIMESTAMP_IX, self.ITEM_IX],
             dtype={
                 self.USER_IX: np.int64,
-                self.TIMESTAMP_IX: np.str,
+                self.TIMESTAMP_IX: str,
                 self.ITEM_IX: np.int64,
             },
             parse_dates=[self.TIMESTAMP_IX],
@@ -526,5 +526,123 @@ class RecsysChallenge2015(Dataset):
         df[self.TIMESTAMP_IX] = (
             df[self.TIMESTAMP_IX].astype(int) / 1e9
         )  # pandas datetime -> seconds from epoch
+
+        return df
+
+
+class CosmeticsShopDataset(Dataset):
+    """Handles data from the eCommerce Events History in Cosmetics Shop dataset on Kaggle.
+
+    All information and downloads can be found at
+    https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop.
+    Because downloading the data requires a Kaggle account we can't download it here,
+    you should download the data manually and provide the path to one of the monthly
+    files, or a combined file with all events.
+    If a monthly file is given, then only those events will be used. In order to use
+    the full dataset you need to combine the files.
+
+    Default processing makes sure that:
+
+    - Each remaining  item has been interacted with by at least 50 users.
+    - Each user has interacted with at least 3 items
+
+    :param path: The path to the data directory.
+        Defaults to `data`
+    :type path: Optional[str]
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: Optional[str]
+    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :type preprocess_default: bool, optional
+    :param additional_columns_to_load: Extra columns to load during dataframe creation
+    :type additional_columns_to_load: List[str], optional
+    :param event_types: The dataset contains view, cart, remove_from_cart, purchase events. You can select a subset of them.
+        If None, selects all event_types. Defaults to None
+    :type event_types: List[str], optional
+    """
+
+    USER_IX = "user_id"
+    """Name of the column in the DataFrame that contains user identifiers."""
+
+    ITEM_IX = "product_id"
+    """Name of the column in the DataFrame that contains item identifiers."""
+
+    TIMESTAMP_IX = "event_time"
+    """Name of the column in the DataFrame that contains timestamp."""
+
+    EVENT_TYPE_IX = "event_type"
+    """Name of the column in the DataFrame that contains the event_types"""
+
+    DEFAULT_FILENAME = "2019-Dec.csv"
+    """Default filename that will be used if it is not specified by the user."""
+
+    def __init__(
+        self,
+        path: str = "data",
+        filename: str = None,
+        preprocess_default=True,
+        additional_columns_to_load: List[str] = ["category_id"],
+        event_types: List[str] = None,
+    ):
+        super().__init__(path, filename, preprocess_default)
+        self.additional_columns_to_load = additional_columns_to_load
+        self.event_types = event_types
+
+    def _download_dataset(self):
+        """Downloading this dataset is not supported."""
+        raise NotImplementedError(
+            "Recsys Challenge dataset should be downloaded manually, "
+            "you can get it at: https://www.kaggle.com/chadgostopp/recsys-challenge-2015."
+        )
+
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the RecsysChallenge 2015 dataset
+
+        Filters items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinUsersPerItem(50, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+            MinItemsPerUser(3, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+        ]
+
+    @property
+    def _columns(self) -> List[str]:
+        columns = [self.USER_IX, self.ITEM_IX, self.TIMESTAMP_IX, self.EVENT_TYPE_IX]
+        if self.additional_columns_to_load:
+            columns = columns + self.additional_columns_to_load
+
+        return columns
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return a DataFrame.
+
+        The output will contain a DataFrame.
+        Each interaction is stored in a separate row.
+
+        :return: The interactions as a DataFrame, with a row for each interaction.
+        :rtype: pd.DataFrame
+        """
+
+        self.fetch_dataset()
+
+        df = pd.read_csv(
+            self.file_path,
+            parse_dates=[self.TIMESTAMP_IX],
+        )
+
+        # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
+        df[self.TIMESTAMP_IX] = (
+            df[self.TIMESTAMP_IX].astype(int) / 1e9
+        )  # pandas datetime -> seconds from epoch
+
+        # Select only the specified event_types
+        if self.event_types:
+            df = df[df[self.EVENT_TYPE_IX].isin(self.event_types)].copy()
+
+        df = df[self._columns].copy()
 
         return df

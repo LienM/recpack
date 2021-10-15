@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 
 
 from recpack.data import datasets
-from recpack.preprocessing.filters import NMostPopular
+from recpack.preprocessing.filters import MinUsersPerItem, NMostPopular
 
 
 @pytest.fixture()
@@ -163,6 +163,62 @@ def test_recsys_challenge_2015():
     data = d.load_interaction_matrix()
 
     assert data.shape == (54, 291)
+
+    # We can't just download this dataset, since it requires Kaggle access
+    with pytest.raises(NotImplementedError):
+        d._download_dataset()
+
+
+@pytest.mark.parametrize(
+    "additional_columns_to_load, event_types, num_events, final_shape",
+    [
+        ([], None, 100, (32, 72)),
+        (["category_id", "category_code"], None, 100, (32, 72)),
+        #
+        ([], ["view"], 47, (28, 42)),
+        ([], ["cart"], 26, (7, 21)),
+        ([], ["purchase"], 1, (1, 1)),
+        ([], ["remove_from_cart"], 26, (4, 16)),
+        #
+        ([], ["view", "cart"], 47 + 26, (30, 60)),
+        ([], ["view", "remove_from_cart"], 47 + 26, (30, 54)),
+        ([], ["view", "purchase"], 47 + 1, (28, 43)),
+        ([], ["cart", "purchase"], 26 + 1, (7, 21)),
+        ([], ["cart", "remove_from_cart"], 26 + 26, (10, 37)),
+        ([], ["remove_from_cart", "purchase"], 26 + 1, (4, 17)),
+        #
+        ([], ["view", "cart", "remove_from_cart"], 47 + 26 + 26, (32, 72)),
+        ([], ["view", "cart", "purchase"], 47 + 26 + 1, (30, 60)),
+        ([], ["view", "remove_from_cart", "purchase"], 47 + 26 + 1, (30, 55)),
+        ([], ["cart", "remove_from_cart", "purchase"], 26 + 26 + 1, (10, 37)),
+        #
+        ([], ["view", "cart", "remove_from_cart", "purchase"], 100, (32, 72)),
+    ],
+)
+def test_cosmeticsshop(
+    additional_columns_to_load,
+    event_types,
+    num_events,
+    final_shape,
+):
+    # To get sample we used head -100 2019-Dec.csv
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    d = datasets.CosmeticsShopDataset(
+        path=path,
+        filename="cosmeticsshop-sample.csv",
+        preprocess_default=False,
+        additional_columns_to_load=additional_columns_to_load,
+        event_types=event_types,
+    )
+
+    df = d.load_dataframe()
+    assert (df.columns == d._columns).all()
+    assert df.shape == (num_events, len(d._columns))
+
+    # assert
+    data = d.load_interaction_matrix()
+
+    assert data.shape == final_shape
 
     # We can't just download this dataset, since it requires Kaggle access
     with pytest.raises(NotImplementedError):
