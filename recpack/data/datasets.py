@@ -676,8 +676,8 @@ class CosmeticsShopDataset(Dataset):
         path: str = "data",
         filename: str = None,
         preprocess_default=True,
-        additional_columns_to_load: List[str] = ["category_id"],
-        event_types: List[str] = None,
+        additional_columns_to_load: List[str] = [],
+        event_types: List[str] = ["view"],
     ):
         super().__init__(path, filename, preprocess_default)
         self.additional_columns_to_load = additional_columns_to_load

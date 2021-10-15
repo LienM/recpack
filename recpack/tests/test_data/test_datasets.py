@@ -172,8 +172,8 @@ def test_recsys_challenge_2015():
 @pytest.mark.parametrize(
     "additional_columns_to_load, event_types, num_events, final_shape",
     [
-        ([], None, 100, (32, 72)),
-        (["category_id", "category_code"], None, 100, (32, 72)),
+        ([], None, 47, (28, 42)),
+        (["category_id", "category_code"], None, 47, (28, 42)),
         #
         ([], ["view"], 47, (28, 42)),
         ([], ["cart"], 26, (7, 21)),

@@ -7,6 +7,12 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2]
+
+### Additions
+* __data.datasets__
+    * Added CosmeticsShopDataset for https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
+
 ## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15) 
 ### Dependency Update 
 * Removed dependency on numba
@@ -20,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * `optimisation_results` property added to Pipeline to allow users to inspect the results for the different hyperparameters that were tried.
 * __data.datasets__
     * Added DummyDataset for easy testing purposes.
-    * Added CosmeticsShopDataset for https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
 
 ## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30) 
 
