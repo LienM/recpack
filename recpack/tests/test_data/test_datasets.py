@@ -203,13 +203,21 @@ def test_cosmeticsshop(
 ):
     # To get sample we used head -100 2019-Dec.csv
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
-    d = datasets.CosmeticsShopDataset(
-        path=path,
-        filename="cosmeticsshop-sample.csv",
-        preprocess_default=False,
-        additional_columns_to_load=additional_columns_to_load,
-        event_types=event_types,
-    )
+    if event_types is None:
+        d = datasets.CosmeticsShopDataset(
+            path=path,
+            filename="cosmeticsshop-sample.csv",
+            preprocess_default=False,
+            additional_columns_to_load=additional_columns_to_load,
+        )
+    else:
+        d = datasets.CosmeticsShopDataset(
+            path=path,
+            filename="cosmeticsshop-sample.csv",
+            preprocess_default=False,
+            additional_columns_to_load=additional_columns_to_load,
+            event_types=event_types,
+        )
 
     df = d.load_dataframe()
     assert (df.columns == d._columns).all()
