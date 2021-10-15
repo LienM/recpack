@@ -7,17 +7,19 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.1] 
-
-### Dependency Update
+## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15) 
+### Dependency Update 
 * Removed dependency on numba
     * Removed numba decorators in shared account implementation. 
       It's potentially slower now, which we don't consider a problem since it is in the experimental module.
 
 ### Additions
-* You can set the seed for scenarios with random components. This allows exact recreation of splits for reproducability.
-* Added DummyDataset for easy testing purposes.
-* `optimisation_results` property added to Pipeline to allow users to inspect the results for the different hyperparameters that were tried.
+* __splitters.scenarios__
+    * You can set the seed for scenarios with random components. This allows exact recreation of splits for reproducability.
+* __pipelines.pipeline__
+    * `optimisation_results` property added to Pipeline to allow users to inspect the results for the different hyperparameters that were tried.
+* __data.datasets__
+    * Added DummyDataset for easy testing purposes.
 
 ## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30) 
 
