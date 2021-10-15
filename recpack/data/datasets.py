@@ -638,7 +638,7 @@ class CosmeticsShopDataset(Dataset):
 
     Default processing makes sure that:
 
-    - Each remaining  item has been interacted with by at least 50 users.
+    - Each remaining item has been interacted with by at least 50 users.
     - Each user has interacted with at least 3 items
 
     :param path: The path to the data directory.
@@ -686,13 +686,13 @@ class CosmeticsShopDataset(Dataset):
     def _download_dataset(self):
         """Downloading this dataset is not supported."""
         raise NotImplementedError(
-            "Recsys Challenge dataset should be downloaded manually, "
-            "you can get it at: https://www.kaggle.com/chadgostopp/recsys-challenge-2015."
+            "CosmeticsShop dataset should be downloaded manually, "
+            "you can get it at: https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop."
         )
 
     @property
     def _default_filters(self) -> List[Filter]:
-        """The default filters for the RecsysChallenge 2015 dataset
+        """The default filters for the CosmeticsShop dataset
 
         Filters items that do not have enough interactions.
 
