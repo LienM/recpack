@@ -230,6 +230,16 @@ class DummyDataset(Dataset):
     :type preprocess_default: bool, optional
     :param seed: Seed for the random data generation. Defaults to None.
     :type seed: int, optional
+    :param num_users: The amount of users to use when generating data, defaults to 100
+    :type num_users: int, optional
+    :param num_items: The number of items to use when generating data, defaults to 20
+    :type num_items: int, optional
+    :param num_interactions: The number of interactions to generate, defaults to 500
+    :type num_interactions: int, optional
+    :param min_t: The minimum timestamp when generating data, defaults to 0
+    :type min_t: int, optional
+    :param max_t: The maximum timestamp when generating data, defaults to 500
+    :type max_t: int, optional
     """
 
     USER_IX = "user_id"
@@ -241,25 +251,29 @@ class DummyDataset(Dataset):
 
     DEFAULT_FILENAME = "dummy_input.csv"
 
-    NUM_USERS = 100
-    NUM_ITEMS = 20
-    NUM_INTERACTIONS = 500
-
-    MIN_T = 0
-    MAX_T = 500
-
     def __init__(
         self,
         path: str = "data",
         filename: str = None,
         preprocess_default=True,
         seed=None,
+        num_users=100,
+        num_items=20,
+        num_interactions=500,
+        min_t=0,
+        max_t=500,
     ):
         super().__init__(path, filename, preprocess_default)
 
         self.seed = seed
         if self.seed is None:
             self.seed = seed = np.random.get_state()[1][0]
+
+        self.num_users = num_users
+        self.num_items = num_users
+        self.num_interactions = num_interactions
+        self.min_t = min_t
+        self.max_t = max_t
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -294,16 +308,16 @@ class DummyDataset(Dataset):
 
         input_dict = {
             self.USER_IX: [
-                np.random.randint(0, self.NUM_USERS)
-                for _ in range(0, self.NUM_INTERACTIONS)
+                np.random.randint(0, self.num_users)
+                for _ in range(0, self.num_interactions)
             ],
             self.ITEM_IX: [
-                np.random.randint(0, self.NUM_ITEMS)
-                for _ in range(0, self.NUM_INTERACTIONS)
+                np.random.randint(0, self.num_items)
+                for _ in range(0, self.num_interactions)
             ],
             self.TIMESTAMP_IX: [
-                np.random.randint(self.MIN_T, self.MAX_T)
-                for _ in range(0, self.NUM_INTERACTIONS)
+                np.random.randint(self.min_t, self.max_t)
+                for _ in range(0, self.num_interactions)
             ],
         }
 
@@ -651,8 +665,9 @@ class CosmeticsShopDataset(Dataset):
     :type preprocess_default: bool, optional
     :param additional_columns_to_load: Extra columns to load during dataframe creation
     :type additional_columns_to_load: List[str], optional
-    :param event_types: The dataset contains view, cart, remove_from_cart, purchase events. You can select a subset of them.
-        If None, selects all event_types. Defaults to None
+    :param event_types: The dataset contains view, cart, remove_from_cart, purchase events.
+        You can select a subset of them.
+        Defaults to ["view"]
     :type event_types: List[str], optional
     """
 
@@ -731,7 +746,7 @@ class CosmeticsShopDataset(Dataset):
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
         df[self.TIMESTAMP_IX] = (
-            df[self.TIMESTAMP_IX].astype(int) / 1e9
+            df[self.TIMESTAMP_IX].view(int) / 1e9
         )  # pandas datetime -> seconds from epoch
 
         # Select only the specified event_types
