@@ -839,7 +839,7 @@ class RetailRocketDataset(Dataset):
 
     @property
     def _default_filters(self) -> List[Filter]:
-        """The default filters for the CosmeticsShop dataset
+        """The default filters for the RetailRocket dataset
 
         Filters items that do not have enough interactions.
 
