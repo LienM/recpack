@@ -45,6 +45,9 @@ Recpack provides a selection of datasets ready for use.
     datasets.CiteULike
     datasets.MovieLens25M
     datasets.RecsysChallenge2015
+    datasets.ThirtyMusicSessions
+    datasets.CosmeticsShopDataset
+    datasets.RetailRocketDataset
 
 Example
 ~~~~~~~~~
