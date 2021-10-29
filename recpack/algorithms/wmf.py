@@ -2,8 +2,6 @@ import logging
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from scipy.sparse.lil import lil_matrix
-from torch._C import device
 from tqdm.auto import tqdm
 
 import torch
@@ -74,6 +72,9 @@ class WeightedMatrixFactorization(Algorithm):
     :param iterations: Number of iterations to execute the ALS calculations.
         Defaults to 20
     :type iterations: int, optional
+    :param batch_size: Number of users/items to process in every mini batch.
+        Defaults to 100
+    :type batch_size: int, optional
     """
 
     CONFIDENCE_SCHEMES = ["minimal", "log-scaling"]
@@ -87,6 +88,7 @@ class WeightedMatrixFactorization(Algorithm):
         num_components: int = 100,
         regularization: float = 0.01,
         iterations: int = 20,
+        batch_size: int = 100
     ):
         """
         Initialize the weighted matrix factorization algorithm
@@ -108,6 +110,9 @@ class WeightedMatrixFactorization(Algorithm):
 
         cuda = torch.cuda.is_available()
         self.device = torch.device("cuda" if cuda else "cpu")
+        self.batch_size = batch_size
+
+        self.loss = torch.nn.MSELoss()
 
     def _fit(self, X: csr_matrix) -> None:
         """Calculate the user- and item-factors which will approximate X
@@ -161,7 +166,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         return result
 
-    def _alternating_least_squares(self, X: csr_matrix) -> (np.ndarray, np.ndarray):
+    def _alternating_least_squares(self, X: csr_matrix) -> (torch.Tensor, torch.Tensor):
         """
         The ALS algorithm will execute the least squares calculation for x number of iterations.
         According factorizing matrix C into two factors Users and Items such that R \approx U^T I.
@@ -186,28 +191,20 @@ class WeightedMatrixFactorization(Algorithm):
         item_factors = torch.rand(
             (self.num_items, self.num_components), dtype=torch.float32, device=self.device) * 0.01
 
-        for i in tqdm(range(self.iterations * 2)):
+        for i in tqdm(range(self.iterations)):
+            # User iteration
+            user_factors = self._least_squares(
+                C, item_factors
+            )
 
-            if i % 2 == 0:
-                # User iteration
-                user_factors = self._least_squares(
-                    C, item_factors
-                )
-            else:
-                # Item iteration
-                item_factors = self._least_squares(
-                    C.T, user_factors
-                )
+            # Item iteration
+            item_factors = self._least_squares(
+                C.T, user_factors
+            )
 
-            # old_uf = np.array(user_factors, copy=True)
-            # old_if = np.array(item_factors, copy=True)
-
-            # norm_uf = np.linalg.norm(old_uf - user_factors, "fro")
-            # norm_if = np.linalg.norm(old_if - item_factors, "fro")
-            # logger.debug(
-            #     f"{self.name} - Iteration {i} - L2-norm of diff user_factors: {norm_uf} - L2-norm of diff "
-            #     f"item_factors: {norm_if}"
-            # )
+            X_pred = user_factors @ item_factors.T
+            loss = self.loss(X_pred, naive_sparse2tensor(X))
+            logger.debug(f"Current MSE Loss: {loss.item()}")
 
         return user_factors, item_factors
 
@@ -239,8 +236,8 @@ class WeightedMatrixFactorization(Algorithm):
 
         factors = torch.zeros(Y.shape)
 
-        for id_batch in get_batches(get_users(C), batch_size=100):
-            # Create batches of 100 at the same time
+        for id_batch in get_batches(get_users(C), batch_size=self.batch_size):
+            # Create batches of batch_size
             C_diag_batch = torch.diag_embed(torch.Tensor(
                 C[id_batch, :].toarray())).to(self.device)
 

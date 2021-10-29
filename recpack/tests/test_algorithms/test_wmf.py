@@ -8,7 +8,7 @@ from recpack.algorithms import WeightedMatrixFactorization
 @pytest.mark.parametrize("cs", ["log-scaling", "minimal"])
 def test_wmf(cs):
     wmf = WeightedMatrixFactorization(
-        confidence_scheme=cs, num_components=3, iterations=500
+        confidence_scheme=cs, num_components=3, iterations=100
     )
 
     values = [2, 5, 4, 1, 3, 4, 3]
