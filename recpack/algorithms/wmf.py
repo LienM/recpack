@@ -1,10 +1,16 @@
 import logging
 
 import numpy as np
-from scipy.sparse import csr_matrix, diags, eye
+from scipy.sparse import csr_matrix
+from scipy.sparse.lil import lil_matrix
+from torch._C import device
 from tqdm.auto import tqdm
 
+import torch
+
 from recpack.algorithms import Algorithm
+from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users
+from recpack.data.matrix import to_binary
 
 logger = logging.getLogger("recpack")
 
@@ -100,15 +106,17 @@ class WeightedMatrixFactorization(Algorithm):
         self.regularization = regularization
         self.iterations = iterations
 
-    def _fit(self, X: csr_matrix) -> Algorithm:
+        cuda = torch.cuda.is_available()
+        self.device = torch.device("cuda" if cuda else "cpu")
+
+    def _fit(self, X: csr_matrix) -> None:
         """Calculate the user- and item-factors which will approximate X
             after applying a dot-product.
 
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
-        :return: The fitted WeightedMatrixFactorizationAlgorithm itself.
         """
         self.num_users, self.num_items = X.shape
-        self.known_users = set(X.nonzero()[0])
+        # Create a matrix with only nonzero users and items.
         self.user_factors_, self.item_factors_ = self._alternating_least_squares(
             X)
 
@@ -121,13 +129,13 @@ class WeightedMatrixFactorization(Algorithm):
         :return: User-item matrix with the prediction scores as values.
         """
 
-        U = set(X.nonzero()[0])
         U_conf = self._generate_confidence(X)
         U_user_factors = self._least_squares(
-            U_conf, self.item_factors_, self.num_users, U
-        )
+            U_conf, self.item_factors_
+        ).detach().cpu().numpy()
 
-        score_matrix = csr_matrix(U_user_factors @ self.item_factors_.T)
+        score_matrix = csr_matrix(
+            U_user_factors @ self.item_factors_.detach().cpu().numpy().T)
 
         self._check_prediction(score_matrix, X)
         return score_matrix
@@ -160,77 +168,64 @@ class WeightedMatrixFactorization(Algorithm):
         :param X: Sparse matrix which the ALS algorithm should be applied on.
         :return: Generated user- and item-factors based on the input matrix X.
         """
-        user_factors = (
-            np.random.rand(
-                self.num_users, self.num_components).astype(np.float32)
-            * 0.01
-        )
-        item_factors = (
-            np.random.rand(
-                self.num_items, self.num_components).astype(np.float32)
-            * 0.01
-        )
 
-        c = self._generate_confidence(X)
-        ct = c.T.tocsr()
-        item_set = set(range(self.num_items))
+        # user_factors = (
+        #     np.random.rand(
+        #         self.num_users, self.num_components).astype(np.float32)
+        #     * 0.01
+        # )
+        # item_factors = (
+        #     np.random.rand(
+        #         self.num_items, self.num_components).astype(np.float32)
+        #     * 0.01
+        # )
 
-        for i in tqdm(range(self.iterations)):
-            old_uf = np.array(user_factors, copy=True)
-            old_if = np.array(item_factors, copy=True)
+        C = self._generate_confidence(X)
+        # c_torch = naive_sparse2tensor(c)
 
-            user_factors = self._least_squares(
-                c, item_factors, self.num_users, self.known_users
-            )
-            item_factors = self._least_squares(
-                ct, user_factors, self.num_items, item_set
-            )
+        item_factors = torch.rand(
+            (self.num_items, self.num_components), dtype=torch.float32, device=self.device) * 0.01
 
-            norm_uf = np.linalg.norm(old_uf - user_factors, "fro")
-            norm_if = np.linalg.norm(old_if - item_factors, "fro")
-            logger.debug(
-                f"{self.name} - Iteration {i} - L2-norm of diff user_factors: {norm_uf} - L2-norm of diff "
-                f"item_factors: {norm_if}"
-            )
+        for i in tqdm(range(self.iterations * 2)):
+
+            if i % 2 == 0:
+                # User iteration
+                user_factors = self._least_squares(
+                    C, item_factors
+                )
+            else:
+                # Item iteration
+                item_factors = self._least_squares(
+                    C.T, user_factors
+                )
+
+            # old_uf = np.array(user_factors, copy=True)
+            # old_if = np.array(item_factors, copy=True)
+
+            # norm_uf = np.linalg.norm(old_uf - user_factors, "fro")
+            # norm_if = np.linalg.norm(old_if - item_factors, "fro")
+            # logger.debug(
+            #     f"{self.name} - Iteration {i} - L2-norm of diff user_factors: {norm_uf} - L2-norm of diff "
+            #     f"item_factors: {norm_if}"
+            # )
 
         return user_factors, item_factors
 
     def _least_squares(
         self,
-        conf_matrix: csr_matrix,
-        factors: np.ndarray,
-        dimension: int,
-        distinct_set: set,
-    ) -> np.ndarray:
+        C: csr_matrix,
+        Y: torch.Tensor,
+    ) -> torch.Tensor:
         """
         Calculate the other factor based on the confidence matrix and the factors with the least squares algorithm.
         It is a general function for item- and user-factors. Depending on the parameter factor_type the other factor
         will be calculated.
         :param conf_matrix: (Transposed) Confidence matrix
-        :param factors: Factor array
-        :param dimension: User/item dimension.
-        :param distinct_set: Set of users/items
         :return: Other factor nd-array based on the factor array and the confidence matrix
         """
-        factors_x = np.zeros((dimension, self.num_components))
-        YtY = factors.T @ factors
+        # factors_x = np.zeros((dimension, self.num_components))
+        YtY = Y.T @ Y
 
-        for i in distinct_set:
-            factors_x[i] = self._linear_equation(factors, YtY, conf_matrix, i)
-
-        return factors_x
-
-    def _linear_equation(
-        self, Y: np.ndarray, YtY: np.ndarray, C: csr_matrix, x: int
-    ) -> np.ndarray:
-        """
-        Helper function to compute the linear equation used in the Least Squares calculations.
-        :param Y: Input factor array
-        :param YtY: Product of Y transpose and Y.
-        :param C: The (transposed) confidence matrix
-        :param x: Calculation for which item/user x
-        :return: Solution for the linear equation (YtCxY + regularization * I)^-1 (YtCxPx)
-        """
         # accumulate YtCxY + regularization * I in A
         # -----------
         # Because of the impact of calculating C-1, instead of C,
@@ -239,15 +234,30 @@ class WeightedMatrixFactorization(Algorithm):
         # Left side of the linear equation A will be:
         #  A = YtY + Yt(Cx)Y + regularization * I
         #  For each x, let us define the diagonal n × n matrix Cx where Cx_yy = c_xy
-        cx = C[x]
-        Cx = diags(C[x].toarray().flatten(), 0)
-        A = YtY + (Y.T @ Cx) @ Y + self.regularization * \
-            np.eye(self.num_components)
 
-        # accumulate Yt(Cx + I)Px in b
-        cx[cx > 0] = 1  # now Px is represented as cx
-        b = (Y.T @ (Cx + eye(Cx.shape[0]))) @ cx.T.toarray()
+        binary_C = to_binary(C)
 
-        # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
-        #  Flatten the result to make sure the dimension is (self.num_components,)
-        return np.linalg.solve(A, b).flatten()
+        factors = torch.empty(Y.shape)
+
+        for id_batch in get_batches(get_users(C), batch_size=100):
+            # Create batches of 100 at the same time
+            C_diag_batch = torch.diag_embed(torch.Tensor(
+                C[id_batch, :].toarray())).to(self.device)
+
+            # A batch needs to be a tensor.
+            A_batch = YtY + (Y.T @ C_diag_batch) @ Y + self.regularization * \
+                torch.eye(self.num_components, device=self.device)
+
+            P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1)
+
+            B_batch = (
+                Y.T @ (C_diag_batch + torch.eye(C_diag_batch.shape[1], device=self.device))) @ P_batch
+
+            # Accumulate Yt(Cx + I)Px in b
+            # Solve the problem with the A_batch, save results.
+            # Xu = (YtCxY + regularization * I)^-1 (YtCxPx)
+            x_batch = torch.linalg.lstsq(A_batch, B_batch).solution.squeeze(-1)
+
+            factors[id_batch] = x_batch
+
+        return factors
