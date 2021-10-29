@@ -237,7 +237,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         binary_C = to_binary(C)
 
-        factors = torch.empty(Y.shape)
+        factors = torch.zeros(Y.shape)
 
         for id_batch in get_batches(get_users(C), batch_size=100):
             # Create batches of 100 at the same time
