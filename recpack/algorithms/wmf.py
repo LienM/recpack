@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple
 
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -183,12 +184,12 @@ class WeightedMatrixFactorization(Algorithm):
         for i in tqdm(range(self.iterations)):
             # User iteration
             user_factors = self._least_squares(
-                C, item_factors
+                C, item_factors, (self.num_users, self.num_components)
             )
 
             # Item iteration
             item_factors = self._least_squares(
-                C.T, user_factors
+                C.T, user_factors, (self.num_items, self.num_components)
             )
 
             X_pred = user_factors @ item_factors.T
@@ -201,6 +202,7 @@ class WeightedMatrixFactorization(Algorithm):
         self,
         C: csr_matrix,
         Y: torch.Tensor,
+        other_factor_dim: Tuple[int, int]
     ) -> torch.Tensor:
         """
         Calculate the other factor based on the confidence matrix and the factors with the least squares algorithm.
@@ -223,7 +225,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         binary_C = to_binary(C)
 
-        factors = torch.zeros(Y.shape)
+        factors = torch.zeros(other_factor_dim)
 
         for id_batch in get_batches(get_users(C), batch_size=self.batch_size):
             # Create batches of batch_size
@@ -235,7 +237,6 @@ class WeightedMatrixFactorization(Algorithm):
                 torch.eye(self.num_components, device=self.device)
 
             P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1)
-
 
             B_batch = (Y.T * (C_diag_batch + 1).unsqueeze(1)) @ P_batch
 
