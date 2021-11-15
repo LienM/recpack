@@ -137,7 +137,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         U_conf = self._generate_confidence(X)
         U_user_factors = self._least_squares(
-            U_conf, self.item_factors_
+            U_conf, self.item_factors_, (self.num_users, self.num_components)
         ).detach().cpu().numpy()
 
         score_matrix = csr_matrix(

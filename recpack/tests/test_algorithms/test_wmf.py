@@ -28,7 +28,7 @@ def test_wmf_different_shapes(num_users):
 @pytest.mark.parametrize("cs", ["log-scaling", "minimal"])
 def test_wmf(cs):
     wmf = WeightedMatrixFactorization(
-        confidence_scheme=cs, num_components=3, iterations=100
+        confidence_scheme=cs, num_components=3, iterations=200
     )
 
     values = [2, 5, 4, 1, 3, 4, 3]
