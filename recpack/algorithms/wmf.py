@@ -174,17 +174,6 @@ class WeightedMatrixFactorization(Algorithm):
         :return: Generated user- and item-factors based on the input matrix X.
         """
 
-        # user_factors = (
-        #     np.random.rand(
-        #         self.num_users, self.num_components).astype(np.float32)
-        #     * 0.01
-        # )
-        # item_factors = (
-        #     np.random.rand(
-        #         self.num_items, self.num_components).astype(np.float32)
-        #     * 0.01
-        # )
-
         C = self._generate_confidence(X)
         # c_torch = naive_sparse2tensor(c)
 
@@ -238,17 +227,17 @@ class WeightedMatrixFactorization(Algorithm):
 
         for id_batch in get_batches(get_users(C), batch_size=self.batch_size):
             # Create batches of batch_size
-            C_diag_batch = torch.diag_embed(torch.Tensor(
-                C[id_batch, :].toarray())).to(self.device)
+            C_diag_batch = torch.Tensor(
+                C[id_batch, :].toarray()).to(self.device)
 
             # A batch needs to be a tensor.
-            A_batch = YtY + (Y.T @ C_diag_batch) @ Y + self.regularization * \
+            A_batch = YtY + (Y.T * C_diag_batch.unsqueeze(1)) @ Y + self.regularization * \
                 torch.eye(self.num_components, device=self.device)
 
             P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1)
 
-            B_batch = (
-                Y.T @ (C_diag_batch + torch.eye(C_diag_batch.shape[1], device=self.device))) @ P_batch
+
+            B_batch = (Y.T * (C_diag_batch + 1).unsqueeze(1)) @ P_batch
 
             # Accumulate Yt(Cx + I)Px in b
             # Solve the problem with the A_batch, save results.
