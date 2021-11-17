@@ -122,9 +122,41 @@ class WeightedMatrixFactorization(Algorithm):
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
         """
         self.num_users, self.num_items = X.shape
-        # Create a matrix with only nonzero users and items.
-        self.user_factors_, self.item_factors_ = self._alternating_least_squares(
-            X)
+
+        # Create a matrix with only nonzero users
+        X_nonzero = self._eliminate_empty_users(X)
+        num_nonzero_users = X_nonzero.shape[0]
+
+        C = self._generate_confidence(X_nonzero)
+
+        print("Got confidence")
+
+        item_factors = torch.rand(
+            (self.num_items, self.num_components), dtype=torch.float32, device=self.device) * 0.01
+
+        for i in tqdm(range(self.iterations)):
+            # User iteration
+            user_factors = self._least_squares(
+                C, item_factors, (num_nonzero_users, self.num_components)
+            )
+
+            print("Got user factors")
+
+            # Item iteration
+            item_factors = self._least_squares(
+                C.T, user_factors, (self.num_items, self.num_components)
+            )
+
+            print("Got item factors")
+
+            X_pred = user_factors @ item_factors.T
+            loss = self.loss(X_pred, naive_sparse2tensor(X_nonzero))
+            logger.debug(f"Current MSE Loss: {loss.item()}")
+            print(f"Got loss {loss.item()}")
+
+        self.item_factors_ = item_factors
+        self.user_factors_ = torch.zeros(self.num_users, self.num_components)
+        self.user_factors_[self.user_id_map_, :] = user_factors
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Prediction scores are calculated as the dotproduct of
@@ -167,36 +199,12 @@ class WeightedMatrixFactorization(Algorithm):
 
         return result
 
-    def _alternating_least_squares(self, X: csr_matrix) -> (torch.Tensor, torch.Tensor):
-        """
-        The ALS algorithm will execute the least squares calculation for x number of iterations.
-        According factorizing matrix C into two factors Users and Items such that R \approx U^T I.
-        :param X: Sparse matrix which the ALS algorithm should be applied on.
-        :return: Generated user- and item-factors based on the input matrix X.
-        """
+    def _eliminate_empty_users(self, X: csr_matrix) -> csr_matrix:
+        nonzero_users = list(set(X.nonzero()[0]))
 
-        C = self._generate_confidence(X)
-        # c_torch = naive_sparse2tensor(c)
+        self.user_id_map_ = np.array(nonzero_users)
 
-        item_factors = torch.rand(
-            (self.num_items, self.num_components), dtype=torch.float32, device=self.device) * 0.01
-
-        for i in tqdm(range(self.iterations)):
-            # User iteration
-            user_factors = self._least_squares(
-                C, item_factors, (self.num_users, self.num_components)
-            )
-
-            # Item iteration
-            item_factors = self._least_squares(
-                C.T, user_factors, (self.num_items, self.num_components)
-            )
-
-            X_pred = user_factors @ item_factors.T
-            loss = self.loss(X_pred, naive_sparse2tensor(X))
-            logger.debug(f"Current MSE Loss: {loss.item()}")
-
-        return user_factors, item_factors
+        return X[nonzero_users, :]
 
     def _least_squares(
         self,
@@ -211,7 +219,6 @@ class WeightedMatrixFactorization(Algorithm):
         :param conf_matrix: (Transposed) Confidence matrix
         :return: Other factor nd-array based on the factor array and the confidence matrix
         """
-        # factors_x = np.zeros((dimension, self.num_components))
         YtY = Y.T @ Y
 
         # accumulate YtCxY + regularization * I in A
@@ -232,13 +239,16 @@ class WeightedMatrixFactorization(Algorithm):
             C_diag_batch = torch.Tensor(
                 C[id_batch, :].toarray()).to(self.device)
 
+            # Used in both A and B
+            Y_T_diag = (Y.T * C_diag_batch.unsqueeze(1))
+
             # A batch needs to be a tensor.
-            A_batch = YtY + (Y.T * C_diag_batch.unsqueeze(1)) @ Y + self.regularization * \
+            A_batch = YtY + Y_T_diag @ Y + self.regularization * \
                 torch.eye(self.num_components, device=self.device)
 
             P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1)
 
-            B_batch = (Y.T * (C_diag_batch + 1).unsqueeze(1)) @ P_batch
+            B_batch = (Y.T + Y_T_diag) @ P_batch
 
             # Accumulate Yt(Cx + I)Px in b
             # Solve the problem with the A_batch, save results.
