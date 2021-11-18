@@ -129,8 +129,6 @@ class WeightedMatrixFactorization(Algorithm):
 
         C = self._generate_confidence(X_nonzero)
 
-        print("Got confidence")
-
         item_factors = torch.rand(
             (self.num_items, self.num_components), dtype=torch.float32, device=self.device) * 0.01
 
@@ -140,22 +138,17 @@ class WeightedMatrixFactorization(Algorithm):
                 C, item_factors, (num_nonzero_users, self.num_components)
             )
 
-            print("Got user factors")
-
             # Item iteration
             item_factors = self._least_squares(
                 C.T, user_factors, (self.num_items, self.num_components)
             )
 
-            print("Got item factors")
-
             X_pred = user_factors @ item_factors.T
             loss = self.loss(X_pred, naive_sparse2tensor(X_nonzero))
             logger.debug(f"Current MSE Loss: {loss.item()}")
-            print(f"Got loss {loss.item()}")
 
         self.item_factors_ = item_factors
-        self.user_factors_ = torch.zeros(self.num_users, self.num_components)
+        self.user_factors_ = torch.zeros(self.num_users, self.num_components, device=self.device)
         self.user_factors_[self.user_id_map_, :] = user_factors
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
@@ -170,10 +163,10 @@ class WeightedMatrixFactorization(Algorithm):
         U_conf = self._generate_confidence(X)
         U_user_factors = self._least_squares(
             U_conf, self.item_factors_, (self.num_users, self.num_components)
-        ).detach().cpu().numpy()
+        )
 
         score_matrix = csr_matrix(
-            U_user_factors @ self.item_factors_.detach().cpu().numpy().T)
+            (U_user_factors @ self.item_factors_.T).detach().cpu().numpy())
 
         self._check_prediction(score_matrix, X)
         return score_matrix
@@ -232,12 +225,12 @@ class WeightedMatrixFactorization(Algorithm):
 
         binary_C = to_binary(C)
 
-        factors = torch.zeros(other_factor_dim)
+        factors = torch.zeros(other_factor_dim, device=self.device)
 
         for id_batch in get_batches(get_users(C), batch_size=self.batch_size):
             # Create batches of batch_size
             C_diag_batch = torch.Tensor(
-                C[id_batch, :].toarray()).to(self.device)
+                C[id_batch, :].toarray(), device=self.device)
 
             # Used in both A and B
             Y_T_diag = (Y.T * C_diag_batch.unsqueeze(1))
@@ -246,7 +239,7 @@ class WeightedMatrixFactorization(Algorithm):
             A_batch = YtY + Y_T_diag @ Y + self.regularization * \
                 torch.eye(self.num_components, device=self.device)
 
-            P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1)
+            P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1).to(self.device)
 
             B_batch = (Y.T + Y_T_diag) @ P_batch
 
