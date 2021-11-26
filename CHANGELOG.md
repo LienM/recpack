@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [UNRELEASED]
-* Added configuration parameter to Random baseline, selects if all items should be used, or only those interacted with in the training dataset.
+* Added boolean parameter `use_only_interacted_items` to Random baseline, selects if all items should be used, or only those interacted with in the training dataset.
 * Fixed bug in NextItem prediction scenario
     * if validation was specified, test_in data contained 1 too few interactions
-* Added option to next item prediction to limit test_in data to only the N most recent interactions of each user.
+* Added parameter `n_most_recent` to `NextItemPrediction` class to limit test_in data to only the N most recent interactions of each user.
 
 ## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15) 
 ### Dependency Update 
