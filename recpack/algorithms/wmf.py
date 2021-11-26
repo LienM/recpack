@@ -31,7 +31,7 @@ class WeightedMatrixFactorization(Algorithm):
 
     Since the data during fitting is assumed to be implicit,
     this confidence will be the same for all interactions,
-    and as such leaving the HP to the defaults works good enough.
+    and as such leaving the HP to the defaults works well enough.
 
     **Example of use**::
 
@@ -120,6 +120,7 @@ class WeightedMatrixFactorization(Algorithm):
             after applying a dot-product.
 
         :param X: Sparse user-item matrix which will be used to fit the algorithm.
+        :type X: csr_matrix
         """
         self.num_users, self.num_items = X.shape
 
@@ -144,22 +145,25 @@ class WeightedMatrixFactorization(Algorithm):
             )
 
             X_pred = user_factors @ item_factors.T
-            loss = self.loss(X_pred, naive_sparse2tensor(X_nonzero))
+            loss = self.loss(X_pred, naive_sparse2tensor(
+                X_nonzero).to(self.device))
             logger.debug(f"Current MSE Loss: {loss.item()}")
 
         self.item_factors_ = item_factors
-        self.user_factors_ = torch.zeros(self.num_users, self.num_components, device=self.device)
+        self.user_factors_ = torch.zeros(
+            self.num_users, self.num_components, device=self.device)
         self.user_factors_[self.user_id_map_, :] = user_factors
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
-        """Prediction scores are calculated as the dotproduct of
+        """Prediction scores are calculated as the dot-product of
             the recomputed user-factors and the item-factors.
 
         :param X: Sparse user-item matrix which will be used to do the predictions;
             only for set of users with interactions will recommendations be generated.
+        :type X: csr_matrix
         :return: User-item matrix with the prediction scores as values.
+        :rtype: csr_matrix
         """
-
         U_conf = self._generate_confidence(X)
         U_user_factors = self._least_squares(
             U_conf, self.item_factors_, (self.num_users, self.num_components)
@@ -171,7 +175,7 @@ class WeightedMatrixFactorization(Algorithm):
         self._check_prediction(score_matrix, X)
         return score_matrix
 
-    def _generate_confidence(self, r) -> csr_matrix:
+    def _generate_confidence(self, r: csr_matrix) -> csr_matrix:
         """
         Generate the confidence matrix as described in the paper.
         This can be calculated in different ways:
@@ -182,7 +186,9 @@ class WeightedMatrixFactorization(Algorithm):
         For this reason C-1 will be the result of this function.
         Important is that it will impact the least squares calculation.
         :param r: User-item matrix which the calculations are based on.
+        :type r: csr_matrix
         :return: User-item matrix converted with the confidence values.
+        :rtype: csr_matrix
         """
         result = csr_matrix(r, copy=True)
         if self.confidence_scheme == "minimal":
@@ -205,12 +211,16 @@ class WeightedMatrixFactorization(Algorithm):
         Y: torch.Tensor,
         other_factor_dim: Tuple[int, int]
     ) -> torch.Tensor:
-        """
-        Calculate the other factor based on the confidence matrix and the factors with the least squares algorithm.
-        It is a general function for item- and user-factors. Depending on the parameter factor_type the other factor
-        will be calculated.
-        :param conf_matrix: (Transposed) Confidence matrix
-        :return: Other factor nd-array based on the factor array and the confidence matrix
+        """Calculate the one factor matrix based on the confidence matrix and the other factor matrix with the least squares algorithm.
+
+        :param C: (Transposed) Confidence matrix.
+        :type C: csr_matrix
+        :param Y: Factor matrix used to calculate the other factor.
+        :type Y: torch.Tensor
+        :param other_factor_dim: Dimension of the factor to be calculated.
+        :type other_factor_dim: Tuple[int, int]
+        :return: Factor matrix calculated using LS.
+        :rtype: torch.Tensor
         """
         YtY = Y.T @ Y
 
@@ -230,7 +240,7 @@ class WeightedMatrixFactorization(Algorithm):
         for id_batch in get_batches(get_users(C), batch_size=self.batch_size):
             # Create batches of batch_size
             C_diag_batch = torch.Tensor(
-                C[id_batch, :].toarray(), device=self.device)
+                C[id_batch, :].toarray()).to(self.device)
 
             # Used in both A and B
             Y_T_diag = (Y.T * C_diag_batch.unsqueeze(1))
@@ -239,7 +249,8 @@ class WeightedMatrixFactorization(Algorithm):
             A_batch = YtY + Y_T_diag @ Y + self.regularization * \
                 torch.eye(self.num_components, device=self.device)
 
-            P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1).to(self.device)
+            P_batch = naive_sparse2tensor(
+                binary_C[id_batch, :]).unsqueeze(-1).to(self.device)
 
             B_batch = (Y.T + Y_T_diag) @ P_batch
 
