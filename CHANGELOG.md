@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Additions
 * __data.datasets__
-    * Added CosmeticsShopDataset for https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
-    * Added RetailRocketDataset for https://www.kaggle.com/retailrocket/ecommerce-dataset
+    * Added CosmeticsShop for https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
+    * Added RetailRocket for https://www.kaggle.com/retailrocket/ecommerce-dataset
     * Added parameters to dummy dataset to define the output expectations.
 
 ### Changes
