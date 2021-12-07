@@ -13,10 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * if validation was specified, test_in data contained 1 too few interactions
 * Added parameter `n_most_recent` to `NextItemPrediction` class to limit test_in data to only the N most recent interactions of each user.
 
-## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15) 
-### Dependency Update 
+* __algorithms.wmf__
+    * Refactored WeightedMatrixFactorization
+        * It now uses PyTorch operations instead of NumPy (for GPU speedups).
+        * It now processes batches of users and items instead of individual users and items.
+
+## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15)
+### Dependency Update
 * Removed dependency on numba
-    * Removed numba decorators in shared account implementation. 
+    * Removed numba decorators in shared account implementation.
       It's potentially slower now, which we don't consider a problem since it is in the experimental module.
 
 ### Additions
@@ -27,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __data.datasets__
     * Added DummyDataset for easy testing purposes.
 
-## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30) 
+## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30)
 
 ### Additions
 * __algorithms.nearest_neighbour__
@@ -39,14 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         * normalize_X: Normalize rows in the interaction matrix so that the contribution of
         users who have viewed more items is smaller
 * __data.datasets__
-    * `filename` parameter now has a default value for almost all datasets. 
+    * `filename` parameter now has a default value for almost all datasets.
     * After initializing a dataset, the code will make sure the specified path exists, and create directories if they were missing.
 
 ### Breaking changes:
 
 * __Datasets__:
-    * The filename parameter behaviour has changed. 
-    This parameter used to expect the full path to the file. 
+    * The filename parameter behaviour has changed.
+    This parameter used to expect the full path to the file.
     It now expects just the filename, the directory is specified using `path`.
 
 * __preprocessing.preprocessors__:
@@ -55,8 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __util__:
     * `get_top_K_values` and `get_top_K_ranks` parameter `k` changed to `K` so it is in line with rest of Recpack.
 
-## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3) 
-* Added Gru4Rec algorithms 
+## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3)
+* Added Gru4Rec algorithms
     * GRU4RecNegSampling
     * GRU4RecCrossEntropy
 * added new loss functions:
