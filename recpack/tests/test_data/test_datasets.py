@@ -170,7 +170,7 @@ def test_recsys_challenge_2015():
 
 
 @pytest.mark.parametrize(
-    "additional_columns_to_load, event_types, num_events, final_shape",
+    "extra_cols, event_types, num_events, final_shape",
     [
         ([], None, 47, (28, 42)),
         (["category_id", "category_code"], None, 47, (28, 42)),
@@ -196,7 +196,7 @@ def test_recsys_challenge_2015():
     ],
 )
 def test_cosmeticsshop(
-    additional_columns_to_load,
+    extra_cols,
     event_types,
     num_events,
     final_shape,
@@ -204,18 +204,18 @@ def test_cosmeticsshop(
     # To get sample we used head -100 2019-Dec.csv
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     if event_types is None:
-        d = datasets.CosmeticsShopDataset(
+        d = datasets.CosmeticsShop(
             path=path,
             filename="cosmeticsshop-sample.csv",
             preprocess_default=False,
-            additional_columns_to_load=additional_columns_to_load,
+            extra_cols=extra_cols,
         )
     else:
-        d = datasets.CosmeticsShopDataset(
+        d = datasets.CosmeticsShop(
             path=path,
             filename="cosmeticsshop-sample.csv",
             preprocess_default=False,
-            additional_columns_to_load=additional_columns_to_load,
+            extra_cols=extra_cols,
             event_types=event_types,
         )
 
@@ -236,7 +236,7 @@ def test_cosmeticsshop(
 def test_cosmeticsshop_bad_event_type():
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     with pytest.raises(ValueError):
-        _ = datasets.CosmeticsShopDataset(
+        _ = datasets.CosmeticsShop(
             path=path,
             filename="cosmeticsshop-sample.csv",
             preprocess_default=False,
@@ -268,13 +268,13 @@ def test_retail_rocket(
     # To get sample we used head -100 2019-Dec.csv
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     if event_types is None:
-        d = datasets.RetailRocketDataset(
+        d = datasets.RetailRocket(
             path=path,
             filename="retailrocket-sample.csv",
             preprocess_default=False,
         )
     else:
-        d = datasets.RetailRocketDataset(
+        d = datasets.RetailRocket(
             path=path,
             filename="retailrocket-sample.csv",
             preprocess_default=False,
@@ -298,7 +298,7 @@ def test_retail_rocket(
 def test_retail_rocket_bad_event_type():
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     with pytest.raises(ValueError):
-        _ = datasets.CosmeticsShopDataset(
+        _ = datasets.CosmeticsShop(
             path=path,
             filename="retailrocket-sample.csv",
             preprocess_default=False,

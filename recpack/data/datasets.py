@@ -4,7 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple, Union
 from urllib.request import urlretrieve
 import zipfile
 
@@ -581,7 +581,7 @@ class RecsysChallenge2015(Dataset):
         return df
 
 
-class CosmeticsShopDataset(Dataset):
+class CosmeticsShop(Dataset):
     """Handles data from the eCommerce Events History in Cosmetics Shop dataset on Kaggle.
 
     All information and downloads can be found at
@@ -605,12 +605,12 @@ class CosmeticsShopDataset(Dataset):
     :type filename: Optional[str]
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
-    :param additional_columns_to_load: Extra columns to load during dataframe creation
-    :type additional_columns_to_load: List[str], optional
+    :param extra_cols: Extra columns to load during dataframe creation
+    :type extra_cols: Optional[List[str]]
     :param event_types: The dataset contains view, cart, remove_from_cart, purchase events.
         You can select a subset of them.
-        Defaults to ["view"]
-    :type event_types: List[str], optional
+        Defaults to ("view", )
+    :type event_types: Union[List[str], Tuple[str]], optional
     """
 
     USER_IX = "user_id"
@@ -635,11 +635,11 @@ class CosmeticsShopDataset(Dataset):
         path: str = "data",
         filename: str = None,
         preprocess_default=True,
-        additional_columns_to_load: List[str] = [],
-        event_types: List[str] = ["view"],
+        extra_cols: Optional[List[str]] = None,
+        event_types: Union[List[str], Tuple[str]] = ("view",),
     ):
         super().__init__(path, filename, preprocess_default)
-        self.additional_columns_to_load = additional_columns_to_load
+        self.extra_cols = extra_cols if extra_cols is not None else []
 
         for event_type in event_types:
             if event_type not in self.ALLOWED_EVENT_TYPES:
@@ -674,8 +674,8 @@ class CosmeticsShopDataset(Dataset):
     @property
     def _columns(self) -> List[str]:
         columns = [self.USER_IX, self.ITEM_IX, self.TIMESTAMP_IX, self.EVENT_TYPE_IX]
-        if self.additional_columns_to_load:
-            columns = columns + self.additional_columns_to_load
+        if self.extra_cols:
+            columns = columns + self.extra_cols
 
         return columns
 
@@ -710,7 +710,7 @@ class CosmeticsShopDataset(Dataset):
         return df
 
 
-class RetailRocketDataset(Dataset):
+class RetailRocket(Dataset):
     """Handles data from the Retail Rocket dataset on Kaggle.
 
     All information and downloads can be found at
@@ -733,8 +733,8 @@ class RetailRocketDataset(Dataset):
     :type preprocess_default: bool, optional
     :param event_types: The dataset contains view, addtocart, transaction events.
         You can select a subset of them.
-        Defaults to ["view"]
-    :type event_types: List[str], optional
+        Defaults to ("view", )
+    :type event_types: Union[List[str], Tuple[str]], optional
     """
 
     USER_IX = "visitorid"
@@ -759,7 +759,7 @@ class RetailRocketDataset(Dataset):
         path: str = "data",
         filename: str = None,
         preprocess_default=True,
-        event_types: List[str] = ["view"],
+        event_types: Union[List[str], Tuple[str]] = ("view",),
     ):
         super().__init__(path, filename, preprocess_default)
 
