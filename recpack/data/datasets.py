@@ -815,7 +815,8 @@ class RetailRocket(Dataset):
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
-        # It's in seconds since epoch, and so should be divided by 1000
+        # Original data is in milliseconds since epoch, 
+        # and so should be divided by 1000
         df[self.TIMESTAMP_IX] = (
             df[self.TIMESTAMP_IX].view(int) / 1e3
         )  # pandas datetime -> seconds from epoch
