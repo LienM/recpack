@@ -1,12 +1,12 @@
 import numpy as np
 import pytest
 
-from recpack.splitters.scenarios import NextItemPrediction
+from recpack.splitters.scenarios import LastItemPrediction
 
 
 def test_next_item_prediction_split(data_m_small):
     im = data_m_small
-    scenario = NextItemPrediction(validation=False)
+    scenario = LastItemPrediction(validation=False)
     scenario._split(im)
 
     train = scenario.train_X
@@ -37,7 +37,7 @@ def test_next_item_prediction_split(data_m_small):
 
 def test_next_item_prediction_split_w_validation(data_m_small):
     im = data_m_small
-    scenario = NextItemPrediction(validation=True)
+    scenario = LastItemPrediction(validation=True)
     scenario._split(im)
 
     train = scenario.train_X
@@ -81,7 +81,7 @@ def test_next_item_prediction_split_w_validation(data_m_small):
 @pytest.mark.parametrize("n_most_recent", [1, 2, 3])
 def test_next_item_prediction_split_w_n_most_recent(data_m_small, n_most_recent):
     im = data_m_small
-    scenario = NextItemPrediction(validation=False, n_most_recent=n_most_recent)
+    scenario = LastItemPrediction(validation=False, n_most_recent=n_most_recent)
     scenario._split(im)
 
     train = scenario.train_X
@@ -120,7 +120,7 @@ def test_next_item_prediction_split_w_validation_w_n_most_recent(
     data_m_small, n_most_recent
 ):
     im = data_m_small
-    scenario = NextItemPrediction(validation=True, n_most_recent=n_most_recent)
+    scenario = LastItemPrediction(validation=True, n_most_recent=n_most_recent)
     scenario._split(im)
 
     train = scenario.train_X

@@ -646,9 +646,8 @@ class StrongGeneralizationTimedMostRecent(Scenario):
             self.train_X = tr_val_data
 
 
-class NextItemPrediction(Scenario):
-    """
-    Split data so that a user's previous n_most_recent interactions are used to predict their last interaction.
+class LastItemPrediction(Scenario):
+    """Split data so that a user's previous n_most_recent interactions are used to predict their last interaction.
     Trains on all other interactions.
 
     A scenario is stateful. After calling ``split`` on your dataset,
@@ -733,3 +732,13 @@ class NextItemPrediction(Scenario):
             _, self._validation_data_in = self.history_splitter.split(train_val_data)
 
         self.train_X = train_val_data
+
+
+class NextItemPrediction(LastItemPrediction):
+    def __init__(self, validation=False, seed=None, n_most_recent=1):
+        raise DeprecationWarning(
+            "NextItemPrediction will be deprecated in favour of "
+            "the more descriptive LastItemPrediction"
+        )
+
+        super.__init__(self, validation, seed, n_most_recent)

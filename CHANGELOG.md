@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Fixed bug in NextItem prediction scenario
     * if validation was specified, test_in data contained 1 too few interactions
 * Added parameter `n_most_recent` to `NextItemPrediction` class to limit test_in data to only the N most recent interactions of each user.
+* Renamed NextItemPrediction to LastItemPrediction class, kept NextItemPrediction as a copy with deprecation warning. 
 
 * __algorithms.wmf__
     * Refactored WeightedMatrixFactorization
