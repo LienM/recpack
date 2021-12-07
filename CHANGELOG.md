@@ -7,6 +7,14 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Changes
+* __algorithms.wmf__
+    * Refactored WeightedMatrixFactorization
+        * It now uses PyTorch operations instead of NumPy (for GPU speedups).
+        * It now processes batches of users and items instead of individual users and items.
+
 ## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15) 
 ### Dependency Update 
 * Removed dependency on numba
