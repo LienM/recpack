@@ -1,68 +1,10 @@
-"""Module responsible for handling datasets.
-
-Summary
----------
-
-.. currentmodule:: recpack.data.datasets
-
-.. autosummary::
-
-    Dataset
-    CiteULike
-    MovieLens25M
-    RecsysChallenge2015
-    ThirtyMusicSessions
-
-Example
----------
-
-Loading a dataset only takes a couple of lines.
-If the file specified does not exist, the dataset is downloaded and written to this file.
-Subsequent loading of the dataset then happens from this file. ::
-
-    from recpack.data.datasets import MovieLens25M
-
-    # Folder needs to exist, file will be downloaded if not present
-    # This can take a while
-    ml_loader = MovieLens25M('datasets/ml-25m.csv')
-    data = ml_loader.load_interaction_matrix()
-
-Each dataset has its own default preprocessing steps, documented in the classes respectively.
-To use custom preprocessing a couple more lines should be added to the example. ::
-
-    from recpack.data.datasets import MovieLens25M
-    from recpack.preprocessing.filters import MinRating, MinUsersPerItem, MinItemsPerUser
-
-    ml_loader = MovieLens25M('datasets/ml-25m.csv', preprocess_default=False)
-    # Only consider ratings 4 or higher as interactions
-    ml_loader.add_filter(MinRating(
-        4,
-        ml_loader.RATING_IX,
-    ))
-    # Keep users with at least 5 interactions
-    ml_loader.add_filter(MinItemsPerUser(
-        5,
-        ml_loader.ITEM_IX,
-        ml_loader.USER_IX,
-    ))
-    # Keep items with at least 30 interactions
-    ml_loader.add_filter(MinUsersPerItem(
-        30,
-        ml_loader.ITEM_IX,
-        ml_loader.USER_IX,
-    ))
-
-    data = ml_loader.load_interaction_matrix()
-
-Classes
----------
-"""
+"""Module responsible for handling datasets."""
 
 import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple, Union
 from urllib.request import urlretrieve
 import zipfile
 
@@ -230,6 +172,16 @@ class DummyDataset(Dataset):
     :type preprocess_default: bool, optional
     :param seed: Seed for the random data generation. Defaults to None.
     :type seed: int, optional
+    :param num_users: The amount of users to use when generating data, defaults to 100
+    :type num_users: int, optional
+    :param num_items: The number of items to use when generating data, defaults to 20
+    :type num_items: int, optional
+    :param num_interactions: The number of interactions to generate, defaults to 500
+    :type num_interactions: int, optional
+    :param min_t: The minimum timestamp when generating data, defaults to 0
+    :type min_t: int, optional
+    :param max_t: The maximum timestamp when generating data, defaults to 500
+    :type max_t: int, optional
     """
 
     USER_IX = "user_id"
@@ -241,25 +193,29 @@ class DummyDataset(Dataset):
 
     DEFAULT_FILENAME = "dummy_input.csv"
 
-    NUM_USERS = 100
-    NUM_ITEMS = 20
-    NUM_INTERACTIONS = 500
-
-    MIN_T = 0
-    MAX_T = 500
-
     def __init__(
         self,
         path: str = "data",
         filename: str = None,
         preprocess_default=True,
         seed=None,
+        num_users=100,
+        num_items=20,
+        num_interactions=500,
+        min_t=0,
+        max_t=500,
     ):
         super().__init__(path, filename, preprocess_default)
 
         self.seed = seed
         if self.seed is None:
             self.seed = seed = np.random.get_state()[1][0]
+
+        self.num_users = num_users
+        self.num_items = num_users
+        self.num_interactions = num_interactions
+        self.min_t = min_t
+        self.max_t = max_t
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -294,16 +250,16 @@ class DummyDataset(Dataset):
 
         input_dict = {
             self.USER_IX: [
-                np.random.randint(0, self.NUM_USERS)
-                for _ in range(0, self.NUM_INTERACTIONS)
+                np.random.randint(0, self.num_users)
+                for _ in range(0, self.num_interactions)
             ],
             self.ITEM_IX: [
-                np.random.randint(0, self.NUM_ITEMS)
-                for _ in range(0, self.NUM_INTERACTIONS)
+                np.random.randint(0, self.num_items)
+                for _ in range(0, self.num_interactions)
             ],
             self.TIMESTAMP_IX: [
-                np.random.randint(self.MIN_T, self.MAX_T)
-                for _ in range(0, self.NUM_INTERACTIONS)
+                np.random.randint(self.min_t, self.max_t)
+                for _ in range(0, self.num_interactions)
             ],
         }
 
@@ -610,7 +566,7 @@ class RecsysChallenge2015(Dataset):
             names=[self.USER_IX, self.TIMESTAMP_IX, self.ITEM_IX],
             dtype={
                 self.USER_IX: np.int64,
-                self.TIMESTAMP_IX: np.str,
+                self.TIMESTAMP_IX: str,
                 self.ITEM_IX: np.int64,
             },
             parse_dates=[self.TIMESTAMP_IX],
@@ -621,5 +577,254 @@ class RecsysChallenge2015(Dataset):
         df[self.TIMESTAMP_IX] = (
             df[self.TIMESTAMP_IX].astype(int) / 1e9
         )  # pandas datetime -> seconds from epoch
+
+        return df
+
+
+class CosmeticsShop(Dataset):
+    """Handles data from the eCommerce Events History in Cosmetics Shop dataset on Kaggle.
+
+    All information and downloads can be found at
+    https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop.
+    Because downloading the data requires a Kaggle account we can't download it here,
+    you should download the data manually and provide the path to one of the monthly
+    files, or a combined file with all events.
+    If a monthly file is given, then only those events will be used. In order to use
+    the full dataset you need to combine the files.
+
+    Default processing makes sure that:
+
+    - Each remaining item has been interacted with by at least 50 users.
+    - Each user has interacted with at least 3 items
+
+    :param path: The path to the data directory.
+        Defaults to `data`
+    :type path: Optional[str]
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: Optional[str]
+    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :type preprocess_default: bool, optional
+    :param extra_cols: Extra columns to load during dataframe creation
+    :type extra_cols: Optional[List[str]]
+    :param event_types: The dataset contains view, cart, remove_from_cart, purchase events.
+        You can select a subset of them.
+        Defaults to ("view", )
+    :type event_types: Union[List[str], Tuple[str]], optional
+    """
+
+    USER_IX = "user_id"
+    """Name of the column in the DataFrame that contains user identifiers."""
+
+    ITEM_IX = "product_id"
+    """Name of the column in the DataFrame that contains item identifiers."""
+
+    TIMESTAMP_IX = "event_time"
+    """Name of the column in the DataFrame that contains timestamp."""
+
+    EVENT_TYPE_IX = "event_type"
+    """Name of the column in the DataFrame that contains the event_types"""
+
+    DEFAULT_FILENAME = "2019-Dec.csv"
+    """Default filename that will be used if it is not specified by the user."""
+
+    ALLOWED_EVENT_TYPES = ["view", "cart", "remove_from_cart", "purchase"]
+
+    def __init__(
+        self,
+        path: str = "data",
+        filename: str = None,
+        preprocess_default=True,
+        extra_cols: Optional[List[str]] = None,
+        event_types: Union[List[str], Tuple[str]] = ("view",),
+    ):
+        super().__init__(path, filename, preprocess_default)
+        self.extra_cols = extra_cols if extra_cols is not None else []
+
+        for event_type in event_types:
+            if event_type not in self.ALLOWED_EVENT_TYPES:
+                raise ValueError(
+                    f"{event_type} is not in the allowed event types. "
+                    f"Please use one of {self.ALLOWED_EVENT_TYPES}"
+                )
+
+        self.event_types = event_types
+
+    def _download_dataset(self):
+        """Downloading this dataset is not supported."""
+        raise NotImplementedError(
+            "CosmeticsShop dataset should be downloaded manually, "
+            "you can get it at: https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop."
+        )
+
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the CosmeticsShop dataset
+
+        Filters items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinUsersPerItem(50, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+            MinItemsPerUser(3, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+        ]
+
+    @property
+    def _columns(self) -> List[str]:
+        columns = [self.USER_IX, self.ITEM_IX, self.TIMESTAMP_IX, self.EVENT_TYPE_IX]
+        if self.extra_cols:
+            columns = columns + self.extra_cols
+
+        return columns
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return a DataFrame.
+
+        The output will contain a DataFrame.
+        Each interaction is stored in a separate row.
+
+        :return: The interactions as a DataFrame, with a row for each interaction.
+        :rtype: pd.DataFrame
+        """
+
+        self.fetch_dataset()
+
+        df = pd.read_csv(
+            self.file_path,
+            parse_dates=[self.TIMESTAMP_IX],
+        )
+
+        # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
+        df[self.TIMESTAMP_IX] = (
+            df[self.TIMESTAMP_IX].view(int) / 1e9
+        )  # pandas datetime -> seconds from epoch
+
+        # Select only the specified event_types
+        if self.event_types:
+            df = df[df[self.EVENT_TYPE_IX].isin(self.event_types)].copy()
+
+        df = df[self._columns].copy()
+
+        return df
+
+
+class RetailRocket(Dataset):
+    """Handles data from the Retail Rocket dataset on Kaggle.
+
+    All information and downloads can be found at
+    https://www.kaggle.com/retailrocket/ecommerce-dataset.
+    Because downloading the data requires a Kaggle account we can't download it here,
+    you should download the data manually and provide the path to the downloaded folder.
+
+    Default processing makes sure that:
+
+    - Each remaining item has been interacted with by at least 50 users.
+    - Each user has interacted with at least 3 items
+
+    :param path: The path to the data directory.
+        Defaults to `data`
+    :type path: Optional[str]
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: Optional[str]
+    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :type preprocess_default: bool, optional
+    :param event_types: The dataset contains view, addtocart, transaction events.
+        You can select a subset of them.
+        Defaults to ("view", )
+    :type event_types: Union[List[str], Tuple[str]], optional
+    """
+
+    USER_IX = "visitorid"
+    """Name of the column in the DataFrame that contains user identifiers."""
+
+    ITEM_IX = "itemid"
+    """Name of the column in the DataFrame that contains item identifiers."""
+
+    TIMESTAMP_IX = "timestamp"
+    """Name of the column in the DataFrame that contains timestamp."""
+
+    EVENT_TYPE_IX = "event"
+    """Name of the column in the DataFrame that contains the event_types"""
+
+    DEFAULT_FILENAME = "events.csv"
+    """Default filename that will be used if it is not specified by the user."""
+
+    ALLOWED_EVENT_TYPES = ["view", "addtocart", "transaction"]
+
+    def __init__(
+        self,
+        path: str = "data",
+        filename: str = None,
+        preprocess_default=True,
+        event_types: Union[List[str], Tuple[str]] = ("view",),
+    ):
+        super().__init__(path, filename, preprocess_default)
+
+        for event_type in event_types:
+            if event_type not in self.ALLOWED_EVENT_TYPES:
+                raise ValueError(
+                    f"{event_type} is not in the allowed event types. "
+                    f"Please use one of {self.ALLOWED_EVENT_TYPES}"
+                )
+
+        self.event_types = event_types
+
+    def _download_dataset(self):
+        """Downloading this dataset is not supported."""
+        raise NotImplementedError(
+            "RetailRocket dataset should be downloaded manually, "
+            "you can get it at: https://www.kaggle.com/retailrocket/ecommerce-dataset."
+        )
+
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the RetailRocket dataset
+
+        Filters items that do not have enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinUsersPerItem(50, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+            MinItemsPerUser(3, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+        ]
+
+    @property
+    def _columns(self) -> List[str]:
+        columns = [self.USER_IX, self.ITEM_IX, self.TIMESTAMP_IX, self.EVENT_TYPE_IX]
+        return columns
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return a DataFrame.
+
+        The output will contain a DataFrame.
+        Each interaction is stored in a separate row.
+
+        :return: The interactions as a DataFrame, with a row for each interaction.
+        :rtype: pd.DataFrame
+        """
+
+        self.fetch_dataset()
+
+        df = pd.read_csv(
+            self.file_path,
+        )
+
+        # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
+        # Original data is in milliseconds since epoch, 
+        # and so should be divided by 1000
+        df[self.TIMESTAMP_IX] = (
+            df[self.TIMESTAMP_IX].view(int) / 1e3
+        )  # pandas datetime -> seconds from epoch
+
+        # Select only the specified event_types
+        if self.event_types:
+            df = df[df[self.EVENT_TYPE_IX].isin(self.event_types)].copy()
+
+        df = df[self._columns].copy()
 
         return df

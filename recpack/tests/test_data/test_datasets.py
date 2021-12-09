@@ -5,7 +5,7 @@ from tempfile import NamedTemporaryFile
 
 
 from recpack.data import datasets
-from recpack.preprocessing.filters import NMostPopular
+from recpack.preprocessing.filters import MinUsersPerItem, NMostPopular
 
 
 @pytest.fixture()
@@ -169,6 +169,143 @@ def test_recsys_challenge_2015():
         d._download_dataset()
 
 
+@pytest.mark.parametrize(
+    "extra_cols, event_types, num_events, final_shape",
+    [
+        ([], None, 47, (28, 42)),
+        (["category_id", "category_code"], None, 47, (28, 42)),
+        #
+        ([], ["view"], 47, (28, 42)),
+        ([], ["cart"], 26, (7, 21)),
+        ([], ["purchase"], 1, (1, 1)),
+        ([], ["remove_from_cart"], 26, (4, 16)),
+        #
+        ([], ["view", "cart"], 47 + 26, (30, 60)),
+        ([], ["view", "remove_from_cart"], 47 + 26, (30, 54)),
+        ([], ["view", "purchase"], 47 + 1, (28, 43)),
+        ([], ["cart", "purchase"], 26 + 1, (7, 21)),
+        ([], ["cart", "remove_from_cart"], 26 + 26, (10, 37)),
+        ([], ["remove_from_cart", "purchase"], 26 + 1, (4, 17)),
+        #
+        ([], ["view", "cart", "remove_from_cart"], 47 + 26 + 26, (32, 72)),
+        ([], ["view", "cart", "purchase"], 47 + 26 + 1, (30, 60)),
+        ([], ["view", "remove_from_cart", "purchase"], 47 + 26 + 1, (30, 55)),
+        ([], ["cart", "remove_from_cart", "purchase"], 26 + 26 + 1, (10, 37)),
+        #
+        ([], ["view", "cart", "remove_from_cart", "purchase"], 100, (32, 72)),
+    ],
+)
+def test_cosmeticsshop(
+    extra_cols,
+    event_types,
+    num_events,
+    final_shape,
+):
+    # To get sample we used head -100 2019-Dec.csv
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    if event_types is None:
+        d = datasets.CosmeticsShop(
+            path=path,
+            filename="cosmeticsshop-sample.csv",
+            preprocess_default=False,
+            extra_cols=extra_cols,
+        )
+    else:
+        d = datasets.CosmeticsShop(
+            path=path,
+            filename="cosmeticsshop-sample.csv",
+            preprocess_default=False,
+            extra_cols=extra_cols,
+            event_types=event_types,
+        )
+
+    df = d.load_dataframe()
+    assert (df.columns == d._columns).all()
+    assert df.shape == (num_events, len(d._columns))
+
+    # assert
+    data = d.load_interaction_matrix()
+
+    assert data.shape == final_shape
+
+    # We can't just download this dataset, since it requires Kaggle access
+    with pytest.raises(NotImplementedError):
+        d._download_dataset()
+
+
+def test_cosmeticsshop_bad_event_type():
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    with pytest.raises(ValueError):
+        _ = datasets.CosmeticsShop(
+            path=path,
+            filename="cosmeticsshop-sample.csv",
+            preprocess_default=False,
+            event_types=["hello"],
+        )
+
+
+@pytest.mark.parametrize(
+    "event_types, num_events, final_shape",
+    [
+        (None, 96, (90, 95)),  # Default = view
+        #
+        (["view"], 96, (90, 95)),
+        (["addtocart"], 3, (3, 3)),
+        (["transaction"], 1, (1, 1)),
+        #
+        (["view", "addtocart"], 96 + 3, (93, 97)),
+        (["view", "transaction"], 96 + 1, (91, 96)),
+        (["addtocart", "transaction"], 3 + 1, (3, 3)),
+        #
+        (["view", "addtocart", "transaction"], 96 + 3 + 1, (93, 97)),
+    ],
+)
+def test_retail_rocket(
+    event_types,
+    num_events,
+    final_shape,
+):
+    # To get sample we used head -100 2019-Dec.csv
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    if event_types is None:
+        d = datasets.RetailRocket(
+            path=path,
+            filename="retailrocket-sample.csv",
+            preprocess_default=False,
+        )
+    else:
+        d = datasets.RetailRocket(
+            path=path,
+            filename="retailrocket-sample.csv",
+            preprocess_default=False,
+            event_types=event_types,
+        )
+
+    df = d.load_dataframe()
+    assert (df.columns == d._columns).all()
+    assert df.shape == (num_events, len(d._columns))
+
+    # assert
+    data = d.load_interaction_matrix()
+
+    assert data.shape == final_shape
+
+    # We can't just download this dataset, since it requires Kaggle access
+    with pytest.raises(NotImplementedError):
+        d._download_dataset()
+
+
+def test_retail_rocket_bad_event_type():
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+    with pytest.raises(ValueError):
+        _ = datasets.CosmeticsShop(
+            path=path,
+            filename="retailrocket-sample.csv",
+            preprocess_default=False,
+            event_types=["hello"],
+        )
+
+
 def test_dummy_dataset():
     d = datasets.DummyDataset(seed=42)
 
@@ -183,7 +320,7 @@ def test_dummy_dataset():
     assert (df[d.ITEM_IX] == df2[d.ITEM_IX]).all()
     assert (df[d.TIMESTAMP_IX] == df2[d.TIMESTAMP_IX]).all()
 
-    assert df.shape[0] == d.NUM_INTERACTIONS
+    assert df.shape[0] == d.num_interactions
     items_kept = (
         (
             df.drop_duplicates([d.USER_IX, d.ITEM_IX])

@@ -8,17 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [UNRELEASED]
-* Added boolean parameter `use_only_interacted_items` to Random baseline, selects if all items should be used, or only those interacted with in the training dataset.
-* Fixed bug in NextItem prediction scenario
-    * if validation was specified, test_in data contained 1 too few interactions
-* Added parameter `n_most_recent` to `NextItemPrediction` class to limit test_in data to only the N most recent interactions of each user.
-* Renamed NextItemPrediction to LastItemPrediction class, kept NextItemPrediction as a copy with deprecation warning. 
 
+### Additions
+* __data.datasets__
+    * Added CosmeticsShop for https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop
+    * Added RetailRocket for https://www.kaggle.com/retailrocket/ecommerce-dataset
+    * Added parameters to dummy dataset to define the output expectations.
+* __algorithms.baseline__
+    * Added boolean parameter `use_only_interacted_items` to Random baseline, selects if all items should be used, or only those interacted with in the training dataset.
+* __splitters.scenarios__
+    * Added parameter `n_most_recent` to `NextItemPrediction` class to limit test_in data to only the N most recent interactions of each user.
+
+### Changes
 * __algorithms.wmf__
     * Refactored WeightedMatrixFactorization
         * It now uses PyTorch operations instead of NumPy (for GPU speedups).
         * It now processes batches of users and items instead of individual users and items.
+* __splitters.scenarios__
+    * Renamed `NextItemPrediction` to `LastItemPrediction` class, kept `NextItemPrediction` as a copy with deprecation warning. 
 
+### Bugfixes
+* __splitters.scenarios__
+    * Fixed bug in `NextItemPrediction` scenario:
+        * if validation was specified, test_in data contained 1 too few interactions
 ## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15)
 ### Dependency Update
 * Removed dependency on numba
