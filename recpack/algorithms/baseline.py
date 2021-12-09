@@ -46,6 +46,7 @@ class Random(Algorithm):
         matrix be used to recommend from. If False all items will be recommended
         uniformly at random.
         Defaults to True.
+    :type use_only_interacted_items: boolean, optional
     """
 
     def __init__(self, K=200, seed=None, use_only_interacted_items=True):

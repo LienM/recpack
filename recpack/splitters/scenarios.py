@@ -660,7 +660,7 @@ class LastItemPrediction(Scenario):
     If validation data is requested, :attr:`training_data` contains all but
     the last and second to last interaction of all users in the dataset.
 
-    - :attr:`validation_data_in` contains the n_most_recent interactions before the 2nd to last interaction of all users.
+    - :attr:`validation_data_in` contains the :attr:`n_most_recent` interactions before the 2nd to last interaction of all users.
     - :attr:`validation_data_out` contains the second to last interaction of all users.
 
     - :attr:`test_data_in`: contains the n_most_recent interactions before the last interaction of all users.
