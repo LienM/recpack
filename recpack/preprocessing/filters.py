@@ -173,6 +173,48 @@ class MinItemsPerUser(Filter):
         return df[df[self.user_ix].isin(users_of_interest)]
 
 
+class MaxItemsPerUser(Filter):
+    """Require that a user has interacted with at most number of items.
+
+    This way you can remove users that show extreme behaviour
+
+    :param max_items_per_user: Maximum number of items allowed.
+    :type max_items_per_user: int
+    :param item_ix: Name of the column in which item identifiers are listed.
+    :type item_ix: str
+    :param user_ix: Name of the column in which user identifiers are listed.
+    :type user_ix: str
+    :param count_duplicates: Count multiple interactions with the same item, defaults to False
+    :type count_duplicates: bool
+    """
+
+    def __init__(
+        self,
+        max_items_per_user: int,
+        item_ix: str,
+        user_ix: str,
+        count_duplicates: bool = False,
+    ):
+        self.max_iu = max_items_per_user
+        self.count_duplicates = count_duplicates
+
+        self.item_ix = item_ix
+        self.user_ix = user_ix
+
+    def apply(self, df):
+        uids = (
+            df[self.user_ix]
+            if self.count_duplicates
+            else df.drop_duplicates([self.user_ix, self.item_ix])[self.user_ix]
+        )
+        cnt_items_per_user = uids.value_counts()
+        users_of_interest = list(
+            cnt_items_per_user[cnt_items_per_user <= self.max_iu].index
+        )
+
+        return df[df[self.user_ix].isin(users_of_interest)]
+
+
 class MinRating(Filter):
     """Keep the DataFrame of only ratings above min_rating.
     This filter is used to turn a rating dataset into an interaction dataset.

@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Added RetailRocket for https://www.kaggle.com/retailrocket/ecommerce-dataset
     * Added parameters to dummy dataset to define the output expectations.
 
+* __preprocessing.filters__
+    * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
 ### Changes
 * __algorithms.wmf__
     * Refactored WeightedMatrixFactorization
