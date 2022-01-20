@@ -61,6 +61,20 @@ def test_random(data, data_in_out):
         # TODO: What else to test?
 
 
+def test_random_use_only_interacted_items(purchases):
+    algo = recpack.algorithms.Random(K=2, use_only_interacted_items=True)
+
+    algo.fit(purchases)
+    assert (
+        len(algo.items_) == 2
+    )  # 2 purchased items in the purchases interaction matrix
+
+    algo = recpack.algorithms.Random(K=2, use_only_interacted_items=False)
+
+    algo.fit(purchases)
+    assert len(algo.items_) == 5
+
+
 def test_popularity():
     item_i = [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
     user_i = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
