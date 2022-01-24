@@ -9,7 +9,7 @@ from scipy.sparse import csr_matrix
 
 from recpack.algorithms.p2v import Prod2Vec, window
 from recpack.data.matrix import InteractionMatrix
-from recpack.splitters.scenarios import NextItemPrediction
+from recpack.splitters.scenarios import LastItemPrediction
 from recpack.data.matrix import to_csr_matrix
 
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
@@ -240,7 +240,7 @@ def test_overfit(prod2vec):
     # For user 1 we should learn to predict 0 -> 2
     # For user 2 we should learn to predict 3 -> 4
     # For user 3 we should learn to predict 3 -> 5
-    scenario = NextItemPrediction(validation=True)
+    scenario = LastItemPrediction(validation=True)
     scenario.split(im)
     train = scenario.train_X
     val_data_in = scenario._validation_data_in

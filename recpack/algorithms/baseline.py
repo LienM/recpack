@@ -42,12 +42,18 @@ class Random(Algorithm):
     :type K: int, optional
     :param seed: Seed for the random number generator used, defaults to None
     :type seed: int, optional
+    :param use_only_interacted_items: Should only items visited in the training
+        matrix be used to recommend from. If False all items will be recommended
+        uniformly at random.
+        Defaults to True.
+    :type use_only_interacted_items: boolean, optional
     """
 
-    def __init__(self, K=200, seed=None):
+    def __init__(self, K=200, seed=None, use_only_interacted_items=True):
         super().__init__()
         self.items = None
         self.K = K
+        self.use_only_interacted_items = use_only_interacted_items
 
         if seed is None:
             seed = random.randrange(sys.maxsize)
@@ -55,7 +61,10 @@ class Random(Algorithm):
         self.seed = seed
 
     def _fit(self, X: csr_matrix):
-        self.items_ = list(set(X.nonzero()[1]))
+        if self.use_only_interacted_items:
+            self.items_ = list(set(X.nonzero()[1]))
+        else:
+            self.items_ = list(np.arange(X.shape[1]))
 
     def _predict(self, X: csr_matrix):
         """Predict K random scores for items per row in X
@@ -74,8 +83,7 @@ class Random(Algorithm):
             for i in np.random.choice(self.items_, size=self.K, replace=False)
         ]
         user_idxs, item_idxs, scores = list(zip(*score_list))
-        score_matrix = csr_matrix(
-            (scores, (user_idxs, item_idxs)), shape=X.shape)
+        score_matrix = csr_matrix((scores, (user_idxs, item_idxs)), shape=X.shape)
 
         return score_matrix
 

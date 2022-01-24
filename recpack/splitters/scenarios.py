@@ -646,9 +646,9 @@ class StrongGeneralizationTimedMostRecent(Scenario):
             self.train_X = tr_val_data
 
 
-class NextItemPrediction(Scenario):
-    """Split data so that a user's second to last interaction is used to predict their last interaction.
-        Trains on all other interactions.
+class LastItemPrediction(Scenario):
+    """Split data so that a user's previous n_most_recent interactions are used to predict their last interaction.
+    Trains on all other interactions.
 
     A scenario is stateful. After calling ``split`` on your dataset,
     the training, validation and test dataset can be retrieved under
@@ -660,15 +660,15 @@ class NextItemPrediction(Scenario):
     If validation data is requested, :attr:`training_data` contains all but
     the last and second to last interaction of all users in the dataset.
 
-    - :attr:`validation_data_in` contains the third to last interaction of all users.
+    - :attr:`validation_data_in` contains the :attr:`n_most_recent` interactions before the 2nd to last interaction of all users.
     - :attr:`validation_data_out` contains the second to last interaction of all users.
 
-    - :attr:`test_data_in`: contains the second to last interaction of all users.
+    - :attr:`test_data_in`: contains the n_most_recent interactions before the last interaction of all users.
     - :attr:`test_data_out` contains the last interaction of all users.
 
     **Example**
 
-    As an example, we split this data with ``validation=False``::
+    As an example, we split this data with ``validation=False`` and ``n_most_recent=1``::
 
         time    0   1   2   3   4   5
         user1   X   X   X
@@ -701,11 +701,16 @@ class NextItemPrediction(Scenario):
         This scenario is deterministic, so changing seed should not matter.
         Defaults to None, so random seed will be generated.
     :type seed: int, optional
+    :param n_most_recent: How much of the historic events to use as input history.
+        Defaults to 1
+    :type n_most_recent: int, optional
     """
 
-    def __init__(self, validation=False, seed=None):
+    def __init__(self, validation=False, seed=None, n_most_recent=1):
         super().__init__(validation=validation, seed=seed)
         self.most_recent_splitter = splitter_base.MostRecentSplitter(1)
+        self.n_most_recent = n_most_recent
+        self.history_splitter = splitter_base.MostRecentSplitter(n_most_recent)
 
     def _split(self, data):
         """Splits data so that a user's second to last interaction is used to predict their last interaction.
@@ -715,12 +720,25 @@ class NextItemPrediction(Scenario):
         :type data: InteractionMatrix
         """
         train_val_data, self._test_data_out = self.most_recent_splitter.split(data)
+        # Select n most recent as test_in
+        _, self._test_data_in = self.history_splitter.split(train_val_data)
+
         if self.validation:
+            # Select the 1 event to use as val_out per user
             train_val_data, self._validation_data_out = self.most_recent_splitter.split(
                 train_val_data
             )
-            _, self._validation_data_in = self.most_recent_splitter.split(
-                train_val_data
-            )
-        _, self._test_data_in = self.most_recent_splitter.split(train_val_data)
+            # Select n items to use as val_in per user
+            _, self._validation_data_in = self.history_splitter.split(train_val_data)
+
         self.train_X = train_val_data
+
+
+class NextItemPrediction(LastItemPrediction):
+    def __init__(self, validation=False, seed=None, n_most_recent=1):
+        raise DeprecationWarning(
+            "NextItemPrediction will be deprecated in favour of "
+            "the more descriptive LastItemPrediction"
+        )
+
+        super.__init__(self, validation, seed, n_most_recent)
