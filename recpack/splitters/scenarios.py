@@ -150,7 +150,7 @@ class WeakGeneralization(Scenario):
 
         item    0   1   2   3   4   5
         user1       X
-        user2               X
+        user2           X
 
     validation_data_in::
 
