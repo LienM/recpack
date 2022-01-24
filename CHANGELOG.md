@@ -7,7 +7,7 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.2.2] - ![](https://img.shields.io/date/1643025589.svg?label=2022-01-24)
 
 ### Additions
 * __data.datasets__
@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __splitters.scenarios__
     * Fixed bug in `NextItemPrediction` scenario:
         * if validation was specified, test_in data contained 1 too few interactions
+
 ## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15)
 ### Dependency Update
 * Removed dependency on numba
