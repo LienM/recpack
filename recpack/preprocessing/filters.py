@@ -174,7 +174,7 @@ class MinItemsPerUser(Filter):
 
 
 class MaxItemsPerUser(Filter):
-    """Require that a user has interacted with at most number of items.
+    """Require that a user has interacted with no more than `max_items_per_user` items.
 
     This way you can remove users that show extreme behaviour
 
