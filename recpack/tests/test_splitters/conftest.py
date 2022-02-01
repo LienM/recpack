@@ -103,7 +103,9 @@ def data_m_small():
 
 @pytest.fixture(scope="function")
 def data_m_sessions():
-    """Data matrix with sessions of varying time overlap for testing time-based splits"""
+    """Data matrix with sessions of varying time overlap
+    for testing time-based splits
+    """
     # (user, time) matrix, non-zero entries are item ids
     # fmt:off
     user_time = csr_matrix(
