@@ -26,6 +26,7 @@ The raw data needs to be cleaned up, to make an optimally useful dataset.
     filters.Filter
     filters.MinUsersPerItem
     filters.MinItemsPerUser
+    filters.MaxItemsPerUser
     filters.NMostPopular
     filters.NMostRecent
     filters.Deduplicate

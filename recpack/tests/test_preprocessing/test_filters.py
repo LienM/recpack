@@ -195,3 +195,41 @@ def test_apply_all(dataframe):
     two_in = 2 in filtered_iids
 
     assert (five_in or two_in) and not (five_in and two_in)
+
+
+def test_max_items_per_user_filter(dataframe):
+
+    df = dataframe
+
+    # Not counting duplicates
+    myfilter = filters.MaxItemsPerUser(
+        2,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+    )
+    filtered_df = myfilter.apply(df)
+
+    filtered_uids = filtered_df[InteractionMatrix.USER_IX].unique()
+
+    assert 0 not in filtered_uids
+    assert 1 not in filtered_uids
+    assert 2 not in filtered_uids
+    assert 3 in filtered_uids
+    assert 4 in filtered_uids
+
+    # Counting duplicates
+    myfilter = filters.MaxItemsPerUser(
+        2,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        count_duplicates=True,
+    )
+    filtered_df = myfilter.apply(df)
+
+    filtered_uids = filtered_df[InteractionMatrix.USER_IX].unique()
+
+    assert 0 not in filtered_uids
+    assert 1 not in filtered_uids
+    assert 2 not in filtered_uids
+    assert 3 in filtered_uids
+    assert 4 not in filtered_uids
