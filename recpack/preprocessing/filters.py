@@ -176,7 +176,7 @@ class MinItemsPerUser(Filter):
 class MaxItemsPerUser(Filter):
     """Require that a user has interacted with no more than `max_items_per_user` items.
 
-    This way you can remove users that show extreme behaviour
+    This way you can remove users that show extreme behaviour.
 
     :param max_items_per_user: Maximum number of items allowed.
     :type max_items_per_user: int
