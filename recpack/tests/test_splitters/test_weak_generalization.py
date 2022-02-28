@@ -159,7 +159,7 @@ def test_weak_generalization_mismatching_train_test_in(data_m_sporadic_users):
 @pytest.mark.parametrize(
     "frac_interactions_train, frac_interactions_validation", [(0.5, 0.25), (0.25, 0.25)]
 )
-def test_strong_generalization_timed_split_seed(
+def test_weak_generalization_timed_split_seed(
     data_m, frac_interactions_train, frac_interactions_validation
 ):
 
