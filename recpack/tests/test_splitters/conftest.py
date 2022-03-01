@@ -103,7 +103,9 @@ def data_m_small():
 
 @pytest.fixture(scope="function")
 def data_m_sessions():
-    """Data matrix with sessions of varying time overlap for testing time-based splits"""
+    """Data matrix with sessions of varying time overlap
+    for testing time-based splits
+    """
     # (user, time) matrix, non-zero entries are item ids
     # fmt:off
     user_time = csr_matrix(
@@ -126,3 +128,25 @@ def data_m_sessions():
     )
 
     return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+
+@pytest.fixture(scope="function")
+def data_m_sporadic_users():
+    """Data matrix for testing when we expect users to only have 1 or 2 interactions"""
+    input_dict = {
+        InteractionMatrix.USER_IX: [0, 0, 0, 1, 1, 1, 1, 2, 3, 3],
+        InteractionMatrix.ITEM_IX: [0, 1, 2, 0, 1, 2, 3, 3, 5, 6],
+        InteractionMatrix.TIMESTAMP_IX: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+
+    df = pd.DataFrame.from_dict(input_dict)
+    df.drop_duplicates(
+        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
+    )
+    data = InteractionMatrix(
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+    return data

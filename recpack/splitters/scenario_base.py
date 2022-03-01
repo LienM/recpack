@@ -84,13 +84,13 @@ class Scenario(ABC):
             InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
+        if not self.validation:
+            raise KeyError("This scenario was created without validation_data.")
+
         if not hasattr(self, "_validation_data_in"):
             raise KeyError(
                 "Split before trying to access the validation_data property."
             )
-
-        if not self.validation:
-            raise KeyError("This scenario was created without validation_data.")
 
         # make sure users match both.
         in_users = self._validation_data_in.active_users

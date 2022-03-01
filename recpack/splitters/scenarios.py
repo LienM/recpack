@@ -139,9 +139,8 @@ class WeakGeneralization(Scenario):
 
     **Example**
 
-    As an example, plitting following data with ``frac_users_train = 0.333``,
-    ``frac_interactions_validation = 0.333`` and ``validation = True``
-    and ``validation=False``::
+    As an example, splitting following data with ``frac_users_train = 0.333``,
+    ``frac_interactions_validation = 0.333`` and ``validation = True``::
 
         item    0   1   2   3   4   5
         user1   X   X   X
@@ -151,7 +150,7 @@ class WeakGeneralization(Scenario):
 
         item    0   1   2   3   4   5
         user1       X
-        user2               X
+        user2           X
 
     validation_data_in::
 
