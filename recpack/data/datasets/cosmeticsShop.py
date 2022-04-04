@@ -7,7 +7,7 @@ import pandas as pd
 from typing import List, Optional, Tuple, Union
 from urllib.request import urlretrieve
 #import zipfile
-import Dataset
+from recpack.data.datasets.dataset import Dataset
 
 from recpack.preprocessing.filters import (
     Filter,
