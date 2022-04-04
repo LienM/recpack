@@ -1,13 +1,3 @@
-import imp
-import recpack.data.datasets.citeULike
-import recpack.data.datasets.cosmeticsShop
-import recpack.data.datasets.dataset
-import recpack.data.datasets.dummyDataset
-import recpack.data.datasets.movieLens25M
-import recpack.data.datasets.recsysChallenge2015
-import recpack.data.datasets.retailRocket
-import recpack.data.datasets.thirtyMusicSessions
-
 from recpack.data.datasets.dataset import Dataset
 from recpack.data.datasets.citeULike import CiteULike
 from recpack.data.datasets.cosmeticsShop import CosmeticsShop
