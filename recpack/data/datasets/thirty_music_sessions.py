@@ -1,12 +1,7 @@
-"""Module responsible for handling datasets."""
+"""Module responsible for the ThirtyMusicSessions dataset."""
 
-#import numpy as np
-#import os
 import pandas as pd
-#from pathlib import Path
 from typing import List
-#from urllib.request import urlretrieve
-#import zipfile
 from recpack.data.datasets.dataset import Dataset
 
 from recpack.preprocessing.filters import (
@@ -14,9 +9,6 @@ from recpack.preprocessing.filters import (
     MinItemsPerUser,
     MinUsersPerItem,
 )
-#from recpack.data.matrix import InteractionMatrix, to_binary
-#from recpack.preprocessing.preprocessors import DataFramePreprocessor
-#from recpack.util import to_tuple
 
 class ThirtyMusicSessions(Dataset):
     # TODO Write documentation
@@ -63,3 +55,4 @@ class ThirtyMusicSessions(Dataset):
         df.drop(columns=["numtracks", "playtime", "uid"], inplace=True)
         df = df.astype({self.TIMESTAMP_IX: "int32"})
         return df
+        

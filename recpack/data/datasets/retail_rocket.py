@@ -1,12 +1,7 @@
-"""Module responsible for handling datasets."""
+"""Module responsible for the RetailRocket dataset."""
 
-import numpy as np
-#import os
 import pandas as pd
-#from pathlib import Path
 from typing import List, Tuple, Union
-from urllib.request import urlretrieve
-#import zipfile
 from recpack.data.datasets.dataset import Dataset
 
 from recpack.preprocessing.filters import (
@@ -14,9 +9,6 @@ from recpack.preprocessing.filters import (
     MinItemsPerUser,
     MinUsersPerItem,
 )
-#from recpack.data.matrix import InteractionMatrix, to_binary
-#from recpack.preprocessing.preprocessors import DataFramePreprocessor
-#from recpack.util import to_tuple
 
 class RetailRocket(Dataset):
     """Handles data from the Retail Rocket dataset on Kaggle.
@@ -136,3 +128,4 @@ class RetailRocket(Dataset):
         df = df[self._columns].copy()
 
         return df
+        

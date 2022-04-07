@@ -1,12 +1,8 @@
-"""Module responsible for handling datasets."""
+"""Module responsible for the DummyDataset dataset."""
 
 import numpy as np
-#import os
 import pandas as pd
-#from pathlib import Path
 from typing import List
-from urllib.request import urlretrieve
-#import zipfile
 from recpack.data.datasets.dataset import Dataset
 
 from recpack.preprocessing.filters import (
@@ -14,9 +10,6 @@ from recpack.preprocessing.filters import (
     MinItemsPerUser,
     MinUsersPerItem,
 )
-#from recpack.data.matrix import InteractionMatrix, to_binary
-#from recpack.preprocessing.preprocessors import DataFramePreprocessor
-#from recpack.util import to_tuple
 
 class DummyDataset(Dataset):
     """Small randomly generated dummy dataset that allows testing of pipelines
@@ -125,3 +118,4 @@ class DummyDataset(Dataset):
 
         df = pd.DataFrame.from_dict(input_dict)
         return df
+        

@@ -1,19 +1,28 @@
 """Module responsible for handling datasets."""
 
-#import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
 from typing import List
-#from urllib.request import urlretrieve
-#import zipfile
-
+from urllib.request import urlretrieve
 from recpack.preprocessing.filters import (
     Filter,
 )
 from recpack.data.matrix import InteractionMatrix
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
-#from recpack.util import to_tuple
+
+def _fetch_remote(url: str, filename: str) -> str:
+    """Fetch data from remote url and save locally
+
+    :param url: url to fetch data from
+    :type url: str
+    :param filename: Path to save file to
+    :type filename: str
+    :return: The filename where data was saved
+    :rtype: str
+    """
+    urlretrieve(url, filename)
+    return filename
 
 class Dataset:
     """Represents a collaborative filtering dataset,

@@ -1,12 +1,7 @@
-"""Module responsible for handling datasets."""
+"""Module responsible for the CosmeticsShop dataset."""
 
-#import numpy as np
-#import os
 import pandas as pd
-#from pathlib import Path
 from typing import List, Optional, Tuple, Union
-from urllib.request import urlretrieve
-#import zipfile
 from recpack.data.datasets.dataset import Dataset
 
 from recpack.preprocessing.filters import (
@@ -14,9 +9,6 @@ from recpack.preprocessing.filters import (
     MinItemsPerUser,
     MinUsersPerItem,
 )
-#from recpack.data.matrix import InteractionMatrix, to_binary
-#from recpack.preprocessing.preprocessors import DataFramePreprocessor
-#from recpack.util import to_tuple
 
 class CosmeticsShop(Dataset):
     """Handles data from the eCommerce Events History in Cosmetics Shop dataset on Kaggle.
@@ -145,3 +137,4 @@ class CosmeticsShop(Dataset):
         df = df[self._columns].copy()
 
         return df
+        
