@@ -55,7 +55,7 @@ class RecsysChallenge2015(Dataset):
         :rtype: List[Filter]
         """
         return [
-            MinUsersPerItem(5, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+            MinUsersPerItem(5, self.ITEM_IX, self.USER_IX, count_duplicates=True),
         ]
 
     def load_dataframe(self) -> pd.DataFrame:

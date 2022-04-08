@@ -54,7 +54,7 @@ class CiteULike(Dataset):
         ]
 
     def _download_dataset(self):
-        """Download thee users.dat file from the github repository.
+        """Download the users.dat file from the github repository.
         The file is saved at the specified `self.file_path`
         """
         DATASETURL = (

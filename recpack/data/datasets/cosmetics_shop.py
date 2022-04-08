@@ -97,8 +97,8 @@ class CosmeticsShop(Dataset):
         :rtype: List[Filter]
         """
         return [
-            MinUsersPerItem(50, self.USER_IX, self.ITEM_IX, count_duplicates=True),
-            MinItemsPerUser(3, self.USER_IX, self.ITEM_IX, count_duplicates=True),
+            MinUsersPerItem(50, self.ITEM_IX, self.USER_IX, count_duplicates=True),
+            MinItemsPerUser(3, self.ITEM_IX, self.USER_IX, count_duplicates=True),
         ]
 
     @property
