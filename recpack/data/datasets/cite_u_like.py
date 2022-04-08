@@ -11,6 +11,7 @@ from recpack.preprocessing.filters import (
     MinUsersPerItem,
 )
 
+
 class CiteULike(Dataset):
     """Dataset class for the CiteULike dataset.
 

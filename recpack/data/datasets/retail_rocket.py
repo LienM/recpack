@@ -10,6 +10,7 @@ from recpack.preprocessing.filters import (
     MinUsersPerItem,
 )
 
+
 class RetailRocket(Dataset):
     """Handles data from the Retail Rocket dataset on Kaggle.
 
@@ -115,7 +116,7 @@ class RetailRocket(Dataset):
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
-        # Original data is in milliseconds since epoch, 
+        # Original data is in milliseconds since epoch,
         # and so should be divided by 1000
         df[self.TIMESTAMP_IX] = (
             df[self.TIMESTAMP_IX].view(int) / 1e3
@@ -128,4 +129,3 @@ class RetailRocket(Dataset):
         df = df[self._columns].copy()
 
         return df
-        

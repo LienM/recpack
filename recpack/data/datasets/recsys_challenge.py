@@ -10,6 +10,7 @@ from recpack.preprocessing.filters import (
     MinUsersPerItem,
 )
 
+
 class RecsysChallenge2015(Dataset):
     """Handles data from the Recsys Challenge 2015, yoochoose dataset.
 
@@ -87,4 +88,3 @@ class RecsysChallenge2015(Dataset):
         )  # pandas datetime -> seconds from epoch
 
         return df
-        

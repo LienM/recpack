@@ -11,6 +11,7 @@ from recpack.preprocessing.filters import (
 from recpack.data.matrix import InteractionMatrix
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
 
+
 def _fetch_remote(url: str, filename: str) -> str:
     """Fetch data from remote url and save locally
 
@@ -23,6 +24,7 @@ def _fetch_remote(url: str, filename: str) -> str:
     """
     urlretrieve(url, filename)
     return filename
+
 
 class Dataset:
     """Represents a collaborative filtering dataset,

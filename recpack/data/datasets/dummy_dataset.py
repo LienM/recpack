@@ -11,6 +11,7 @@ from recpack.preprocessing.filters import (
     MinUsersPerItem,
 )
 
+
 class DummyDataset(Dataset):
     """Small randomly generated dummy dataset that allows testing of pipelines
     and other components without needing to load a full scale dataset.
@@ -118,4 +119,3 @@ class DummyDataset(Dataset):
 
         df = pd.DataFrame.from_dict(input_dict)
         return df
-        

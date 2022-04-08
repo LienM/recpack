@@ -10,6 +10,7 @@ from recpack.preprocessing.filters import (
     MinUsersPerItem,
 )
 
+
 class ThirtyMusicSessions(Dataset):
     # TODO Write documentation
 
@@ -55,4 +56,3 @@ class ThirtyMusicSessions(Dataset):
         df.drop(columns=["numtracks", "playtime", "uid"], inplace=True)
         df = df.astype({self.TIMESTAMP_IX: "int32"})
         return df
-        

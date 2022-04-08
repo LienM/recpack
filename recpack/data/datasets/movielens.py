@@ -14,6 +14,7 @@ from recpack.preprocessing.filters import (
     MinRating,
 )
 
+
 class MovieLens25M(Dataset):
     """Handles Movielens 25M dataset.
 
@@ -114,4 +115,3 @@ class MovieLens25M(Dataset):
         )
 
         return df
-        

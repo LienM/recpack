@@ -10,6 +10,7 @@ from recpack.preprocessing.filters import (
     MinUsersPerItem,
 )
 
+
 class CosmeticsShop(Dataset):
     """Handles data from the eCommerce Events History in Cosmetics Shop dataset on Kaggle.
 
@@ -137,4 +138,3 @@ class CosmeticsShop(Dataset):
         df = df[self._columns].copy()
 
         return df
-        
