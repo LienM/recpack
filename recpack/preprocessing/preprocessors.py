@@ -1,9 +1,12 @@
 """Preprocessors turn data into Recpack internal representations."""
 
+from itertools import groupby
 import logging
 from typing import List
+from numpy import cumsum
 
 import pandas as pd
+from scipy.fftpack import shift
 
 import recpack.preprocessing.util as util
 from recpack.data.matrix import InteractionMatrix
@@ -215,3 +218,61 @@ class DataFramePreprocessor:
         self.item_id_mapping = util.rescale_id_space(
             item_ids, id_mapping=self.item_id_mapping
         )
+
+
+class SessionDataFramePreprocessor(DataFramePreprocessor):
+    # Not completed yet!
+    SESSION_IX = "session_id"
+
+    def __init__(
+        self,
+        item_ix,
+        timestamp_ix,
+        user_ix=SESSION_IX,
+        interval_between_sessions=30 * 60,
+        maximal_allowed_gap=20,
+    ):
+        super().__init__(item_ix, user_ix, timestamp_ix)
+
+        self.interval_between_sessions = interval_between_sessions
+        self.maximal_allowed_gap = maximal_allowed_gap
+
+    def process_many(self, *dfs: pd.DataFrame):
+        session_dfs = []
+        for df in dfs:
+            session_dfs.append(self.session_transformer(df))
+        # dfs = cut_df_into_sessions(dfs, self.interval_between_sessions)
+
+        return super().process_many(*session_dfs)
+
+    def session_transformer(self, df) -> pd.DataFrame:
+        dfs = df[self.user_ix, self.item_ix, self.timestamp_ix]
+        if self.user_ix | self.item_ix | self.timestamp_ix is not dfs:
+            raise ValueError("One of the element doesn't exist!")
+        # a = groupby(dfs[self.user_ix])
+        data_list = list(dfs.itertuples(index=False))
+        # gap = 10
+        # Sorting the list by the timestamp
+        data_list_sorted = sorted(data_list, key=lambda i: i[1])
+        result_list = []
+        session_list = []
+        # Appending the first item with its timestamp
+        session_list.append(data_list_sorted[0])
+        # assigning the last timestamps as the timestamp of the first item of the list
+        last_timestamp = session_list[0][1]
+        for i in data_list_sorted[1:]:
+            next_timestamp = i[1]
+            if (next_timestamp - last_timestamp) <= self.maximal_allowed_gap:
+                session_list.append(i)
+                last_timestamp = next_timestamp
+            else:
+                result_list.append(session_list.copy())
+                session_list.clear()
+                session_list.append(i)
+                last_timestamp = next_timestamp
+        result_list.append(session_list)
+        l_new = []
+        for lst in result_list:
+            l_new.append([x[0] for x in lst])
+        return l_new
+        # return df

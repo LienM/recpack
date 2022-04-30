@@ -1,7 +1,10 @@
 import pytest
 
 import recpack.preprocessing.filters as filters
-from recpack.preprocessing.preprocessors import DataFramePreprocessor
+from recpack.preprocessing.preprocessors import (
+    DataFramePreprocessor,
+    SessionDataFramePreprocessor,
+)
 from recpack.data.matrix import InteractionMatrix
 
 
@@ -225,3 +228,52 @@ def test_add_filter(dataframe):
     assert type(processor.filters[0]) == filters.MinUsersPerItem
     assert type(processor.filters[1]) == filters.MinItemsPerUser
     assert type(processor.filters[2]) == filters.NMostPopular
+
+
+def test_sessions(dataframe):
+    processor = SessionDataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        SessionDataFramePreprocessor.SESSION_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    interaction_m = processor.process(dataframe)
+
+    # Here we check the number of rows with shape[0] and we want to be sure to be equal with the number
+    # of session rows.
+    assert interaction_m.shape[0] == len(
+        dataframe[SessionDataFramePreprocessor.SESSION_IX].unique()
+    )
+    # assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+
+
+def test_session_interactions(dataframe):
+    processor = SessionDataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        SessionDataFramePreprocessor.SESSION_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    row = dataframe.loc[
+        0, :
+    ].values  # This will be the session and item interactions for the first
+    # session. Here we will test only one session to check the interactions of that session with items.
+    # So we will check the interactions for one row.
+
+    dataframe.loc[dataframe.shape[0]] = row
+    interaction_m = processor.process(dataframe)
+    assert (
+        row[2] == interaction_m.timestamps[row[0], row[1]]
+    )  # testing the series of interaction with
+    # multi indexing on session id and item id.
+
+
+def test_session_raises(dataframe):
+    processor = SessionDataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        SessionDataFramePreprocessor.SESSION_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    with pytest.raises(ValueError):
+        processor.session_transformer(dataframe)
