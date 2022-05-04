@@ -228,13 +228,11 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         self,
         item_ix,
         timestamp_ix,
-        user_ix=SESSION_IX,
-        interval_between_sessions=30 * 60,
+        user_ix,
         maximal_allowed_gap=20,
     ):
-        super().__init__(item_ix, user_ix, timestamp_ix)
-
-        self.interval_between_sessions = interval_between_sessions
+        super().__init__(item_ix, self.SESSION_IX, timestamp_ix)
+        self.raw_user_ix = user_ix
         self.maximal_allowed_gap = maximal_allowed_gap
 
     def process_many(self, *dfs: pd.DataFrame):
@@ -247,13 +245,19 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
 
     def session_transformer(self, df) -> pd.DataFrame:
         dfs = df[self.user_ix, self.item_ix, self.timestamp_ix]
-        if self.user_ix | self.item_ix | self.timestamp_ix is not dfs:
+        if (
+            self.user_ix not in dfs
+            or self.item_ix not in dfs
+            or self.timestamp_ix not in dfs
+        ):
             raise ValueError("One of the element doesn't exist!")
         # a = groupby(dfs[self.user_ix])
+        # dfs = pd.DataFrame.sort_values(by = [self.user_ix, self.timestamp_ix])
         data_list = list(dfs.itertuples(index=False))
         # gap = 10
         # Sorting the list by the timestamp
-        data_list_sorted = sorted(data_list, key=lambda i: i[1])
+        data_list_sorted = sorted(data_list, key=lambda i: (i[0], i[2]))
+        # data_list_sorted = data_list
         result_list = []
         session_list = []
         # Appending the first item with its timestamp
@@ -274,5 +278,6 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         l_new = []
         for lst in result_list:
             l_new.append([x[0] for x in lst])
+        l_dfs = pd.DataFrame(l_new)
         return l_new
         # return df

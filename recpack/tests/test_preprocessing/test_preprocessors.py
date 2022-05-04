@@ -1,3 +1,4 @@
+from sys import exc_info
 import pytest
 
 import recpack.preprocessing.filters as filters
@@ -233,7 +234,7 @@ def test_add_filter(dataframe):
 def test_sessions(dataframe):
     processor = SessionDataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
-        SessionDataFramePreprocessor.SESSION_IX,
+        InteractionMatrix.USER_IX,
         timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
 
@@ -250,7 +251,7 @@ def test_sessions(dataframe):
 def test_session_interactions(dataframe):
     processor = SessionDataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
-        SessionDataFramePreprocessor.SESSION_IX,
+        InteractionMatrix.USER_IX,
         timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
 
@@ -260,8 +261,12 @@ def test_session_interactions(dataframe):
     # session. Here we will test only one session to check the interactions of that session with items.
     # So we will check the interactions for one row.
 
-    dataframe.loc[dataframe.shape[0]] = row
+    dataframe.iloc[
+        0
+    ] = row  # Here we are interested to check only the first row of the dataframe.
     interaction_m = processor.process(dataframe)
+    row[0] = processor.raw_user_ix
+    row[1] = processor.item_id_mapping
     assert (
         row[2] == interaction_m.timestamps[row[0], row[1]]
     )  # testing the series of interaction with
@@ -271,9 +276,10 @@ def test_session_interactions(dataframe):
 def test_session_raises(dataframe):
     processor = SessionDataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
-        SessionDataFramePreprocessor.SESSION_IX,
+        InteractionMatrix.USER_IX,
         timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as excinfo:
         processor.session_transformer(dataframe)
+    assert "One of the element doesn't exist!" in str(excinfo.value)
