@@ -244,13 +244,15 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         return super().process_many(*session_dfs)
 
     def session_transformer(self, df) -> pd.DataFrame:
-        dfs = df[self.user_ix, self.item_ix, self.timestamp_ix]
         if (
-            self.user_ix not in dfs
-            or self.item_ix not in dfs
-            or self.timestamp_ix not in dfs
+            self.raw_user_ix
+            not in df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
+            or self.item_ix not in df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
+            or self.timestamp_ix
+            not in df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
         ):
             raise ValueError("One of the element doesn't exist!")
+        dfs = df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
         # a = groupby(dfs[self.user_ix])
         # dfs = pd.DataFrame.sort_values(by = [self.user_ix, self.timestamp_ix])
         data_list = list(dfs.itertuples(index=False))
