@@ -227,8 +227,8 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
     def __init__(
         self,
         item_ix,
-        timestamp_ix,
         user_ix,
+        timestamp_ix,
         maximal_allowed_gap=20,
     ):
         super().__init__(item_ix, self.SESSION_IX, timestamp_ix)
@@ -239,27 +239,25 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         session_dfs = []
         for df in dfs:
             session_dfs.append(self.session_transformer(df))
-        # dfs = cut_df_into_sessions(dfs, self.interval_between_sessions)
-
+        print(session_dfs)
         return super().process_many(*session_dfs)
 
     def session_transformer(self, df) -> pd.DataFrame:
+        # return df.rename(columns={self.raw_user_ix: self.SESSION_IX})
         if (
-            self.raw_user_ix
-            not in df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
-            or self.item_ix not in df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
-            or self.timestamp_ix
-            not in df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
+            self.raw_user_ix not in df
+            or self.item_ix not in df
+            or self.timestamp_ix not in df
         ):
             raise ValueError("One of the element doesn't exist!")
-        dfs = df[self.raw_user_ix, self.item_ix, self.timestamp_ix]
-        # a = groupby(dfs[self.user_ix])
-        # dfs = pd.DataFrame.sort_values(by = [self.user_ix, self.timestamp_ix])
-        data_list = list(dfs.itertuples(index=False))
-        # gap = 10
+
+        df = df[[self.raw_user_ix, self.item_ix, self.timestamp_ix]]
+
         # Sorting the list by the timestamp
-        data_list_sorted = sorted(data_list, key=lambda i: (i[0], i[2]))
-        # data_list_sorted = data_list
+        data_list_sorted = sorted(
+            df.itertuples(index=False), key=lambda i: (i[0], i[2])
+        )
+
         result_list = []
         session_list = []
         # Appending the first item with its timestamp
@@ -281,5 +279,5 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         for lst in result_list:
             l_new.append([x[0] for x in lst])
         l_dfs = pd.DataFrame(l_new)
-        return l_new
+        return l_dfs
         # return df
