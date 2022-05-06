@@ -1,4 +1,5 @@
 from sys import exc_info
+import numpy as np
 import pytest
 
 import recpack.preprocessing.filters as filters
@@ -231,55 +232,81 @@ def test_add_filter(dataframe):
     assert type(processor.filters[2]) == filters.NMostPopular
 
 
-def test_sessions(dataframe):
+def test_session_dataframe_preprocessor_sunny_day(dataframe_with_fixed_timestamps):
     processor = SessionDataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
         timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
     )
+    interaction_m = processor.process(dataframe_with_fixed_timestamps)
 
-    interaction_m = processor.process(dataframe)
-
-    # Here we check the number of rows with shape[0] and we want to be sure to be equal with the number
-    # of session rows.
-    assert interaction_m.shape[0] == len(
-        dataframe[SessionDataFramePreprocessor.SESSION_IX].unique()
-    )
-    # assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
-
-
-def test_session_interactions(dataframe):
-    processor = SessionDataFramePreprocessor(
-        InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
-        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
-    )
-
-    row = dataframe.loc[
-        0, :
-    ].values  # This will be the session and item interactions for the first
-    # session. Here we will test only one session to check the interactions of that session with items.
-    # So we will check the interactions for one row.
-
-    dataframe.iloc[
-        0
-    ] = row  # Here we are interested to check only the first row of the dataframe.
-    interaction_m = processor.process(dataframe)
-    row[0] = processor.raw_user_ix
-    row[1] = processor.item_id_mapping
+    # User 1 has 2 sessions, all other users have a single one.
     assert (
-        row[2] == interaction_m.timestamps[row[0], row[1]]
-    )  # testing the series of interaction with
-    # multi indexing on session id and item id.
+        interaction_m.shape[0]
+        == dataframe_with_fixed_timestamps[InteractionMatrix.USER_IX].nunique() + 1
+    )
+
+    session_interaction_counts = interaction_m.values.sum(axis=1).T
+
+    session_interaction_counts[0, 0] == 5
+    session_interaction_counts[0, 1] == 4
+    session_interaction_counts[0, 2] == 3
+    session_interaction_counts[0, 3] == 3
+    session_interaction_counts[0, 4] == 2
+    session_interaction_counts[0, 5] == 3
+
+    # Check that order is as expected
+    session_unique_interaction_counts = interaction_m.binary_values.sum(axis=1).T
+    session_unique_interaction_counts[0, 2] == 1
+    session_unique_interaction_counts[0, 5] == 1
+
+    first_session_id, first_session = next(interaction_m.sorted_item_history)
+    assert first_session_id == 0
+    np.testing.assert_array_equal(first_session, [0, 1, 2, 3, 4])
 
 
-def test_session_raises(dataframe):
+@pytest.mark.parametrize(
+    "item_ix, user_ix, timestamp_ix",
+    [
+        (
+            "this_is_not_there",
+            InteractionMatrix.USER_IX,
+            InteractionMatrix.TIMESTAMP_IX,
+        ),
+        (
+            "this_is_not_there",
+            InteractionMatrix.USER_IX,
+            InteractionMatrix.TIMESTAMP_IX,
+        ),  # TODO: add more cases here
+    ],
+)
+def test_session_raises(dataframe, item_ix, user_ix, timestamp_ix):
+    processor = SessionDataFramePreprocessor(
+        item_ix,
+        user_ix,
+        timestamp_ix,
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        processor.session_transformer(dataframe)
+    assert "One of the element doesn't exist!" in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    "column_to_drop",
+    [
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        InteractionMatrix.TIMESTAMP_IX,
+    ],
+)
+def test_session_raises_missing_column(dataframe, column_to_drop):
     processor = SessionDataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
-        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+        InteractionMatrix.TIMESTAMP_IX,
     )
-
+    dataframe.drop(column_to_drop, axis="columns", inplace=True)
     with pytest.raises(ValueError) as excinfo:
         processor.session_transformer(dataframe)
     assert "One of the element doesn't exist!" in str(excinfo.value)
