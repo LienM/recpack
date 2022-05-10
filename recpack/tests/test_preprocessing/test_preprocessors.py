@@ -278,6 +278,36 @@ def test_session_dataframe_preprocessor_sunny_day(dataframe_with_fixed_timestamp
             InteractionMatrix.USER_IX,
             InteractionMatrix.TIMESTAMP_IX,
         ),  # TODO: add more cases here
+        (
+            InteractionMatrix.ITEM_IX,
+            "this_is_not_here",
+            InteractionMatrix.TIMESTAMP_IX,
+        ),
+        (
+            InteractionMatrix.ITEM_IX,
+            InteractionMatrix.USER_IX,
+            "this_is_not_there",
+        ),
+        (
+            "this_is_not_there",
+            "this_is_not_there",
+            InteractionMatrix.TIMESTAMP_IX,
+        ),
+        (
+            "this_is_not_there",
+            InteractionMatrix.USER_IX,
+            "this_is_not_there",
+        ),
+        (
+            InteractionMatrix.ITEM_IX,
+            "this_is_not_there",
+            "this_is_not_there",
+        ),
+        (
+            "this_is_not_there",
+            "this_is_not_there",
+            "this_is_not_there",
+        ),
     ],
 )
 def test_session_raises(dataframe, item_ix, user_ix, timestamp_ix):

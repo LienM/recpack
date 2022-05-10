@@ -229,7 +229,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         item_ix,
         user_ix,
         timestamp_ix,
-        maximal_allowed_gap=20,
+        maximal_allowed_gap=2,
     ):
         super().__init__(item_ix, self.SESSION_IX, timestamp_ix)
         self.raw_user_ix = user_ix
@@ -275,9 +275,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
                 session_list.append(i)
                 last_timestamp = next_timestamp
         result_list.append(session_list)
-        l_new = []
-        for lst in result_list:
-            l_new.append([x[0] for x in lst])
-        l_dfs = pd.DataFrame(l_new)
-        return l_dfs
-        # return df
+        l_new = pd.DataFrame(result_list[0], columns=["session_id", "iid", "ts"])
+        for lst in result_list[1:]:
+            l_new.concat(pd.DataFrame(lst), ignore_index=True)
+        return l_new
