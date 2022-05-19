@@ -318,7 +318,7 @@ def test_session_raises(dataframe, item_ix, user_ix, timestamp_ix):
     )
 
     with pytest.raises(ValueError) as excinfo:
-        processor.session_transformer(dataframe)
+        processor.cut_into_sessions(dataframe)
     assert "One of the element doesn't exist!" in str(excinfo.value)
 
 
@@ -338,5 +338,5 @@ def test_session_raises_missing_column(dataframe, column_to_drop):
     )
     dataframe.drop(column_to_drop, axis="columns", inplace=True)
     with pytest.raises(ValueError) as excinfo:
-        processor.session_transformer(dataframe)
+        processor.cut_into_sessions(dataframe)
     assert "One of the element doesn't exist!" in str(excinfo.value)
