@@ -2,6 +2,7 @@
 
 from itertools import groupby
 import logging
+import collections
 from typing import List
 from numpy import cumsum
 
@@ -261,21 +262,34 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         result_list = []
         session_list = []
         # Appending the first item with its timestamp
-        session_list.append(data_list_sorted[0])
+        session_cnt = 0
+        session_tup = (session_cnt, data_list_sorted[0][1], data_list_sorted[0][2])
+        session_list.append(session_tup)
         # assigning the last timestamps as the timestamp of the first item of the list
-        last_timestamp = session_list[0][1]
+        last_timestamp = session_list[0][2]
+        user_x = session_list[0][0]
         for i in data_list_sorted[1:]:
-            next_timestamp = i[1]
-            if (next_timestamp - last_timestamp) <= self.maximal_allowed_gap:
-                session_list.append(i)
+            next_timestamp = i[2]
+            if (
+                next_timestamp - last_timestamp
+            ) <= self.maximal_allowed_gap and user_x == i[0]:
+                session_tup = (session_cnt, i[1], i[2])
+                session_list.append(session_tup)
                 last_timestamp = next_timestamp
+                user_x = i[0]
             else:
                 result_list.append(session_list.copy())
                 session_list.clear()
-                session_list.append(i)
+                session_cnt += 1
+                session_tup = (session_cnt, i[1], i[2])
+                session_list.append(session_tup)
                 last_timestamp = next_timestamp
+                user_x = i[0]
         result_list.append(session_list)
-        l_new = pd.DataFrame(result_list[0], columns=["session_id", "iid", "ts"])
-        for lst in result_list[1:]:
-            l_new.concat(pd.DataFrame(lst), ignore_index=True)
-        return l_new
+
+        return pd.concat(
+            [
+                pd.DataFrame(session, columns=["session_id", "iid", "ts"])
+                for session in result_list
+            ]
+        )
