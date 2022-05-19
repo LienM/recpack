@@ -1,13 +1,9 @@
 """Preprocessors turn data into Recpack internal representations."""
 
-from itertools import groupby
 import logging
-import collections
 from typing import List
-from numpy import cumsum
 
 import pandas as pd
-from scipy.fftpack import shift
 
 import recpack.preprocessing.util as util
 from recpack.data.matrix import InteractionMatrix
@@ -240,7 +236,6 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         session_dfs = []
         for df in dfs:
             session_dfs.append(self.session_transformer(df))
-        print(session_dfs)
         return super().process_many(*session_dfs)
 
     def session_transformer(self, df) -> pd.DataFrame:
@@ -253,43 +248,47 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
             raise ValueError("One of the element doesn't exist!")
 
         df = df[[self.raw_user_ix, self.item_ix, self.timestamp_ix]]
+        # Magical variables, to select the right indices in the tuples.
+        USER_IX = 0
+        ITEM_IX = 1
+        TIMESTAMP_IX = 2
 
         # Sorting the list by the timestamp
         data_list_sorted = sorted(
-            df.itertuples(index=False), key=lambda i: (i[0], i[2])
+            df.itertuples(index=False), key=lambda i: (i[USER_IX], i[TIMESTAMP_IX])
         )
 
-        result_list = []
-        session_list = []
+        session_cnt = 0  # Incrementing counter, will be used as the session_id
+
+        tuple_list = (
+            []
+        )  # Holds session, item, timestamp tuples used to construct the final dataframe
+
         # Appending the first item with its timestamp
-        session_cnt = 0
-        session_tup = (session_cnt, data_list_sorted[0][1], data_list_sorted[0][2])
-        session_list.append(session_tup)
+        tuple_list.append(
+            (
+                session_cnt,
+                data_list_sorted[0][ITEM_IX],
+                data_list_sorted[0][TIMESTAMP_IX],
+            )
+        )
         # assigning the last timestamps as the timestamp of the first item of the list
-        last_timestamp = session_list[0][2]
-        user_x = session_list[0][0]
+        last_timestamp = tuple_list[0][TIMESTAMP_IX]
+        user_x = tuple_list[0][USER_IX]
+
         for i in data_list_sorted[1:]:
-            next_timestamp = i[2]
+            next_timestamp = i[TIMESTAMP_IX]
+            next_user = i[USER_IX]
+
+            # We need to start a new session (increment the session counter)
             if (
                 next_timestamp - last_timestamp
-            ) <= self.maximal_allowed_gap and user_x == i[0]:
-                session_tup = (session_cnt, i[1], i[2])
-                session_list.append(session_tup)
-                last_timestamp = next_timestamp
-                user_x = i[0]
-            else:
-                result_list.append(session_list.copy())
-                session_list.clear()
+            ) > self.maximal_allowed_gap or user_x != next_user:
                 session_cnt += 1
-                session_tup = (session_cnt, i[1], i[2])
-                session_list.append(session_tup)
-                last_timestamp = next_timestamp
-                user_x = i[0]
-        result_list.append(session_list)
 
-        return pd.concat(
-            [
-                pd.DataFrame(session, columns=["session_id", "iid", "ts"])
-                for session in result_list
-            ]
-        )
+            session_tup = (session_cnt, i[ITEM_IX], i[TIMESTAMP_IX])
+            tuple_list.append(session_tup)
+            last_timestamp = next_timestamp
+            user_x = next_user
+
+        return pd.DataFrame(tuple_list, columns=["session_id", "iid", "ts"])
