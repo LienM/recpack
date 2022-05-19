@@ -135,8 +135,7 @@ class DataFramePreprocessor:
         )
 
     def process(self, df: pd.DataFrame) -> InteractionMatrix:
-        """
-        Process a single DataFrame to a InteractionMatrix object.
+        """Process a single DataFrame to a InteractionMatrix object.
 
         IMPORTANT: If you have multiple DataFrames, use process_many.
         This ensures consistent InteractionMatrix shapes and user/item ID mappings.
@@ -218,27 +217,119 @@ class DataFramePreprocessor:
 
 
 class SessionDataFramePreprocessor(DataFramePreprocessor):
-    # Not completed yet!
+    """Class to preprocess a Pandas Dataframe and turn it into a InteractionMatrix object,
+    while cutting user histories into sessions
+
+    Preprocessing has Four steps
+
+    - Cut user histories into sessions based on the maximal allowed gap in seconds
+    - Apply filters to the input data
+    - Map session and item identifiers to a consecutive id space.
+      Making them usable as indices in a matrix.
+    - Construct an InteractionMatrix object (where each user will represent a session)
+
+    In order to apply filters they should be added using :meth:`add_filter`.
+    The filters and the two other steps get applied during :meth:`process`
+    and :meth:`process_many`.
+
+    All ID mappings are stored, so that processing of multiple DataFrames
+    will lead to consistently mapped identifiers.
+
+    .. note::
+        When processing multiple DataFrames all dataframes are processed together
+        Events in one can bridge a gap between events of another dataframe,
+        as such different sessions can be found than when processing the dataframes individually.
+
+    Example
+    ~~~~~~~~~
+
+    This example processes a pandas DataFrame.
+    Using filters to
+
+    - Remove duplicates
+    - Make sure all users have at least 3 interactions
+
+    ::
+
+        import random
+        import pandas as pd
+        from recpack.preprocessing.filters import Deduplicate, MinItemsPerUser
+        from recpack.preprocessing.preprocessors import DataFramePreprocessor
+
+        # Generate random data
+        data = {
+            "user": [random.randint(1, 250) for i in range(1000)],
+            "item": [random.randint(1, 250) for i in range(1000)],
+            "timestamp": [1613736000 + random.randint(1, 3600) for i in range(1000)]
+        }
+        df = pd.DataFrame.from_dict(data)
+
+        # Construct the processor and add filters
+        df_pp = SessionDataFramePreprocessor("item", "user", "timestamp")
+        df_pp.add_filter(
+            Deduplicate("item", "user", "timestamp")
+        )
+        # This will now function as a min items per session filter.
+        df_pp.add_filter(
+            MinItemsPerUser(3, "item", "user")
+        )
+
+        # apply preprocessing
+        im = df_pp.process(df)
+
+
+    :param item_ix: Column name of the Item ID column
+    :type item_ix: str
+    :param user_ix: Column name of the User ID column
+    :type user_ix: str
+    :param timestamp_ix: Column name of the timestamp column.
+        If None, no timestamps will be loaded, defaults to None
+    :type timestamp_ix: str, optional
+    :param gap_between_sessions: The maximal gap in seconds between consecutive events
+        before they are put into separate sessions.
+        Defaults to 30*3600 (30 minutes)
+    :type gap_between_sessions: int, optional
+    """
+
     SESSION_IX = "session_id"
 
     def __init__(
         self,
-        item_ix,
-        user_ix,
-        timestamp_ix,
-        maximal_allowed_gap=2,
+        item_ix: str,
+        user_ix: str,
+        timestamp_ix: str,
+        gap_between_sessions: int = 30 * 3600,
     ):
         super().__init__(item_ix, self.SESSION_IX, timestamp_ix)
         self.raw_user_ix = user_ix
-        self.maximal_allowed_gap = maximal_allowed_gap
+        self.gap_between_sessions = gap_between_sessions
 
     def process_many(self, *dfs: pd.DataFrame):
-        session_dfs = []
-        for df in dfs:
-            session_dfs.append(self.cut_into_sessions(df))
-        return super().process_many(*session_dfs)
+        """Process multiple dataframes into sessions.
 
-    def cut_into_sessions(self, df) -> pd.DataFrame:
+        Dataframes are processed together, such that interactions from two dataframes can be put into the same session.
+        """
+
+        # In order to make sure that session_ids are correct, we will concatenate the dataframes,
+        # cut up this dataframe, and then disentangle everything again.
+
+        concatenated = pd.concat(dfs, ignore_index=True)
+        events_seen = 0
+        df_slices = []
+        for df in dfs:
+            start_ix = events_seen
+            events_seen = events_seen + df.shape[0]
+            end_ix = events_seen
+            df_slices.append((start_ix, end_ix))
+
+        cut_df = self._cut_into_sessions(concatenated)
+
+        # Retrieve the right parts of the sessions for each dataframe, and process into interaction matrix
+        return super().process_many(
+            *[cut_df.loc[start_ix:end_ix, :] for start_ix, end_ix in df_slices]
+        )
+
+    def _cut_into_sessions(self, df) -> pd.DataFrame:
         # make a copy to avoid editing in place
         df = df.copy()
 
@@ -260,7 +351,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         df["start_of_session"] = (
             df["last_user"].isna()
             | (df[self.raw_user_ix] != df["last_user"])
-            | (df[self.timestamp_ix] - df["last_timestamp"] > self.maximal_allowed_gap)
+            | (df[self.timestamp_ix] - df["last_timestamp"] > self.gap_between_sessions)
         )
 
         # Cumsum on a boolean series makes sure that each value is equal to the number of sessions started.
@@ -268,4 +359,4 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         # by reducing by 1 again, we start counting at session 0.
         df[self.SESSION_IX] = df["start_of_session"].cumsum() - 1
 
-        return df[[self.SESSION_IX, self.item_ix, self.timestamp_ix]]
+        return df[[self.SESSION_IX, self.item_ix, self.timestamp_ix]].sort_index()

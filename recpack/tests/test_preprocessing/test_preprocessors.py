@@ -1,5 +1,5 @@
-from sys import exc_info
 import numpy as np
+import pandas as pd
 import pytest
 
 import recpack.preprocessing.filters as filters
@@ -237,6 +237,7 @@ def test_session_dataframe_preprocessor_sunny_day(dataframe_with_fixed_timestamp
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
         timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+        gap_between_sessions=2,
     )
     interaction_m = processor.process(dataframe_with_fixed_timestamps)
 
@@ -318,7 +319,7 @@ def test_session_raises(dataframe, item_ix, user_ix, timestamp_ix):
     )
 
     with pytest.raises(ValueError) as excinfo:
-        processor.cut_into_sessions(dataframe)
+        processor._cut_into_sessions(dataframe)
     assert "One of the element doesn't exist!" in str(excinfo.value)
 
 
@@ -338,5 +339,44 @@ def test_session_raises_missing_column(dataframe, column_to_drop):
     )
     dataframe.drop(column_to_drop, axis="columns", inplace=True)
     with pytest.raises(ValueError) as excinfo:
-        processor.cut_into_sessions(dataframe)
+        processor._cut_into_sessions(dataframe)
     assert "One of the element doesn't exist!" in str(excinfo.value)
+
+
+@pytest.fixture
+def session_pageviews():
+    return pd.DataFrame.from_dict(
+        {
+            InteractionMatrix.USER_IX: [1, 1, 1, 2, 2, 3, 3, 5, 5],
+            InteractionMatrix.ITEM_IX: [0, 1, 2, 0, 1, 0, 1, 0, 1],
+            InteractionMatrix.TIMESTAMP_IX: [1, 5, 8, 1, 9, 1, 3, 1, 2],
+        }
+    )
+
+
+@pytest.fixture
+def session_purchases():
+    return pd.DataFrame.from_dict(
+        {
+            InteractionMatrix.USER_IX: [1, 2, 3, 5],
+            InteractionMatrix.ITEM_IX: [0, 0, 0, 0],
+            InteractionMatrix.TIMESTAMP_IX: [7, 5, 8, 9],
+        }
+    )
+
+
+def test_session_dataframe_preprocessor_process_many(
+    session_pageviews, session_purchases
+):
+    processor = SessionDataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+        gap_between_sessions=5,
+    )
+    pv_im, pur_im = processor.process_many(session_pageviews, session_purchases)
+
+    assert pv_im.shape == pur_im.shape
+    # There should be 5 sessions
+    # for user 2 a gap in pageviews is covered by a purchase
+    assert pv_im.shape[0] == 5
