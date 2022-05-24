@@ -198,12 +198,8 @@ class RecVAE(TorchMLAlgorithm):
             beta=self.beta,
         ).to(self.device)
 
-        self.enc_optimizer = optim.Adam(
-            self.model_.encoder.parameters(), lr=self.learning_rate
-        )
-        self.dec_optimizer = optim.Adam(
-            self.model_.decoder.parameters(), lr=self.learning_rate
-        )
+        self.enc_optimizer = optim.Adam(self.model_.encoder.parameters(), lr=self.learning_rate)
+        self.dec_optimizer = optim.Adam(self.model_.decoder.parameters(), lr=self.learning_rate)
 
     def _compute_loss(
         self,
@@ -237,12 +233,7 @@ class RecVAE(TorchMLAlgorithm):
         mll = (F.log_softmax(X_pred, dim=-1) * X).sum(dim=-1).mean()
 
         z = self.model_.reparameterize(mu, logvar)
-        kld = (
-            (log_norm_pdf(z, mu, logvar) - self.model_.prior(X, z))
-            .sum(dim=-1)
-            .mul(kl_weight)
-            .mean()
-        )
+        kld = (log_norm_pdf(z, mu, logvar) - self.model_.prior(X, z)).sum(dim=-1).mul(kl_weight).mean()
         negative_elbo = -(mll - kld)
 
         return negative_elbo
@@ -297,14 +288,15 @@ class RecVAE(TorchMLAlgorithm):
 
         return losses
 
-    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
-        """Predict scores for matrix X, given the selected users.
+    def _batch_predict(self, X: csr_matrix, users: List[int]) -> csr_matrix:
+        """Predict scores for matrix X, given the selected users in this batch
 
-        :param X: Matrix of user item interactions
+        :param X: Matrix of user item interactions,
+            expected to only contain interactions for those users that are in `users`
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: dense matrix of scores per user item pair.
+        :return: Sparse matrix of scores per user item pair.
         :rtype: csr_matrix
         """
         active_users = X[users]
@@ -346,24 +338,16 @@ class CompositePrior(nn.Module):
 
         self.mixture_weights = mixture_weights
 
-        self.mu_prior = nn.Parameter(
-            torch.Tensor(1, dim_bottleneck_layer), requires_grad=False
-        )
+        self.mu_prior = nn.Parameter(torch.Tensor(1, dim_bottleneck_layer), requires_grad=False)
         self.mu_prior.data.fill_(0)
 
-        self.logvar_prior = nn.Parameter(
-            torch.Tensor(1, dim_bottleneck_layer), requires_grad=False
-        )
+        self.logvar_prior = nn.Parameter(torch.Tensor(1, dim_bottleneck_layer), requires_grad=False)
         self.logvar_prior.data.fill_(0)
 
-        self.logvar_uniform_prior = nn.Parameter(
-            torch.Tensor(1, dim_bottleneck_layer), requires_grad=False
-        )
+        self.logvar_uniform_prior = nn.Parameter(torch.Tensor(1, dim_bottleneck_layer), requires_grad=False)
         self.logvar_uniform_prior.data.fill_(10)
 
-        self.encoder_old = Encoder(
-            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer
-        )
+        self.encoder_old = Encoder(dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
         self.encoder_old.requires_grad_(False)
 
     def forward(self, x, z):
@@ -374,8 +358,7 @@ class CompositePrior(nn.Module):
         unif_prior = log_norm_pdf(z, self.mu_prior, self.logvar_uniform_prior)
 
         gaussians = [stnd_prior, post_prior, unif_prior]
-        gaussians = [g.add(np.log(w))
-                     for g, w in zip(gaussians, self.mixture_weights)]
+        gaussians = [g.add(np.log(w)) for g, w in zip(gaussians, self.mixture_weights)]
 
         density_per_gaussian = torch.stack(gaussians, dim=-1)
 
@@ -494,11 +477,8 @@ class RecVAETorch(nn.Module):
         """
         super(RecVAETorch, self).__init__()
 
-        self.encoder = Encoder(
-            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
-        self.prior = CompositePrior(
-            dim_hidden_layer, dim_bottleneck_layer, dim_input_layer
-        )
+        self.encoder = Encoder(dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
+        self.prior = CompositePrior(dim_hidden_layer, dim_bottleneck_layer, dim_input_layer)
         self.decoder = nn.Linear(dim_bottleneck_layer, dim_input_layer)
 
         self.gamma = gamma
@@ -552,5 +532,4 @@ class RecVAETorch(nn.Module):
         """
         The encoder in the prior is updated to the current encoder state.
         """
-        self.prior.encoder_old.load_state_dict(
-            deepcopy(self.encoder.state_dict()))
+        self.prior.encoder_old.load_state_dict(deepcopy(self.encoder.state_dict()))

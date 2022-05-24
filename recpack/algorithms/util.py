@@ -1,12 +1,12 @@
 from inspect import isgenerator
 from itertools import islice
-from typing import Iterator, List, Iterable, Union
+from typing import Iterable, Iterator, List, Optional, Union
 
 import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.data.matrix import Matrix, to_binary
+from recpack.data.matrix import InteractionMatrix, Matrix, to_binary
 
 
 def swish(x):
@@ -83,9 +83,7 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     :rtype: List[csr_matrix]
     """
     nonzero_users = list(set(args[0].nonzero()[0]))
-    users = np.random.choice(
-        nonzero_users, size=min(sample_size, len(nonzero_users)), replace=False
-    )
+    users = np.random.choice(nonzero_users, size=min(sample_size, len(nonzero_users)), replace=False)
 
     sampled_matrices = []
 
@@ -128,3 +126,31 @@ def invert(x: Union[np.ndarray, csr_matrix]) -> Union[np.ndarray, csr_matrix]:
         raise TypeError("Unsupported type for argument x.")
     ret[x.nonzero()] = 1 / x[x.nonzero()]
     return ret
+
+
+def create_front_padded_history_tensor(
+    X: InteractionMatrix, padding_token: int, max_hist_length: Optional[int] = None
+) -> torch.LongTensor:
+    """Construct a sorted tensor from an interaction matrix, with the sorted interactions of the users.
+    Padding is added to the front of the tensor to make sure all users have the same length vectors.
+
+    :param X: InteracationMatrix to process into a tensor
+    :type X: InteractionMatrix
+    :param padding_token: The token to use as padding
+    :type padding_token: int
+    :param max_hist_length: Users with longer histories only retain their `max_hist_length` last ones,
+        defaults to None
+    :type max_hist_length: Optional[int], optional
+    :return: tensor with item_ids and padding tokens for each user.
+    :rtype: torch.LongTensor
+    """
+    if max_hist_length is None:
+        max_hist_length = X.binary_values.sum(axis=1).max()
+    history_tensor = torch.zeros((X.num_active_users, max_hist_length), dtype=int)
+    history_tensor = torch.ones((X.num_active_users, max_hist_length), dtype=int) * padding_token
+    for ix, pair in enumerate(X.sorted_item_history):
+        _, sorted_history = pair
+        hist_length = min(len(sorted_history), max_hist_length)
+        history_tensor[ix, -hist_length:] = torch.LongTensor(sorted_history[-hist_length:])
+
+    return history_tensor

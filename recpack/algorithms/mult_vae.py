@@ -164,11 +164,7 @@ class MultVAE(TorchMLAlgorithm):
         that controls the importance of the KL-divergence term.
         It is slowly annealed from 0 to self.max_beta over self.anneal_steps.
         """
-        return (
-            self.max_beta
-            if self.steps >= self.anneal_steps
-            else self.steps / self.anneal_steps
-        )
+        return self.max_beta if self.steps >= self.anneal_steps else self.steps / self.anneal_steps
 
     def _init_model(self, X: csr_matrix):
         """
@@ -188,8 +184,7 @@ class MultVAE(TorchMLAlgorithm):
             dropout=self.dropout,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(
-            self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _train_epoch(self, train_data: csr_matrix):
         """
@@ -246,14 +241,15 @@ class MultVAE(TorchMLAlgorithm):
 
         return loss
 
-    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
-        """Predict scores for matrix X, given the selected users.
+    def _batch_predict(self, X: csr_matrix, users: List[int]) -> csr_matrix:
+        """Predict scores for matrix X, given the selected users in this batch
 
-        :param X: Matrix of user item interactions
+        :param X: Matrix of user item interactions,
+            expected to only contain interactions for those users that are in `users`
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: dense matrix of scores per user item pair.
+        :return: Sparse matrix of scores per user item pair.
         :rtype: csr_matrix
         """
         active_users = X[users]
@@ -294,8 +290,7 @@ class MultiVAETorch(nn.Module):
         self.q_in_hid_layer = nn.Linear(dim_input_layer, dim_hidden_layer)
         # Last dimension of q- network is for mean and variance (*2)
         # Use PyTorch Distributions for this.
-        self.q_hid_bn_layer = nn.Linear(
-            dim_hidden_layer, dim_bottleneck_layer * 2)
+        self.q_hid_bn_layer = nn.Linear(dim_hidden_layer, dim_bottleneck_layer * 2)
 
         self.p_bn_hid_layer = nn.Linear(dim_bottleneck_layer, dim_hidden_layer)
         self.p_hid_out_layer = nn.Linear(dim_hidden_layer, dim_input_layer)
@@ -312,9 +307,7 @@ class MultiVAETorch(nn.Module):
         self.drop = nn.Dropout(p=dropout, inplace=False)
         self._init_weights()
 
-    def forward(
-        self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Pass the input through the network, and return result.
 
         :param x: input tensor
@@ -342,7 +335,7 @@ class MultiVAETorch(nn.Module):
 
         # TODO This is a terrible hack. Do something about it.
         mu = h[:, : self.dim_bottleneck_layer]
-        logvar = h[:, self.dim_bottleneck_layer:]
+        logvar = h[:, self.dim_bottleneck_layer :]
         return mu, logvar
 
     def decode(self, z):
@@ -364,6 +357,4 @@ class MultiVAETorch(nn.Module):
     def _init_weights(self):
         for layer in self.layers:
             nn.init.xavier_normal_(layer.weight)
-            nn.init.normal_(
-                layer.bias, mean=0, std=0.001
-            )  # TODO This should be truncated normal
+            nn.init.normal_(layer.bias, mean=0, std=0.001)  # TODO This should be truncated normal

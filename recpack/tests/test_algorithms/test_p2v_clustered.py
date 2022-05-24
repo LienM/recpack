@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix
 import torch
 
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
+from recpack.algorithms.util import get_users
 from recpack.data.matrix import InteractionMatrix
 
 from recpack.tests.test_algorithms.util import assert_changed
@@ -47,7 +48,9 @@ def test__predict(prod2vec, larger_mat):
     matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
 
     prod2vec._create_similarity_matrix(larger_mat)
-    predictions = prod2vec._batch_predict(matrix)
+    predictions = prod2vec._batch_predict(matrix, get_users(matrix))
+
+    assert predictions.shape == matrix.shape
 
 
 def test_cluster_similarity_computation():
@@ -126,14 +129,10 @@ def test_cluster_similarity_computation():
 
     assert c2c.shape == (4, 4)
 
-    np.testing.assert_array_equal(
-        c2c[c_0].nonzero()[1], np.array(sorted([c_0, c_1])))
-    np.testing.assert_array_equal(
-        c2c[c_1].nonzero()[1], np.array(sorted([c_1, c_2])))
-    np.testing.assert_array_equal(
-        c2c[c_2].nonzero()[1], np.array(sorted([c_2, c_3])))
-    np.testing.assert_array_equal(
-        c2c[c_3].nonzero()[1], np.array(sorted([c_3, c_0])))
+    np.testing.assert_array_equal(c2c[c_0].nonzero()[1], np.array(sorted([c_0, c_1])))
+    np.testing.assert_array_equal(c2c[c_1].nonzero()[1], np.array(sorted([c_1, c_2])))
+    np.testing.assert_array_equal(c2c[c_2].nonzero()[1], np.array(sorted([c_2, c_3])))
+    np.testing.assert_array_equal(c2c[c_3].nonzero()[1], np.array(sorted([c_3, c_0])))
 
     # Check if only items from neighbouring clusters are nonzero
 
@@ -150,8 +149,7 @@ def test_training_epoch(prod2vec, mat):
 
     prod2vec._init_model(mat)
 
-    params = [o for o in prod2vec.model_.named_parameters()
-              if o[1].requires_grad]
+    params = [o for o in prod2vec.model_.named_parameters() if o[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
