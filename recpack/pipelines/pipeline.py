@@ -74,7 +74,8 @@ class MetricAccumulator:
         return self.acc[key]
 
     def add(self, metric, algorithm_name, metric_name):
-        logger.debug(f"Metric {metric_name} created for algorithm {algorithm_name}")
+        logger.debug(
+            f"Metric {metric_name} created for algorithm {algorithm_name}")
         self.acc[algorithm_name][metric_name] = metric
 
     @property
@@ -102,41 +103,47 @@ AlgorithmEntry = namedtuple("AlgorithmEntry", ["name", "grid", "params"])
 
 
 class Pipeline(object):
-    """Performs all steps in order and holds on to results.
+    """Trains and evaluates the algorithms specified for the scenario given, for all metrics.
 
     Pipeline is run per algorithm.
-    First grid parameters are optimised by training on train_data and
+    First grid parameters are optimised by training on validation_training_data and
     evaluation on validation_data.
     Next, unless the model requires validation data,
     the model with optimised parameters is retrained
-    on the combination of train_data and validation_data.
+    on full_training_data.
     Predictions are then generated with test_in as input and evaluated on test_out.
 
     Results can be accessed via the :meth:`get_metrics` method.
 
+    :param results_directory: Absolute path to the directory in which results will be stored.
+    :type results_directory: str
     :param algorithms: List of AlgorithmEntry objects to evaluate in this pipeline.
-        An AlgorithmEntry defines which algorithm to train, with which fixed parameters (params)
-        and which parameters to optimize (grid).
+    An AlgorithmEntry defines which algorithm to train, with which fixed parameters (params)
+    and which parameters to optimize (grid).
     :type algorithms: List[AlgorithmEntry]
     :param metrics: List of MetricEntry objects to evaluate each algorithm on.
-        A MetricEntry defines which metric and value of the parameter K (number of recommendations).
+    A MetricEntry defines which metric and value of the parameter K (number of recommendations).
     :type metrics: List[MetricEntry]
-    :param train_data: The data to train models on.
-    :type train_data: InteractionMatrix
+    :param full_training_data: Training data used in final training.
+    :type full_training_data: InteractionMatrix
+    :param validation_training_data: Training data used for hyperparameter optimization.
+    :type validation_training_data: Union[InteractionMatrix, None]
     :param validation_data: The data to use for optimising parameters,
-        can be None only if none of the algorithms require optimisation.
+    can be None only if none of the algorithms require optimisation.
     :type validation_data: Union[Tuple[InteractionMatrix, InteractionMatrix], None]
     :param test_data: The data to perform evaluation, as (`test_in`, `test_out`) tuple.
-    :type: Tuple[InteractionMatrix, InteractionMatrix]
+    :type test_data: Tuple[InteractionMatrix, InteractionMatrix]
     :param optimisation_metric: The metric to optimise each algorithm on.
-    """
+    :type optimisation_metric: Union[OptimisationMetricEntry, None]
+        """
 
     def __init__(
         self,
         results_directory: str,
         algorithms: List[AlgorithmEntry],
         metrics: List[MetricEntry],
-        train_data: InteractionMatrix,
+        full_training_data: InteractionMatrix,
+        validation_training_data: Union[InteractionMatrix, None],
         validation_data: Union[Tuple[InteractionMatrix, InteractionMatrix], None],
         test_data: Tuple[InteractionMatrix, InteractionMatrix],
         optimisation_metric: Union[OptimisationMetricEntry, None],
@@ -144,7 +151,8 @@ class Pipeline(object):
         self.results_directory = results_directory
         self.algorithms = algorithms
         self.metrics = metrics
-        self.train_data = train_data
+        self.full_training_data = full_training_data
+        self.validation_training_data = validation_training_data
         self.validation_data = validation_data
         self.test_data = test_data
         self.optimisation_metric = optimisation_metric
@@ -164,13 +172,16 @@ class Pipeline(object):
         # Construct grid:
         optimisation_params = ParameterGrid(algorithm.grid)
         for p in optimisation_params:
-            algo = ALGORITHM_REGISTRY.get(algorithm.name)(**p, **algorithm.params)
+            algo = ALGORITHM_REGISTRY.get(
+                algorithm.name)(**p, **algorithm.params)
 
-            # validation data in case of TorchML!
             if isinstance(algo, TorchMLAlgorithm):
-                algo.fit(self.train_data, self.validation_data)
+                # Training a TorchMLAlgorithm requires validation data for early stopping.
+                # TODO Technically we only need to use validation_training_data here when early stopping
+                # If we run for a fixed number of iterations, it doesn't matter anyway.
+                algo.fit(self.validation_training_data, self.validation_data)
             else:
-                algo.fit(self.train_data)
+                algo.fit(self.full_training_data)
             metric = METRIC_REGISTRY.get(metric_entry.name)(K=metric_entry.K)
 
             prediction = algo.predict(self.validation_data[0])
@@ -198,20 +209,17 @@ class Pipeline(object):
 
         for algorithm in tqdm(self.algorithms):
             # optimisation:
-            optimal_params = self._optimise(algorithm, self.optimisation_metric)
+            optimal_params = self._optimise(
+                algorithm, self.optimisation_metric)
 
             # Train again.
             algo = ALGORITHM_REGISTRY.get(algorithm.name)(**optimal_params)
             if isinstance(algo, TorchMLAlgorithm):
                 # TODO: Optimise this retraining step, by returning trained model?
-                algo.fit(self.train_data, self.validation_data)
+                algo.fit(self.validation_training_data, self.validation_data)
             else:
                 algo.fit(
-                    self.train_data
-                    if self.validation_data is None
-                    else self.train_data
-                    + self.validation_data[0]
-                    + self.validation_data[1]
+                    self.full_training_data
                 )
 
             # Evaluate
@@ -289,7 +297,8 @@ class PipelineBuilder(object):
         self.algorithms = []
 
         self._config_file_path = f"{self.base_path}/{self.folder_name}/config.yaml"
-        self._train_file_path = f"{self.base_path}/{self.folder_name}/train"
+        self._full_train_file_path = f"{self.base_path}/{self.folder_name}/full_train"
+        self._validation_train_file_path = f"{self.base_path}/{self.folder_name}/validation_train"
         self._test_in_file_path = f"{self.base_path}/{self.folder_name}/test_in"
         self._test_out_file_path = f"{self.base_path}/{self.folder_name}/test_out"
         self._validation_in_file_path = (
@@ -298,6 +307,7 @@ class PipelineBuilder(object):
         self._validation_out_file_path = (
             f"{self.base_path}/{self.folder_name}/validation_out"
         )
+        # TODO Rename this to better reflect the contents
         self.results_directory = f"{self.base_path}/{self.folder_name}"
 
     def _parse_arg(self, arg: Union[type, str]) -> str:
@@ -305,7 +315,8 @@ class PipelineBuilder(object):
             arg = arg.__name__
 
         elif type(arg) != str:
-            raise TypeError(f"Argument should be string or type, not {type(arg)}!")
+            raise TypeError(
+                f"Argument should be string or type, not {type(arg)}!")
 
         return arg
 
@@ -385,13 +396,21 @@ class PipelineBuilder(object):
 
         self.optimisation_metric = OptimisationMetricEntry(metric, K, minimise)
 
-    def set_train_data(self, train_data: InteractionMatrix):
-        """Set the training dataset.
+    def set_validation_training_data(self, validation_training_data: InteractionMatrix):
+        """Set the training dataset used for validation.
 
-        :param train_data: The interaction matrix to use during training.
-        :type train_data: InteractionMatrix
+        :param validation_training_data: The interaction matrix to use during training when optimizing hyperparameters.
+        :type validation_training_data: InteractionMatrix
         """
-        self.train_data = train_data
+        self.validation_training_data = validation_training_data
+
+    def set_full_training_data(self, full_training_data: InteractionMatrix):
+        """Set the complete training dataset.
+
+        :param full_training_data: The interaction matrix to use during training.
+        :type full_training_data: InteractionMatrix
+        """
+        self.full_training_data = full_training_data
 
     def set_validation_data(
         self, validation_data: Tuple[InteractionMatrix, InteractionMatrix]
@@ -430,10 +449,12 @@ class PipelineBuilder(object):
 
     def _check_readiness(self):
         if len(self.metrics) == 0:
-            raise RuntimeError("No metrics specified, can't construct pipeline")
+            raise RuntimeError(
+                "No metrics specified, can't construct pipeline")
 
         if len(self.algorithms) == 0:
-            raise RuntimeError("No algorithms specified, can't construct pipeline")
+            raise RuntimeError(
+                "No algorithms specified, can't construct pipeline")
 
         if not hasattr(self, "optimisation_metric") and np.any(
             [len(algo.grid) > 0 for algo in self.algorithms]
@@ -444,30 +465,30 @@ class PipelineBuilder(object):
             )
 
         # Check availability of data
-        if not hasattr(self, "train_data"):
-            raise RuntimeError("No training data available, can't construct pipeline.")
+        if not hasattr(self, "full_training_data"):
+            raise RuntimeError(
+                "No full training data available, can't construct pipeline.")
 
         if not hasattr(self, "test_data"):
-            raise RuntimeError("No test data available, can't construct pipeline.")
+            raise RuntimeError(
+                "No test data available, can't construct pipeline.")
 
         # If there are parameters to optimise,
         # there needs to be validation data available.
-        if not hasattr(self, "validation_data") and (
-            any([len(algo.grid) > 0 for algo in self.algorithms])
-            or any(
-                [
-                    issubclass(ALGORITHM_REGISTRY.get(algo.name), TorchMLAlgorithm)
-                    for algo in self.algorithms
-                ]
-            )
-        ):
+        if self._requires_validation() and not hasattr(self, "validation_data"):
             raise RuntimeError(
                 "No validation data available to perform the requested hyperparameter optimisation"
                 ", can't construct pipeline."
             )
 
+        if self._requires_validation() and not hasattr(self, "validation_training_data"):
+            raise RuntimeError(
+                "No validation training data available to perform the requested hyperparameter optimisation"
+                ", can't construct pipeline."
+            )
+
         # Validate shape is correct
-        shape = self.train_data.shape
+        shape = self.full_training_data.shape
 
         if any([d.shape != shape for d in self.test_data]):
             raise RuntimeError("Shape mismatch between test and training data")
@@ -475,7 +496,14 @@ class PipelineBuilder(object):
         if hasattr(self, "validation_data") and any(
             [d.shape != shape for d in self.validation_data]
         ):
-            raise RuntimeError("Shape mismatch between validation and training data")
+            raise RuntimeError(
+                "Shape mismatch between validation and training data")
+
+    def _requires_validation(self) -> bool:
+        return any([len(algo.grid) > 0 for algo in self.algorithms]) or any(
+            [issubclass(ALGORITHM_REGISTRY.get(algo.name), TorchMLAlgorithm)
+             for algo in self.algorithms]
+        )
 
     def build(self) -> Pipeline:
         """Construct a pipeline object, given the set values.
@@ -492,14 +520,15 @@ class PipelineBuilder(object):
             self.results_directory,
             self.algorithms,
             list(self.metrics.values()),
-            self.train_data,
-            self.validation_data if hasattr(self, "validation_data") else None,
+            self.full_training_data,
+            getattr(self, "validation_training_data", None),
+            getattr(self, "validation_data", None),
             self.test_data,
-            self.optimisation_metric if hasattr(self, "optimisation_metric") else None,
+            getattr(self, "optimisation_metric", None),
         )
 
     def _save_data(self):
-        self.train_data.save(self._train_file_path)
+        self.full_training_data.save(self._full_train_file_path)
 
         self.test_data[0].save(self._test_in_file_path)
         self.test_data[1].save(self._test_out_file_path)
@@ -507,6 +536,8 @@ class PipelineBuilder(object):
         if hasattr(self, "validation_data"):
             self.validation_data[0].save(self._validation_in_file_path)
             self.validation_data[1].save(self._validation_out_file_path)
+            self.validation_training_data.save(
+                self._validation_train_file_path)
 
     @property
     def _pipeline_config(self):
@@ -535,7 +566,8 @@ class PipelineBuilder(object):
             outfile.write(yaml.safe_dump(self._pipeline_config))
 
     def _load_data(self, d):
-        self.train_data = InteractionMatrix.load(self._train_file_path)
+        self.full_training_data = InteractionMatrix.load(
+            self._full_train_file_path)
 
         self.test_data = (
             InteractionMatrix.load(self._test_in_file_path),
@@ -547,10 +579,13 @@ class PipelineBuilder(object):
                 InteractionMatrix.load(self._validation_in_file_path),
                 InteractionMatrix.load(self._validation_out_file_path),
             )
+            self.validation_training_data = InteractionMatrix.load(
+                self._validation_train_file_path)
         except FileNotFoundError:
             pass
 
     def load(self):
+        # TODO Split into load settings and main function
         """Load the settings from file into the correct attributes."""
 
         with open(self._config_file_path, "r") as infile:
@@ -564,6 +599,7 @@ class PipelineBuilder(object):
 
         if d["optimisation_metric"]:
             opt = d["optimisation_metric"]
-            self.set_optimisation_metric(opt["name"], opt["K"], opt["minimise"])
+            self.set_optimisation_metric(
+                opt["name"], opt["K"], opt["minimise"])
 
         self._load_data(d)

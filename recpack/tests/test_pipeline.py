@@ -45,7 +45,7 @@ def pipeline_builder(mat):
     pb.add_metric("CalibratedRecallK", 3)
     pb.add_algorithm("ItemKNN", params={"K": 2})
     pb.add_algorithm("EASE", params={"l2": 2})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
 
     return pb
@@ -60,7 +60,8 @@ def pipeline_builder_optimisation(mat):
     pb.add_metric("CalibratedRecallK", 3)
     pb.add_algorithm("ItemKNN", grid={"K": [1, 2, 3]})
     pb.add_algorithm("EASE", grid={"l2": [2, 10]})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
+    pb.set_validation_training_data(mat)
     pb.set_optimisation_metric("CalibratedRecallK", 2)
     pb.set_test_data((mat, mat))
     pb.set_validation_data((mat, mat))
@@ -116,11 +117,11 @@ def test_pipeline_builder(mat):
         pb.build()
 
     assert (
-        error.value.args[0] == "No training data available, can't construct pipeline."
+        error.value.args[0] == "No full training data available, can't construct pipeline."
     )
 
-    pb.set_train_data(mat)
-    assert pb.train_data.shape == mat.shape
+    pb.set_full_training_data(mat)
+    assert pb.full_training_data.shape == mat.shape
 
     # Build pipeline without test data
     with pytest.raises(RuntimeError) as error:
@@ -146,13 +147,25 @@ def test_pipeline_builder(mat):
     assert len(pb.validation_data) == 2
     assert pb.validation_data[0].shape == mat.shape
 
+    # Build pipeline that needs to be optimized without validation training data
+    with pytest.raises(RuntimeError) as error:
+        pb.build()
+
+    assert (
+        error.value.args[0]
+        == "No validation training data available to perform the requested hyperparameter optimisation"
+        ", can't construct pipeline."
+    )
+
+    pb.set_validation_training_data(mat)
+    assert pb.validation_training_data.shape == mat.shape
+
     pipeline = pb.build()
 
     assert len(pipeline.metrics) == 3
     assert len(pipeline.algorithms) == 3
     assert pipeline.optimisation_metric.name == "CalibratedRecallK"
     assert pipeline.optimisation_metric.K == 20
-    assert pipeline.train_data.shape == mat.shape
     assert pipeline.test_data is not None
     assert pipeline.validation_data is not None
 
@@ -173,7 +186,7 @@ def test_pipeline_builder_no_optimisation(mat):
     pb = PipelineBuilder()
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
 
     pipeline = pb.build()
@@ -187,7 +200,7 @@ def test_pipeline_duplicate_metric(mat):
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
 
     assert len(pb.metrics) == 1
@@ -200,7 +213,7 @@ def test_pipeline_mismatching_shapes_test(mat, larger_mat):
     pb = PipelineBuilder()
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((larger_mat, larger_mat))
 
     with pytest.raises(RuntimeError) as error:
@@ -212,7 +225,7 @@ def test_pipeline_mismatching_shapes_validation(mat, larger_mat):
     pb = PipelineBuilder()
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
     pb.set_validation_data((larger_mat, larger_mat))
 
@@ -266,7 +279,8 @@ def test_pipeline_builder_pipeline_config(pipeline_builder):
     assert d["algorithms"][1]["name"] == "EASE"
 
 
-def test_save(pipeline_builder, mat):
+def test_save_no_optimisation(pipeline_builder, mat):
+    # TODO Add test with validation data
 
     mocker = mock_open()
     mocker2 = mock_open()
@@ -279,7 +293,7 @@ def test_save(pipeline_builder, mat):
     assert mocker2.call_count == 3
 
     assert mocker2.call_args_list[0].args == (
-        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/train_properties.yaml",
+        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/full_train_properties.yaml",
         "w",
     )
     assert mocker2.call_args_list[1].args == (
@@ -295,12 +309,14 @@ def test_save(pipeline_builder, mat):
         f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/config.yaml", "w"
     )
     handler = mocker()
-    handler.write.assert_called_with(yaml.safe_dump(pipeline_builder._pipeline_config))
+    handler.write.assert_called_with(
+        yaml.safe_dump(pipeline_builder._pipeline_config))
 
 
 def test_load(pipeline_builder, mat):
 
-    mocker = mock_open(read_data=yaml.safe_dump(pipeline_builder._pipeline_config))
+    mocker = mock_open(read_data=yaml.safe_dump(
+        pipeline_builder._pipeline_config))
     mocker2 = mock_open(read_data=yaml.safe_dump(mat.properties.to_dict()))
     mocker3 = MagicMock(return_value=mat._df)
 
