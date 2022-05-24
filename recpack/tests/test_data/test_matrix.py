@@ -61,8 +61,7 @@ def test_init_w_timestamps(interaction_m):
     assert interaction_m.shape == (3, 4)
 
     assert (
-        interaction_m.values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+        interaction_m.values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
     ).all()
 
     assert interaction_m.has_timestamps
@@ -91,10 +90,7 @@ def test_binary_values_w_dups(interaction_m_w_duplicate):
 
     binary_values = interaction_m_w_duplicate.binary_values
 
-    assert (
-        binary_values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
-    ).all()
+    assert (binary_values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)).all()
 
 
 def test_timestamps_no_dups(interaction_m):
@@ -103,9 +99,7 @@ def test_timestamps_no_dups(interaction_m):
 
 def test_timestamps_w_dups(interaction_m_w_duplicate):
 
-    assert (
-        interaction_m_w_duplicate.timestamps.values == np.array([3, 2, 4, 1, 1])
-    ).all()
+    assert (interaction_m_w_duplicate.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
 
 
 def test_timestamps_gt_w_dups(interaction_m_w_duplicate):
@@ -115,8 +109,7 @@ def test_timestamps_gt_w_dups(interaction_m_w_duplicate):
     assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 4])).all()
 
     assert (
-        filtered_d_w_duplicate.values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+        filtered_d_w_duplicate.values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
     ).all()
 
 
@@ -128,8 +121,7 @@ def test_timestamps_lt_w_dups(interaction_m_w_duplicate):
 
     assert (filtered_d_w_duplicate.timestamps.values == np.array([1, 1])).all()
     assert (
-        filtered_d_w_duplicate.values.toarray()
-        == np.array([[0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+        filtered_d_w_duplicate.values.toarray() == np.array([[0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
     ).all()
 
 
@@ -140,8 +132,7 @@ def test_timestamps_gte_w_dups(interaction_m_w_duplicate):
     assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 2, 4])).all()
 
     assert (
-        filtered_d_w_duplicate.values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
+        filtered_d_w_duplicate.values.toarray() == np.array([[0, 1, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
     ).all()
 
 
@@ -153,8 +144,7 @@ def test_timestamps_lte_w_dups(interaction_m_w_duplicate):
 
     assert (filtered_d_w_duplicate.timestamps.values == np.array([2, 1, 1])).all()
     assert (
-        filtered_d_w_duplicate.values.toarray()
-        == np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
+        filtered_d_w_duplicate.values.toarray() == np.array([[0, 0, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
     ).all()
 
 
@@ -166,10 +156,7 @@ def test_indices_in(interaction_m):
     filtered_df = interaction_m.indices_in((U, I))
 
     assert (filtered_df.timestamps.values == np.array([3, 1])).all()
-    assert (
-        filtered_df.values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]], dtype=np.int32)
-    ).all()
+    assert (filtered_df.values.toarray() == np.array([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]], dtype=np.int32)).all()
 
 
 def test_eliminate_timestamps(df):
@@ -207,18 +194,13 @@ def test_interactions_in_empty_set(df):
     with warnings.catch_warnings(record=True) as w:
         d2 = d.interactions_in([])
         assert d2.shape == (3, 4)
-        assert (
-            d2.values.toarray()
-            == np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
-        ).all()
+        assert (d2.values.toarray() == np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], dtype=np.int32)).all()
 
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
         assert len(w) == 1
 
-        assert "No interaction IDs given, returning empty InteractionMatrix." in str(
-            w[-1].message
-        )
+        assert "No interaction IDs given, returning empty InteractionMatrix." in str(w[-1].message)
 
 
 def test_interactions_in(df):
@@ -226,20 +208,14 @@ def test_interactions_in(df):
 
     d2 = d.interactions_in([0, 1])
     assert d2.shape == (3, 4)
-    assert (
-        d2.values.toarray()
-        == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
-    ).all()
+    assert (d2.values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)).all()
 
     with warnings.catch_warnings(record=True) as w:
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
         # interaction_id 10 is not known to the DataFrame
         d.interactions_in([0, 1, 10], inplace=True)
-        assert (
-            d.values.toarray()
-            == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)
-        ).all()
+        assert (d.values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)).all()
 
         assert len(w) == 1
 
@@ -247,9 +223,7 @@ def test_interactions_in(df):
 
 
 def test_get_timestamp_raises(df):
-    df_no_timestamps = df.drop(
-        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False
-    )
+    df_no_timestamps = df.drop(columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False)
 
     d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
 
@@ -285,9 +259,7 @@ def test_interaction_history(interaction_m):
 
 
 def test_sorted_interaction_history_no_timestamps_raises(df):
-    df_no_timestamps = df.drop(
-        columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False
-    )
+    df_no_timestamps = df.drop(columns=[InteractionMatrix.TIMESTAMP_IX], errors="ignore", inplace=False)
     d = InteractionMatrix(df_no_timestamps, ITEM_IX, USER_IX)
 
     with pytest.raises(AttributeError):
@@ -375,9 +347,7 @@ def m_datam():
             TIMESTAMP_IX: [3, 2, 4, 1, 2],
         }
     )
-    return InteractionMatrix(
-        df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, shape=(3, 4)
-    )
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, shape=(3, 4))
 
 
 def matrix_equal(a, b):
@@ -455,9 +425,7 @@ def test_save(larger_mat):
     handle = mocker()
     # handle.call
     assert handle.write.call_count == 1
-    handle.write.assert_called_once_with(
-        yaml.safe_dump(larger_mat.properties.to_dict())
-    )
+    handle.write.assert_called_once_with(yaml.safe_dump(larger_mat.properties.to_dict()))
 
     assert mocker2.call_count == 1
     mocker2.assert_called_once_with("test_data.csv", header=True, index=False)
@@ -490,12 +458,9 @@ def test_add(larger_mat):
 
     assert double_mat.num_interactions == larger_mat.num_interactions * 2
     assert double_mat.active_users == larger_mat.active_users
-    np.testing.assert_array_equal(
-        double_mat.binary_values.toarray(), larger_mat.binary_values.toarray()
-    )
+    np.testing.assert_array_equal(double_mat.binary_values.toarray(), larger_mat.binary_values.toarray())
     assert (
-        double_mat._df[double_mat.INTERACTION_IX].nunique()
-        == 2 * larger_mat._df[larger_mat.INTERACTION_IX].nunique()
+        double_mat._df[double_mat.INTERACTION_IX].nunique() == 2 * larger_mat._df[larger_mat.INTERACTION_IX].nunique()
     )
     np.testing.assert_array_equal(double_mat._df.columns, larger_mat._df.columns)
 
@@ -503,3 +468,17 @@ def test_add(larger_mat):
 def test_add_mismatch(mat, larger_mat):
     with pytest.raises(ValueError):
         mat + larger_mat
+
+
+def test_im_to_timestamp_matrix(matrix_sessions):
+    # fmt: off
+    expected_matrix = np.array([
+        [0, 1, 2, 0],
+        [0, 5, 1, 4],
+        [0, 7, 6, 0],
+        [0, 7, 6, 1],
+        [0, 6, 7, 0]
+    ])
+    # fmt: on
+
+    np.testing.assert_array_equal(matrix_sessions.last_timestamps_matrix.toarray(), expected_matrix)
