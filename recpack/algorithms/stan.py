@@ -74,6 +74,7 @@ class STAN(Algorithm):
         session_decay: float = 1 / 3600,
         distance_from_match_decay: float = 1,
     ):
+        super().__init__()
         self.K = K
         self.interaction_decay = interaction_decay
         self.session_decay = session_decay
@@ -87,7 +88,8 @@ class STAN(Algorithm):
         :return:
         :rtype:
         """
-        self._check_input(X)
+        self._assert_is_interaction_matrix(X)
+        self._assert_has_timestamps(X)
         return X
 
     def _transform_predict_input(self, X: Matrix) -> InteractionMatrix:
@@ -98,19 +100,18 @@ class STAN(Algorithm):
         :return:
         :rtype:
         """
-        self._check_input(X)
-        return X
-
-    def _check_input(self, X: Matrix) -> None:
         self._assert_is_interaction_matrix(X)
         self._assert_has_timestamps(X)
+        return X
 
     def _fit(self, X: InteractionMatrix) -> None:
         # STAN is not a model based model, but we can precompute some values
         self.sessions_ = X
         session_interactions_timestamps = X.last_timestamps_matrix
-        self.session_interactions_positions_ = timestamp_matrix_to_position(session_interactions_timestamps)
-        self.historical_session_timestamps_ = session_interactions_timestamps.max(axis=1)  # |U| x 1 matrix
+        self.session_interactions_positions_ = timestamp_matrix_to_position(
+            session_interactions_timestamps)
+        self.historical_session_timestamps_ = session_interactions_timestamps.max(
+            axis=1)  # |U| x 1 matrix
 
     def _predict(self, X: InteractionMatrix) -> csr_matrix:
         timestamp_matrix = X.last_timestamps_matrix
@@ -120,16 +121,20 @@ class STAN(Algorithm):
         full_session_similarity_matrix = lil_matrix((X.shape[0], X.shape[0]))
 
         for user_batch in get_batches(X.active_users, batch_size=1000):
-            session_similarity = self._compute_session_similarity(timestamp_matrix[user_batch, :])
+            session_similarity = self._compute_session_similarity(
+                timestamp_matrix[user_batch, :])
             session_similarity = session_similarity.multiply(
-                self._compute_session_similarity_weights(timestamp_matrix[user_batch, :], session_similarity)
+                self._compute_session_similarity_weights(
+                    timestamp_matrix[user_batch, :], session_similarity)
             )
             # Remove self similarity
             # Rows are indexed 0 - len(batch), cols are index by original user ids.
             session_similarity[np.arange(len(user_batch)), user_batch] = 0
 
-            full_session_similarity_matrix[user_batch, :] = get_top_K_values(session_similarity, K=self.K)
-        predictions = self._compute_prediction_scores(full_session_similarity_matrix.tocsr(), X)
+            full_session_similarity_matrix[user_batch, :] = get_top_K_values(
+                session_similarity, K=self.K)
+        predictions = self._compute_prediction_scores(
+            full_session_similarity_matrix.tocsr(), X)
         return predictions
 
     def _compute_session_similarity(self, session_timestamps: csr_matrix) -> csr_matrix:
@@ -153,7 +158,8 @@ class STAN(Algorithm):
         # So our computation changes to exp(-((rank(i,s) - 1) * interaction_decay))
         session_ranks = get_top_K_ranks(session_timestamps)
         weighted_sessions = session_ranks.copy()
-        weighted_sessions.data = np.exp(-(weighted_sessions.data - 1) * self.interaction_decay)
+        weighted_sessions.data = np.exp(-(weighted_sessions.data - 1)
+                                        * self.interaction_decay)
 
         # Compute  similarity between the weighted sessions, and the training sessions
         # Similarity computed between sessions a and b as
@@ -165,7 +171,8 @@ class STAN(Algorithm):
         denominator_part_2 = self.session_interactions_positions_.max(axis=1)
         denominator_part_2.data = 1 / np.sqrt(denominator_part_2.data)
 
-        session_similarity = session_similarity.multiply(denominator_part_1).multiply(denominator_part_2.T)
+        session_similarity = session_similarity.multiply(
+            denominator_part_1).multiply(denominator_part_2.T)
         return session_similarity
 
     def _compute_session_similarity_weights(
@@ -192,7 +199,8 @@ class STAN(Algorithm):
 
         # 1st matrix contains the timestamp of the input sessions
         # in their respective rows.
-        intersection_session_last_timestamps = (session_similarities > 0).multiply(sessions_last_timestamp)
+        intersection_session_last_timestamps = (
+            session_similarities > 0).multiply(sessions_last_timestamp)
         # 2nd matrix contains the timestamp of the training sessions
         # in their respective columns.
         intersection_historical_last_timestamps = (session_similarities > 0).multiply(
@@ -201,8 +209,10 @@ class STAN(Algorithm):
 
         # By subtracting the two, we get at position (i,j) the value t(s_j) - t(s_i)
         # where j is a training session, and i is an input session
-        session_similarity_weights = intersection_historical_last_timestamps - intersection_session_last_timestamps
-        session_similarity_weights.data = np.exp(session_similarity_weights.data * self.session_decay)
+        session_similarity_weights = intersection_historical_last_timestamps - \
+            intersection_session_last_timestamps
+        session_similarity_weights.data = np.exp(
+            session_similarity_weights.data * self.session_decay)
 
         return session_similarity_weights
 
@@ -227,7 +237,8 @@ class STAN(Algorithm):
 
             # Get the positions of visits in the neighborhood sessions
             neighborhood_positions = csr_matrix(
-                self.session_interactions_positions_.multiply((neighborhood_scores > 0).T)
+                self.session_interactions_positions_.multiply(
+                    (neighborhood_scores > 0).T)
             )
 
             # Find the last matching position with each neighbour session
@@ -244,9 +255,11 @@ class STAN(Algorithm):
             # so wether it is 1 or 0 does not impact the reproduction results.
             # Because recpack does not always remove history items,
             # it makes more sense to not recommend this last matching item as well.
-            item_weights = neighborhood_positions - (neighborhood_positions > 0).multiply(last_match.A)
+            item_weights = neighborhood_positions - \
+                (neighborhood_positions > 0).multiply(last_match.A)
 
-            item_weights.data = np.exp(-np.abs(item_weights.data) * self.distance_from_match_decay)
+            item_weights.data = np.exp(-np.abs(item_weights.data)
+                                       * self.distance_from_match_decay)
 
             results[session] = neighborhood_scores @ item_weights
 

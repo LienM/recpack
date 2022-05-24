@@ -19,7 +19,7 @@ from recpack.algorithms import (
     GRU4RecNegSampling,
     Prod2Vec,
     Prod2VecClustered,
-    ItemPNN
+    ItemPNN,
 )
 from recpack.data.matrix import InteractionMatrix
 

@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from scipy.sparse import csr_matrix
 
-from recpack.algorithms import STAN
+from recpack.algorithms.stan import STAN
 from recpack.data.matrix import InteractionMatrix
 
 
