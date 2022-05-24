@@ -108,15 +108,10 @@ def test_weak_generalization_mismatching_train_validation_in(data_m_sporadic_use
     te_data_in, _ = scenario.test_data
     val_data_in, _ = scenario.validation_data
 
-    print("tr", tr.binary_values.toarray())
-    print("te_data_in", te_data_in.binary_values.toarray())
-    print("val_data_in", val_data_in.binary_values.toarray())
-
     # Not all users in training are also in val_data_in
     assert val_data_in.active_users != tr.active_users
 
     temp = data_m_sporadic_users._df.groupby("uid").iid.count().reset_index()
-    print("temp", temp)
     users_expected_in_all = temp[temp.iid >= 3].uid.unique()
     users_expected_in_test_and_train = temp[temp.iid >= 2].uid.unique()
 
@@ -209,8 +204,6 @@ def interaction_matrix_different_history_sizes():
 
 
 def test_base_splitter(interaction_matrix_different_history_sizes):
-    print(interaction_matrix_different_history_sizes.values.toarray())
-
     scen = scenarios.WeakGeneralization(0.66666, validation=True)
 
     scen.split(interaction_matrix_different_history_sizes)
