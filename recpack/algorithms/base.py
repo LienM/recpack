@@ -147,9 +147,7 @@ class Algorithm(BaseEstimator):
 
     def _assert_is_interaction_matrix(self, *matrices: Matrix) -> None:
         """Make sure that the passed matrices are all an InteractionMatrix."""
-        print(matrices)
         for X in matrices:
-            print(type(X))
             if type(X) != InteractionMatrix:
                 raise TypeError(f"{self.name} requires Interaction Matrix as input. Got {type(X)}.")
 
