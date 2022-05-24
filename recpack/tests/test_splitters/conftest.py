@@ -18,65 +18,63 @@ TIMESTAMP_IX = "ts"
 
 @pytest.fixture(scope="function")
 def data_m():
-    np.random.seed(42)
+    num_users = 50
+    num_items = 100
+    num_interactions = 5000
 
-    input_dict = {
-        InteractionMatrix.USER_IX: [
-            np.random.randint(0, num_users) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.ITEM_IX: [
-            np.random.randint(0, num_items) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.TIMESTAMP_IX: [
-            np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
-        ],
-    }
+    return create_interaction_matrix(
+        num_users,
+        num_items,
+        num_interactions,
+        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX],
+    )
 
-    df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(
-        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
+
+@pytest.fixture(scope="function")
+def larger_data_m():
+    num_users = 100
+    num_items = 1000
+    num_interactions = 10000
+
+    return create_interaction_matrix(
+        num_users,
+        num_items,
+        num_interactions,
+        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX],
     )
-    data = InteractionMatrix(
-        df,
-        InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
-        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+
+
+@pytest.fixture(scope="function")
+def data_m_sparse():
+    num_users = 500
+    avg_items_per_user = 10
+    num_items = 100
+    num_interactions = num_users * avg_items_per_user
+
+    return create_interaction_matrix(
+        num_users,
+        num_items,
+        num_interactions,
+        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX],
     )
-    return data
 
 
 @pytest.fixture(scope="function")
 def data_m_w_dups():
-    np.random.seed(42)
+    num_users = 50
+    num_items = 100
+    num_interactions = 5000
 
-    input_dict = {
-        InteractionMatrix.USER_IX: [
-            np.random.randint(0, num_users) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.ITEM_IX: [
-            np.random.randint(0, num_items) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.TIMESTAMP_IX: [
-            np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
-        ],
-    }
-
-    df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(
+    return create_interaction_matrix(
+        num_users,
+        num_items,
+        num_interactions,
         [
             InteractionMatrix.USER_IX,
             InteractionMatrix.ITEM_IX,
             InteractionMatrix.TIMESTAMP_IX,
         ],
-        inplace=True,
     )
-    data = InteractionMatrix(
-        df,
-        InteractionMatrix.ITEM_IX,
-        InteractionMatrix.USER_IX,
-        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
-    )
-    return data
 
 
 @pytest.fixture(scope="function")
@@ -89,9 +87,7 @@ def data_m_small():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(
-        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
-    )
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
     data = InteractionMatrix(
         df,
         InteractionMatrix.ITEM_IX,
@@ -130,6 +126,27 @@ def data_m_sessions():
     return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
 
+def create_interaction_matrix(num_users, num_items, num_interactions, deduplication_indices):
+    np.random.seed(42)
+
+    input_dict = {
+        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.ITEM_IX: [np.random.randint(0, num_items) for _ in range(0, num_interactions)],
+        InteractionMatrix.TIMESTAMP_IX: [np.random.randint(min_t, max_t) for _ in range(0, num_interactions)],
+    }
+
+    df = pd.DataFrame.from_dict(input_dict)
+    df.drop_duplicates(deduplication_indices, inplace=True)
+
+    data = InteractionMatrix(
+        df,
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+    return data
+
+
 @pytest.fixture(scope="function")
 def data_m_sporadic_users():
     """Data matrix for testing when we expect users to only have 1 or 2 interactions"""
@@ -140,9 +157,7 @@ def data_m_sporadic_users():
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(
-        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
-    )
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
     data = InteractionMatrix(
         df,
         InteractionMatrix.ITEM_IX,

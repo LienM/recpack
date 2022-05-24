@@ -16,7 +16,8 @@ class Scenario(ABC):
     a fold-in set of interactions that is used to predict another held-out
     set of interactions.
 
-    :param validation: Create a validation dataset when True, else split into training and test datasets.
+    :param validation: Create a validation dataset when True,
+    else split into training and test datasets.
     :type validation: boolean, optional
     :param seed: Seed for randomisation parts of the scenario.
         Defaults to None, so random seed will be generated.
@@ -30,9 +31,7 @@ class Scenario(ABC):
         self.seed = seed
         self.validation = validation
         if validation:
-            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(
-                0.8, seed=self.seed
-            )
+            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8, seed=self.seed)
 
     @abstractmethod
     def _split(self, data_m: InteractionMatrix) -> None:
@@ -50,7 +49,8 @@ class Scenario(ABC):
         """Splits ``data_m`` according to the scenario.
 
         After splitting properties :attr:`training_data`,
-        :attr:`validation_data` and :attr:`test_data` can be used to retrieve the splitted data.
+        :attr:`validation_data` and :attr:`test_data` can be used
+        to retrieve the splitted data.
 
         :param data_m: Interaction matrix that should be split.
         :type data: InteractionMatrix
@@ -61,15 +61,45 @@ class Scenario(ABC):
 
     @property
     def training_data(self) -> InteractionMatrix:
-        """The training dataset.
+        """The training dataset [DEPRECATED!]
+
+        If the scenario has validation data,
+        then the validation_training_data will be returned.
+        Otherwise the full_training_data will be returned.
 
         :return: Interaction Matrix of training interactions.
         :rtype: InteractionMatrix
         """
-        if not hasattr(self, "train_X"):
-            raise KeyError("Split before trying to access the training_data property.")
+        if self.validation:
+            warn("training_data property is deprecated, " "use the validation_training_data.")
+            return self.validation_training_data
+        else:
+            warn("training_data property is deprecated, use the full_training_data.")
+            return self.full_training_data
 
-        return self.train_X
+    @property
+    def full_training_data(self) -> InteractionMatrix:
+        """The full training dataset, which should be used for a final training
+        after hyper parameter optimisation.
+
+        :return: Interaction Matrix of training interactions.
+        :rtype: InteractionMatrix
+        """
+        if not hasattr(self, "_full_train_X"):
+            raise KeyError("Split before trying to access the full_training_data property.")
+
+        return self._full_train_X
+
+    @property
+    def validation_training_data(self) -> InteractionMatrix:
+        """The training data to be used during validation."""
+        if not self.validation:
+            raise KeyError("This scenario was created without validation data.")
+
+        if not hasattr(self, "_validation_train_X"):
+            raise KeyError("Split before trying to access the validation_training_data property.")
+
+        return self._validation_train_X
 
     @property
     def validation_data(
@@ -78,7 +108,8 @@ class Scenario(ABC):
         """The validation dataset. Consist of a fold-in and hold-out set of interactions.
 
         Data is processed such that both matrices contain the exact same users.
-        Users that were present in only one of the matrices and not in the other are removed.
+        Users that were present in only one of the matrices
+        and not in the other are removed.
 
         :return: Validation data matrices as
             InteractionMatrix in, InteractionMatrix out.
@@ -88,9 +119,7 @@ class Scenario(ABC):
             raise KeyError("This scenario was created without validation_data.")
 
         if not hasattr(self, "_validation_data_in"):
-            raise KeyError(
-                "Split before trying to access the validation_data property."
-            )
+            raise KeyError("Split before trying to access the validation_data property.")
 
         # make sure users match both.
         in_users = self._validation_data_in.active_users
@@ -127,7 +156,8 @@ class Scenario(ABC):
         """The test dataset. Consist of a fold-in and hold-out set of interactions.
 
         Data is processed such that both matrices contain the exact same users.
-        Users that were present in only one of the matrices and not in the other are removed.
+        Users that were present in only one of the matrices
+        and not in the other are removed.
 
         :return: Test data matrices as InteractionMatrix in, InteractionMatrix out.
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
@@ -147,16 +177,11 @@ class Scenario(ABC):
 
         Makes sure all expected attributes are set.
         """
-        assert hasattr(self, "train_X") and self.train_X is not None
+        assert hasattr(self, "_full_train_X") and self._full_train_X is not None
         if self.validation:
-            assert (
-                hasattr(self, "_validation_data_in")
-                and self._validation_data_in is not None
-            )
-            assert (
-                hasattr(self, "_validation_data_out")
-                and self._validation_data_out is not None
-            )
+            assert hasattr(self, "_validation_train_X") and self._validation_train_X is not None
+            assert hasattr(self, "_validation_data_in") and self._validation_data_in is not None
+            assert hasattr(self, "_validation_data_out") and self._validation_data_out is not None
 
         assert hasattr(self, "_test_data_in") and self._test_data_in is not None
         assert hasattr(self, "_test_data_out") and self._test_data_out is not None
@@ -167,7 +192,7 @@ class Scenario(ABC):
         """
         Warns user if any of the sets is unusually small or empty
         """
-        n_train = self.train_X.num_interactions
+        n_train = self._full_train_X.num_interactions
         n_test_in = self._test_data_in.num_interactions
         n_test_out = self._test_data_out.num_interactions
         n_test = n_test_in + n_test_out
@@ -176,6 +201,7 @@ class Scenario(ABC):
         if self.validation:
             n_val_in = self._validation_data_in.num_interactions
             n_val_out = self._validation_data_out.num_interactions
+            n_val_train = self._validation_train_X.num_interactions
             n_val = n_val_in + n_val_out
             n_total += n_val
 
@@ -189,5 +215,6 @@ class Scenario(ABC):
         check("Test out set", n_test_out, n_test, 0.01)
         if self.validation:
             check("Validation set", n_val, n_total, 0.01)
+            check("Validation train set", n_val_train, n_train, 0.05)
             check("Validation in set", n_val_in, n_val, 0.05)
             check("Validation out set", n_val_out, n_val, 0.01)
