@@ -1,9 +1,11 @@
 """Module responsible for handling datasets."""
 
+import json
 import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
+import tarfile
 from typing import List, Optional, Tuple, Union
 from urllib.request import urlretrieve
 import zipfile
@@ -63,9 +65,7 @@ class Dataset:
     DEFAULT_FILENAME = None
     """Default filename that will be used if it is not specified by the user."""
 
-    def __init__(
-        self, path: str = "data", filename: str = None, preprocess_default=True
-    ):
+    def __init__(self, path: str = "data", filename: str = None, preprocess_default=True):
         self.filename = filename
         if not self.filename:
             if self.DEFAULT_FILENAME:
@@ -74,9 +74,7 @@ class Dataset:
                 raise ValueError("No filename specified, and no default known.")
 
         self.path = path
-        self.preprocessor = DataFramePreprocessor(
-            self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX
-        )
+        self.preprocessor = DataFramePreprocessor(self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX)
         if preprocess_default:
             for f in self._default_filters:
                 self.add_filter(f)
@@ -249,18 +247,9 @@ class DummyDataset(Dataset):
         np.random.seed(self.seed)
 
         input_dict = {
-            self.USER_IX: [
-                np.random.randint(0, self.num_users)
-                for _ in range(0, self.num_interactions)
-            ],
-            self.ITEM_IX: [
-                np.random.randint(0, self.num_items)
-                for _ in range(0, self.num_interactions)
-            ],
-            self.TIMESTAMP_IX: [
-                np.random.randint(self.min_t, self.max_t)
-                for _ in range(0, self.num_interactions)
-            ],
+            self.USER_IX: [np.random.randint(0, self.num_users) for _ in range(0, self.num_interactions)],
+            self.ITEM_IX: [np.random.randint(0, self.num_items) for _ in range(0, self.num_interactions)],
+            self.TIMESTAMP_IX: [np.random.randint(self.min_t, self.max_t) for _ in range(0, self.num_interactions)],
         }
 
         df = pd.DataFrame.from_dict(input_dict)
@@ -359,9 +348,7 @@ class CiteULike(Dataset):
         """Download thee users.dat file from the github repository.
         The file is saved at the specified `self.file_path`
         """
-        DATASETURL = (
-            "https://raw.githubusercontent.com/js05212/citeulike-a/master/users.dat"
-        )
+        DATASETURL = "https://raw.githubusercontent.com/js05212/citeulike-a/master/users.dat"
         _fetch_remote(DATASETURL, self.file_path)
 
     def load_dataframe(self) -> pd.DataFrame:
@@ -425,10 +412,12 @@ class MovieLens25M(Dataset):
     :param path: The path to the data directory.
         Defaults to `data`
     :type path: Optional[str]
-    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
+    :param filename: Name of the file, if no name is provided the dataset default
+        will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: Optional[str]
-    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :param preprocess_default: Should a default set of filters be initialised?
+        Defaults to True
     :type preprocess_default: bool, optional
 
     """
@@ -574,9 +563,7 @@ class RecsysChallenge2015(Dataset):
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
-        df[self.TIMESTAMP_IX] = (
-            df[self.TIMESTAMP_IX].astype(int) / 1e9
-        )  # pandas datetime -> seconds from epoch
+        df[self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].astype(int) / 1e9  # pandas datetime -> seconds from epoch
 
         return df
 
@@ -644,8 +631,7 @@ class CosmeticsShop(Dataset):
         for event_type in event_types:
             if event_type not in self.ALLOWED_EVENT_TYPES:
                 raise ValueError(
-                    f"{event_type} is not in the allowed event types. "
-                    f"Please use one of {self.ALLOWED_EVENT_TYPES}"
+                    f"{event_type} is not in the allowed event types. " f"Please use one of {self.ALLOWED_EVENT_TYPES}"
                 )
 
         self.event_types = event_types
@@ -697,9 +683,7 @@ class CosmeticsShop(Dataset):
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
-        df[self.TIMESTAMP_IX] = (
-            df[self.TIMESTAMP_IX].view(int) / 1e9
-        )  # pandas datetime -> seconds from epoch
+        df[self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].view(int) / 1e9  # pandas datetime -> seconds from epoch
 
         # Select only the specified event_types
         if self.event_types:
@@ -766,8 +750,7 @@ class RetailRocket(Dataset):
         for event_type in event_types:
             if event_type not in self.ALLOWED_EVENT_TYPES:
                 raise ValueError(
-                    f"{event_type} is not in the allowed event types. "
-                    f"Please use one of {self.ALLOWED_EVENT_TYPES}"
+                    f"{event_type} is not in the allowed event types. " f"Please use one of {self.ALLOWED_EVENT_TYPES}"
                 )
 
         self.event_types = event_types
@@ -815,16 +798,132 @@ class RetailRocket(Dataset):
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
-        # Original data is in milliseconds since epoch, 
+        # Original data is in milliseconds since epoch,
         # and so should be divided by 1000
-        df[self.TIMESTAMP_IX] = (
-            df[self.TIMESTAMP_IX].view(int) / 1e3
-        )  # pandas datetime -> seconds from epoch
+        df[self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].view(int) / 1e3  # pandas datetime -> seconds from epoch
 
         # Select only the specified event_types
         if self.event_types:
             df = df[df[self.EVENT_TYPE_IX].isin(self.event_types)].copy()
 
         df = df[self._columns].copy()
+
+        return df
+
+
+class AdressaOneWeek(Dataset):
+    """Handles the 1 week dataset of adressa.
+
+    All information on the dataset can be found at https://reclab.idi.ntnu.no/dataset/.
+    Uses the `ratings.csv` file to generate an InteractionMatrix.
+
+    Default processing makes sure that:
+
+    - Each remaining user has interacted with at least 3 items
+    - Each remaining item has been interacted with by at least 5 users
+
+    To change the filter conditions, you can manually set the preprocessing filters.::
+
+        from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
+        from recpack.data.datasets import AdressaOneWeek
+        d = AdressaOneWeek(path='path/to', filename='file', preprocess_default=False)
+        d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
+        d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
+
+    :param path: The path to the data directory.
+        Defaults to `data`
+    :type path: Optional[str]
+    :param filename: Name of the file, if no name is provided the dataset default
+        will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: Optional[str]
+    :param preprocess_default: Should a default set of filters be initialised?
+        Defaults to True
+    :type preprocess_default: bool, optional
+
+    """
+
+    USER_IX = "userId"
+    """Name of the column in the DataFrame that contains user identifiers."""
+    ITEM_IX = "id"
+    """Name of the column in the DataFrame that contains item identifiers."""
+    TIMESTAMP_IX = "time"
+    """Name of the column in the DataFrame that contains time of interaction in seconds since epoch."""
+
+    DEFAULT_FILENAME = "adressa_one_week.csv"
+    """Default filename that will be used if it is not specified by the user."""
+
+    DATASET_URL = "https://reclab.idi.ntnu.no/dataset/one_week.tar.gz"
+    """URL to fetch the dataset from."""
+
+    @property
+    def _default_filters(self) -> List[Filter]:
+        """The default filters for the Adressa dataset
+
+        Filters users and items with not enough interactions.
+
+        :return: List of filters to use as default preprocessing.
+        :rtype: List[Filter]
+        """
+        return [
+            MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
+            MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
+        ]
+
+    def _download_dataset(self):
+        """Downloads the dataset.
+
+        Downloads the zipfile, and extracts the ratings file to `self.file_path`
+        """
+
+        zipfile_name = "one_week.tar.gz"
+        if not os.path.exists(os.path.join(self.path, zipfile_name)):
+            # Download the zip into the data directory
+            _fetch_remote(self.DATASET_URL, os.path.join(self.path, zipfile_name))
+
+        # Subfiles that should be present in the tarfile
+        fs = [
+            "20170101",
+            "20170102",
+            "20170103",
+            "20170104",
+            "20170105",
+            "20170106",
+            "20170107",
+        ]
+
+        tar = tarfile.open(os.path.join(self.path, zipfile_name))
+        dfs = []
+        # For each file in the directory:
+        for f in fs:
+            # open the file from the tarfile.
+            g = tar.extractfile(f"one_week/{f}")
+            df = pd.read_json(g, lines=True)
+            if self.ITEM_IX in df and self.TIMESTAMP_IX in df and self.USER_IX in df:
+                dfs.append(df[[self.USER_IX, self.ITEM_IX, self.TIMESTAMP_IX]])
+        df = pd.concat(dfs)
+
+        df.dropna(inplace=True)
+        df.to_csv(os.path.join(self.path, self.filename), header=True, index=False)
+
+    def load_dataframe(self) -> pd.DataFrame:
+        """Load the data from file, and return as a Pandas DataFrame.
+
+        Downloads the data file if it is not yet present.
+        The output will contain the data of the CSV file as a Pandas DataFrame.
+
+        :return: The interactions as a Pandas DataFrame, with a row for each interaction.
+        :rtype: pandas.DataFrame
+        """
+
+        self.fetch_dataset()
+        df = pd.read_csv(
+            self.file_path,
+            dtype={
+                self.USER_IX: str,
+                self.TIMESTAMP_IX: np.int64,
+                self.ITEM_IX: str,
+            },
+        )
 
         return df
