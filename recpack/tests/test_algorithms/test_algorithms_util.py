@@ -10,7 +10,6 @@ from recpack.algorithms.util import (
     sample_rows,
     get_batches,
     union_csr_matrices,
-    create_front_padded_history_tensor,
 )
 
 
@@ -112,17 +111,3 @@ def test_invert():
     inv = invert(a)
 
     np.testing.assert_almost_equal(inv, expected)
-
-
-def test_create_front_padded_history_tensor(mat):
-    tens = create_front_padded_history_tensor(mat, padding_token=-1)
-    assert tens.shape == (6, 2)
-    np.testing.assert_array_equal(tens, [[1, 0], [2, 3], [0, 1], [2, 4], [0, 1], [-1, 2]])
-
-    tens = create_front_padded_history_tensor(mat, padding_token=-1, max_hist_length=1)
-    assert tens.shape == (6, 1)
-    np.testing.assert_array_equal(tens, [[0], [3], [1], [4], [1], [2]])
-
-    tens = create_front_padded_history_tensor(mat, padding_token=-1, max_hist_length=3)
-    assert tens.shape == (6, 3)
-    np.testing.assert_array_equal(tens, [[-1, 1, 0], [-1, 2, 3], [-1, 0, 1], [-1, 2, 4], [-1, 0, 1], [-1, -1, 2]])

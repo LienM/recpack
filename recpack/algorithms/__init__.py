@@ -167,7 +167,6 @@ As such recpack contains a number of commonly used sampling methods.
     samplers.WarpSampler
     samplers.SequenceMiniBatchSampler
     samplers.SequenceMiniBatchPositivesTargetsNegativesSampler
-    samplers.SequenceSlidingWindowSampler
 
 
 Utility Functions

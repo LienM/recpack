@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 from scipy.sparse import diags
@@ -8,73 +8,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import Normalizer
 
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
-from recpack.algorithms.util import invert, to_binary
+from recpack.algorithms.util import invert
 from recpack.util import get_top_K_values
-
-
-def compute_conditional_probability(X: csr_matrix, pop_discount: float = 0) -> csr_matrix:
-    """Compute conditional probability like similarity.
-
-    Computation using equation (3) from the original ItemKNN paper.
-    'Item-based top-n recommendation algorithms.'
-    Deshpande, Mukund, and George Karypis
-
-    .. math ::
-        sim(i,j) = \\frac{\\sum\\limits_{u \\in U} \\mathbb{I}_{u,i} X_{u,j}}{Freq(i) \\times Freq(j)^{\\alpha}}
-
-    Where I_ui is 1 if the user u has visited item i, and 0 otherwise.
-    And alpha is the pop_discount parameter.
-    Note that this is a non-symmetric similarity measure.
-    Given that X is a binary matrix, and alpha is set to 0,
-    this simplifies to pure conditional probability.
-
-    .. math::
-        sim(i,j) = \\frac{Freq(i \\land j)}{Freq(i)}
-
-    :param X: user x item matrix with scores per user, item pair.
-    :type X: csr_matrix
-    :param pop_discount: Parameter defining popularity discount. Defaults to 0
-    :type pop_discount: float, Optional.
-    """
-    # matrix with co_mat_i,j =  SUM(1_u,i * X_u,j for each user u)
-    # If the input matrix is binary, this is the cooccurence count matrix.
-    co_mat = to_binary(X).T @ X
-
-    # Compute the inverse of the item frequencies
-    A = invert(diags(to_binary(X).sum(axis=0).A[0]).tocsr())
-
-    if pop_discount:
-        # This has all item similarities
-        # Co_mat is weighted by both the frequencies of item i
-        # and the frequency of item j to the pop_discount power.
-        # If pop_discount = 1, this similarity is symmetric again.
-        item_cond_prob_similarities = A @ co_mat @ A.power(pop_discount)
-    else:
-        # Weight the co_mat with the amount of occurences of item i.
-        item_cond_prob_similarities = A @ co_mat
-
-    # Set diagonal to 0, because we don't support self similarity
-    item_cond_prob_similarities.setdiag(0)
-
-    return item_cond_prob_similarities
-
-
-def compute_cosine_similarity(X: csr_matrix) -> csr_matrix:
-    """Compute the cosine similarity between the items in the matrix.
-
-    Self similarity is removed.
-
-    :param X: user x item matrix with scores per user, item pair.
-    :type X: csr_matrix
-    :return: similarity matrix
-    :rtype: csr_matrix
-    """
-    # X.T otherwise we are doing a user KNN
-    item_cosine_similarities = cosine_similarity(X.T, dense_output=False)
-    item_cosine_similarities.setdiag(0)
-    # Set diagonal to 0, because we don't want to support self similarity
-
-    return item_cosine_similarities
 
 
 class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
@@ -88,23 +23,11 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     Similarity parameter decides how to compute the similarity between two items.
     Supported options are: ``"cosine"`` and ``"conditional_probability"``
 
-    Cosine similarity between item i and j is computed as
-
-    .. math::
-        sim(i,j) = \\frac{X_i X_j}{||X_i||_2 ||X_j||_2}
-
-    The conditional probablity based similarity of item i with j is computed as
-
-    .. math ::
-        sim(i,j) = \\frac{\\sum\\limits_{u \\in U} \\mathbb{I}_{u,i} X_{u,j}}{Freq(i) \\times Freq(j)^{\\alpha}}
-
-    Where I_ui is 1 if the user u has visited item i, and 0 otherwise.
-    And alpha is the pop_discount parameter.
-    Note that this is a non-symmetric similarity measure.
-    Given that X is a binary matrix, and alpha is set to 0, this simplifies to pure conditional probability.
-
-    .. math::
-        sim(i,j) = \\frac{Freq(i \\land j)}{Freq(i)}
+    - Cosine similarity between item i and j is computed as
+      the ``count(i and j) / (count(i)*count(j))``.
+    - Conditional probablity of item i with j is computed
+      as ``count(i and j) / (count(i))``.
+      Note that this is a non-symmetric similarity measure.
 
     If sim_normalize is True, the scores are normalized per predictive item,
     making sure the sum of each row in the similarity matrix is 1.
@@ -170,18 +93,15 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     :param similarity: Which similarity measure to use,
         can be one of ["cosine", "conditional_probability"], defaults to "cosine"
     :type similarity: str, optional
-    :param pop_discount: Power applied to the comparing item in the denominator,
-        to discount contributions of very popular items.
-        Should be between 0 and 1. If None, apply no discounting.
+    :param pop_discount: Power applied to the comparing item in the denominator, to discount contributions
+        of very popular items. Should be between 0 and 1. If None, apply no discounting.
         Defaults to None.
     :type pop_discount: Optional[float], optional
-    :param normalize_X: Normalize rows in the interaction matrix so that
-        the contribution of users who have viewed more items is smaller,
-        defaults to False
+    :param normalize_X: Normalize rows in the interaction matrix so that the contribution of
+        users who have viewed more items is smaller, defaults to False
     :type normalize_X: bool, optional
-    :param normalize_sim: Normalize scores per row in the similarity matrix to
-        counteract artificially large similarity scores when the predictive item is
-        rare, defaults to False.
+    :param normalize_sim: Normalize scores per row in the similarity matrix to counteract
+        artificially large similarity scores when the predictive item is rare, defaults to False.
     :type normalize_sim: bool, optional
     :param normalize: DEPRECATED. Use normalize_sim instead.
         Defaults to False
@@ -192,15 +112,8 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
     """The supported similarity options"""
 
-    def __init__(
-        self,
-        K=200,
-        similarity: str = "cosine",
-        pop_discount: Optional[float] = None,
-        normalize_X: bool = False,
-        normalize_sim: bool = False,
-        normalize: bool = False,
-    ):
+    def __init__(self, K=200, similarity: str = "cosine", pop_discount: Optional[float] = None,
+                 normalize_X: bool = False, normalize_sim: bool = False, normalize: bool = False):
         super().__init__(K)
 
         if similarity not in self.SUPPORTED_SIMILARITIES:
@@ -208,24 +121,19 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         self.similarity = similarity
 
         if self.similarity != "conditional_probability" and pop_discount:
-            warnings.warn(
-                "Argument pop_discount is incompatible with all similarity \
-                functions except conditional probability. \
-                This argument will be ignored, \
-                popularity discounting won't be applied.",
-                UserWarning,
-            )
+            warnings.warn("Argument pop_discount is incompatible with all similarity \
+                functions except conditional probability. This argument will be ignored, \
+                popularity discounting won't be applied.", UserWarning)
 
         if type(pop_discount) == float and (pop_discount < 0 or pop_discount > 1):
-            raise ValueError("Invalid value for pop_discount. Value should be between 0 and 1.")
+            raise ValueError(
+                "Invalid value for pop_discount. Value should be between 0 and 1.")
 
         self.pop_discount = pop_discount
 
         if normalize:
             warnings.warn(
-                "Use of argument normalize is deprecated. Use normalize_sim instead.",
-                DeprecationWarning,
-            )
+                "Use of argument normalize is deprecated. Use normalize_sim instead.", DeprecationWarning)
 
         self.normalize_X = normalize_X
         # Sim_normalize takes precedence.
@@ -233,18 +141,46 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         self.normalize = normalize
 
+    def _compute_conditional_probability(self, X: csr_matrix) -> csr_matrix:
+        # Cooccurence matrix
+        co_mat = X.T @ X
+
+        # Adding 1 additive smoothing to occurrences to avoid division by 0
+        A = invert(diags(co_mat.diagonal()).tocsr())
+
+        # We're trying to get a matrix S of P(j|i) where j is the column index,
+        # i is the row index, so that we can later do X * S to obtain predictions.
+
+        if self.pop_discount:
+            # This has all item similarities
+            item_cond_prob_similarities = A @ co_mat @ A.power(
+                self.pop_discount)
+        else:
+            item_cond_prob_similarities = A @ co_mat
+        # Set diagonal to 0, because we don't support self similarity
+        item_cond_prob_similarities.setdiag(0)
+
+        return item_cond_prob_similarities
+
+    def _compute_cosine(self, X: csr_matrix) -> csr_matrix:
+        # X.T otherwise we are doing a user KNN
+        item_cosine_similarities = cosine_similarity(X.T, dense_output=False)
+        item_cosine_similarities.setdiag(0)
+        # Set diagonal to 0, because we don't want to support self similarity
+
+        return item_cosine_similarities
+
     def _fit(self, X: csr_matrix) -> None:
         """Fit a cosine similarity matrix from item to item"""
-
         transformer = Normalizer(norm="l1", copy=False)
 
         if self.normalize_X:
             X = transformer.transform(X)
 
         if self.similarity == "cosine":
-            item_similarities = compute_cosine_similarity(X)
+            item_similarities = self._compute_cosine(X)
         elif self.similarity == "conditional_probability":
-            item_similarities = compute_conditional_probability(X, self.pop_discount)
+            item_similarities = self._compute_conditional_probability(X)
 
         item_similarities = get_top_K_values(item_similarities, self.K)
 
@@ -315,9 +251,7 @@ class ItemPNN(ItemKNN):
         # We'll only keep the closest neighbour for each item.
         # we set the similarity measure to conditional probability
         # And enable normalization
-        algo = ItemPNN(
-            K=2, similarity='conditional_probability', sim_normalize=True, pdf='uniform'
-        )
+        algo = ItemPNN(K=2, similarity='conditional_probability', sim_normalize=True, pdf='uniform')
         # Fit algorithm
         algo.fit(X)
 
@@ -343,52 +277,39 @@ class ItemPNN(ItemKNN):
     :param similarity: Which similarity measure to use,
         can be one of ["cosine", "conditional_probability"], defaults to "cosine"
     :type similarity: str, optional
-    :param pop_discount: Power applied to the comparing item in the denominator,
-        to discount contributions of very popular items.
-        Should be between 0 and 1. If None, apply no discounting.
+    :param pop_discount: Power applied to the comparing item in the denominator, to discount contributions
+        of very popular items. Should be between 0 and 1. If None, apply no discounting.
         Defaults to None.
     :type pop_discount: Optional[float], optional
-    :param normalize_X: Normalize rows in the interaction matrix so that
-        the contribution of users who have viewed more items is smaller,
-        defaults to False
+    :param normalize_X: Normalize rows in the interaction matrix so that the contribution of
+        users who have viewed more items is smaller, defaults to False
     :type normalize_X: bool, optional
-    :param normalize_sim: Normalize scores per row in the similarity matrix to
-        counteract artificially large similarity scores
-        when the predictive item is rare,
-        defaults to False.
+    :param normalize_sim: Normalize scores per row in the similarity matrix to counteract
+        artificially large similarity scores when the predictive item is rare, defaults to False.
     :type normalize_sim: bool, optional
     :param pdf: Which probability distribution to use,
-        can be one of ["empirical", "uniform", "softmax_empirical"],
-        defaults to "empirical"
+        can be one of ["empirical", "uniform", "softmax_empirical"], defaults to "empirical"
     :type pdf: str, optional
     :param seed: Seed to the randomizers, useful for reproducible results,
         defaults to None
     :type seed: int, optional
-    :raises ValueError: If an unsupported similarity measure or
-        probability distribution is passed.
+    :raises ValueError: If an unsupported similarity measure or probability distribution is passed.
     """
-
-    SUPPORTED_SAMPLING_FUNCTIONS = ["empirical", "uniform", "softmax_empirical"]
+    SUPPORTED_SAMPLING_FUNCTIONS = [
+        "empirical", "uniform", "softmax_empirical"]
     """The supported similarity options"""
 
-    def __init__(
-        self,
-        K=200,
-        similarity: str = "cosine",
-        pop_discount: Optional[float] = None,
-        normalize_X: bool = False,
-        normalize_sim: bool = False,
-        pdf: str = "empirical",
-        seed: Optional[int] = None,
-    ):
+    def __init__(self,
+                 K=200,
+                 similarity: str = "cosine",
+                 pop_discount: Optional[float] = None,
+                 normalize_X: bool = False,
+                 normalize_sim: bool = False,
+                 pdf: str = "empirical",
+                 seed: Optional[int] = None):
 
-        super().__init__(
-            K=K,
-            similarity=similarity,
-            pop_discount=pop_discount,
-            normalize_X=normalize_X,
-            normalize_sim=normalize_sim,
-        )
+        super().__init__(K=K, similarity=similarity, pop_discount=pop_discount,
+                         normalize_X=normalize_X, normalize_sim=normalize_sim)
 
         if pdf not in self.SUPPORTED_SAMPLING_FUNCTIONS:
             raise ValueError(f"Sampling function {pdf} not supported")
@@ -405,8 +326,7 @@ class ItemPNN(ItemKNN):
         # TODO Outside of the class maybe?
         sim_matrix = sim_matrix.toarray()
         if pdf == "empirical":
-            # Add the None dimension at the end to do a row-wise division.
-            # Otherwise the default is column-wise.
+            # Add the None dimension at the end to do a row-wise division. Otherwise the default is column-wise.
             p = sim_matrix / sim_matrix.sum(axis=1)[:, None]
         elif pdf == "uniform":
             p = np.ones(sim_matrix.shape) / sim_matrix.shape[1]
@@ -420,16 +340,15 @@ class ItemPNN(ItemKNN):
 
     def _fit(self, X: csr_matrix) -> None:
         """Fit a cosine similarity matrix from item to item"""
-
         transformer = Normalizer(norm="l1", copy=False)
 
         if self.normalize_X:
             X = transformer.transform(X)
 
         if self.similarity == "cosine":
-            item_similarities = compute_cosine_similarity(X)
+            item_similarities = self._compute_cosine(X)
         elif self.similarity == "conditional_probability":
-            item_similarities = compute_conditional_probability(X, self.pop_discount)
+            item_similarities = self._compute_conditional_probability(X)
 
         self.pdf_ = self._compute_pdf(self.pdf, item_similarities)
 
@@ -447,16 +366,14 @@ class ItemPNN(ItemKNN):
 
 
 def get_K_values(X: csr_matrix, K: int, pdf: np.ndarray) -> csr_matrix:
-    """Select K values random values for every row in X,
-    sampled according to the probabilities in pdf.
+    """Select K values random values for every row in X, sampled according to the probabilities in pdf.
     All other values in the row are set to zero.
 
     :param X: Matrix from which we will select K values in every row.
     :type X: csr_matrix
     :param K: Amount of values to select.
     :type K: int
-    :param pdf: np.ndarray of probabilities of items in X, given another item.
-        Rows should sum to 1.
+    :param pdf: np.ndarray of probabilities of items in X, given another item. Rows should sum to 1.
     :type pdf: np.ndarray
     :return: Matrix with K values per row.
     :rtype: csr_matrix
@@ -467,7 +384,8 @@ def get_K_values(X: csr_matrix, K: int, pdf: np.ndarray) -> csr_matrix:
 
     for row_ix in range(0, X.shape[0]):
         # Select one more, so that we can eliminate the item itself.
-        selected_K = np.random.choice(items, size=K + 1, p=pdf[row_ix, :], replace=False)
+        selected_K = np.random.choice(
+            items, size=K + 1, p=pdf[row_ix, :], replace=False)
 
         try:
             # Eliminate the item itself if it was selected.

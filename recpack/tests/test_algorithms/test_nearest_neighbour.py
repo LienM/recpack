@@ -7,10 +7,7 @@ from scipy.sparse.csr import csr_matrix
 
 from recpack.algorithms import ItemKNN
 from recpack.data.matrix import to_binary
-from recpack.algorithms.nearest_neighbour import (
-    ItemPNN,
-    compute_conditional_probability,
-)
+from recpack.algorithms.nearest_neighbour import ItemPNN
 
 
 @pytest.fixture(scope="function")
@@ -46,11 +43,14 @@ def test_item_knn(data):
             [2 / math.sqrt(6), 2 / math.sqrt(6), 0],
         ]
     )
-    np.testing.assert_almost_equal(algo.similarity_matrix_.toarray(), expected_similarities)
+    np.testing.assert_almost_equal(
+        algo.similarity_matrix_.toarray(), expected_similarities
+    )
 
     # Make sure the similarities recommended are the cosine similarities as computed.
     # If we create users with a single item seen in order.
-    _in = csr_matrix(([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
+    _in = csr_matrix(
+        ([1, 1, 1], ([0, 1, 2], [0, 1, 2])), shape=(3, 3))
     result = algo.predict(_in)
 
     np.testing.assert_almost_equal(result.toarray(), expected_similarities)
@@ -68,7 +68,8 @@ def test_item_knn_normalize(data):
 
     algo.fit(data)
 
-    np.testing.assert_array_almost_equal(algo.similarity_matrix_.sum(axis=1), 1)
+    np.testing.assert_array_almost_equal(
+        algo.similarity_matrix_.sum(axis=1), 1)
 
 
 def test_item_knn_normalize_X(data):
@@ -93,19 +94,19 @@ def test_item_knn_normalize_X(data):
     c = (1 / 3 * 3) + 1 / (2 * 2) * 2
 
     # Item norms
-    d = math.sqrt((1 / 2) ** 2 + (1 / 3) ** 2)
+    d = math.sqrt((1 / 2)**2 + (1 / 3)**2)
     e = d
-    f = math.sqrt(2 * (1 / 2) ** 2 + (1 / 3) ** 2)
+    f = math.sqrt(2 * (1 / 2)**2 + (1 / 3)**2)
 
-    expected_similarities = np.array(
-        [
-            [0, a / (d * e), b / (d * f)],
-            [a / (d * e), 0, b / (e * f)],
-            [b / (d * f), b / (e * f), 0],
-        ]
+    expected_similarities = np.array([
+        [0, a / (d * e), b / (d * f)],
+        [a / (d * e), 0, b / (e * f)],
+        [b / (d * f), b / (e * f), 0]
+    ])
+
+    np.testing.assert_almost_equal(
+        algo.similarity_matrix_.toarray(), expected_similarities
     )
-
-    np.testing.assert_almost_equal(algo.similarity_matrix_.toarray(), expected_similarities)
 
 
 def test_item_knn_normalize_sim(data):
@@ -114,15 +115,21 @@ def test_item_knn_normalize_sim(data):
 
     algo.fit(data)
 
-    np.testing.assert_array_almost_equal(algo.similarity_matrix_.sum(axis=1), 1)
+    np.testing.assert_array_almost_equal(
+        algo.similarity_matrix_.sum(axis=1), 1)
 
 
 def test_item_knn_empty_col(data_empty_col):
     algo = ItemKNN(K=2)
 
     algo.fit(data_empty_col)
-    expected_similarities = np.array([[0.0, 0.0, 0.0], [0.0, 0, 2 / math.sqrt(6)], [0.0, 2 / math.sqrt(6), 0]])
-    np.testing.assert_almost_equal(algo.similarity_matrix_.toarray(), expected_similarities)
+    expected_similarities = np.array(
+        [[0.0, 0.0, 0.0], [0.0, 0, 2 /
+                           math.sqrt(6)], [0.0, 2 / math.sqrt(6), 0]]
+    )
+    np.testing.assert_almost_equal(
+        algo.similarity_matrix_.toarray(), expected_similarities
+    )
 
 
 def test_item_knn_conditional_probability(data):
@@ -150,12 +157,15 @@ def test_item_knn_conditional_probability(data):
         ]
     )
     # fmt: on
-    np.testing.assert_almost_equal(algo.similarity_matrix_.toarray(), expected_similarities)
+    np.testing.assert_almost_equal(
+        algo.similarity_matrix_.toarray(), expected_similarities
+    )
 
 
 @pytest.mark.parametrize("pop_discount", [1, 0.2, 0.5])
 def test_item_knn_conditional_probability_w_pop_discount(data, pop_discount):
-    algo = ItemKNN(K=2, similarity="conditional_probability", pop_discount=pop_discount)
+    algo = ItemKNN(K=2, similarity="conditional_probability",
+                   pop_discount=pop_discount)
 
     algo.fit(data)
     # similarity is computed as count(i^j) / (count(i) * count(j) ^ pop_discount)
@@ -179,22 +189,16 @@ def test_item_knn_conditional_probability_w_pop_discount(data, pop_discount):
         ]
     )
     # fmt: on
-    np.testing.assert_almost_equal(algo.similarity_matrix_.toarray(), expected_similarities)
+    np.testing.assert_almost_equal(
+        algo.similarity_matrix_.toarray(), expected_similarities
+    )
 
 
-@pytest.mark.parametrize(
-    "K, pdf",
-    [
-        (1, "uniform"),
-        (2, "uniform"),
-        (
-            1,
-            "empirical",
-        ),  # (2, "empirical"),  # Cannot run 2 empirical because it leads to fewer nonzero values than needed
-        (1, "softmax_empirical"),
-        (2, "softmax_empirical"),
-    ],
-)
+@pytest.mark.parametrize("K, pdf", [
+    (1, "uniform"), (2, "uniform"),
+    (1, "empirical"), # (2, "empirical"),  # Cannot run 2 empirical because it leads to fewer nonzero values than needed
+    (1, "softmax_empirical"), (2, "softmax_empirical")
+])
 def test_item_pnn(data, K, pdf):
     algo = ItemPNN(K=K, similarity="cosine", pdf=pdf)
 
@@ -223,62 +227,21 @@ def test_item_pnn_uniform_larger(larger_matrix):
     np.testing.assert_array_compare(operator.__ne__, sims, sims2)
 
 
-@pytest.mark.parametrize(
-    "K, pdf",
-    [
-        (1, "uniform"),
-        (2, "uniform"),
-        (
-            1,
-            "empirical",
-        ),  # (2, "empirical"),  # Cannot run 2 empirical because it leads to fewer nonzero values than needed
-        (1, "softmax_empirical"),
-        (2, "softmax_empirical"),
-    ],
-)
+@pytest.mark.parametrize("K, pdf", [
+    (1, "uniform"), (2, "uniform"),
+    (1, "empirical"), # (2, "empirical"),  # Cannot run 2 empirical because it leads to fewer nonzero values than needed
+    (1, "softmax_empirical"), (2, "softmax_empirical")
+])
 def test_item_pnn_compute_df(K, pdf):
     algo = ItemPNN(K=K, similarity="cosine", pdf=pdf)
 
-    X = csr_matrix([[0.5, 0.2, 0.3], [0.2, 0.3, 0.5], [0.5, 0.5, 0]])
+    X = csr_matrix([
+        [0.5, 0.2, 0.3],
+        [0.2, 0.3, 0.5],
+        [0.5, 0.5, 0]
+    ])
 
     p = algo._compute_pdf(pdf, X)
 
     np.testing.assert_almost_equal(np.sum(p), X.shape[1])
     np.testing.assert_array_almost_equal(np.sum(p, axis=1), 1)
-
-
-def test_conditional_probability():
-    # fmt: off
-    X = csr_matrix([
-        [1, 0.5],
-        [0, 0.25],
-        [1, 1]
-    ])
-
-    similarity = compute_conditional_probability(X)
-
-    expected_similarity = [
-        [0, (0.5 + 1)/2],
-        [(1 + 1)/3, 0]
-    ]
-
-    np.testing.assert_array_equal(similarity.toarray(), expected_similarity)
-
-    similarity = compute_conditional_probability(X, pop_discount=1)
-
-    expected_similarity = [
-        [0, (0.5 + 1) / (2 * 3)],
-        [(1 + 1) / (2 * 3), 0]
-    ]
-
-    np.testing.assert_array_equal(similarity.toarray(), expected_similarity)
-
-    similarity = compute_conditional_probability(X, pop_discount=0.1)
-
-    expected_similarity = [
-        [0, (0.5 + 1) / (2 * 3 ** 0.1)],
-        [(1 + 1) / (3 * 2 ** 0.1), 0],
-    ]
-    # fmt: on
-
-    np.testing.assert_array_almost_equal(similarity.toarray(), expected_similarity)
