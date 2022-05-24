@@ -38,21 +38,6 @@ def test_init(algo):
     assert algo.identifier == "STAN(K=2,distance_from_match_decay=1.0," "interaction_decay=1.0,session_decay=0.2)"
 
 
-def test_check_input(algo, matrix_sessions):
-    # No error when checking type
-    algo._check_input(matrix_sessions)
-
-    with pytest.raises(TypeError) as type_error:
-        algo._check_input(matrix_sessions.binary_values)
-
-    assert type_error.match("STAN requires Interaction Matrix as input. " "Got <class 'scipy.sparse._csr.csr_matrix'>.")
-
-    with pytest.raises(ValueError) as value_error:
-        algo._check_input(matrix_sessions.eliminate_timestamps())
-
-    assert value_error.match("STAN requires timestamp information in the InteractionMatrix.")
-
-
 def test_fit(algo, mini_training_dataset):
 
     algo.fit(mini_training_dataset)
