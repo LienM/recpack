@@ -1,10 +1,10 @@
 """Postprocessors apply filtering onto Recpack's internal output representations."""
 
 import logging
-from typing import List
+from typing import List, Optional
 from recpack.postprocessing.filters import PostFilter
 from scipy.sparse import csr_matrix
-import numpy as np
+
 
 logger = logging.getLogger("recpack")
 
@@ -22,7 +22,7 @@ class Postprocessor:
     def __init__(self):
         self.filters = []
 
-    def add_filter(self, _filter: PostFilter, index: int = None):
+    def add_filter(self, _filter: PostFilter, index: Optional[int] = None):
         """ Add a post-processing filter.
         """
         if index is None:
@@ -49,16 +49,16 @@ class Postprocessor:
             the csr_matrices were passed in.
         :rtype: List[csr_matrix]
         """
-
+        # TODO Can I improve this?
         for index, X_pred in enumerate(X_preds):
             logger.debug(f"Processing X_pred {index}")
-            logger.debug(f"\tusers with recommendations before preprocess: {sum(np.diff(X_pred.indptr) != 0)}")
+            # logger.debug(f"\tusers with recommendations before preprocess: {sum(np.diff(X_pred.indptr) != 0)}")
 
         for filter in self.filters:
             logger.debug(f"Applying post processing filter: {filter}")
             X_preds = filter.apply_all(*X_preds)
             for index, X_pred in enumerate(X_preds):
                 logger.debug(f"X_pred {index}")
-                logger.debug(f"\tusers with recommendations after preprocess: {sum(np.diff(X_pred.indptr) != 0)}")
+                # logger.debug(f"\tusers with recommendations after preprocess: {sum(np.diff(X_pred.indptr) != 0)}")
 
         return X_preds

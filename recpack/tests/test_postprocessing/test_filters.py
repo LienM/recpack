@@ -11,25 +11,21 @@ AMOUNT_OF_ITEMS = 25
 AMOUNT_SELECTED = 5
 
 
-@pytest.mark.parametrize(
-    "prediction_matrix, interaction_history",
-    [
-        (
-            csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            csr_matrix(np.random.randint(0, 2, size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS)))
-        ),
-    ]
-)
-def test_previously_interacted(prediction_matrix, interaction_history):
-    myfilter = filters.RemovePreviousInteractions(
-        InteractionMatrix.from_csr_matrix(
-            interaction_history
-        )
-    )
-    filter_pred = myfilter.apply(prediction_matrix)
+# @pytest.mark.parametrize(
+#     "prediction_matrix, interaction_history",
+#     [
+#         (
+#             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
+#             csr_matrix(np.random.randint(0, 2, size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
+#         ),
+#     ],
+# )
+# def test_remove_history(prediction_matrix, interaction_history):
+#     myfilter = filters.RemoveHistory(InteractionMatrix.from_csr_matrix(interaction_history))
+#     filter_pred = myfilter.apply(prediction_matrix)
 
-    assert filter_pred.shape == prediction_matrix.shape
-    assert not filter_pred[interaction_history.nonzero()].any()
+#     assert filter_pred.shape == prediction_matrix.shape
+#     assert not filter_pred[interaction_history.nonzero()].any()
 
 
 @pytest.mark.parametrize(
@@ -37,9 +33,13 @@ def test_previously_interacted(prediction_matrix, interaction_history):
     [
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False)
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
-    ]
+    ],
 )
 def test_select_items(prediction_matrix, items):
     myfilter = filters.SelectItems(items)
@@ -56,13 +56,17 @@ def test_select_items(prediction_matrix, items):
     [
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False)
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            random.sample(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED))
+            random.sample(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED)),
         ),
-    ]
+    ],
 )
 def test_select_items_array_like(prediction_matrix, items):
     myfilter = filters.SelectItems(items)
@@ -79,9 +83,13 @@ def test_select_items_array_like(prediction_matrix, items):
     [
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
-    ]
+    ],
 )
 def test_exclude_items(prediction_matrix, items):
     myfilter = filters.ExcludeItems(items)
@@ -97,9 +105,13 @@ def test_exclude_items(prediction_matrix, items):
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
             csr_matrix(np.random.random_sample(size=(2 * AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
-    ]
+    ],
 )
 def test_filter_items_multiple(prediction_matrix1, prediction_matrix2, items):
     myfilter = filters.SelectItems(items)
@@ -111,9 +123,13 @@ def test_filter_items_multiple(prediction_matrix1, prediction_matrix2, items):
     "items",
     [
         (
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
-    ]
+    ],
 )
 def test_post_filter_item_empty(items):
     myfilter = filters.SelectItems(items)
@@ -126,24 +142,32 @@ def test_post_filter_item_empty(items):
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
             np.random.choice(range(AMOUNT_OF_ITEMS), 0, replace=False),
-            filters.SelectItems
+            filters.SelectItems,
         ),
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
             np.random.choice(range(AMOUNT_OF_ITEMS), 0, replace=False),
-            filters.ExcludeItems
+            filters.ExcludeItems,
         ),
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS, 2 * AMOUNT_OF_ITEMS), AMOUNT_SELECTED, replace=False),
-            filters.SelectItems
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS, 2 * AMOUNT_OF_ITEMS),
+                AMOUNT_SELECTED,
+                replace=False,
+            ),
+            filters.SelectItems,
         ),
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS, 2 * AMOUNT_OF_ITEMS), AMOUNT_SELECTED, replace=False),
-            filters.ExcludeItems
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS, 2 * AMOUNT_OF_ITEMS),
+                AMOUNT_SELECTED,
+                replace=False,
+            ),
+            filters.ExcludeItems,
         ),
-    ]
+    ],
 )
 def test_exclude_items_shape_error(prediction_matrix, items, filter_class):
     myfilter = filter_class(items)
@@ -157,14 +181,14 @@ def test_exclude_items_shape_error(prediction_matrix, items, filter_class):
         (
             np.random.randint(0, 2, size=(AMOUNT_OF_ITEMS,)).astype(bool),
             filters.ExcludeItems,
-            "ExcludeItems"
+            "ExcludeItems",
         ),
         (
             np.random.randint(0, 2, size=(AMOUNT_OF_ITEMS,)).astype(bool),
             filters.SelectItems,
-            "SelectItems"
-        )
-    ]
+            "SelectItems",
+        ),
+    ],
 )
 def test_filter_items_str_repr(filter_input, filter_class, name):
     myfilter = filter_class(filter_input)
@@ -173,13 +197,11 @@ def test_filter_items_str_repr(filter_input, filter_class, name):
     assert f"{filter_input}" in myfilter.__str__()
 
 
-@pytest.mark.parametrize(
-    "filter_input",
-    [
-        csr_matrix(np.random.randint(0, 2, size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS)))
-    ]
-)
-def test_prev_int_str_repr(filter_input):
-    myfilter = filters.RemovePreviousInteractions(filter_input)
+# @pytest.mark.parametrize(
+#     "filter_input",
+#     [csr_matrix(np.random.randint(0, 2, size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS)))],
+# )
+# def test_prev_int_str_repr(filter_input):
+#     myfilter = filters.RemoveHistory(filter_input)
 
-    assert "RemovePreviousInteractions" in myfilter.__str__()
+#     assert "RemoveHistory" in myfilter.__str__()

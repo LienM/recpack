@@ -18,6 +18,15 @@ are performed in the right order.
 To define a pipeline, you should use the PipelineBuilder class, 
 which makes it possible to construct the pipeline with a few intuitive functions.
 
+# TODO Fix documentation
+There are 2 seperate pipeline classes. :class:`Pipeline` is the default one,
+where recommendations will get postprocessed to remove the user's history, i.e. items they previously interacted with.
+In some cases it is useful to keep historical interactions in the recommendations,
+for this the :class:`RecommendHistoryPipeline` is designed.
+
+Choosing to build the latter is done by using :meth:`disable_history_filtering`
+on the pipeline builder.
+
 An example of usage is::
 
     import recpack.pipelines
@@ -25,16 +34,14 @@ An example of usage is::
     # Construct pipeline_builder and add data.
     # Assumes a scenario has been created and split before.
     pipeline_builder = recpack.pipelines.PipelineBuilder('demo')
-    pipeline_builder.set_train_data(scenario.training_data)
-    pipeline_builder.set_test_data(scenario.test_data)
-    pipeline_builder.set_validation_data(scenario.validation_data)
+    pipeline_builder.set_data_from_scenario(scenario)
 
     # We'll have the pipeline optimise the K parameter from the given values.
     pipeline_builder.add_algorithm('ItemKNN', grid={'K': [100, 200, 400, 800]})
 
-    # Add NDCG and Recall to be evaluated at 10, 20, 50 and 100
-    pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
-    pipeline_builder.add_metric('RecallK', [10, 20, 50, 100])
+    # Add NDCG and Recall to be evaluated at 10, 20 and 50
+    pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50])
+    pipeline_builder.add_metric('RecallK', [10, 20, 50])
 
     # Construct pipeline
     pipeline = pipeline_builder.build()
@@ -48,8 +55,10 @@ An example of usage is::
     pd.DataFrame.from_dict(pipeline.get_metrics())
 
 
-If you want to use the pipelines with your own algorithms or metrics, you should register them using the registries.
-For info on the functions see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
+If you want to use the pipelines with your own algorithms or metrics,
+you should register them using the registries.
+For info on the functions see :class:`registries.AlgorithmRegistry`
+and :class:`registries.MetricRegistry`.
 
 Example to register an algorithm::
 
@@ -81,9 +90,8 @@ Example to register a metric::
     algo = METRIC_REGISTRY.get('NewMetric')(K=20)
 """
 
-from recpack.pipelines.pipeline import (
-    Pipeline,
-    PipelineBuilder,
-    ALGORITHM_REGISTRY,
-    METRIC_REGISTRY,
-)
+from recpack.pipelines.pipeline import Pipeline
+
+from recpack.pipelines.registries import ALGORITHM_REGISTRY, METRIC_REGISTRY
+
+from recpack.pipelines.pipeline_builder import PipelineBuilder
