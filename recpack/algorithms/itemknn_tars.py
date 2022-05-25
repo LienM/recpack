@@ -78,18 +78,18 @@ class TARSItemKNNLiu(TopKItemSimilarityMatrixAlgorithm):
         :rtype: csr_matrix
         """
         X = self._add_decay_to_interaction_matrix(X, self.predict_decay)
-        super()._predict(X)
+        return super()._predict(X)
 
     def _transform_fit_input(self, X: Matrix) -> InteractionMatrix:
         """Weight each of the interactions by the decay factor of its timestamp"""
-        self._assert_input_is_interaction_matrix(X)
-        self._assert_input_has_timestamps(X)
+        self._assert_is_interaction_matrix(X)
+        self._assert_has_timestamps(X)
         return X
 
     def _transform_predict_input(self, X: Matrix) -> InteractionMatrix:
         """Weight each of the interactions by the decay factor of its timestamp"""
-        self._assert_input_is_interaction_matrix(X)
-        self._assert_input_has_timestamps(X)
+        self._assert_is_interaction_matrix(X)
+        self._assert_has_timestamps(X)
         return X
 
     def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay: float) -> csr_matrix:
@@ -168,7 +168,7 @@ class TARSItemKNN(TARSItemKNNLiu):
         if self.similarity == "cosine":
             item_similarities = compute_cosine_similarity(X)
         elif self.similarity == "conditional_probability":
-            item_similarities = compute_conditional_probability(X, self.pop_discount)
+            item_similarities = compute_conditional_probability(X)
 
         item_similarities = get_top_K_values(item_similarities, self.K)
 
