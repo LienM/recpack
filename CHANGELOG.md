@@ -9,10 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking Changes
+* __splitters.scenarios__
+    * Parameters of the `WeakGeneralization` scenario have been changed to now only accept a single `frac_data_in` parameter. Which makes sure the validation task is as difficult as the test tasks.
+    * Training data structure has changed. Rather than a single training dataset, we use two training datasets. `validation_training_data` is used to train models while optimising their parameters, and evaluation happens on the validation data. `full_training_data` is the union of training and validation data on which the final model should be trained during evaluation on the test dataset.
+
+* __pipelines__
+    * PipelineBuilder's `set_train_data` function has been replaced with `set_full_training_data` and `set_validation_training_data` to set the two separate training datasets.
+
+
 ### Bugfixes
 * __splitters.scenarios__
     * Improved tests for WeakGeneralization scenario to confirm mismatches between train and validation_in are only due to users with not enough items and not a potential bug.
-    * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first. 
+    * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first.
+
+
 ### Additions
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
