@@ -217,7 +217,7 @@ class STAN(Algorithm):
         return session_similarity_weights
 
     def _compute_prediction_scores(self, session_similarity: csr_matrix, X: InteractionMatrix) -> csr_matrix:
-        """[summary]
+        """Computes recommendation scores for active users given the session similarity matrix.
 
         :param session_similarity: The matrix of similarities between sessions.
             Dimension 1 = input sessions.
