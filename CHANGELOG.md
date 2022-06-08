@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Improved tests for WeakGeneralization scenario to confirm mismatches between train and validation_in are only due to users with not enough items and not a potential bug.
     * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first. 
 ### Additions
+* __algorithms__
+    * Added `STAN` algorithm, presented in Garg, Diksha, et al.
+    "Sequence and time aware neighborhood for session-based recommendations: Stan". 
+    This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
+
+* __data.matrix__
+    * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
 
