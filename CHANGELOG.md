@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Additions
 * __algorithms__
     * Added TARSItemKNNLiu and TARSItemKNN algorithms, which compute item-item similarities based on a weighted matrix based on the age of events.
+        * TARSItemKNNLiu algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
+ 
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
 
