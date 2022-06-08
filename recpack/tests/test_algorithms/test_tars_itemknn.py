@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from recpack.algorithms.itemknn_tars import TARSItemKNN, TARSItemKNNLiu
+from recpack.algorithms.tars_itemknn import TARSItemKNN, TARSItemKNNLiu
 
 
 @pytest.fixture
