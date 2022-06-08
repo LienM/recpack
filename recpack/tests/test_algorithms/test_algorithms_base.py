@@ -1,14 +1,27 @@
 import warnings
 
 import numpy as np
+import pandas as pd
 import pytest
 import scipy.sparse
 
 
 from recpack.algorithms.base import Algorithm
 from recpack.algorithms import (
-    ItemKNN, MultVAE, RecVAE, BPRMF, Random,
-    NMFItemToItem, NMF, GRU4Rec, Prod2Vec, Prod2VecClustered, ItemPNN)
+    ItemKNN,
+    MultVAE,
+    RecVAE,
+    BPRMF,
+    Random,
+    NMFItemToItem,
+    NMF,
+    GRU4RecCrossEntropy,
+    GRU4RecNegSampling,
+    Prod2Vec,
+    Prod2VecClustered,
+    ItemPNN
+)
+from recpack.data.matrix import InteractionMatrix
 
 
 def test_check_prediction():
@@ -52,16 +65,20 @@ def test_check_fit_complete(pageviews):
         assert "1 items" in str(w[-1].message)
 
 
-@pytest.mark.parametrize("algo", [ItemPNN, RecVAE, MultVAE, BPRMF, Random,
-                                  NMFItemToItem, NMF, GRU4Rec, Prod2Vec, Prod2VecClustered])
+@pytest.mark.parametrize(
+    "algo",
+    [ItemPNN, RecVAE, MultVAE, BPRMF, Random, NMFItemToItem, NMF, Prod2Vec, Prod2VecClustered, GRU4RecCrossEntropy, GRU4RecNegSampling],
+)
 def test_seed_is_set_consistently_None(algo):
 
     a = algo()
     assert hasattr(a, "seed")
 
 
-@pytest.mark.parametrize("algo", [ItemPNN, RecVAE, MultVAE, BPRMF, Random,
-                                  NMFItemToItem, NMF, GRU4Rec, Prod2Vec, Prod2VecClustered])
+@pytest.mark.parametrize(
+    "algo",
+    [ItemPNN, RecVAE, MultVAE, BPRMF, Random, NMFItemToItem, NMF, Prod2Vec, Prod2VecClustered, GRU4RecNegSampling, GRU4RecCrossEntropy],
+)
 def test_seed_is_set_consistently_42(algo):
 
     a = algo(seed=42)

@@ -194,18 +194,13 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _init_model(self, X: Matrix) -> None:
         self.model_ = SkipGram(X.shape[1], self.embedding_size).to(self.device)
-        self.optimizer = optim.Adam(
-            self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
         if self.similarity_matrix_ is None:
-            raise RuntimeError(
-                "Expected similarity matrix to be computed before _evaluate"
-            )
-        val_in_selection, val_out_selection = sample_rows(
-            val_in, val_out, sample_size=1000
-        )
-        predictions = self._batch_predict(val_in_selection)
+            raise RuntimeError("Expected similarity matrix to be computed before _evaluate")
+        val_in_selection, val_out_selection = sample_rows(val_in, val_out, sample_size=1000)
+        predictions = self._predict(val_in_selection)
         better = self.stopping_criterion.update(val_out_selection, predictions)
 
         if better:
@@ -227,11 +222,8 @@ class Prod2Vec(TorchMLAlgorithm):
 
             self.optimizer.zero_grad()
 
-            positive_sim = self.model_(
-                focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1)
-            )
-            negative_sim = self.model_(
-                focus_batch.unsqueeze(-1), negatives_batch)
+            positive_sim = self.model_(focus_batch.unsqueeze(-1), positives_batch.unsqueeze(-1))
+            negative_sim = self.model_(focus_batch.unsqueeze(-1), negatives_batch)
 
             loss = self._compute_loss(positive_sim, negative_sim)
             loss.backward()
@@ -246,9 +238,7 @@ class Prod2Vec(TorchMLAlgorithm):
 
         return losses
 
-    def _compute_loss(
-        self, positive_sim: torch.Tensor, negative_sim: torch.Tensor
-    ) -> torch.Tensor:
+    def _compute_loss(self, positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
         return skipgram_negative_sampling_loss(positive_sim, negative_sim)
 
     def _create_similarity_matrix(self, X: InteractionMatrix) -> None:
@@ -265,18 +255,25 @@ class Prod2Vec(TorchMLAlgorithm):
         item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
         for batch in range(0, num_items, batch_size):
-            Y = embedding[batch: batch + batch_size]
-            item_cosine_similarity_batch = csr_matrix(
-                cosine_similarity(Y, embedding))
+            Y = embedding[batch : batch + batch_size]
+            item_cosine_similarity_batch = csr_matrix(cosine_similarity(Y, embedding))
 
-            item_cosine_similarity_[batch: batch + batch_size] = get_top_K_values(
-                item_cosine_similarity_batch, K
-            )
+            item_cosine_similarity_[batch : batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
-    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
+    def _batch_predict(self, X: csr_matrix, users: List[int]) -> csr_matrix:
+        """Predict scores for matrix X, given the selected users in this batch
+
+        :param X: Matrix of user item interactions,
+            expected to only contain interactions for those users that are in `users`
+        :type X: csr_matrix
+        :param users: users selected for recommendation
+        :type users: List[int]
+        :return: Sparse matrix of scores per user item pair.
+        :rtype: csr_matrix
+        """
         scores = X @ self.similarity_matrix_
         return scores
 
@@ -299,16 +296,14 @@ class Prod2Vec(TorchMLAlgorithm):
         context = np.hstack(
             (
                 windowed_sequences[:, : self.window_size],
-                windowed_sequences[:, self.window_size + 1:],
+                windowed_sequences[:, self.window_size + 1 :],
             )
         )
         focus = windowed_sequences[:, self.window_size]
         # Apply np.repeat to focus to turn [0,1,2,3] into [0, 0, 1, 1, ...]
         # where number of repetitions is self.window_size
         # Squeeze final dimension from context so they line up neatly.
-        positives = np.column_stack(
-            [focus.repeat(self.window_size * 2), context.reshape(-1)]
-        )
+        positives = np.column_stack([focus.repeat(self.window_size * 2), context.reshape(-1)])
         # Remove any NaN valued rows (consequence of windowing)
         positives = positives[~np.isnan(positives).any(axis=1)].astype(int)
 
@@ -326,7 +321,9 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def _transform_fit_input(
         self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
-    ) -> Tuple[Matrix, Tuple[csr_matrix, csr_matrix]]:
+    ) -> Tuple[InteractionMatrix, Tuple[csr_matrix, csr_matrix]]:
+        self._assert_is_interaction_matrix(X)
+        self._assert_has_timestamps(X)
         return X, to_csr_matrix(validation_data, binary=True)
 
 
@@ -343,12 +340,9 @@ class SkipGram(nn.Module):
         nn.init.normal_(self.input_embeddings.weight, std=self.std)
         nn.init.normal_(self.output_embeddings.weight, std=self.std)
 
-    def forward(
-        self, focus_item_batch: torch.LongTensor, context_items_batch: torch.LongTensor
-    ) -> torch.Tensor:
+    def forward(self, focus_item_batch: torch.LongTensor, context_items_batch: torch.LongTensor) -> torch.Tensor:
         # Create a (batch_size, embedding_dim, 1) tensor
-        focus_vector = torch.movedim(
-            self.input_embeddings(focus_item_batch), 1, 2)
+        focus_vector = torch.movedim(self.input_embeddings(focus_item_batch), 1, 2)
         # Expected of size (batch_size, 1, embedding_dim)
         context_vectors = self.output_embeddings(context_items_batch)
         return torch.bmm(context_vectors, focus_vector).squeeze(-1)
@@ -366,10 +360,7 @@ def window(sequences: Iterator[Tuple[int, list]], window_size: int) -> np.ndarra
     :return: Windowed sequences of items
     :rtype: np.ndarray
     """
-    padded_sequences = [
-        [np.NAN] * window_size + list(s) + [np.NAN] * window_size
-        for uid, s in sequences
-    ]
+    padded_sequences = [[np.NAN] * window_size + list(s) + [np.NAN] * window_size for uid, s in sequences]
     w = [
         w.tolist()
         for sequence in padded_sequences

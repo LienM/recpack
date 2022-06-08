@@ -40,7 +40,7 @@ they have interacted with.
     SVDItemToItem
     Prod2Vec
     Prod2VecClustered
-    
+
 
 Hybrid Similarity Algorithms
 ----------------------------
@@ -84,7 +84,7 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
     EASE
 
 
-Recurrent Neural Networks
+Session Aware Algorithms
 -------------------------
 
 .. autosummary::
