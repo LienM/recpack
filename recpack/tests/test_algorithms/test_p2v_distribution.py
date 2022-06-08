@@ -124,7 +124,7 @@ def test_overfit(prod2vec):
     # For user 3 we should learn to predict 3 -> 5
     scenario = LastItemPrediction(validation=True)
     scenario.split(im)
-    train = scenario.train_X
+    train = scenario.validation_training_data
     val_data_in = scenario._validation_data_in
     val_data_out = scenario._validation_data_out
 

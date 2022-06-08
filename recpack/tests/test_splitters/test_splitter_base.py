@@ -23,21 +23,13 @@ def data_m_w_timestamps():
     max_t = 100
 
     input_dict = {
-        InteractionMatrix.USER_IX: [
-            np.random.randint(0, num_users) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.ITEM_IX: [
-            np.random.randint(0, num_items) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.TIMESTAMP_IX: [
-            np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
-        ],
+        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.ITEM_IX: [np.random.randint(0, num_items) for _ in range(0, num_interactions)],
+        InteractionMatrix.TIMESTAMP_IX: [np.random.randint(min_t, max_t) for _ in range(0, num_interactions)],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
-    df.drop_duplicates(
-        [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True
-    )
+    df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX], inplace=True)
     data = InteractionMatrix(
         df,
         InteractionMatrix.ITEM_IX,
@@ -59,15 +51,9 @@ def data_m_w_dups():
     max_t = 100
 
     input_dict = {
-        InteractionMatrix.USER_IX: [
-            np.random.randint(0, num_users) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.ITEM_IX: [
-            np.random.randint(0, num_items) for _ in range(0, num_interactions)
-        ],
-        InteractionMatrix.TIMESTAMP_IX: [
-            np.random.randint(min_t, max_t) for _ in range(0, num_interactions)
-        ],
+        InteractionMatrix.USER_IX: [np.random.randint(0, num_users) for _ in range(0, num_interactions)],
+        InteractionMatrix.ITEM_IX: [np.random.randint(0, num_items) for _ in range(0, num_interactions)],
+        InteractionMatrix.TIMESTAMP_IX: [np.random.randint(min_t, max_t) for _ in range(0, num_interactions)],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
@@ -104,9 +90,7 @@ def check_values_timestamps_match(data):
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
 def test_strong_generalization_splitter(data_m_w_timestamps, in_perc):
-    splitter = splitter_base.StrongGeneralizationSplitter(
-        in_perc, seed=42, error_margin=0.10
-    )
+    splitter = splitter_base.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
 
     tr, te = splitter.split(data_m_w_timestamps)
 
@@ -120,9 +104,7 @@ def test_strong_generalization_splitter(data_m_w_timestamps, in_perc):
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
 def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
-    splitter = splitter_base.StrongGeneralizationSplitter(
-        in_perc, seed=42, error_margin=0.10
-    )
+    splitter = splitter_base.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
 
     tr, te = splitter.split(data_m_w_dups)
 
@@ -143,9 +125,7 @@ def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
         (8, 3, 0),
     ],
 )
-def test_user_interaction_time_splitter(
-    data_m_sessions, t, n_tr_expected, n_te_expected
-):
+def test_user_interaction_time_splitter(data_m_sessions, t, n_tr_expected, n_te_expected):
     splitter = splitter_base.UserInteractionTimeSplitter(t)
 
     tr, te = splitter.split(data_m_sessions)
@@ -337,9 +317,7 @@ def test_fold_iterator_correctness(data_m_w_timestamps, batch_size):
 
     data_m_in, data_m_out = splitter.split(data_m_w_timestamps)
 
-    fold_iterator = splitter_base.FoldIterator(
-        data_m_in, data_m_out, batch_size=batch_size
-    )
+    fold_iterator = splitter_base.FoldIterator(data_m_in, data_m_out, batch_size=batch_size)
 
     for fold_in, fold_out, users in fold_iterator:
         assert fold_in.nnz > 0
@@ -351,9 +329,7 @@ def test_fold_iterator_correctness(data_m_w_timestamps, batch_size):
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
 def test_fold_iterator_completeness(data_m_w_timestamps, batch_size):
 
-    fold_iterator = splitter_base.FoldIterator(
-        data_m_w_timestamps, data_m_w_timestamps, batch_size=batch_size
-    )
+    fold_iterator = splitter_base.FoldIterator(data_m_w_timestamps, data_m_w_timestamps, batch_size=batch_size)
 
     nonzero_users = set(data_m_w_timestamps.indices[0])
 
@@ -366,8 +342,6 @@ def test_fold_iterator_completeness(data_m_w_timestamps, batch_size):
 
         all_batches = all_batches.union(users_in_batch)
 
-        assert len(users_in_batch) == batch_size or (
-            len(users_in_batch) == len(nonzero_users) % batch_size
-        )
+        assert len(users_in_batch) == batch_size or (len(users_in_batch) == len(nonzero_users) % batch_size)
 
     assert len(all_batches) == len(nonzero_users)
