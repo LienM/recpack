@@ -129,33 +129,53 @@ def test_cluster_similarity_computation():
 
     assert c2c.shape == (4, 4)
 
-    np.testing.assert_array_equal(c2c[c_0].nonzero()[1], np.array(sorted([c_0, c_1])))
-    np.testing.assert_array_equal(c2c[c_1].nonzero()[1], np.array(sorted([c_1, c_2])))
-    np.testing.assert_array_equal(c2c[c_2].nonzero()[1], np.array(sorted([c_2, c_3])))
-    np.testing.assert_array_equal(c2c[c_3].nonzero()[1], np.array(sorted([c_3, c_0])))
+    np.testing.assert_array_equal(
+        c2c[c_0].nonzero()[1], np.array(sorted([c_0, c_1]))
+    )
+    np.testing.assert_array_equal(
+        c2c[c_1].nonzero()[1], np.array(sorted([c_1, c_2]))
+    )
+    np.testing.assert_array_equal(
+        c2c[c_2].nonzero()[1], np.array(sorted([c_2, c_3]))
+    )
+    np.testing.assert_array_equal(
+        c2c[c_3].nonzero()[1], np.array(sorted([c_3, c_0]))
+    )
 
     # Check if only items from neighbouring clusters are nonzero
 
     alg._create_similarity_matrix(im)
 
     # All items in neighbouring clusters except itself.
-    np.testing.assert_array_equal([1, 2, 3], alg.similarity_matrix_[0, :].nonzero()[1])
-    np.testing.assert_array_equal([3, 4, 5], alg.similarity_matrix_[2, :].nonzero()[1])
-    np.testing.assert_array_equal([5, 6, 7], alg.similarity_matrix_[4, :].nonzero()[1])
-    np.testing.assert_array_equal([0, 1, 7], alg.similarity_matrix_[6, :].nonzero()[1])
+    np.testing.assert_array_equal(
+        [1, 2, 3], alg.similarity_matrix_[0, :].nonzero()[1]
+    )
+    np.testing.assert_array_equal(
+        [3, 4, 5], alg.similarity_matrix_[2, :].nonzero()[1]
+    )
+    np.testing.assert_array_equal(
+        [5, 6, 7], alg.similarity_matrix_[4, :].nonzero()[1]
+    )
+    np.testing.assert_array_equal(
+        [0, 1, 7], alg.similarity_matrix_[6, :].nonzero()[1]
+    )
 
 
 def test_training_epoch(prod2vec, mat):
 
     prod2vec._init_model(mat)
 
-    params = [o for o in prod2vec.model_.named_parameters() if o[1].requires_grad]
+    params = [
+        o for o in prod2vec.model_.named_parameters() if o[1].requires_grad
+    ]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
 
     # run a training step
-    with pytest.warns(UserWarning, match="There are clusters without neighbours"):
+    with pytest.warns(
+        UserWarning, match="There are clusters without neighbours"
+    ):
         prod2vec._train_epoch(mat)
 
     device = prod2vec.device
@@ -164,5 +184,17 @@ def test_training_epoch(prod2vec, mat):
 
 
 def test_predict_warning(prod2vec, mat):
-    with pytest.warns(UserWarning, match="K is larger than the number of items."):
+    with pytest.warns(
+        UserWarning, match="K is larger than the number of items."
+    ):
         prod2vec._create_similarity_matrix(mat)
+
+
+def test_fit_no_interaction_matrix(prod2vec, mat):
+    with pytest.raises(TypeError):
+        prod2vec.fit(mat.binary_values, (mat, mat))
+
+
+def test_fit_no_timestamps(prod2vec, mat):
+    with pytest.raises(ValueError):
+        prod2vec.fit(mat.eliminate_timestamps(), (mat, mat))
