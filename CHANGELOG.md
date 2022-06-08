@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Additions
 * __algorithms__
+    * Standardised train and predict input validation functions have been added, and used to make sure inputs are InteractionMatrix objects when needed, and contain timestamps when needed.
+    * Added `TARSItemKNNLiu` and `TARSItemKNN` algorithms, which compute item-item similarities based on a weighted matrix based on the age of events.
+        * `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
+
     * Added `STAN` algorithm, presented in Garg, Diksha, et al.
     "Sequence and time aware neighborhood for session-based recommendations: Stan". 
     This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
@@ -35,8 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
-* __algorithms__
-    * Standardised train and predict input validation functions have been added, and used to make sure inputs are InteractionMatrix objects when needed, and contain timestamps when needed.
 
 ## [0.2.2] - ![](https://img.shields.io/date/1643025589.svg?label=2022-01-24)
 
