@@ -92,6 +92,7 @@ Session Aware Algorithms
 
     GRU4RecNegSampling
     GRU4RecCrossEntropy
+    STAN
 
 .. _algorithm-base-classes:
 
@@ -212,3 +213,5 @@ from recpack.algorithms.wmf import WeightedMatrixFactorization
 from recpack.algorithms.p2v import Prod2Vec
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
 from recpack.algorithms.gru4rec import GRU4Rec, GRU4RecNegSampling, GRU4RecCrossEntropy
+
+from recpack.algorithms.stan import STAN

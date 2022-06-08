@@ -25,9 +25,7 @@ An example of usage is::
     # Construct pipeline_builder and add data.
     # Assumes a scenario has been created and split before.
     pipeline_builder = recpack.pipelines.PipelineBuilder('demo')
-    pipeline_builder.set_train_data(scenario.training_data)
-    pipeline_builder.set_test_data(scenario.test_data)
-    pipeline_builder.set_validation_data(scenario.validation_data)
+    pipeline_builder.set_data_from_scenario(scenario)
 
     # We'll have the pipeline optimise the K parameter from the given values.
     pipeline_builder.add_algorithm('ItemKNN', grid={'K': [100, 200, 400, 800]})
