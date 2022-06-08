@@ -68,9 +68,7 @@ class InteractionMatrix(DataMatrix):
         if InteractionMatrix.INTERACTION_IX in df.columns:
             pass
         else:
-            df = df.reset_index().rename(
-                columns={"index": InteractionMatrix.INTERACTION_IX}
-            )
+            df = df.reset_index().rename(columns={"index": InteractionMatrix.INTERACTION_IX})
 
         col_mapper = {
             item_ix: InteractionMatrix.ITEM_IX,
@@ -82,14 +80,8 @@ class InteractionMatrix(DataMatrix):
 
         self._df = df.rename(columns=col_mapper)
 
-        num_users = (
-            self._df[InteractionMatrix.USER_IX].max(
-            ) + 1 if shape is None else shape[0]
-        )
-        num_items = (
-            self._df[InteractionMatrix.ITEM_IX].max(
-            ) + 1 if shape is None else shape[1]
-        )
+        num_users = self._df[InteractionMatrix.USER_IX].max() + 1 if shape is None else shape[0]
+        num_items = self._df[InteractionMatrix.ITEM_IX].max() + 1 if shape is None else shape[1]
 
         self.shape = (int(num_users), int(num_items))
 
@@ -120,19 +112,18 @@ class InteractionMatrix(DataMatrix):
         """
         if self.has_timestamps != im.has_timestamps:
             raise ValueError(
-                f"Interaction matrices should both have timestamps, or neither. Only {'this' if self.has_timestamps else 'the other'} InteractionMatrix has timestamps")
+                f"Interaction matrices should both have timestamps, or neither. Only {'this' if self.has_timestamps else 'the other'} InteractionMatrix has timestamps"
+            )
 
         if self.shape != im.shape:
-            raise ValueError(
-                f"Shapes don't match. This InteractionMatrix has shape {self.shape}, the other {im.shape}")
+            raise ValueError(f"Shapes don't match. This InteractionMatrix has shape {self.shape}, the other {im.shape}")
 
         timestamp_ix = self.TIMESTAMP_IX if self.has_timestamps else None
 
         df = pd.concat([self._df, im._df])
         return InteractionMatrix(
             # Drop the interaction index to make sure it gets recreated.
-            df.reset_index(drop=True).drop(
-                columns=[InteractionMatrix.INTERACTION_IX]),
+            df.reset_index(drop=True).drop(columns=[InteractionMatrix.INTERACTION_IX]),
             InteractionMatrix.ITEM_IX,
             InteractionMatrix.USER_IX,
             timestamp_ix=timestamp_ix,
@@ -203,13 +194,10 @@ class InteractionMatrix(DataMatrix):
         :rtype: csr_matrix
         """
         values = np.ones(self._df.shape[0])
-        indices = self._df[
-            [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]
-        ].values
+        indices = self._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]].values
         indices = indices[:, 0], indices[:, 1]
 
-        matrix = csr_matrix((values, indices),
-                            shape=self.shape, dtype=np.int32)
+        matrix = csr_matrix((values, indices), shape=self.shape, dtype=np.int32)
         return matrix
 
     @property
@@ -232,17 +220,14 @@ class InteractionMatrix(DataMatrix):
         :rtype: int
         """
         if not self.has_timestamps:
-            raise AttributeError(
-                "No timestamp column, so timestamps could not be retrieved"
-            )
+            raise AttributeError("No timestamp column, so timestamps could not be retrieved")
         try:
             return self._df.loc[
                 self._df[InteractionMatrix.INTERACTION_IX] == interaction_id,
                 InteractionMatrix.TIMESTAMP_IX,
             ].values[0]
         except IndexError as e:
-            raise KeyError(
-                f"Interaction ID {interaction_id} not present in data")
+            raise KeyError(f"Interaction ID {interaction_id} not present in data")
 
     @property
     def timestamps(self) -> pd.Series:
@@ -253,19 +238,26 @@ class InteractionMatrix(DataMatrix):
         :rtype: pd.Series
         """
         if not self.has_timestamps:
-            raise AttributeError(
-                "No timestamp column, so timestamps could not be retrieved"
-            )
-        index = pd.MultiIndex.from_frame(
-            self._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]]
-        )
-        return self._df[[InteractionMatrix.TIMESTAMP_IX]].set_index(index)[
-            InteractionMatrix.TIMESTAMP_IX
-        ]
+            raise AttributeError("No timestamp column, so timestamps could not be retrieved")
+        index = pd.MultiIndex.from_frame(self._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]])
+        return self._df[[InteractionMatrix.TIMESTAMP_IX]].set_index(index)[InteractionMatrix.TIMESTAMP_IX]
 
-    def eliminate_timestamps(
-        self, inplace: bool = False
-    ) -> Optional["InteractionMatrix"]:
+    @property
+    def last_timestamps_matrix(self) -> csr_matrix:
+        """A sparse matrix with the last timestamp for each user, item pair.
+
+        By using the maximal timestamp for each pair,
+        we make it possible to use non deduplicated datasets.
+        """
+        timestamps = self.timestamps.groupby(["uid", "iid"]).max().reset_index()
+        timestamp_mat = csr_matrix(
+            (timestamps.ts.values, (timestamps.uid.values, timestamps.iid.values)),
+            shape=self.shape,
+        )
+
+        return timestamp_mat
+
+    def eliminate_timestamps(self, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Remove all timestamp information.
 
         :type inplace: bool
@@ -286,7 +278,7 @@ class InteractionMatrix(DataMatrix):
     def indices(self) -> Tuple[List[int], List[int]]:
         """Returns a tuple of lists of user IDs and item IDs corresponding to interactions.
 
-        :return: Tuple of lists of user IDs and item IDs that correspond to at least one interaction. 
+        :return: Tuple of lists of user IDs and item IDs that correspond to at least one interaction.
         :rtype: Tuple[List[int], List[int]]
         """
         return self.values.nonzero()
@@ -302,9 +294,7 @@ class InteractionMatrix(DataMatrix):
         interaction_m._df = c_df
         return None if inplace else interaction_m
 
-    def _timestamps_cmp(
-        self, op: Callable, timestamp: float, inplace: bool = False
-    ) -> Optional["InteractionMatrix"]:
+    def _timestamps_cmp(self, op: Callable, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Filter interactions based on timestamp.
 
         :param op: Comparison operator.
@@ -321,9 +311,7 @@ class InteractionMatrix(DataMatrix):
 
         return self._apply_mask(mask, inplace=inplace)
 
-    def timestamps_gt(
-        self, timestamp: float, inplace: bool = False
-    ) -> Optional["InteractionMatrix"]:
+    def timestamps_gt(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions after a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t > timestamp.
@@ -338,9 +326,7 @@ class InteractionMatrix(DataMatrix):
         """
         return self._timestamps_cmp(operator.gt, timestamp, inplace)
 
-    def timestamps_lt(
-        self, timestamp: float, inplace: bool = False
-    ) -> Optional["InteractionMatrix"]:
+    def timestamps_lt(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions up to a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t < timestamp.
@@ -355,9 +341,7 @@ class InteractionMatrix(DataMatrix):
         """
         return self._timestamps_cmp(operator.lt, timestamp, inplace)
 
-    def timestamps_gte(
-        self, timestamp: float, inplace: bool = False
-    ) -> Optional["InteractionMatrix"]:
+    def timestamps_gte(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions after and including a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t >= timestamp.
@@ -372,9 +356,7 @@ class InteractionMatrix(DataMatrix):
         """
         return self._timestamps_cmp(operator.ge, timestamp, inplace)
 
-    def timestamps_lte(
-        self, timestamp: float, inplace: bool = False
-    ) -> Optional["InteractionMatrix"]:
+    def timestamps_lte(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions up to and including a given timestamp.
 
         Performs _timestamps_cmp operation to select rows for which t <= timestamp.
@@ -389,9 +371,7 @@ class InteractionMatrix(DataMatrix):
         """
         return self._timestamps_cmp(operator.le, timestamp, inplace)
 
-    def users_in(
-        self, U: Union[Set[int], List[int]], inplace=False
-    ) -> Optional["InteractionMatrix"]:
+    def users_in(self, U: Union[Set[int], List[int]], inplace=False) -> Optional["InteractionMatrix"]:
         """Keep only interactions by one of the specified users.
 
         :param U: A Set or List of users to select the interactions from.
@@ -407,9 +387,7 @@ class InteractionMatrix(DataMatrix):
 
         return self._apply_mask(mask, inplace=inplace)
 
-    def interactions_in(
-        self, interaction_ids: List[int], inplace: bool = False
-    ) -> Optional["InteractionMatrix"]:
+    def interactions_in(self, interaction_ids: List[int], inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select the interactions by their interaction ids
 
         :param interaction_ids: A list of interaction ids
@@ -425,22 +403,16 @@ class InteractionMatrix(DataMatrix):
 
         mask = self._df[InteractionMatrix.INTERACTION_IX].isin(interaction_ids)
 
-        unknown_interaction_ids = set(interaction_ids).difference(
-            self._df[InteractionMatrix.INTERACTION_IX].unique()
-        )
+        unknown_interaction_ids = set(interaction_ids).difference(self._df[InteractionMatrix.INTERACTION_IX].unique())
 
         if unknown_interaction_ids:
             warnings.warn(f"IDs {unknown_interaction_ids} not present in data")
         if not interaction_ids:
-            warnings.warn(
-                "No interaction IDs given, returning empty InteractionMatrix."
-            )
+            warnings.warn("No interaction IDs given, returning empty InteractionMatrix.")
 
         return self._apply_mask(mask, inplace=inplace)
 
-    def indices_in(
-        self, u_i_lists: Tuple[List[int], List[int]], inplace=False
-    ) -> Optional["InteractionMatrix"]:
+    def indices_in(self, u_i_lists: Tuple[List[int], List[int]], inplace=False) -> Optional["InteractionMatrix"]:
         """Select interactions between the specified user-item combinations.
 
         :param u_i_lists: Two lists as a tuple, the first list are the indices of users,
@@ -462,10 +434,7 @@ class InteractionMatrix(DataMatrix):
         #   the [USER_IX, ITEM_IX] columns for fast multi-indexing.
         # This index can be dropped safely,
         #   as the data is still there in the original columns.
-        index = pd.MultiIndex.from_frame(
-            interaction_m._df[[InteractionMatrix.USER_IX,
-                               InteractionMatrix.ITEM_IX]]
-        )
+        index = pd.MultiIndex.from_frame(interaction_m._df[[InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]])
         tuples = list(zip(*u_i_lists))
         c_df = interaction_m._df.set_index(index)
         c_df = c_df.loc[tuples]
@@ -482,9 +451,7 @@ class InteractionMatrix(DataMatrix):
         :yield: Tuples of user ID, list of distinct item IDs the user interacted with.
         :rtype: List[Tuple[int, List[int]]]
         """
-        df = self._df.drop_duplicates(
-            [InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX]
-        )
+        df = self._df.drop_duplicates([InteractionMatrix.USER_IX, InteractionMatrix.ITEM_IX])
         for uid, user_history in df.groupby(InteractionMatrix.USER_IX):
             yield (uid, user_history[InteractionMatrix.ITEM_IX].values)
 
@@ -508,15 +475,12 @@ class InteractionMatrix(DataMatrix):
         """
         if not self.has_timestamps:
             raise AttributeError(
-                "InteractionMatrix is missing timestamps. "
-                "Cannot sort user history without timestamps."
+                "InteractionMatrix is missing timestamps. " "Cannot sort user history without timestamps."
             )
         for uid, user_history in self._df.groupby(self.USER_IX):
             yield (
                 uid,
-                user_history.sort_values(self.TIMESTAMP_IX, ascending=True)[
-                    InteractionMatrix.INTERACTION_IX
-                ].values,
+                user_history.sort_values(self.TIMESTAMP_IX, ascending=True)[InteractionMatrix.INTERACTION_IX].values,
             )
 
     @property
@@ -529,15 +493,12 @@ class InteractionMatrix(DataMatrix):
         """
         if not self.has_timestamps:
             raise AttributeError(
-                "InteractionMatrix is missing timestamps. "
-                "Cannot sort user history without timestamps."
+                "InteractionMatrix is missing timestamps. " "Cannot sort user history without timestamps."
             )
         for uid, user_history in self._df.groupby(self.USER_IX):
             yield (
                 uid,
-                user_history.sort_values(self.TIMESTAMP_IX, ascending=True)[
-                    InteractionMatrix.ITEM_IX
-                ].values,
+                user_history.sort_values(self.TIMESTAMP_IX, ascending=True)[InteractionMatrix.ITEM_IX].values,
             )
 
     @property
@@ -598,7 +559,7 @@ class InteractionMatrix(DataMatrix):
     def from_csr_matrix(cls, X: csr_matrix) -> "InteractionMatrix":
         """Create an InteractionMatrix from a csr_matrix containing interactions.
 
-        .. warning:: 
+        .. warning::
             No timestamps can be passed this way!
 
         :return: InteractionMatrix constructed from the csr_matrix.
@@ -695,7 +656,6 @@ class UnsupportedTypeError(Exception):
         assert not _is_supported(X)
         super().__init__(
             "Recpack only supports matrix types {}. Received {}.".format(
-                ", ".join(t.__name__ for t in _supported_types), type(
-                    X).__name__
+                ", ".join(t.__name__ for t in _supported_types), type(X).__name__
             )
         )
