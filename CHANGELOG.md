@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Improved tests for WeakGeneralization scenario to confirm mismatches between train and validation_in are only due to users with not enough items and not a potential bug.
     * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first. 
 ### Additions
+* __algorithms__
+    * Added TARSItemKNNLiu and TARSItemKNN algorithms, which compute item-item similarities based on a weighted matrix based on the age of events.
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
 
