@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * __pipelines__
     * PipelineBuilder's `set_train_data` function has been replaced with `set_full_training_data` and `set_validation_training_data` to set the two separate training datasets.
+    * Added `set_data_from_scenario` function to `PipelineBuilder`, which makes setting data easy based on a split scenario.
 
 
 ### Bugfixes
