@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * __data.matrix__
     * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.
+
+* __data.datasets__
+    * Added `AdressaOneWeek` dataset.
+
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
 

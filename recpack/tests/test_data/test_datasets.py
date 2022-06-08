@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
 import pytest
+import shutil
 from tempfile import NamedTemporaryFile
 
+from unittest.mock import patch
 
 from recpack.data import datasets
 from recpack.preprocessing.filters import MinUsersPerItem, NMostPopular
@@ -12,6 +14,11 @@ from recpack.preprocessing.filters import MinUsersPerItem, NMostPopular
 def demo_data():
     s = """2 1 2\n3 2 1 3\n1 2"""
     return s
+
+
+@pytest.fixture()
+def path():
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
 
 
 def test_fetch_dataset(demo_data):
@@ -85,8 +92,7 @@ def test_error_no_default_filename():
         _ = datasets.Dataset()
 
 
-def test_add_filter():
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+def test_add_filter(path):
     filename = "citeulike_sample.dat"
 
     d = datasets.CiteULike(path=path, filename=filename)
@@ -98,8 +104,7 @@ def test_add_filter():
     assert data.shape[1] == 3
 
 
-def test_add_filter_w_index():
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+def test_add_filter_w_index(path):
     filename = "citeulike_sample.dat"
 
     d = datasets.CiteULike(path=path, filename=filename)
@@ -110,9 +115,8 @@ def test_add_filter_w_index():
     assert len(d.preprocessor.filters) == 3
 
 
-def test_citeulike():
+def test_citeulike(path):
     # To get sample we used head -1000 users.dat
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     filename = "citeulike_sample.dat"
 
     d = datasets.CiteULike(path=path, filename=filename)
@@ -129,13 +133,11 @@ def test_citeulike():
     assert data.shape == (963, 1748)
 
 
-def test_movielens25m():
+def test_movielens25m(path):
     # To get sample we used head -10000 ratings.csv
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     filename = "ml-25m_sample.csv"
 
     d = datasets.MovieLens25M(path=path, filename=filename)
-    print(d.file_path)
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()
@@ -149,9 +151,8 @@ def test_movielens25m():
     assert data.shape == (75, 565)
 
 
-def test_recsys_challenge_2015():
+def test_recsys_challenge_2015(path):
     # To get sample we used head -1000 ratings.csv
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     d = datasets.RecsysChallenge2015(path=path)
 
     df = d.load_dataframe()
@@ -196,13 +197,13 @@ def test_recsys_challenge_2015():
     ],
 )
 def test_cosmeticsshop(
+    path,
     extra_cols,
     event_types,
     num_events,
     final_shape,
 ):
     # To get sample we used head -100 2019-Dec.csv
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     if event_types is None:
         d = datasets.CosmeticsShop(
             path=path,
@@ -233,8 +234,7 @@ def test_cosmeticsshop(
         d._download_dataset()
 
 
-def test_cosmeticsshop_bad_event_type():
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+def test_cosmeticsshop_bad_event_type(path):
     with pytest.raises(ValueError):
         _ = datasets.CosmeticsShop(
             path=path,
@@ -261,12 +261,12 @@ def test_cosmeticsshop_bad_event_type():
     ],
 )
 def test_retail_rocket(
+    path,
     event_types,
     num_events,
     final_shape,
 ):
     # To get sample we used head -100 2019-Dec.csv
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
     if event_types is None:
         d = datasets.RetailRocket(
             path=path,
@@ -295,8 +295,7 @@ def test_retail_rocket(
         d._download_dataset()
 
 
-def test_retail_rocket_bad_event_type():
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
+def test_retail_rocket_bad_event_type(path):
     with pytest.raises(ValueError):
         _ = datasets.CosmeticsShop(
             path=path,
@@ -322,24 +321,14 @@ def test_dummy_dataset():
 
     assert df.shape[0] == d.num_interactions
     items_kept = (
-        (
-            df.drop_duplicates([d.USER_IX, d.ITEM_IX])
-            .groupby(d.ITEM_IX)[d.USER_IX]
-            .count()
-            >= 2
-        )
+        (df.drop_duplicates([d.USER_IX, d.ITEM_IX]).groupby(d.ITEM_IX)[d.USER_IX].count() >= 2)
         .reset_index()
         .rename(columns={d.USER_IX: "enough_interactions"})
     )
-    df_after_filter_1 = df.merge(
-        items_kept[items_kept.enough_interactions], on=d.ITEM_IX
-    )
+    df_after_filter_1 = df.merge(items_kept[items_kept.enough_interactions], on=d.ITEM_IX)
 
     users_removed = (
-        df_after_filter_1.drop_duplicates([d.USER_IX, d.ITEM_IX])
-        .groupby(d.USER_IX)[d.ITEM_IX]
-        .count()
-        < 2
+        df_after_filter_1.drop_duplicates([d.USER_IX, d.ITEM_IX]).groupby(d.USER_IX)[d.ITEM_IX].count() < 2
     ).sum()
 
     im = d.load_interaction_matrix()
@@ -347,3 +336,47 @@ def test_dummy_dataset():
         df[d.USER_IX].nunique() - users_removed,
         items_kept.enough_interactions.sum(),
     )
+
+
+@pytest.fixture()
+def adressa_dataset(path):
+    filename = "adressa_views.csv"
+    ds = datasets.AdressaOneWeek(path, filename, preprocess_default=False)
+    ds.add_filter(MinUsersPerItem(2, ds.ITEM_IX, ds.USER_IX))
+
+    ds.fetch_dataset(force=True)
+
+    yield ds
+
+    # Clean up the created file
+    os.remove(os.path.join(path, filename))
+
+
+def test_adressa_one_week(path, adressa_dataset):
+    """Check if loading adressa works properly
+
+    zipfile contents were constructed with specific checks in mind:
+    20170101 -> contains 3 non view events + 5 view events with a 3rd user
+    20170102 -> Contains 5 views with no user_ids -> events should be skipped
+    20170103 -> Contains 5 views without a timestamp -> should be skipped
+    20170104 -> Contains 5 views with new user
+    20170105 -> Contains 5 views with new item
+    20170106 -> Contains 5 views with no item -> should be skipped
+    20170107 -> Contains 5 base views
+
+    The resulting interaction matrix should contain 3 users with 1 item.
+    Each user should have 5 visits of the same item.
+
+    """
+
+    df = adressa_dataset.load_dataframe()
+    assert (df.columns == [adressa_dataset.USER_IX, adressa_dataset.ITEM_IX, adressa_dataset.TIMESTAMP_IX]).all()
+
+    assert df.shape == (20, 3)
+    assert df[adressa_dataset.USER_IX].nunique() == 3
+    assert df[adressa_dataset.ITEM_IX].nunique() == 2
+
+    im = adressa_dataset.load_interaction_matrix()
+
+    assert im.shape == (3, 1)
+    assert im.num_interactions == 15
