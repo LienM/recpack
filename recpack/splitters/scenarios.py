@@ -101,8 +101,12 @@ class StrongGeneralization(Scenario):
         self.frac_users_train = frac_users_train
         self.frac_interactions_in = frac_interactions_in
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_train, seed=self.seed)
-        self.interaction_split = splitter_base.FractionInteractionSplitter(frac_interactions_in, seed=self.seed)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            frac_users_train, seed=self.seed
+        )
+        self.interaction_split = splitter_base.FractionInteractionSplitter(
+            frac_interactions_in, seed=self.seed
+        )
 
     def _split(self, data: InteractionMatrix) -> None:
         """Splits your data so that a user can only be in one of
@@ -114,19 +118,23 @@ class StrongGeneralization(Scenario):
         self._full_train_X, test_data = self.strong_gen.split(data)
 
         if self.validation:
-            self._validation_train_X, validation_data = self.validation_splitter.split(self._full_train_X)
+            (
+                self._validation_train_X,
+                validation_data,
+            ) = self.validation_splitter.split(self._full_train_X)
 
             (
                 self._validation_data_in,
                 self._validation_data_out,
             ) = self.interaction_split.split(validation_data)
 
-        self._test_data_in, self._test_data_out = self.interaction_split.split(test_data)
+        self._test_data_in, self._test_data_out = self.interaction_split.split(
+            test_data
+        )
 
 
-# TODO: docs for Weak generalization suck
 class WeakGeneralization(Scenario):
-    """Applies user based hold-out sampling.
+    """Applies a weak generalization split of the data on a per user basis.
 
     A scenario is stateful. After calling :attr:`split` on your dataset,
     the datasets can be retrieved under
@@ -138,7 +146,7 @@ class WeakGeneralization(Scenario):
         This scenario duplicates interactions across training, validation
         and test datasets:
 
-    for each user their events ``I_u`` are distributed over the datasets as follows:
+    For each user their events ``I_u`` are distributed over the datasets as follows:
 
     - :attr:`full_training_data` (``IT_u``) contains ``frac_data_in * |I_u|`` (rounded up)
       of the user's interactions in the full dataset.
@@ -222,12 +230,16 @@ class WeakGeneralization(Scenario):
 
         self.frac_data_in = frac_data_in
 
-        self.interaction_split = splitter_base.FractionInteractionSplitter(self.frac_data_in, seed=self.seed)
+        self.interaction_split = splitter_base.FractionInteractionSplitter(
+            self.frac_data_in, seed=self.seed
+        )
 
         if validation:
-            self.validation_splitter = splitter_base.FractionInteractionSplitter(
-                self.frac_data_in,
-                seed=self.seed,
+            self.validation_splitter = (
+                splitter_base.FractionInteractionSplitter(
+                    self.frac_data_in,
+                    seed=self.seed,
+                )
             )
 
     def _split(self, data: InteractionMatrix):
@@ -237,7 +249,9 @@ class WeakGeneralization(Scenario):
         :param data: Interaction matrix to be split.
         :type data: InteractionMatrix
         """
-        self._full_train_X, self._test_data_out = self.interaction_split.split(data)
+        self._full_train_X, self._test_data_out = self.interaction_split.split(
+            data
+        )
 
         if self.validation:
             (
@@ -368,14 +382,20 @@ class Timed(Scenario):
         self.delta_in = delta_in
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
-            raise Exception("t_validation should be provided when requesting a validation dataset.")
+            raise Exception(
+                "t_validation should be provided when requesting a validation dataset."
+            )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, delta_out, delta_in
+        )
 
         if self.validation:
             assert self.t_validation < self.t
             # Override the validation splitter to a timed splitter.
-            self.validation_time_splitter = splitter_base.TimestampSplitter(t_validation, delta_out, delta_in)
+            self.validation_time_splitter = splitter_base.TimestampSplitter(
+                t_validation, delta_out, delta_in
+            )
 
     def _split(self, data):
         """Splits your dataset into a training, validation and test dataset
@@ -384,7 +404,9 @@ class Timed(Scenario):
         :param data: Interaction matrix to be split. Must contain timestamps.
         :type data: InteractionMatrix
         """
-        self._full_train_X, self._test_data_out = self.timestamp_spl.split(data)
+        self._full_train_X, self._test_data_out = self.timestamp_spl.split(
+            data
+        )
         self._test_data_in = self._full_train_X.copy()
 
         if self.validation:
@@ -395,7 +417,6 @@ class Timed(Scenario):
             self._validation_data_in = self._validation_train_X.copy()
 
 
-# TODO: how do you define the validation_train data?
 class StrongGeneralizationTimed(Scenario):
     """Splits data into non overlapping train, validation and test user sets
     and uses temporal information to split validation and test into in and out folds.
@@ -409,7 +430,7 @@ class StrongGeneralizationTimed(Scenario):
     - :attr:`full_training_data` contains interactions
       from ``frac_users_in`` of the users.
       Only interactions whose timestamps are
-      in the interval ``t - delta_in, t[`` are used.
+      in the interval ``[t - delta_in, t[`` are used.
 
     - :attr:`test_data_in` contains data from the ``1-frac_users_in`` users
       for which the events' timestamps are in ``[t - delta_in, t[``.
@@ -420,6 +441,8 @@ class StrongGeneralizationTimed(Scenario):
     If validation data is requested, 80% of the full training users are used
     as validation training users, the remaining 20% are used for validation evaluation:
 
+    - :attr:`validation_training_data` contains interactions of validation training users
+      with timestamps in ``[t_validation - delta_in, t_validation[``
     - :attr:`validation_data_in` contains all interactions
       of the validation evaluation users
       with timestamps in ``[t_validation - delta_in, t_validation[``.
@@ -529,15 +552,23 @@ class StrongGeneralizationTimed(Scenario):
         self.delta_in = delta_in
         self.t_validation = t_validation
         if self.validation and not self.t_validation:
-            raise Exception("t_validation should be provided when using validation split.")
+            raise Exception(
+                "t_validation should be provided when using validation split."
+            )
 
-        self.timestamp_spl = splitter_base.TimestampSplitter(t, delta_out, delta_in)
+        self.timestamp_spl = splitter_base.TimestampSplitter(
+            t, delta_out, delta_in
+        )
 
-        self.strong_gen = splitter_base.StrongGeneralizationSplitter(frac_users_in, seed=self.seed)
+        self.strong_gen = splitter_base.StrongGeneralizationSplitter(
+            frac_users_in, seed=self.seed
+        )
 
         if self.validation:
             assert self.t_validation < self.t
-            self.validation_time_splitter = splitter_base.TimestampSplitter(t_validation, delta_out, delta_in)
+            self.validation_time_splitter = splitter_base.TimestampSplitter(
+                t_validation, delta_out, delta_in
+            )
 
     def _split(self, data):
         """Splits data into non overlapping train, validation and test user sets
@@ -553,17 +584,23 @@ class StrongGeneralizationTimed(Scenario):
         # Make sure only interactions before t are used for training /
         # validation
         self._full_train_X, _ = self.timestamp_spl.split(tr_val_data)
-        self._test_data_in, self._test_data_out = self.timestamp_spl.split(te_data)
+        self._test_data_in, self._test_data_out = self.timestamp_spl.split(
+            te_data
+        )
 
         if self.validation:
-            train_data, validation_data = self.validation_splitter.split(self._full_train_X)
+            train_data, validation_data = self.validation_splitter.split(
+                self._full_train_X
+            )
             # Split validation data into input and output on t_validation
             (
                 self._validation_data_in,
                 self._validation_data_out,
             ) = self.validation_time_splitter.split(validation_data)
             # select the right train data.
-            self._validation_train_X, _ = self.validation_time_splitter.split(train_data)
+            self._validation_train_X, _ = self.validation_time_splitter.split(
+                train_data
+            )
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
@@ -674,12 +711,16 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         self.t_validation = t_validation
         self.n = n
         if self.validation and not self.t_validation:
-            raise Exception("t_validation should be provided when using validation split.")
+            raise Exception(
+                "t_validation should be provided when using validation split."
+            )
 
         self.user_splitter_test = splitter_base.UserInteractionTimeSplitter(t)
         if self.validation:
             assert self.t_validation < self.t
-            self.user_splitter_val = splitter_base.UserInteractionTimeSplitter(t_validation)
+            self.user_splitter_val = splitter_base.UserInteractionTimeSplitter(
+                t_validation
+            )
         self.most_recent_splitter = splitter_base.MostRecentSplitter(n)
 
     def _split(self, data):
@@ -692,10 +733,15 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         """
         self._full_train_X, te_data = self.user_splitter_test.split(data)
 
-        self._test_data_in, self._test_data_out = self.most_recent_splitter.split(te_data)
+        (
+            self._test_data_in,
+            self._test_data_out,
+        ) = self.most_recent_splitter.split(te_data)
 
         if self.validation:
-            self._validation_train_X, val_data = self.user_splitter_val.split(self._full_train_X)
+            self._validation_train_X, val_data = self.user_splitter_val.split(
+                self._full_train_X
+            )
             (
                 self._validation_data_in,
                 self._validation_data_out,
@@ -796,7 +842,10 @@ class LastItemPrediction(Scenario):
         :param data: Interaction matrix to be split. Must contain timestamps.
         :type data: InteractionMatrix
         """
-        self._full_train_X, self._test_data_out = self.most_recent_splitter.split(data)
+        (
+            self._full_train_X,
+            self._test_data_out,
+        ) = self.most_recent_splitter.split(data)
         # Select n most recent as test_in
         _, self._test_data_in = self.history_splitter.split(self._full_train_X)
 
@@ -808,13 +857,16 @@ class LastItemPrediction(Scenario):
             ) = self.most_recent_splitter.split(self._full_train_X)
 
             # Select n items to use as val_in per user
-            _, self._validation_data_in = self.history_splitter.split(self._validation_train_X)
+            _, self._validation_data_in = self.history_splitter.split(
+                self._validation_train_X
+            )
 
 
 class NextItemPrediction(LastItemPrediction):
     def __init__(self, validation=False, seed=None, n_most_recent=1):
         raise DeprecationWarning(
-            "NextItemPrediction will be deprecated in favour of " "the more descriptive LastItemPrediction"
+            "NextItemPrediction will be deprecated in favour of "
+            "the more descriptive LastItemPrediction"
         )
 
         super.__init__(self, validation, seed, n_most_recent)
