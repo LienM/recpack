@@ -60,24 +60,6 @@ class Scenario(ABC):
         self._check_split()
 
     @property
-    def training_data(self) -> InteractionMatrix:
-        """The training dataset [DEPRECATED!]
-
-        If the scenario has validation data,
-        then the validation_training_data will be returned.
-        Otherwise the full_training_data will be returned.
-
-        :return: Interaction Matrix of training interactions.
-        :rtype: InteractionMatrix
-        """
-        if self.validation:
-            warn("training_data property is deprecated, " "use the validation_training_data.")
-            return self.validation_training_data
-        else:
-            warn("training_data property is deprecated, use the full_training_data.")
-            return self.full_training_data
-
-    @property
     def full_training_data(self) -> InteractionMatrix:
         """The full training dataset, which should be used for a final training
         after hyper parameter optimisation.
