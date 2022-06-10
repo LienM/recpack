@@ -108,7 +108,6 @@ class NeuMF(TorchMLAlgorithm):
         num_users, num_items = X.shape
         self.model_ = NeuMFModule(self.num_components, num_users, num_items, self.hidden_dims).to(self.device)
         self.optimizer = torch.optim.Adam(self.model_.parameters(), lr=self.learning_rate)
-        self.steps = 0
 
     def _compute_loss(
         self, positive_scores: torch.FloatTensor, negative_scores: torch.FloatTensor
@@ -137,7 +136,6 @@ class NeuMF(TorchMLAlgorithm):
 
             losses.append(loss.item())
 
-            self.steps += 1
         return losses
 
     def _construct_negative_prediction_input(self, users, negatives):
