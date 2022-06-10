@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Added `STAN` algorithm, presented in Garg, Diksha, et al.
     "Sequence and time aware neighborhood for session-based recommendations: Stan". 
     This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
+    * Implemented `NeuMF` as defined in He, Xiangnan, et al. "Neural collaborative filtering." 
 
 * __data.matrix__
     * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.
