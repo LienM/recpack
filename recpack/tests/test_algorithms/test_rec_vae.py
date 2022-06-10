@@ -4,7 +4,7 @@ import tempfile
 from unittest.mock import MagicMock
 
 
-from util import assert_changed, assert_same
+from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 from recpack.algorithms import RecVAE
 
@@ -48,12 +48,8 @@ def test_encoder_training(larger_matrix, algo):
     algo._init_model(larger_matrix)
 
     users = list(set(larger_matrix.nonzero()[1]))
-    encoder_params = [
-        np for np in algo.model_.encoder.named_parameters() if np[1].requires_grad
-    ]
-    decoder_params = [
-        np for np in algo.model_.decoder.named_parameters() if np[1].requires_grad
-    ]
+    encoder_params = [np for np in algo.model_.encoder.named_parameters() if np[1].requires_grad]
+    decoder_params = [np for np in algo.model_.decoder.named_parameters() if np[1].requires_grad]
 
     # take a copy
     encoder_params_before = [(name, p.clone()) for (name, p) in encoder_params]
@@ -76,12 +72,8 @@ def test_decoder_training(larger_matrix, algo):
     algo._init_model(larger_matrix)
 
     users = list(set(larger_matrix.nonzero()[1]))
-    encoder_params = [
-        np for np in algo.model_.encoder.named_parameters() if np[1].requires_grad
-    ]
-    decoder_params = [
-        np for np in algo.model_.decoder.named_parameters() if np[1].requires_grad
-    ]
+    encoder_params = [np for np in algo.model_.encoder.named_parameters() if np[1].requires_grad]
+    decoder_params = [np for np in algo.model_.decoder.named_parameters() if np[1].requires_grad]
 
     # take a copy
     encoder_params_before = [(name, p.clone()) for (name, p) in encoder_params]
