@@ -9,14 +9,18 @@ from recpack.algorithms.samplers import PositiveNegativeSampler
 from recpack.algorithms.util import get_users
 
 
-class NeuMF(TorchMLAlgorithm):
+class NeuMFMLPOnly(TorchMLAlgorithm):
     """Implementation of Neural Matrix Factoration.
 
-    Algorithm as defined in He, Xiangnan, et al. "Neural collaborative filtering."
+    Neural Matrix Factorization based on MLP architecture
+    as presented in Figure 2 in He, Xiangnan, et al. "Neural collaborative filtering."
     Proceedings of the 26th international conference on world wide web. 2017.
 
-    Neural Matrix Factorization represents the users and itmes as an embedding, and uses a neural network to model the similarity between the two.
-    This provides a generalization of the traditional dot product used in MF.
+    Represents the users and items using an embedding, and models similarity using a neural network.
+    An MLP is used with as input the concatenated embeddings of users and items.
+
+    As in the paper, the sum of square error is used as the loss function.
+    Positive items should get a prediction close to 1, while sampled negatives should get a value close to 0.
 
     :param num_components: Size of the embeddings
     :type num_components: int
@@ -106,7 +110,7 @@ class NeuMF(TorchMLAlgorithm):
 
     def _init_model(self, X: csr_matrix):
         num_users, num_items = X.shape
-        self.model_ = NeuMFModule(self.num_components, num_users, num_items, self.hidden_dims).to(self.device)
+        self.model_ = NeuMFMLPModule(self.num_components, num_users, num_items, self.hidden_dims).to(self.device)
         self.optimizer = torch.optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _compute_loss(
@@ -165,10 +169,8 @@ class NeuMF(TorchMLAlgorithm):
         return X_pred.tocsr()
 
 
-class NeuMFModule(nn.Module):
+class NeuMFMLPModule(nn.Module):
     """Model that encodes the Neural Matrix Factorization Network.
-
-    TODO: This still misses the GMF component.
 
     :param num_components: size of the embeddings
     :type num_components: int
@@ -199,7 +201,7 @@ class NeuMFModule(nn.Module):
         self.user_embedding.weight.data.normal_(0, 1.0 / self.user_embedding.embedding_dim)
         self.item_embedding.weight.data.normal_(0, 1.0 / self.item_embedding.embedding_dim)
 
-        # TODO: do I need to randomly initialise the MLP layers?
+        # TODO: do I need to randomly initialise the MLP layer weights?
 
     def forward(self, users: torch.LongTensor, items: torch.LongTensor) -> torch.FloatTensor:
         """Predict scores for the user item pairs obtained when zipping together the two 1D tensors
@@ -211,12 +213,6 @@ class NeuMFModule(nn.Module):
         :return: 1D tensor with on position i the prediction similarity between `users[i]` and `items[i]`
         :rtype: torch.FloatTensor
         """
-        # Little check for development
-        # TODO: remove when done
-        if users.shape != items.shape:
-            raise (ValueError("users and items inputs should have same shape"))
-        if len(users.shape) != 1:
-            raise (ValueError("Input should be a 1 dimensional vector"))
 
         user_emb = self.user_embedding(users)
         item_emb = self.item_embedding(items)

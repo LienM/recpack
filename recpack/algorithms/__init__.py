@@ -70,7 +70,7 @@ user to reconstruct the original interaction matrix R = UV^T.
     SVD
     WeightedMatrixFactorization
     BPRMF
-    NeuMF
+    NeuMFMLPOnly
 
 
 Autoencoder Algorithms
@@ -210,7 +210,7 @@ from recpack.algorithms.bprmf import BPRMF
 # from recpack.algorithms.metric_learning.cml import CML
 
 from recpack.algorithms.mult_vae import MultVAE
-from recpack.algorithms.neumf import NeuMF
+from recpack.algorithms.neumf import NeuMFMLPOnly
 from recpack.algorithms.rec_vae import RecVAE
 from recpack.algorithms.wmf import WeightedMatrixFactorization
 

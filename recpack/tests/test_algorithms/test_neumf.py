@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 import torch
 
-from recpack.algorithms import NeuMF
-from recpack.algorithms.neumf import NeuMFModule
+from recpack.algorithms import NeuMFMLPOnly
+from recpack.algorithms.neumf import NeuMFMLPModule
 
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
@@ -17,9 +17,9 @@ def test_MLP():
     "num_components, num_users, num_items, hidden_sizes",
     [(5, 10, 10, [10]), (5, 10, 10, [10, 5, 3]), (5, 3, 10, [10]), (1, 3, 3, [10])],
 )
-def test_output_shapes_NeuMFModule(num_components, num_users, num_items, hidden_sizes):
+def test_output_shapes_NeuMFMLPModule(num_components, num_users, num_items, hidden_sizes):
     """Check that no mather the inner settings of the network, the output is always correct"""
-    mod = NeuMFModule(num_components, num_users, num_items, hidden_sizes)
+    mod = NeuMFMLPModule(num_components, num_users, num_items, hidden_sizes)
 
     user_tensor = torch.LongTensor([1, 2])
     item_tensor = torch.LongTensor([1, 2])
@@ -32,33 +32,9 @@ def test_output_shapes_NeuMFModule(num_components, num_users, num_items, hidden_
     assert (res.detach().numpy() >= 0).all()
 
 
-def test_shape_input_check_NeuMFModule():
-    """Check that no mather the inner settings of the network, the output is always correct"""
-
-    mod = NeuMFModule(3, 3, 3, [10])
-
-    user_tensor = torch.LongTensor([[1, 2]])
-    item_tensor = torch.LongTensor([[1, 2]])
-
-    with pytest.raises(ValueError):
-        mod(user_tensor, item_tensor)
-
-    user_tensor = torch.LongTensor([1, 2])
-    item_tensor = torch.LongTensor([1, 2, 0])
-
-    with pytest.raises(ValueError):
-        mod(user_tensor, item_tensor)
-
-    user_tensor = torch.LongTensor([[1, 2]])
-    item_tensor = torch.LongTensor([1, 2])
-
-    with pytest.raises(ValueError):
-        mod(user_tensor, item_tensor)
-
-
 def test_training_epoch(mat):
     X = mat.binary_values
-    a = NeuMF(
+    a = NeuMFMLPOnly(
         num_components=3,
         hidden_dims=[6, 4],
         batch_size=2,
@@ -81,7 +57,7 @@ def test_training_epoch(mat):
 
 @pytest.mark.parametrize("users", [[0, 1], [0], [0, 1, 3]])
 def test_batch_predict(mat, users):
-    a = NeuMF(
+    a = NeuMFMLPOnly(
         num_components=3,
         hidden_dims=[6, 4],
         batch_size=2,
@@ -113,7 +89,7 @@ def test_batch_predict(mat, users):
 )
 def test_negative_input_construction(users, negatives):
     U = negatives.shape[1]
-    a = NeuMF(
+    a = NeuMFMLPOnly(
         num_components=3,
         hidden_dims=[16, 8, 4],
         batch_size=100,
