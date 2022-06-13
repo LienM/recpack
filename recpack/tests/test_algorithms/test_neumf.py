@@ -35,8 +35,8 @@ def test_output_shapes_NeuMFMLPModule(num_components, num_users, num_items, hidd
 def test_training_epoch(mat):
     X = mat.binary_values
     a = NeuMFMLPOnly(
-        num_components=3,
-        hidden_dims=[6, 4],
+        num_components=8,
+        hidden_dims=[16, 8],
         batch_size=2,
         max_epochs=50,
         learning_rate=0.005,
@@ -107,3 +107,32 @@ def test_negative_input_construction(users, negatives):
     for ix in range(users_input.shape[0]):
         assert users_input[ix] == users[ix // U]
         assert negatives_input[ix] == negatives[ix // U, ix % U]
+
+
+def test_overfit(mat):
+    m = NeuMFMLPOnly(
+        num_components=8,
+        hidden_dims=[16],
+        batch_size=1,
+        max_epochs=15,
+        learning_rate=0.05,
+        stopping_criterion="ndcg",
+        U=1,
+    )
+
+    # set sampler to exact sampling
+    m.sampler.exact = True
+
+    m.fit(mat, (mat, mat))
+    bin_mat = mat.binary_values
+    pred = m.predict(mat.binary_values).toarray()
+    for user in mat.active_users:
+        # The model should have overfitted, so that the visited items have the highest similarities
+        positives = bin_mat[user].nonzero()[1]
+        negatives = list(set(range(mat.shape[1])) - set(positives))
+
+        print(user, positives, negatives, pred[user])
+        for item in positives:
+            print(pred[user][negatives], pred[user, item], pred[user][negatives] < pred[user, item])
+            assert (pred[user][negatives] < pred[user, item]).all()
+    # assert False

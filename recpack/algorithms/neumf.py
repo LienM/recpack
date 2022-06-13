@@ -132,6 +132,7 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
     def _train_epoch(self, X: csr_matrix) -> List[int]:
         losses = []
         for users, positives, negatives in self.sampler.sample(X):
+
             self.optimizer.zero_grad()
 
             # Predict for the positives
@@ -244,7 +245,7 @@ class MLP(nn.Module):
     Args:
         in_dim (int): Input dimension.
         out_dim (int): Output dimension.
-        hidden_dims (Optional[List[int]]): Output dimension for each hidden layer.
+        hidden_dims ([List[int]]): Output dimension for each hidden layer.
         dropout (float): Probability for dropout layer.
         activation (Callable[..., nn.Module]): Which activation
             function to use. Supports module type or partial.
@@ -259,7 +260,7 @@ class MLP(nn.Module):
         self,
         in_dim: int,
         out_dim: int,
-        hidden_dims: Optional[Union[int, List[int]]] = None,
+        hidden_dims: Optional[Union[int, List[int]]],
         dropout: float = 0.1,
         activation: Callable[..., nn.Module] = nn.ReLU,
         normalization: Optional[Callable[..., nn.Module]] = None,
@@ -268,9 +269,6 @@ class MLP(nn.Module):
         super().__init__()
 
         layers = nn.ModuleList()
-
-        if hidden_dims is None:
-            hidden_dims = []
 
         if isinstance(hidden_dims, int):
             hidden_dims = [hidden_dims]
