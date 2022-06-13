@@ -24,8 +24,6 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
 
     :param num_components: Size of the embeddings
     :type num_components: int
-    :param hidden_dims: list of dimensions for each of the MLP layers.
-    :type hidden_dims: Union[int, List[int]]
     :param batch_size: How many samples to use in each update step.
         Higher batch sizes make each epoch more efficient,
         but increases the amount of epochs needed to converge to the optimum,
@@ -77,11 +75,10 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
     def __init__(
         self,
         num_components: int,
-        hidden_dims: Union[int, List[int]],
-        batch_size: int,
-        max_epochs: int,
-        learning_rate: float,
-        stopping_criterion: str,
+        batch_size: int = 512,
+        max_epochs: int = 10,
+        learning_rate: float = 0.01,
+        stopping_criterion: str = "ndcg",
         stop_early: bool = False,
         max_iter_no_change: int = 5,
         min_improvement: float = 0.0,
@@ -107,7 +104,10 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         )
 
         self.num_components = num_components
-        self.hidden_dims = hidden_dims
+        if self.num_components % 2 != 0:
+            raise ValueError("Please use an even number of components for training the NeuMF model.")
+
+        self.hidden_dims = [self.num_components * 2, self.num_components, self.num_components // 2]
         self.U = U
         self.dropout = dropout
 

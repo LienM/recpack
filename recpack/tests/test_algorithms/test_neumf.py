@@ -36,11 +36,6 @@ def test_training_epoch(mat):
     X = mat.binary_values
     a = NeuMFMLPOnly(
         num_components=8,
-        hidden_dims=[16, 8],
-        batch_size=2,
-        max_epochs=50,
-        learning_rate=0.005,
-        stopping_criterion="ndcg",
         U=2,
     )
     device = a.device
@@ -55,15 +50,15 @@ def test_training_epoch(mat):
     assert_changed(params_before, params, device)
 
 
+def test_num_components_even():
+    with pytest.raises(ValueError):
+        NeuMFMLPOnly(num_components=5)
+
+
 @pytest.mark.parametrize("users", [[0, 1], [0], [0, 1, 3]])
 def test_batch_predict(mat, users):
     a = NeuMFMLPOnly(
-        num_components=3,
-        hidden_dims=[6, 4],
-        batch_size=2,
-        max_epochs=10,
-        learning_rate=0.005,
-        stopping_criterion="ndcg",
+        num_components=4,
         U=2,
     )
     device = a.device
@@ -90,12 +85,7 @@ def test_batch_predict(mat, users):
 def test_negative_input_construction(users, negatives):
     U = negatives.shape[1]
     a = NeuMFMLPOnly(
-        num_components=3,
-        hidden_dims=[16, 8, 4],
-        batch_size=100,
-        max_epochs=10,
-        learning_rate=0.01,
-        stopping_criterion="ndcg",
+        num_components=8,
         U=U,
     )
 
@@ -111,18 +101,16 @@ def test_negative_input_construction(users, negatives):
 
 def test_overfit(mat):
     m = NeuMFMLPOnly(
-        num_components=8,
-        hidden_dims=[16],
+        num_components=10,
         batch_size=1,
-        max_epochs=15,
-        learning_rate=0.05,
+        max_epochs=20,
+        learning_rate=0.02,
         stopping_criterion="ndcg",
         U=1,
     )
 
     # set sampler to exact sampling
     m.sampler.exact = True
-
     m.fit(mat, (mat, mat))
     bin_mat = mat.binary_values
     pred = m.predict(mat.binary_values).toarray()
