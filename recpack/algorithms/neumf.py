@@ -21,23 +21,29 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
 
     As in the paper, the sum of square error is used as the loss function.
     Positive items should get a prediction close to 1, while sampled negatives should get a value close to 0.
+    The MLP has 3 layers, whose dimensions are based on the `num_components` parameter.
+    Bottom layer has `num_components * 2`, middle layer `num_components`
+    and the top layer has `num_components / 2` dimensions.
 
-    :param num_components: Size of the embeddings
+    :param num_components: Size of the embeddings, needs to be an even number.
     :type num_components: int
     :param batch_size: How many samples to use in each update step.
         Higher batch sizes make each epoch more efficient,
         but increases the amount of epochs needed to converge to the optimum,
         by reducing the amount of updates per epoch.
-    :type batch_size: int
+        Defaults to 512.
+    :type batch_size: Optional[int]
     :param max_epochs: The max number of epochs to train.
         If the stopping criterion uses early stopping, less epochs could be used.
-    :type max_epochs: int
-    :param learning_rate: How much to update the weights at each update.
-    :type learning_rate: float
+        Defaults to 10.
+    :type max_epochs: Optional[int]
+    :param learning_rate: How much to update the weights at each update. Defaults to 0.01
+    :type learning_rate: Optional[float]
     :param stopping_criterion: Name of the stopping criterion to use for training.
         For available values,
         check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
-    :type stopping_criterion: str
+        Defaults to 'ndcg'
+    :type stopping_criterion: Optional[str]
     :param stop_early: If True, early stopping is enabled,
         and after ``max_iter_no_change`` iterations where improvement of loss function
         is below ``min_improvement`` the optimisation is stopped,
@@ -75,19 +81,19 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
     def __init__(
         self,
         num_components: int,
-        batch_size: int = 512,
-        max_epochs: int = 10,
-        learning_rate: float = 0.01,
-        stopping_criterion: str = "ndcg",
-        stop_early: bool = False,
-        max_iter_no_change: int = 5,
-        min_improvement: float = 0.0,
-        seed: int = None,
-        save_best_to_file: bool = False,
-        keep_last: bool = False,
-        predict_topK: int = None,
-        U: int = 1,
-        dropout: float = 0.0,
+        batch_size: Optional[int] = 512,
+        max_epochs: Optional[int] = 10,
+        learning_rate: Optional[float] = 0.01,
+        stopping_criterion: Optional[str] = "ndcg",
+        stop_early: Optional[bool] = False,
+        max_iter_no_change: Optional[int] = 5,
+        min_improvement: Optional[float] = 0.0,
+        seed: Optional[int] = None,
+        save_best_to_file: Optional[bool] = False,
+        keep_last: Optional[bool] = False,
+        predict_topK: Optional[int] = None,
+        U: Optional[int] = 1,
+        dropout: Optional[float] = 0.0,
     ):
         super().__init__(
             batch_size,
