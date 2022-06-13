@@ -69,6 +69,9 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
     :type predict_topK: int, optional
     :param U: Amount of negatives to sample for each positive example, defaults to 1
     :type U: int, optional
+    :param dropout: Dropout parameter used in MLP, defaults to 0.0
+    :type dropout: float, optional
+
     """
 
     def __init__(
@@ -87,6 +90,7 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         keep_last: bool = False,
         predict_topK: int = None,
         U: int = 1,
+        dropout: float = 0.0,
     ):
         super().__init__(
             batch_size,
@@ -105,12 +109,15 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         self.num_components = num_components
         self.hidden_dims = hidden_dims
         self.U = U
+        self.dropout = dropout
 
         self.sampler = PositiveNegativeSampler(U=self.U, replace=False, batch_size=self.batch_size)
 
     def _init_model(self, X: csr_matrix):
         num_users, num_items = X.shape
-        self.model_ = NeuMFMLPModule(self.num_components, num_users, num_items, self.hidden_dims).to(self.device)
+        self.model_ = NeuMFMLPModule(self.num_components, num_users, num_items, self.hidden_dims, self.dropout).to(
+            self.device
+        )
         self.optimizer = torch.optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     def _compute_loss(
@@ -180,9 +187,13 @@ class NeuMFMLPModule(nn.Module):
     :type n_items: int
     :param hidden_dims: dimensions of the MLP hidden layers.
     :type hidden_dims: Union[int, List[int]]
+    :param dropout: Dropout chance between layers of the MLP
+    :type dropout: float
     """
 
-    def __init__(self, num_components: int, n_users: int, n_items: int, hidden_dims: Union[int, List[int]]):
+    def __init__(
+        self, num_components: int, n_users: int, n_items: int, hidden_dims: Union[int, List[int]], dropout: float
+    ):
         super().__init__()
 
         self.user_embedding = nn.Embedding(n_users, num_components)
@@ -190,7 +201,7 @@ class NeuMFMLPModule(nn.Module):
 
         # 2 x embedding size as input, since the user and item embedding are concatenated.
         # Output is always 1, since we need a single score for u,i
-        self.mlp = MLP(2 * num_components, 1, hidden_dims)
+        self.mlp = MLP(2 * num_components, 1, hidden_dims, dropout=dropout)
 
         # In order to interpret the output as a probability, the score should be between 0 and 1
         # The papers mentions probit / logistic activation,
@@ -249,7 +260,7 @@ class MLP(nn.Module):
         in_dim: int,
         out_dim: int,
         hidden_dims: Optional[Union[int, List[int]]] = None,
-        dropout: float = 0.5,
+        dropout: float = 0.1,
         activation: Callable[..., nn.Module] = nn.ReLU,
         normalization: Optional[Callable[..., nn.Module]] = None,
         **kwargs,
