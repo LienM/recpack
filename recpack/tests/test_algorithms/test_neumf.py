@@ -19,7 +19,7 @@ def test_MLP():
 )
 def test_output_shapes_NeuMFMLPModule(num_components, num_users, num_items, hidden_sizes):
     """Check that no mather the inner settings of the network, the output is always correct"""
-    mod = NeuMFMLPModule(num_components, num_users, num_items, hidden_sizes)
+    mod = NeuMFMLPModule(num_components, num_users, num_items, hidden_sizes, 0)
 
     user_tensor = torch.LongTensor([1, 2])
     item_tensor = torch.LongTensor([1, 2])
