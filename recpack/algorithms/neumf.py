@@ -142,9 +142,11 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
             self.optimizer.zero_grad()
 
             # Predict for the positives
-            positive_scores = self.model_.forward(users, positives)
+            positive_scores = self.model_.forward(users.to(self.device), positives.to(self.device))
             # Predict for the negatives
-            negative_scores = self.model_.forward(*self._construct_negative_prediction_input(users, negatives))
+            negative_scores = self.model_.forward(
+                *self._construct_negative_prediction_input(users.to(self.device), negatives.to(self.device))
+            )
 
             loss = self._compute_loss(positive_scores, negative_scores)
 
