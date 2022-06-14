@@ -119,8 +119,5 @@ def test_overfit(mat):
         positives = bin_mat[user].nonzero()[1]
         negatives = list(set(range(mat.shape[1])) - set(positives))
 
-        print(user, positives, negatives, pred[user])
         for item in positives:
-            print(pred[user][negatives], pred[user, item], pred[user][negatives] < pred[user, item])
             assert (pred[user][negatives] < pred[user, item]).all()
-    # assert False
