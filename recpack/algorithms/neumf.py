@@ -221,8 +221,6 @@ class NeuMFMLPModule(nn.Module):
         self.user_embedding.weight.data.normal_(0, 1.0 / self.user_embedding.embedding_dim)
         self.item_embedding.weight.data.normal_(0, 1.0 / self.item_embedding.embedding_dim)
 
-        # TODO: do I need to randomly initialise the MLP layer weights?
-
     def forward(self, users: torch.LongTensor, items: torch.LongTensor) -> torch.FloatTensor:
         """Predict scores for the user item pairs obtained when zipping together the two 1D tensors
 
