@@ -5,8 +5,8 @@
 #   Lien Michiels
 #   Robin Verachtert
 
-from recpack.algorithms.experimental.time_decay_nearest_neighbour import (
-    TimeDecayingNearestNeighbour,
+from recpack.algorithms.time_aware_item_knn import (
+    TARSItemKNNXia,
 )
 import scipy.sparse
 import pandas as pd
@@ -69,7 +69,7 @@ def mat_no_timestamps():
 )
 def test_time_decay_knn(mat, decay_fn, decay_coeff, expected_similarities, expected_out):
 
-    algo = TimeDecayingNearestNeighbour(K=2, decay_coeff=decay_coeff, decay_fn=decay_fn, decay_interval=1)
+    algo = TARSItemKNNXia(K=2, decay_coeff=decay_coeff, decay_fn=decay_fn, decay_interval=1)
 
     algo.fit(mat)
 
@@ -107,12 +107,12 @@ def test_time_decay_knn(mat, decay_fn, decay_coeff, expected_similarities, expec
 )
 def test_time_decay_knn_empty(mat_no_timestamps, decay_fn, decay_coeff, expected_similarities, expected_out):
 
-    algo = TimeDecayingNearestNeighbour(K=2, decay_coeff=decay_coeff, decay_fn=decay_fn, decay_interval=1)
+    algo = TARSItemKNNXia(K=2, decay_coeff=decay_coeff, decay_fn=decay_fn, decay_interval=1)
 
     with pytest.warns(UserWarning) as record:
         algo.fit(mat_no_timestamps)
 
-    assert str(record[0].message) == "TimeDecayingNearestNeighbour missing similar items for 3 items."
+    assert str(record[0].message) == "TARSItemKNNXia missing similar items for 3 items."
 
     np.testing.assert_almost_equal(algo.similarity_matrix_.toarray(), expected_similarities)
 
@@ -122,7 +122,7 @@ def test_time_decay_knn_empty(mat_no_timestamps, decay_fn, decay_coeff, expected
 
     with pytest.warns(UserWarning):
         result = algo.predict(_in)
-    assert str(record[0].message) == "TimeDecayingNearestNeighbour missing similar items for 3 items."
+    assert str(record[0].message) == "TARSItemKNNXia missing similar items for 3 items."
 
     np.testing.assert_almost_equal(result.toarray(), expected_similarities)
 
@@ -130,7 +130,7 @@ def test_time_decay_knn_empty(mat_no_timestamps, decay_fn, decay_coeff, expected
     _in = scipy.sparse.csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 3))
     with pytest.warns(UserWarning) as record:
         result = algo.predict(_in)
-    assert str(record[0].message) == "TimeDecayingNearestNeighbour missing similar items for 3 items."
+    assert str(record[0].message) == "TARSItemKNNXia missing similar items for 3 items."
 
     np.testing.assert_almost_equal(result.toarray(), expected_out)
 
@@ -148,7 +148,7 @@ def test_time_decay_knn_empty(mat_no_timestamps, decay_fn, decay_coeff, expected
 )
 def test_time_decay_knn_coeff_validation(mat, decay_fn, decay_coeff):
     with pytest.raises(ValueError):
-        TimeDecayingNearestNeighbour(decay_coeff=decay_coeff, decay_fn=decay_fn)
+        TARSItemKNNXia(decay_coeff=decay_coeff, decay_fn=decay_fn)
 
 
 @pytest.mark.parametrize(
@@ -161,7 +161,7 @@ def test_time_decay_knn_coeff_validation(mat, decay_fn, decay_coeff):
 )
 def test_time_decay_knn_fn_validation_error(decay_fn):
     with pytest.raises(ValueError):
-        TimeDecayingNearestNeighbour(decay_fn=decay_fn)
+        TARSItemKNNXia(decay_fn=decay_fn)
 
 
 @pytest.mark.parametrize(
@@ -177,7 +177,7 @@ def test_time_decay_knn_fn_validation_error(decay_fn):
 )
 def test_time_decay_knn_predict(mat, decay_fn, decay_coeff, expected_similarities, expected_out):
 
-    algo = TimeDecayingNearestNeighbour(K=2, decay_coeff=decay_coeff, decay_fn=decay_fn, decay_interval=1)
+    algo = TARSItemKNNXia(K=2, decay_coeff=decay_coeff, decay_fn=decay_fn, decay_interval=1)
 
     algo.fit(mat)
     assert type(algo.similarity_matrix_) is scipy.sparse.csr_matrix
@@ -194,8 +194,8 @@ def test_time_decay_knn_predict(mat, decay_fn, decay_coeff, expected_similaritie
 
 @pytest.mark.parametrize("interval", [20, 3600, 24 * 3600])
 def test_decay_interval(interval):
-    algo_1 = TimeDecayingNearestNeighbour(K=2, decay_interval=1)
-    algo_2 = TimeDecayingNearestNeighbour(K=2, decay_interval=interval)
+    algo_1 = TARSItemKNNXia(K=2, decay_interval=1)
+    algo_2 = TARSItemKNNXia(K=2, decay_interval=interval)
 
     input_matrix_1 = scipy.sparse.csr_matrix([[1, 2, 3], [4, 5, 6]])
     input_matrix_2 = scipy.sparse.csr_matrix([[1, 2, 3], [4, 5, 6]]) * interval
@@ -219,4 +219,4 @@ def test_decay_interval(interval):
 @pytest.mark.parametrize("decay_interval", [0, 0.5])
 def test_decay_interval_validation(decay_interval):
     with pytest.raises(ValueError):
-        TimeDecayingNearestNeighbour(decay_interval=decay_interval)
+        TARSItemKNNXia(decay_interval=decay_interval)

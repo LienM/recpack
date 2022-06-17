@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## Additions
+* __algorithms__
+    * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to TARSItemKNNXia to distinguish it from other time aware item KNN models.
+
 ### Bugfixes
 * __metrics__
     * Fixed bug in `CalibratedRecallK` results property, which caused an error when requesting this property.
@@ -167,6 +171,10 @@ In addition to interface changes and additions we also made a big effort to incr
     * Added `STAN` algorithm, presented in Garg, Diksha, et al.
     "Sequence and time aware neighborhood for session-based recommendations: Stan". 
     This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
+    * We added time aware item knn algorithms:
+        * `TARSItemKNNLee`, `TARSItemKNNLee_W3` and `TARSItemKNNLee_W5` from Lee, Tong Queue, Young Park, and Yong-Tae Park. "A time-based approach to effective recommender systems using implicit feedback." Expert systems with applications 34.4 (2008): 3055-3062.
+        * `TARSItemKNNDing` from Ding, Yi, and Xue Li. "Time weight collaborative filtering." Proceedings of the 14th ACM international conference on Information and knowledge management. 2005.
+        * `TARSItemKNN` baseclass which implements common functionality, and therefore extends the previous works on Time Aware ItemKNN
 
 * __data.matrix__
     * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.

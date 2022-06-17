@@ -7,4 +7,3 @@
 
 from recpack.algorithms.experimental.shared_account import DAMIBCover
 from recpack.algorithms.experimental.ease_xy import EASE_XY
-from recpack.algorithms.experimental.time_decay_nearest_neighbour import TimeDecayingNearestNeighbour

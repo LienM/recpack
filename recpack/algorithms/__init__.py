@@ -258,4 +258,12 @@ from recpack.algorithms.gru4rec import (
 )
 
 from recpack.algorithms.stan import STAN
-from recpack.algorithms.tars_itemknn import TARSItemKNN, TARSItemKNNLiu
+from recpack.algorithms.time_aware_item_knn import (
+    TARSItemKNN,
+    TARSItemKNNLiu,
+    TARSItemKNNXia,
+    TARSItemKNNDing,
+    TARSItemKNNLee,
+    TARSItemKNNLee_W3,
+    TARSItemKNNLee_W5,
+)

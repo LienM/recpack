@@ -13,7 +13,10 @@ from recpack.matrix import InteractionMatrix
 from recpack.util import get_top_K_values
 
 
-class TimeDecayingNearestNeighbour(TopKItemSimilarityMatrixAlgorithm):
+# TODO: can I use the TARSItemKNN class
+
+
+class TARSItemKNNXia(TopKItemSimilarityMatrixAlgorithm):
     """Time Decaying Nearest Neighbours model.
 
     First described in 'Dynamic Item-Based Recommendation Algorithm with Time Decay'

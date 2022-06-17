@@ -8,12 +8,8 @@
 import numpy as np
 import pytest
 
-from recpack.algorithms.tars_itemknn import TARSItemKNN, TARSItemKNNLiu
-
-
-@pytest.fixture
-def algorithm_liu() -> TARSItemKNNLiu:
-    return TARSItemKNNLiu(K=2, fit_decay=0.5, predict_decay=0.5)
+from recpack.algorithms.time_aware_item_knn import TARSItemKNN
+from recpack.algorithms.time_aware_item_knn.base import add_decay_to_interaction_matrix
 
 
 @pytest.fixture(params=["cosine", "conditional_probability"])
@@ -51,8 +47,8 @@ def test_check_input(algorithm, matrix_sessions):
     assert value_error.match("TARSItemKNN requires timestamp information in the InteractionMatrix.")
 
 
-def test_add_decay_to_interaction_matrix(algorithm, mat):
-    result = algorithm._add_decay_to_interaction_matrix(mat, algorithm.fit_decay)
+def test_add_decay_to_interaction_matrix(mat):
+    result = add_decay_to_interaction_matrix(mat, 0.5)
 
     MAX_TS = mat.timestamps.max()
     expected_result = np.array(

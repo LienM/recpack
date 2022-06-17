@@ -10,13 +10,14 @@ import operator
 
 import numpy as np
 import pytest
-from scipy.sparse.csr import csr_matrix
+from scipy.sparse import csr_matrix
 
 from recpack.algorithms import ItemKNN
 from recpack.matrix import to_binary
 from recpack.algorithms.nearest_neighbour import (
     ItemPNN,
     compute_conditional_probability,
+    compute_pearson_similarity,
 )
 
 
@@ -280,3 +281,25 @@ def test_conditional_probability():
     # fmt: on
 
     np.testing.assert_array_almost_equal(similarity.toarray(), expected_similarity)
+
+
+def test_compute_pearson_similarity():
+    # fmt: off
+    data = csr_matrix([
+        [1, 0, 1, 0],
+        [2, 0, 2, 0],
+        [0, 3, 0, 3],
+        [4, 0, 0, 4],
+    ])
+    # fmt: on
+    corr = compute_pearson_similarity(data)
+
+    print(corr.toarray())
+    assert corr[0, 0] == 0  # no self similarity
+    assert corr[0, 1] == 0
+    expected_sim_0_2 = ((-1.333 * -0.5) + (-0.333 * 0.5)) / (
+        np.sqrt(1.333 ** 2 + 0.333 ** 2 + 1.666 ** 2) * np.sqrt(2 * (0.5) ** 2)
+    )
+    np.testing.assert_almost_equal(corr[0, 2], expected_sim_0_2, decimal=3)
+    expected_sim_0_3 = (1.666 * 0.5) / (np.sqrt(1.333 ** 2 + 0.333 ** 2 + 1.666 ** 2) * np.sqrt(2 * 0.5 ** 2))
+    np.testing.assert_almost_equal(corr[0, 3], expected_sim_0_3, decimal=3)
