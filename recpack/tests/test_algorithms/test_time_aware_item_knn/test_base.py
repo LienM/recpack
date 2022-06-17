@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 
 from recpack.algorithms.time_aware_item_knn import TARSItemKNN
-from recpack.algorithms.time_aware_item_knn.base import add_decay_to_interaction_matrix
 
 
 @pytest.fixture(params=["cosine", "conditional_probability"])
@@ -47,8 +46,8 @@ def test_check_input(algorithm, matrix_sessions):
     assert value_error.match("TARSItemKNN requires timestamp information in the InteractionMatrix.")
 
 
-def test_add_decay_to_interaction_matrix(mat):
-    result = add_decay_to_interaction_matrix(mat, 0.5)
+def test_add_decay_to_interaction_matrix(algorithm, mat):
+    result = algorithm._add_decay_to_interaction_matrix(mat, 0.5)
 
     MAX_TS = mat.timestamps.max()
     expected_result = np.array(
@@ -63,3 +62,19 @@ def test_add_decay_to_interaction_matrix(mat):
     )
 
     np.testing.assert_array_equal(result.toarray(), expected_result)
+
+
+def test_fit(algorithm, mat):
+    algorithm.fit(mat)
+
+    assert algorithm.similarity_matrix_.shape == (mat.shape[1], mat.shape[1])
+
+    # TODO: value checks, we know our weighting func works, so we'd only check that values are passed correctly
+
+
+def test_predict(algorithm, mat):
+    algorithm.fit(mat)
+    predictions = algorithm.predict(mat)
+
+    assert mat.shape == predictions.shape
+    # TODO: value check?

@@ -85,7 +85,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         :return: csr_matrix with scores
         :rtype: csr_matrix
         """
-        X = add_decay_to_interaction_matrix(X, self.predict_decay)
+        X = self._add_decay_to_interaction_matrix(X, self.predict_decay)
         return super()._predict(X)
 
     def _transform_fit_input(self, X: Matrix) -> InteractionMatrix:
@@ -115,20 +115,19 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         self.similarity_matrix_ = item_similarities
 
+    def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay: float) -> csr_matrix:
+        """Weight the interaction matrix based on age of the events.
 
-def add_decay_to_interaction_matrix(X: InteractionMatrix, decay: float) -> csr_matrix:
-    """Weight the interaction matrix based on age of the events.
-
-    :param X: Interaction matrix.
-    :type X: InteractionMatrix
-    :param decay: decay parameter, is 1/half_life
-    :type decay: float
-    :return: Weighted csr matrix.
-    :rtype: csr_matrix
-    """
-    timestamp_mat = X.last_timestamps_matrix
-    # The maximal timestamp in the matrix is used as 'now',
-    # age is encoded as now - t
-    now = timestamp_mat.data.max()
-    timestamp_mat.data = np.exp(-decay * (now - timestamp_mat.data))
-    return csr_matrix(timestamp_mat)
+        :param X: Interaction matrix.
+        :type X: InteractionMatrix
+        :param decay: decay parameter, is 1/half_life
+        :type decay: float
+        :return: Weighted csr matrix.
+        :rtype: csr_matrix
+        """
+        timestamp_mat = X.last_timestamps_matrix
+        # The maximal timestamp in the matrix is used as 'now',
+        # age is encoded as now - t
+        now = timestamp_mat.data.max()
+        timestamp_mat.data = np.exp(-decay * (now - timestamp_mat.data))
+        return csr_matrix(timestamp_mat)

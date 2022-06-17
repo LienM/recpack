@@ -36,3 +36,19 @@ def test_check_input(algorithm, matrix_sessions):
         algorithm._transform_predict_input(matrix_sessions.eliminate_timestamps())
 
     assert value_error.match("TARSItemKNNLiu requires timestamp information in the InteractionMatrix.")
+
+
+def test_fit(algorithm, mat):
+    algorithm.fit(mat)
+
+    assert algorithm.similarity_matrix_.shape == (mat.shape[1], mat.shape[1])
+
+    # TODO: value checks, we know our weighting func works, so we'd only check that values are passed correctly
+
+
+def test_predict(algorithm, mat):
+    algorithm.fit(mat)
+    predictions = algorithm.predict(mat)
+
+    assert mat.shape == predictions.shape
+    # TODO: value check?
