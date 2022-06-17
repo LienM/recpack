@@ -6,11 +6,32 @@ from recpack.data.matrix import InteractionMatrix
 
 
 class TARSItemKNNLee(TARSItemKNN):
+    """Time aware model which computes weights of interactions based on a bucketized approach,
+    taking into account age of event, and time since publication of an item.
+
+    Algorithm extending the two fixed value matrices used in Lee, Tong Queue, Young Park, and Yong-Tae Park.
+    "A time-based approach to effective recommender systems using implicit feedback."
+
+    The automated computation of the weighting matrix follows the W=5 weighting scheme in the paper,
+    each column ends with an integer value, and the next column follows on this previous column.
+    By generating the matrix, we can support not only the W5 matrix from the paper,
+    but also arbitrary sizes of weight matrices.
+
+    Weights are used both for prediction and for training.
+
+    :param K: Amount of neighbours to keep. Defaults to 200.
+    :type K: int, Optional
+    :param W: The size of the weighting matrix, defaults to 5
+    :type W: int, Optional
+    :param similarity: Which similarity measure to use. Defaults to `"cosine"`
+    :type similarity: str, Optional
+    """
+
     SUPPORTED_SIMILARITIES = ["cosine", "pearson"]
 
-    def __init__(self, K: int = 200, num_windows: int = 3, similarity: str = "cosine"):
+    def __init__(self, K: int = 200, W: int = 5, similarity: str = "cosine"):
         super().__init__(K, similarity=similarity, fit_decay=0, predict_decay=0)
-        self.num_windows = num_windows
+        self.W = W
 
     @property
     def weight_matrix(self):
@@ -19,10 +40,8 @@ class TARSItemKNNLee(TARSItemKNN):
         Top left is old/old, bottom right is new/new.
         Position 1,1 will have lower weight than both 1,2, 2,1 and 2,2.
         """
-        stepsize = 1 / self.num_windows
-        return np.array(
-            [[i + (j * stepsize) for j in range(1, self.num_windows + 1)] for i in range(self.num_windows)]
-        ).T
+        stepsize = 1 / self.W
+        return np.array([[i + (j * stepsize) for j in range(1, self.W + 1)] for i in range(self.W)]).T
 
     def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay=None) -> csr_matrix:
         """Add decay to each user, item interaction based on the launch time of the item,
@@ -40,19 +59,17 @@ class TARSItemKNNLee(TARSItemKNN):
         launch_times = self._compute_launch_times(X)
         launch_width = launch_times.max() - launch_times.min()
         launch_min = launch_times.min()
-        launch_window_width = launch_width / self.num_windows
+        launch_window_width = launch_width / self.W
         # Create division points
-        launch_splits = [np.ceil(launch_min + i * launch_window_width) for i in range(1, self.num_windows + 1)]
+        launch_splits = [np.ceil(launch_min + i * launch_window_width) for i in range(1, self.W + 1)]
 
         timestamps_mat = X.last_timestamps_matrix
         timestamps_min = X.timestamps.min()
         timestamps_max = X.timestamps.max()
         timestamps_width = timestamps_max - timestamps_min
-        timestamps_window_width = timestamps_width / self.num_windows
+        timestamps_window_width = timestamps_width / self.W
 
-        timestamps_splits = [
-            np.ceil(timestamps_min + i * timestamps_window_width) for i in range(1, self.num_windows + 1)
-        ]
+        timestamps_splits = [np.ceil(timestamps_min + i * timestamps_window_width) for i in range(1, self.W + 1)]
 
         def get_weight_index(arr, value):
             """Get the index of the first value in the array that is greater than or equal to value"""
@@ -87,8 +104,26 @@ class TARSItemKNNLee(TARSItemKNN):
 
 
 class TARSItemKNNLee_W3(TARSItemKNNLee):
+    """Time aware model which computes weights of interactions based on a bucketized approach,
+    taking into account age of event, and time since publication of an item.
+
+    Implements the W3 model from Lee, Tong Queue, Young Park, and Yong-Tae Park.
+    "A time-based approach to effective recommender systems using implicit feedback."
+
+    Weights are used both for prediction and for training.
+
+    .. note::
+        This uses the hard coded weight matrix from the paper, and therefore is different from `TARSItemKNNLee(W=3)`
+
+
+    :param K: Amount of neighbours to keep. Defaults to 200.
+    :type K: int, Optional
+    :param similarity: Which similarity measure to use. Defaults to `"cosine"`
+    :type similarity: str, Optional
+    """
+
     def __init__(self, K: int = 200, similarity: str = "cosine"):
-        super().__init__(K, num_windows=3, similarity=similarity)
+        super().__init__(K, W=3, similarity=similarity)
 
     # fmt: off
     weight_matrix = np.array([
@@ -100,5 +135,22 @@ class TARSItemKNNLee_W3(TARSItemKNNLee):
 
 
 class TARSItemKNNLee_W5(TARSItemKNNLee):
+    """Time aware model which computes weights of interactions based on a bucketized approach,
+    taking into account age of event, and time since publication of an item.
+
+    Implements the W5 model from Lee, Tong Queue, Young Park, and Yong-Tae Park.
+    "A time-based approach to effective recommender systems using implicit feedback."
+
+    Weights are used both for prediction and for training.
+
+    .. note::
+        This is identical to `TARSItemKNNLee(W=5)`
+
+    :param K: Amount of neighbours to keep. Defaults to 200.
+    :type K: int, Optional
+    :param similarity: Which similarity measure to use. Defaults to `"cosine"`
+    :type similarity: str, Optional
+    """
+
     def __init__(self, K: int = 200, similarity: str = "cosine"):
-        super().__init__(K, num_windows=5, similarity=similarity)
+        super().__init__(K, W=5, similarity=similarity)

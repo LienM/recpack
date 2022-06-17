@@ -28,7 +28,7 @@ def test_weight_matrix_W4():
     ])
     # fmt: on
 
-    algorithm = TARSItemKNNLee(num_windows=4)
+    algorithm = TARSItemKNNLee(W=4)
     np.testing.assert_array_almost_equal(algorithm.weight_matrix, expected_matrix)
 
 
@@ -62,7 +62,7 @@ def test_add_decay_to_interaction_matrix_W3(mat):
 
 def test_add_decay_to_interaction_matrix_W4(mat):
     print(mat.last_timestamps_matrix.toarray())
-    algorithm = TARSItemKNNLee(num_windows=4)
+    algorithm = TARSItemKNNLee(W=4)
     expected_matrix = np.array(
         [
             [2.25, 1.25, 0.00, 0.00, 0.00],

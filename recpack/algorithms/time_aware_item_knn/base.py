@@ -22,15 +22,21 @@ from recpack.util import get_top_K_values
 
 
 class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
-    """ItemKNN algorithm where older interactions have
-    less weight during both prediction and training.
+    """ItemKNN algorithm where older interactions have less weight during both prediction and training.
 
-    Contains extensions on the algorithm presented in Liu, Nathan N., et al.
-    "Online evolutionary collaborative filtering."
-    Proceedings of the fourth ACM conference on Recommender systems. 2010.
+    This class is the baseclass for ItemKNN weighting approaches, combining their functionality,
+    and allowing unpublished combinations of settings.
+    Includes work by Liu, Nathan N., et al. (2010), Ding et al. (2005) and lee et al. (2007)
 
-    Each interaction is weighed as
+    The standard framework for all of these approaches can be summarised as:
 
+    - When training the user interaction matrix is weighted to take into account temporal information available
+    - Similarities are computed on this weighted matrix, using various similarity measures.
+    - When predicting the interactions are similarly weighted, giving more weight to more recent interactions.
+    - Recommendation scores are obtained by multiplying the weighted interaction matrix with
+      the previously computed similarity matrix
+
+    The default weighting in this base class is:
     .. math::
 
         e^{- \\alpha \\text{age}}
@@ -38,11 +44,6 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     Where alpha is the decay scaling parameter,
     and age is the time between the maximal timestamp in the matrix
     and the timestamp of the event.
-
-    Similarity is computed on this weighted matrix, using either of the supported similarity measures.
-
-    At prediction time a user's history is weighted using the same formula with a different alpha.
-    This weighted history is then multiplied with the precomputed similarity matrix.
 
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional

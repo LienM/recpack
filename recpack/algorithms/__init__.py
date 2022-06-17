@@ -59,8 +59,6 @@ they have interacted with.
 
     SLIM
     ItemKNN
-    TARSItemKNNLiu
-    TARSItemKNN
     ItemPNN
     NMFItemToItem
     SVDItemToItem
@@ -119,6 +117,20 @@ Session-Based Algorithms
     GRU4RecNegSampling
     GRU4RecCrossEntropy
     STAN
+
+Time Aware Algorithms
+----------------------
+
+.. autosummary::
+    :toctree: generated/
+
+    TARSItemKNN
+    TARSItemKNNDing
+    TARSItemKNNLee
+    TARSItemKNNLee_W3
+    TARSItemKNNLee_W5
+    TARSItemKNNLiu
+    TARSItemKNNXia
 
 .. _algorithm-base-classes:
 
