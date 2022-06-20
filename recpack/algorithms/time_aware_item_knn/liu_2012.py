@@ -5,19 +5,27 @@ from recpack.algorithms.time_aware_item_knn.base import TARSItemKNN
 from recpack.data.matrix import InteractionMatrix
 
 
-def liu_decay(time_array: np.array, decay: float):
-    """Computes a log based decay function.
+def liu_decay(time_array: np.array, alpha: float) -> np.array:
+    """Computes a log based alpha function.
 
     .. math::
 
         log_\\alpha ((\\alpha-1)x + 1) + 1
 
-    Where alpha is the decay parameter, computed for each x in the time_array.
-    time_array values should be in the [0, 1] interval.
+    Where alpha is the alpha parameter, computed for each x in the time_array.
 
-    Time_array values should be between 0 and 1
+    :param time_array: array of time based weights, which will be decayed.
+        Values should be in the [0, 1] interval.
+    :type time_array: np.array
+    :param alpha: The decay parameter, should be in the ]1, inf[ interval.
+    :type alpha: float
+    :returns: The decayed input time array. Larger values in the original array still have the highest values.
+    :rtype: np.array
+
     """
-    return (np.log(((decay - 1) * time_array) + 1) / np.log(decay)) + 1
+    if not alpha > 1:
+        raise ValueError(f"decay parameter alpha = {alpha} is not in the supported range: ]1, inf [")
+    return (np.log(((alpha - 1) * time_array) + 1) / np.log(alpha)) + 1
 
 
 class TARSItemKNNLiu2012(TARSItemKNN):

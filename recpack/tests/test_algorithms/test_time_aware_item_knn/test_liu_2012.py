@@ -11,7 +11,7 @@ def test_liu_decay_order_preservation():
         a = np.random.rand()
         b = np.random.rand()
 
-        decay = np.random.rand()
+        decay = np.random.randint(2, 10)
         print(a, b, decay)
         output = liu_decay(np.array([a, b]), decay)
         # Events further from the first interaction get a higher weight

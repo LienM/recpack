@@ -93,6 +93,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         if decay_function not in self.DECAY_FUNCTIONS:
             raise ValueError(f"decay function {decay_function} is not supported")
+
         self.decay_function = decay_function
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
