@@ -1,7 +1,7 @@
 import pytest
 import warnings
 
-import recpack.splitters.scenarios as scenarios
+import recpack.scenarios as scenarios
 from recpack.data.matrix import InteractionMatrix
 
 USER_IX = InteractionMatrix.USER_IX

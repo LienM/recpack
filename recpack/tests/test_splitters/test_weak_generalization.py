@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from recpack.data.matrix import InteractionMatrix
-import recpack.splitters.scenarios as scenarios
+import recpack.scenarios as scenarios
 
 
 @pytest.mark.parametrize("frac_data_in", [0.5, 0.7])
@@ -21,9 +21,7 @@ def test_weak_generalization_split(data_m, frac_data_in):
     # Test approximately correct split
     frac_interactions_test = 1 - frac_data_in
 
-    np.testing.assert_almost_equal(
-        tr.num_interactions / data_m.num_interactions, frac_data_in, decimal=2
-    )
+    np.testing.assert_almost_equal(tr.num_interactions / data_m.num_interactions, frac_data_in, decimal=2)
     np.testing.assert_almost_equal(
         te_data_out.num_interactions / data_m.num_interactions,
         frac_interactions_test,
@@ -78,14 +76,8 @@ def test_weak_generalization_split_w_validation(larger_data_m, frac_data_in):
     )
 
     # te_data_in ~= tr (except users that had no interactions in te_data_out)
-    assert (
-        set(val_tr.active_users).intersection(val_data_in.active_users)
-        == val_data_in.active_users
-    )
-    assert (
-        set(full_tr.active_users.intersection(te_data_in.active_users))
-        == te_data_in.active_users
-    )
+    assert set(val_tr.active_users).intersection(val_data_in.active_users) == val_data_in.active_users
+    assert set(full_tr.active_users.intersection(te_data_in.active_users)) == te_data_in.active_users
     # Users have interactions in both
     assert te_data_out.active_users == te_data_in.active_users
     assert val_data_in.active_users == val_data_out.active_users
@@ -132,9 +124,7 @@ def test_weak_generalization_mismatching_train_validation_in(
     # Validation is the smallest subset
     assert set(val_data_in.active_users) == set(users_expected_in_all)
     # Test is a superset of validation
-    assert set(te_data_in.active_users) == set(
-        users_expected_in_test_and_train
-    )
+    assert set(te_data_in.active_users) == set(users_expected_in_test_and_train)
     # Train should contain all users
     assert tr.active_users == data_m_sporadic_users.active_users
 
@@ -166,9 +156,7 @@ def test_weak_generalization_mismatching_train_test_in(data_m_sporadic_users):
     users_expected_in_test_and_train = temp[temp.iid >= 2].uid.unique()
 
     # Test is a subset
-    assert set(te_data_in.active_users) == set(
-        users_expected_in_test_and_train
-    )
+    assert set(te_data_in.active_users) == set(users_expected_in_test_and_train)
     # Train should contain all users
     assert tr.active_users == data_m_sporadic_users.active_users
 
@@ -192,33 +180,15 @@ def test_weak_generalization_timed_split_seed(data_m, frac_data_in):
     )
     scenario_2.split(data_m)
 
-    assert (
-        scenario_1.full_training_data.num_interactions
-        == scenario_2.full_training_data.num_interactions
-    )
+    assert scenario_1.full_training_data.num_interactions == scenario_2.full_training_data.num_interactions
 
-    assert (
-        scenario_1.validation_training_data.num_interactions
-        == scenario_2.validation_training_data.num_interactions
-    )
+    assert scenario_1.validation_training_data.num_interactions == scenario_2.validation_training_data.num_interactions
 
-    assert (
-        scenario_1.test_data_in.num_interactions
-        == scenario_2.test_data_in.num_interactions
-    )
-    assert (
-        scenario_1.test_data_out.num_interactions
-        == scenario_2.test_data_out.num_interactions
-    )
+    assert scenario_1.test_data_in.num_interactions == scenario_2.test_data_in.num_interactions
+    assert scenario_1.test_data_out.num_interactions == scenario_2.test_data_out.num_interactions
 
-    assert (
-        scenario_1.validation_data_in.num_interactions
-        == scenario_2.validation_data_in.num_interactions
-    )
-    assert (
-        scenario_1.validation_data_out.num_interactions
-        == scenario_2.validation_data_out.num_interactions
-    )
+    assert scenario_1.validation_data_in.num_interactions == scenario_2.validation_data_in.num_interactions
+    assert scenario_1.validation_data_out.num_interactions == scenario_2.validation_data_out.num_interactions
 
 
 @pytest.fixture()

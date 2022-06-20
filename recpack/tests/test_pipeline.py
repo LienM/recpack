@@ -10,7 +10,7 @@ from recpack.pipelines import (
     ALGORITHM_REGISTRY,
     METRIC_REGISTRY,
 )
-from recpack.splitters.scenarios import Timed
+from recpack.scenarios import Timed
 
 # ---- TEST REGISTRIES
 def test_metric_registry():
@@ -80,9 +80,7 @@ def test_pipeline_builder(mat):
     # Build empty pipeline
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert (
-        error.value.args[0] == "No metrics specified, can't construct pipeline"
-    )
+    assert error.value.args[0] == "No metrics specified, can't construct pipeline"
 
     # Add 1 or multiple metrics
     pb.add_metric("CalibratedRecallK", 20)
@@ -93,10 +91,7 @@ def test_pipeline_builder(mat):
     # Build pipeline without algorithms
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert (
-        error.value.args[0]
-        == "No algorithms specified, can't construct pipeline"
-    )
+    assert error.value.args[0] == "No algorithms specified, can't construct pipeline"
 
     # Add algorithms
     pb.add_algorithm("ItemKNN", params={"K": 20})
@@ -117,8 +112,7 @@ def test_pipeline_builder(mat):
     with pytest.raises(RuntimeError) as error:
         pb.build()
     assert error.value.args[0] == (
-        "No optimisation metric selected to perform requested hyperparameter optimisation,"
-        "can't construct pipeline."
+        "No optimisation metric selected to perform requested hyperparameter optimisation," "can't construct pipeline."
     )
 
     pb.set_optimisation_metric("CalibratedRecallK", 20)
@@ -127,10 +121,7 @@ def test_pipeline_builder(mat):
     with pytest.raises(RuntimeError) as error:
         pb.build()
 
-    assert (
-        error.value.args[0]
-        == "No full training data available, can't construct pipeline."
-    )
+    assert error.value.args[0] == "No full training data available, can't construct pipeline."
 
     pb.set_full_training_data(mat)
     assert pb.full_training_data.shape == mat.shape
@@ -139,10 +130,7 @@ def test_pipeline_builder(mat):
     with pytest.raises(RuntimeError) as error:
         pb.build()
 
-    assert (
-        error.value.args[0]
-        == "No test data available, can't construct pipeline."
-    )
+    assert error.value.args[0] == "No test data available, can't construct pipeline."
 
     pb.set_test_data((mat, mat))
     assert len(pb.test_data) == 2
@@ -153,8 +141,7 @@ def test_pipeline_builder(mat):
         pb.build()
 
     assert (
-        error.value.args[0]
-        == "No validation data available to perform the requested hyperparameter optimisation"
+        error.value.args[0] == "No validation data available to perform the requested hyperparameter optimisation"
         ", can't construct pipeline."
     )
 
@@ -233,9 +220,7 @@ def test_pipeline_mismatching_shapes_test(mat, larger_mat):
 
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert (
-        error.value.args[0] == "Shape mismatch between test and training data"
-    )
+    assert error.value.args[0] == "Shape mismatch between test and training data"
 
 
 def test_pipeline_mismatching_shapes_validation(mat, larger_mat):
@@ -248,10 +233,7 @@ def test_pipeline_mismatching_shapes_validation(mat, larger_mat):
 
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert (
-        error.value.args[0]
-        == "Shape mismatch between validation and training data"
-    )
+    assert error.value.args[0] == "Shape mismatch between validation and training data"
 
 
 def test_pipeline_builder_bad_test_data(mat):
@@ -264,10 +246,7 @@ def test_pipeline_builder_bad_test_data(mat):
     with pytest.raises(ValueError) as error:
         pb.set_test_data((mat,))
 
-    assert (
-        error.value.args[0]
-        == "Incorrect value, expected tuple with data_in and data_out"
-    )
+    assert error.value.args[0] == "Incorrect value, expected tuple with data_in and data_out"
 
 
 def test_pipeline_builder_bad_validation_data(mat):
@@ -280,10 +259,7 @@ def test_pipeline_builder_bad_validation_data(mat):
     with pytest.raises(ValueError) as error:
         pb.set_validation_data((mat,))
 
-    assert (
-        error.value.args[0]
-        == "Incorrect value, expected tuple with data_in and data_out"
-    )
+    assert error.value.args[0] == "Incorrect value, expected tuple with data_in and data_out"
 
 
 def test_pipeline_builder_pipeline_config(pipeline_builder):
@@ -345,16 +321,12 @@ def test_save_no_optimisation(pipeline_builder, mat):
         "w",
     )
     handler = mocker()
-    handler.write.assert_called_with(
-        yaml.safe_dump(pipeline_builder._pipeline_config)
-    )
+    handler.write.assert_called_with(yaml.safe_dump(pipeline_builder._pipeline_config))
 
 
 def test_load(pipeline_builder, mat):
 
-    mocker = mock_open(
-        read_data=yaml.safe_dump(pipeline_builder._pipeline_config)
-    )
+    mocker = mock_open(read_data=yaml.safe_dump(pipeline_builder._pipeline_config))
     mocker2 = mock_open(read_data=yaml.safe_dump(mat.properties.to_dict()))
     mocker3 = MagicMock(return_value=mat._df)
 
@@ -401,9 +373,7 @@ def test_pipeline_save_metrics(pipeline_builder):
     with patch("recpack.pipelines.pipeline.pd.DataFrame.to_json", mocker):
         pipeline.save_metrics()
 
-        mocker.assert_called_once_with(
-            f"{pipeline_builder.results_directory}/results.json"
-        )
+        mocker.assert_called_once_with(f"{pipeline_builder.results_directory}/results.json")
 
 
 def test_pipeline_optimisation_results(pipeline_builder_optimisation):

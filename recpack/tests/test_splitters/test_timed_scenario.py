@@ -1,6 +1,6 @@
 import pytest
 
-import recpack.splitters.scenarios as scenarios
+import recpack.scenarios as scenarios
 
 
 @pytest.mark.parametrize("t", [50, 75, 40])

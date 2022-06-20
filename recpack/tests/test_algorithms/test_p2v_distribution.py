@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from recpack.data.matrix import InteractionMatrix
-from recpack.splitters.scenarios import LastItemPrediction
+from recpack.scenarios import LastItemPrediction
 from recpack.algorithms.p2v import Prod2Vec
 
 
@@ -93,7 +93,9 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
 
     generated_positive_pairs = np.column_stack([all_item_1, all_item_2])
 
-    expected_positive_pairs = np.array([[1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [0, 1], [4, 2], [2, 4], [0, 1], [1, 0]])
+    expected_positive_pairs = np.array(
+        [[1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [0, 1], [4, 2], [2, 4], [0, 1], [1, 0]]
+    )
 
     sorted_generated_positive_pairs = list(map(tuple, generated_positive_pairs))
     sorted_generated_positive_pairs.sort()
