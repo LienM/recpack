@@ -165,16 +165,15 @@ In addition to interface changes and additions we also made a big effort to incr
 ### Additions
 * __algorithms__
     * Standardised train and predict input validation functions have been added, and used to make sure inputs are InteractionMatrix objects when needed, and contain timestamps when needed.
-    * Added `TARSItemKNNLiu` and `TARSItemKNN` algorithms, which compute item-item similarities based on a weighted matrix based on the age of events.
-        * `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
-
     * Added `STAN` algorithm, presented in Garg, Diksha, et al.
     "Sequence and time aware neighborhood for session-based recommendations: Stan". 
     This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
-    * We added time aware item knn algorithms:
+    * Added various time aware item knn alternatives:
+        * `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
         * `TARSItemKNNLee`, `TARSItemKNNLee_W3` and `TARSItemKNNLee_W5` from Lee, Tong Queue, Young Park, and Yong-Tae Park. "A time-based approach to effective recommender systems using implicit feedback." Expert systems with applications 34.4 (2008): 3055-3062.
         * `TARSItemKNNDing` from Ding, Yi, and Xue Li. "Time weight collaborative filtering." Proceedings of the 14th ACM international conference on Information and knowledge management. 2005.
         * `TARSItemKNN` baseclass which implements common functionality, and therefore extends the previous works on Time Aware ItemKNN
+        * `TARSItemKNNLiu2012`based on Liu, Yue, et al. "Time-based k-nearest neighbor collaborative filtering."
 
 * __data.matrix__
     * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.

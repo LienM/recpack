@@ -17,7 +17,14 @@ from recpack.algorithms.nearest_neighbour import (
     compute_cosine_similarity,
     compute_pearson_similarity,
 )
-from recpack.matrix import InteractionMatrix, Matrix
+from recpack.algorithms.time_aware_item_knn.decay_functions import (
+    exponential_decay,
+    log_decay,
+    linear_decay,
+    concave_decay,
+    convex_decay,
+)
+from recpack.data.matrix import InteractionMatrix, Matrix
 from recpack.util import get_top_K_values
 
 
@@ -58,6 +65,14 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     """
 
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability", "pearson"]
+    DECAY_FUNCTIONS = {
+        "exponential": exponential_decay,
+        "log": log_decay,
+        "linear": linear_decay,
+        "concave": concave_decay,
+        "convex": convex_decay,
+        "unity": lambda x: x,
+    }
 
     def __init__(
         self,
@@ -65,6 +80,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         fit_decay: float = 1 / 3600,
         predict_decay: float = 1 / 3600,
         similarity="cosine",
+        decay_function="exponential",
     ):
         # Uses other default parameters for ItemKNN
         super().__init__(K=K)
@@ -72,8 +88,12 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         self.predict_decay = predict_decay
 
         if similarity not in self.SUPPORTED_SIMILARITIES:
-            raise ValueError(f"similarity {similarity} not supported")
+            raise ValueError(f"similarity {similarity} is not supported")
         self.similarity = similarity
+
+        if decay_function not in self.DECAY_FUNCTIONS:
+            raise ValueError(f"decay function {decay_function} is not supported")
+        self.decay_function = decay_function
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Predict scores for nonzero users in X
@@ -130,5 +150,5 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         # The maximal timestamp in the matrix is used as 'now',
         # age is encoded as now - t
         now = timestamp_mat.data.max()
-        timestamp_mat.data = np.exp(-decay * (now - timestamp_mat.data))
+        timestamp_mat.data = self.DECAY_FUNCTIONS[self.decay_function](now - timestamp_mat.data, decay)
         return csr_matrix(timestamp_mat)
