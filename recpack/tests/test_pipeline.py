@@ -5,8 +5,12 @@ import time
 from unittest.mock import MagicMock, mock_open, patch
 import yaml
 
-from recpack.pipelines import PipelineBuilder, ALGORITHM_REGISTRY, METRIC_REGISTRY
-
+from recpack.pipelines import (
+    PipelineBuilder,
+    ALGORITHM_REGISTRY,
+    METRIC_REGISTRY,
+)
+from recpack.splitters.scenarios import Timed
 
 # ---- TEST REGISTRIES
 def test_metric_registry():
@@ -45,7 +49,7 @@ def pipeline_builder(mat):
     pb.add_metric("CalibratedRecallK", 3)
     pb.add_algorithm("ItemKNN", params={"K": 2})
     pb.add_algorithm("EASE", params={"l2": 2})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
 
     return pb
@@ -60,7 +64,8 @@ def pipeline_builder_optimisation(mat):
     pb.add_metric("CalibratedRecallK", 3)
     pb.add_algorithm("ItemKNN", grid={"K": [1, 2, 3]})
     pb.add_algorithm("EASE", grid={"l2": [2, 10]})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
+    pb.set_validation_training_data(mat)
     pb.set_optimisation_metric("CalibratedRecallK", 2)
     pb.set_test_data((mat, mat))
     pb.set_validation_data((mat, mat))
@@ -75,7 +80,9 @@ def test_pipeline_builder(mat):
     # Build empty pipeline
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert error.value.args[0] == "No metrics specified, can't construct pipeline"
+    assert (
+        error.value.args[0] == "No metrics specified, can't construct pipeline"
+    )
 
     # Add 1 or multiple metrics
     pb.add_metric("CalibratedRecallK", 20)
@@ -86,13 +93,18 @@ def test_pipeline_builder(mat):
     # Build pipeline without algorithms
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert error.value.args[0] == "No algorithms specified, can't construct pipeline"
+    assert (
+        error.value.args[0]
+        == "No algorithms specified, can't construct pipeline"
+    )
 
     # Add algorithms
     pb.add_algorithm("ItemKNN", params={"K": 20})
     pb.add_algorithm("ItemKNN", grid={"K": [10, 20, 50, 100]})
     pb.add_algorithm(
-        "Prod2Vec", grid={"embedding_size": [10, 20]}, params={"learning_rate": 0.1}
+        "Prod2Vec",
+        grid={"embedding_size": [10, 20]},
+        params={"learning_rate": 0.1},
     )
     assert len(pb.algorithms) == 3
     assert pb.algorithms[0].grid == {}
@@ -116,17 +128,21 @@ def test_pipeline_builder(mat):
         pb.build()
 
     assert (
-        error.value.args[0] == "No training data available, can't construct pipeline."
+        error.value.args[0]
+        == "No full training data available, can't construct pipeline."
     )
 
-    pb.set_train_data(mat)
-    assert pb.train_data.shape == mat.shape
+    pb.set_full_training_data(mat)
+    assert pb.full_training_data.shape == mat.shape
 
     # Build pipeline without test data
     with pytest.raises(RuntimeError) as error:
         pb.build()
 
-    assert error.value.args[0] == "No test data available, can't construct pipeline."
+    assert (
+        error.value.args[0]
+        == "No test data available, can't construct pipeline."
+    )
 
     pb.set_test_data((mat, mat))
     assert len(pb.test_data) == 2
@@ -146,13 +162,25 @@ def test_pipeline_builder(mat):
     assert len(pb.validation_data) == 2
     assert pb.validation_data[0].shape == mat.shape
 
+    # Build pipeline that needs to be optimized without validation training data
+    with pytest.raises(RuntimeError) as error:
+        pb.build()
+
+    assert (
+        error.value.args[0]
+        == "No validation training data available to perform the requested hyperparameter optimisation"
+        ", can't construct pipeline."
+    )
+
+    pb.set_validation_training_data(mat)
+    assert pb.validation_training_data.shape == mat.shape
+
     pipeline = pb.build()
 
     assert len(pipeline.metrics) == 3
     assert len(pipeline.algorithms) == 3
     assert pipeline.optimisation_metric.name == "CalibratedRecallK"
     assert pipeline.optimisation_metric.K == 20
-    assert pipeline.train_data.shape == mat.shape
     assert pipeline.test_data is not None
     assert pipeline.validation_data is not None
 
@@ -173,7 +201,7 @@ def test_pipeline_builder_no_optimisation(mat):
     pb = PipelineBuilder()
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
 
     pipeline = pb.build()
@@ -187,7 +215,7 @@ def test_pipeline_duplicate_metric(mat):
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
 
     assert len(pb.metrics) == 1
@@ -200,25 +228,30 @@ def test_pipeline_mismatching_shapes_test(mat, larger_mat):
     pb = PipelineBuilder()
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((larger_mat, larger_mat))
 
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert error.value.args[0] == "Shape mismatch between test and training data"
+    assert (
+        error.value.args[0] == "Shape mismatch between test and training data"
+    )
 
 
 def test_pipeline_mismatching_shapes_validation(mat, larger_mat):
     pb = PipelineBuilder()
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_algorithm("ItemKNN", params={"K": 20})
-    pb.set_train_data(mat)
+    pb.set_full_training_data(mat)
     pb.set_test_data((mat, mat))
     pb.set_validation_data((larger_mat, larger_mat))
 
     with pytest.raises(RuntimeError) as error:
         pb.build()
-    assert error.value.args[0] == "Shape mismatch between validation and training data"
+    assert (
+        error.value.args[0]
+        == "Shape mismatch between validation and training data"
+    )
 
 
 def test_pipeline_builder_bad_test_data(mat):
@@ -266,7 +299,23 @@ def test_pipeline_builder_pipeline_config(pipeline_builder):
     assert d["algorithms"][1]["name"] == "EASE"
 
 
-def test_save(pipeline_builder, mat):
+def test_set_data_from_scenario(mat):
+    pb = PipelineBuilder()
+    pb.add_metric("CalibratedRecallK", 2)
+    pb.add_metric("CalibratedRecallK", 3)
+    pb.add_algorithm("ItemKNN", params={"K": 2})
+    pb.add_algorithm("EASE", params={"l2": 2})
+    scenario = Timed(t=3, t_validation=2, validation=True)
+    scenario.split(mat)
+    pb.set_data_from_scenario(scenario)
+    assert len(pb.test_data) == 2
+    assert len(pb.validation_data) == 2
+    assert pb.full_training_data.shape == mat.shape
+    assert pb.validation_training_data.shape == mat.shape
+
+
+def test_save_no_optimisation(pipeline_builder, mat):
+    # TODO Add test with validation data
 
     mocker = mock_open()
     mocker2 = mock_open()
@@ -279,7 +328,7 @@ def test_save(pipeline_builder, mat):
     assert mocker2.call_count == 3
 
     assert mocker2.call_args_list[0].args == (
-        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/train_properties.yaml",
+        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/full_train_properties.yaml",
         "w",
     )
     assert mocker2.call_args_list[1].args == (
@@ -292,20 +341,26 @@ def test_save(pipeline_builder, mat):
     )
 
     mocker.assert_called_with(
-        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/config.yaml", "w"
+        f"{pipeline_builder.base_path}/{pipeline_builder.folder_name}/config.yaml",
+        "w",
     )
     handler = mocker()
-    handler.write.assert_called_with(yaml.safe_dump(pipeline_builder._pipeline_config))
+    handler.write.assert_called_with(
+        yaml.safe_dump(pipeline_builder._pipeline_config)
+    )
 
 
 def test_load(pipeline_builder, mat):
 
-    mocker = mock_open(read_data=yaml.safe_dump(pipeline_builder._pipeline_config))
+    mocker = mock_open(
+        read_data=yaml.safe_dump(pipeline_builder._pipeline_config)
+    )
     mocker2 = mock_open(read_data=yaml.safe_dump(mat.properties.to_dict()))
     mocker3 = MagicMock(return_value=mat._df)
 
     pb2 = PipelineBuilder(
-        folder_name=pipeline_builder.folder_name, base_path=pipeline_builder.base_path
+        folder_name=pipeline_builder.folder_name,
+        base_path=pipeline_builder.base_path,
     )
 
     with patch("recpack.data.matrix.pd.read_csv", mocker3):

@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from typing import List
-from recpack.data.datasets.dataset import Dataset, _fetch_remote
+from recpack.data.datasets.base import Dataset, _fetch_remote
 
 from recpack.preprocessing.filters import (
     Filter,
@@ -57,9 +57,7 @@ class CiteULike(Dataset):
         """Download the users.dat file from the github repository.
         The file is saved at the specified `self.file_path`
         """
-        DATASETURL = (
-            "https://raw.githubusercontent.com/js05212/citeulike-a/master/users.dat"
-        )
+        DATASETURL = "https://raw.githubusercontent.com/js05212/citeulike-a/master/users.dat"
         _fetch_remote(DATASETURL, self.file_path)
 
     def load_dataframe(self) -> pd.DataFrame:

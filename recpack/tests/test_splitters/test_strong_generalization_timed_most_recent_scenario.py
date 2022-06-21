@@ -1,6 +1,4 @@
 import pytest
-import numpy as np
-import pandas as pd
 import warnings
 
 import recpack.splitters.scenarios as scenarios
@@ -15,7 +13,7 @@ TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 def test_strong_generalization_timed_most_recent_split(data_m_sessions, t, n):
     scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, n=n)
     scenario.split(data_m_sessions)
-    tr = scenario.training_data
+    tr = scenario.full_training_data
     te_data_in, te_data_out = scenario.test_data
 
     # User earliest/latest interaction times, indexed by user
@@ -36,9 +34,7 @@ def test_strong_generalization_timed_most_recent_split(data_m_sessions, t, n):
 
     # No actions should ever be discarded, no set should be empty for these settings
     assert (
-        actions_per_user_tr.sum()
-        + actions_per_user_te_in.sum()
-        + actions_per_user_te_out.sum()
+        actions_per_user_tr.sum() + actions_per_user_te_in.sum() + actions_per_user_te_out.sum()
     ) == actions_per_user_total.sum()
     assert actions_per_user_tr.sum() > 0
     assert actions_per_user_te_in.sum() > 0
@@ -62,18 +58,16 @@ def test_strong_generalization_timed_most_recent_split(data_m_sessions, t, n):
 
 @pytest.mark.parametrize("t, t_val, n", [(5, 4, 1), (5, 4, -2)])
 def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val, n):
-    scenario = scenarios.StrongGeneralizationTimedMostRecent(
-        t=t, t_validation=t_val, n=n, validation=True
-    )
+    scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, t_validation=t_val, n=n, validation=True)
     scenario.split(data_m_sessions)
-    tr = scenario.training_data
+    val_tr = scenario.validation_training_data
+    full_tr = scenario.full_training_data
     val_data_in, val_data_out = scenario.validation_data
     te_data_in, te_data_out = scenario.test_data
 
     # User earliest/latest interaction times, indexed by user
     last_action_val_in = val_data_in._df.groupby(USER_IX)[TIMESTAMP_IX].max()
-    first_action_val_out = val_data_out._df.groupby(USER_IX)[
-        TIMESTAMP_IX].min()
+    first_action_val_out = val_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].min()
     last_action_val_out = val_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].max()
     last_action_te_in = te_data_in._df.groupby(USER_IX)[TIMESTAMP_IX].max()
     first_action_te_out = te_data_out._df.groupby(USER_IX)[TIMESTAMP_IX].min()
@@ -81,7 +75,7 @@ def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val
 
     # Nr. of user actions, indexed by user
     actions_per_user_total = data_m_sessions._df[USER_IX].value_counts()
-    actions_per_user_tr = tr._df[USER_IX].value_counts()
+    actions_per_user_tr = val_tr._df[USER_IX].value_counts()
     actions_per_user_val_in = val_data_in._df[USER_IX].value_counts()
     actions_per_user_val_out = val_data_out._df[USER_IX].value_counts()
     actions_per_user_val = actions_per_user_total[actions_per_user_val_in.index]
@@ -90,10 +84,15 @@ def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val
     actions_per_user_test = actions_per_user_total[actions_per_user_te_in.index]
 
     # User actions should never be split between train and validation or test sets
-    assert not tr.active_users.intersection(val_data_in.active_users)
-    assert not tr.active_users.intersection(val_data_out.active_users)
-    assert not tr.active_users.intersection(te_data_in.active_users)
-    assert not tr.active_users.intersection(te_data_out.active_users)
+    assert not val_tr.active_users.intersection(val_data_in.active_users)
+    assert not val_tr.active_users.intersection(val_data_out.active_users)
+    assert not val_tr.active_users.intersection(te_data_in.active_users)
+    assert not val_tr.active_users.intersection(te_data_out.active_users)
+
+    # full training data should contain users from both validation_training
+    # and validation evaluation datasets.
+    assert full_tr.active_users.intersection(val_data_in.active_users) == val_data_in.active_users
+    assert full_tr.active_users.intersection(val_tr.active_users) == val_tr.active_users
 
     # No actions should ever be discarded, no set should be empty for these settings
     assert (
@@ -110,7 +109,7 @@ def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val
     assert actions_per_user_te_out.sum() > 0
 
     # Time of last user action decides if actions are placed in train or validation or test
-    assert (tr.timestamps < t_val).all()
+    assert (val_tr.timestamps < t_val).all()
     assert (last_action_val_out >= t_val).all()
     assert (last_action_val_out < t).all()
     assert (last_action_te_out >= t).all()
@@ -143,7 +142,6 @@ def test_strong_generalization_timed_most_recent_too_few_actions(data_m_sessions
         scenario.split(data_m_sessions)
         assert len(w) > 0
 
-    tr = scenario.training_data
     te_data_in, te_data_out = scenario.test_data_in, scenario.test_data_out
 
     # Nr. of user actions, indexed by user

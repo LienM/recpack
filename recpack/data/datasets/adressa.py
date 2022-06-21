@@ -1,77 +1,72 @@
-"""Module responsible for the MovieLens25M dataset."""
-
 import numpy as np
 import os
 import pandas as pd
+import tarfile
 from typing import List
-import zipfile
-from recpack.data.datasets.base import Dataset, _fetch_remote
 
+from recpack.data.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (
     Filter,
     MinItemsPerUser,
     MinUsersPerItem,
-    MinRating,
 )
 
 
-class MovieLens25M(Dataset):
-    """Handles Movielens 25M dataset.
+class AdressaOneWeek(Dataset):
+    """Handles the 1 week dataset of adressa.
 
-    All information on the dataset can be found at https://grouplens.org/datasets/movielens/25m/.
-    Uses the `ratings.csv` file to generate an interaction matrix.
+    All information on the dataset can be found at https://reclab.idi.ntnu.no/dataset/.
+    Uses the `ratings.csv` file to generate an InteractionMatrix.
 
     Default processing makes sure that:
 
-    - Each rating above or equal to 1 is used as interaction
     - Each remaining user has interacted with at least 3 items
-    - Each remaining  item has been interacted with by at least 5 users
+    - Each remaining item has been interacted with by at least 5 users
 
-    To use another value as minimal rating to mark interaction as positive,
-    you have to manually set the preprocessing filters.::
+    To change the filter conditions, you can manually set the preprocessing filters.::
 
         from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
-        from recpack.data.datasets import MovieLens25M
-        d = MovieLens25M('path/to/file', preprocess_default=False)
-        d.add_filter(MinRating(3, d.RATING_IX, 3))
+        from recpack.data.datasets import AdressaOneWeek
+        d = AdressaOneWeek(path='path/to', filename='file', preprocess_default=False)
         d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
         d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
     :param path: The path to the data directory.
         Defaults to `data`
     :type path: Optional[str]
-    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
+    :param filename: Name of the file, if no name is provided the dataset default
+        will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: Optional[str]
-    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
+    :param preprocess_default: Should a default set of filters be initialised?
+        Defaults to True
     :type preprocess_default: bool, optional
 
     """
 
     USER_IX = "userId"
     """Name of the column in the DataFrame that contains user identifiers."""
-    ITEM_IX = "movieId"
+    ITEM_IX = "id"
     """Name of the column in the DataFrame that contains item identifiers."""
-    TIMESTAMP_IX = "timestamp"
+    TIMESTAMP_IX = "time"
     """Name of the column in the DataFrame that contains time of interaction in seconds since epoch."""
-    RATING_IX = "rating"
-    """Name of the column in the DataFrame that contains the rating a user gave to the item."""
 
-    DEFAULT_FILENAME = "ratings.csv"
+    DEFAULT_FILENAME = "adressa_one_week.csv"
     """Default filename that will be used if it is not specified by the user."""
+
+    DATASET_URL = "https://reclab.idi.ntnu.no/dataset/one_week.tar.gz"
+    """URL to fetch the dataset from."""
 
     @property
     def _default_filters(self) -> List[Filter]:
-        """The default filters for the Movielens 25M dataset
+        """The default filters for the Adressa dataset
 
-        By default each rating is considered as an interaction.
         Filters users and items with not enough interactions.
 
         :return: List of filters to use as default preprocessing.
         :rtype: List[Filter]
         """
         return [
-            MinRating(1, self.RATING_IX),
             MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
             MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
         ]
@@ -81,17 +76,36 @@ class MovieLens25M(Dataset):
 
         Downloads the zipfile, and extracts the ratings file to `self.file_path`
         """
-        DATASETURL = "http://files.grouplens.org/datasets/movielens/ml-25m.zip"
 
-        # Download the zip into the data directory
-        _fetch_remote(DATASETURL, os.path.join(self.path, "ml-25m.zip"))
+        zipfile_name = "one_week.tar.gz"
+        if not os.path.exists(os.path.join(self.path, zipfile_name)):
+            # Download the zip into the data directory
+            _fetch_remote(self.DATASET_URL, os.path.join(self.path, zipfile_name))
 
-        # Extract the ratings file which we will use
-        with zipfile.ZipFile(os.path.join(self.path, "ml-25m.zip"), "r") as zip_ref:
-            zip_ref.extract("ml-25m/ratings.csv", self.path)
+        # Subfiles that should be present in the tarfile
+        fs = [
+            "20170101",
+            "20170102",
+            "20170103",
+            "20170104",
+            "20170105",
+            "20170106",
+            "20170107",
+        ]
 
-        # Rename the ratings file to the specified filename
-        os.rename(os.path.join(self.path, "ml-25m/ratings.csv"), self.file_path)
+        tar = tarfile.open(os.path.join(self.path, zipfile_name))
+        dfs = []
+        # For each file in the directory:
+        for f in fs:
+            # open the file from the tarfile.
+            g = tar.extractfile(f"one_week/{f}")
+            df = pd.read_json(g, lines=True)
+            if self.ITEM_IX in df and self.TIMESTAMP_IX in df and self.USER_IX in df:
+                dfs.append(df[[self.USER_IX, self.ITEM_IX, self.TIMESTAMP_IX]])
+        df = pd.concat(dfs)
+
+        df.dropna(inplace=True)
+        df.to_csv(os.path.join(self.path, self.filename), header=True, index=False)
 
     def load_dataframe(self) -> pd.DataFrame:
         """Load the data from file, and return as a Pandas DataFrame.
@@ -107,10 +121,9 @@ class MovieLens25M(Dataset):
         df = pd.read_csv(
             self.file_path,
             dtype={
-                self.USER_IX: np.int64,
+                self.USER_IX: str,
                 self.TIMESTAMP_IX: np.int64,
-                self.ITEM_IX: np.int64,
-                self.RATING_IX: np.float64,
+                self.ITEM_IX: str,
             },
         )
 

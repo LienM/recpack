@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from typing import List
-from recpack.data.datasets.dataset import Dataset
+from recpack.data.datasets.base import Dataset
 
 from recpack.preprocessing.filters import (
     Filter,
@@ -83,8 +83,6 @@ class RecsysChallenge2015(Dataset):
         )
 
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
-        df[self.TIMESTAMP_IX] = (
-            df[self.TIMESTAMP_IX].astype(int) / 1e9
-        )  # pandas datetime -> seconds from epoch
+        df[self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].astype(int) / 1e9  # pandas datetime -> seconds from epoch
 
         return df

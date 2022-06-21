@@ -1,4 +1,5 @@
-from recpack.data.datasets.dataset import Dataset
+from recpack.data.datasets.base import Dataset
+from recpack.data.datasets.adressa import AdressaOneWeek
 from recpack.data.datasets.cite_u_like import CiteULike
 from recpack.data.datasets.cosmetics_shop import CosmeticsShop
 from recpack.data.datasets.dummy_dataset import DummyDataset

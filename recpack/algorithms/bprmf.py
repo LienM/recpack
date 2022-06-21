@@ -170,20 +170,15 @@ class BPRMF(TorchMLAlgorithm):
 
     def _init_model(self, X: csr_matrix):
         num_users, num_items = X.shape
-        self.model_ = MFModule(
-            num_users, num_items, num_components=self.num_components
-        ).to(self.device)
+        self.model_ = MFModule(num_users, num_items, num_components=self.num_components).to(self.device)
 
-        self.optimizer = optim.SGD(
-            self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
 
-    def _batch_predict(self, X: csr_matrix, users: List[int] = None) -> csr_matrix:
-        """Predict scores for matrix X, given the selected users.
+    def _batch_predict(self, X: csr_matrix, users: List[int]) -> csr_matrix:
+        """Predict scores for matrix X, given the selected users in this batch
 
-        If there are no selected users, assumes X is a full matrix,
-        and users can be retrieved as the nonzero indices in the X matrix.
-
-        :param X: Matrix of user item interactions
+        :param X: Matrix of user item interactions,
+            expected to only contain interactions for those users that are in `users`
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
@@ -191,15 +186,11 @@ class BPRMF(TorchMLAlgorithm):
         :rtype: csr_matrix
         """
 
-        if users is None:
-            users = get_users(X)
-
         user_tensor = torch.LongTensor(users).to(self.device)
         item_tensor = torch.arange(X.shape[1]).to(self.device)
 
         result = lil_matrix(X.shape)
-        result[users] = self.model_(
-            user_tensor, item_tensor).detach().cpu().numpy()
+        result[users] = self.model_(user_tensor, item_tensor).detach().cpu().numpy()
 
         return result.tocsr()
 
@@ -235,10 +226,7 @@ class BPRMF(TorchMLAlgorithm):
             mnar_sim = self.model_.forward(users, mnar_items).diag()
 
             # Checks to make sure the shapes are correct.
-            if not (
-                (mnar_sim.shape == target_sim.shape)
-                or (target_sim.shape[0] == users.shape[0])
-            ):
+            if not ((mnar_sim.shape == target_sim.shape) or (target_sim.shape[0] == users.shape[0])):
                 raise AssertionError("Shapes should match")
 
             loss = self._compute_loss(target_sim, mnar_sim)
@@ -277,19 +265,15 @@ class MFModule(nn.Module):
         self.num_users = num_users
         self.num_items = num_items
 
-        self.user_embedding_ = nn.Embedding(
-            num_users, num_components)  # User embedding
-        self.item_embedding_ = nn.Embedding(
-            num_items, num_components)  # Item embedding
+        self.user_embedding_ = nn.Embedding(num_users, num_components)  # User embedding
+        self.item_embedding_ = nn.Embedding(num_items, num_components)  # Item embedding
 
         self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
         nn.init.normal_(self.user_embedding_.weight, std=self.std)
         nn.init.normal_(self.item_embedding_.weight, std=self.std)
 
-    def forward(
-        self, user_tensor: torch.Tensor, item_tensor: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, user_tensor: torch.Tensor, item_tensor: torch.Tensor) -> torch.Tensor:
         """
         Compute dot-product of user embedding (w_u) and item embedding (h_i)
         for every user and item pair in user_tensor and item_tensor.

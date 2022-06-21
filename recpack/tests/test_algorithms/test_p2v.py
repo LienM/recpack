@@ -11,7 +11,7 @@ from recpack.algorithms.p2v import Prod2Vec, window
 from recpack.data.matrix import InteractionMatrix
 from recpack.splitters.scenarios import LastItemPrediction
 from recpack.data.matrix import to_csr_matrix
-
+from recpack.algorithms.util import get_users
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 
 
@@ -135,7 +135,7 @@ def test_batch_predict(prod2vec):
     # Which is used for subclasses of this one,
     # but is unused by the based model, so we can use None.
     prod2vec._create_similarity_matrix(None)
-    predictions = prod2vec._batch_predict(matrix)
+    predictions = prod2vec._batch_predict(matrix, get_users(matrix))
 
     np.testing.assert_array_almost_equal(
         predictions.toarray(),
@@ -211,18 +211,14 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
 
     generated_positive_pairs = np.column_stack([all_item_1, all_item_2])
 
-    expected_positive_pairs = np.array(
-        [[1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [0, 1], [4, 2], [2, 4], [0, 1], [1, 0]]
-    )
+    expected_positive_pairs = np.array([[1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [0, 1], [4, 2], [2, 4], [0, 1], [1, 0]])
 
     sorted_generated_positive_pairs = list(map(tuple, generated_positive_pairs))
     sorted_generated_positive_pairs.sort()
     sorted_expected_positive_pairs = list(map(tuple, expected_positive_pairs))
     sorted_expected_positive_pairs.sort()
 
-    np.testing.assert_array_equal(
-        sorted_generated_positive_pairs, sorted_expected_positive_pairs
-    )
+    np.testing.assert_array_equal(sorted_generated_positive_pairs, sorted_expected_positive_pairs)
 
 
 def test_overfit(prod2vec):
@@ -242,7 +238,7 @@ def test_overfit(prod2vec):
     # For user 3 we should learn to predict 3 -> 5
     scenario = LastItemPrediction(validation=True)
     scenario.split(im)
-    train = scenario.train_X
+    train = scenario.validation_training_data
     val_data_in = scenario._validation_data_in
     val_data_out = scenario._validation_data_out
 
@@ -263,3 +259,13 @@ def test_overfit(prod2vec):
     assert 3 not in max_similarity_items[:3]
     assert 4 not in max_similarity_items[:3]
     assert 5 not in max_similarity_items[:3]
+
+
+def test_p2v_fit_no_interaction_matrix(prod2vec, mat):
+    with pytest.raises(TypeError):
+        prod2vec.fit(mat.binary_values, (mat, mat))
+
+
+def test_p2v_fit_no_timestamps(prod2vec, mat):
+    with pytest.raises(ValueError):
+        prod2vec.fit(mat.eliminate_timestamps(), (mat, mat))

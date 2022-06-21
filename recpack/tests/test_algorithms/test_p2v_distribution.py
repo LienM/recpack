@@ -93,18 +93,14 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
 
     generated_positive_pairs = np.column_stack([all_item_1, all_item_2])
 
-    expected_positive_pairs = np.array(
-        [[1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [0, 1], [4, 2], [2, 4], [0, 1], [1, 0]]
-    )
+    expected_positive_pairs = np.array([[1, 0], [0, 1], [2, 3], [3, 2], [1, 0], [0, 1], [4, 2], [2, 4], [0, 1], [1, 0]])
 
     sorted_generated_positive_pairs = list(map(tuple, generated_positive_pairs))
     sorted_generated_positive_pairs.sort()
     sorted_expected_positive_pairs = list(map(tuple, expected_positive_pairs))
     sorted_expected_positive_pairs.sort()
 
-    np.testing.assert_array_equal(
-        sorted_generated_positive_pairs, sorted_expected_positive_pairs
-    )
+    np.testing.assert_array_equal(sorted_generated_positive_pairs, sorted_expected_positive_pairs)
 
 
 def test_overfit(prod2vec):
@@ -124,7 +120,7 @@ def test_overfit(prod2vec):
     # For user 3 we should learn to predict 3 -> 5
     scenario = LastItemPrediction(validation=True)
     scenario.split(im)
-    train = scenario.train_X
+    train = scenario.validation_training_data
     val_data_in = scenario._validation_data_in
     val_data_out = scenario._validation_data_out
 

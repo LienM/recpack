@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from typing import List
-from recpack.data.datasets.dataset import Dataset
+from recpack.data.datasets.base import Dataset
 
 from recpack.preprocessing.filters import (
     Filter,
@@ -103,18 +103,9 @@ class DummyDataset(Dataset):
         np.random.seed(self.seed)
 
         input_dict = {
-            self.USER_IX: [
-                np.random.randint(0, self.num_users)
-                for _ in range(0, self.num_interactions)
-            ],
-            self.ITEM_IX: [
-                np.random.randint(0, self.num_items)
-                for _ in range(0, self.num_interactions)
-            ],
-            self.TIMESTAMP_IX: [
-                np.random.randint(self.min_t, self.max_t)
-                for _ in range(0, self.num_interactions)
-            ],
+            self.USER_IX: [np.random.randint(0, self.num_users) for _ in range(0, self.num_interactions)],
+            self.ITEM_IX: [np.random.randint(0, self.num_items) for _ in range(0, self.num_interactions)],
+            self.TIMESTAMP_IX: [np.random.randint(self.min_t, self.max_t) for _ in range(0, self.num_interactions)],
         }
 
         df = pd.DataFrame.from_dict(input_dict)

@@ -1,4 +1,3 @@
-from functools import partial
 import os
 
 import numpy as np
@@ -7,8 +6,6 @@ import torch
 
 from recpack.algorithms import BPRMF
 from recpack.algorithms.bprmf import MFModule
-from recpack.algorithms.stopping_criterion import StoppingCriterion
-from recpack.metrics.recall import recall_k
 
 
 def test_bprmf(pageviews):
@@ -29,7 +26,6 @@ def test_bprmf_topK(pageviews):
     pred = a.predict(pageviews)
 
     assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
-    print(pred.toarray())
     # Each user should receive a single recommendation
     assert pred.nonzero()[1].shape[0] == len(set(pageviews.nonzero()[0]))
 

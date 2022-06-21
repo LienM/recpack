@@ -2,7 +2,7 @@
 
 import pandas as pd
 from typing import List, Tuple, Union
-from recpack.data.datasets.dataset import Dataset
+from recpack.data.datasets.base import Dataset
 
 from recpack.preprocessing.filters import (
     Filter,
@@ -67,8 +67,7 @@ class RetailRocket(Dataset):
         for event_type in event_types:
             if event_type not in self.ALLOWED_EVENT_TYPES:
                 raise ValueError(
-                    f"{event_type} is not in the allowed event types. "
-                    f"Please use one of {self.ALLOWED_EVENT_TYPES}"
+                    f"{event_type} is not in the allowed event types. " f"Please use one of {self.ALLOWED_EVENT_TYPES}"
                 )
 
         self.event_types = event_types
@@ -118,9 +117,7 @@ class RetailRocket(Dataset):
         # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
         # Original data is in milliseconds since epoch,
         # and so should be divided by 1000
-        df[self.TIMESTAMP_IX] = (
-            df[self.TIMESTAMP_IX].view(int) / 1e3
-        )  # pandas datetime -> seconds from epoch
+        df[self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].view(int) / 1e3  # pandas datetime -> seconds from epoch
 
         # Select only the specified event_types
         if self.event_types:

@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 
 import recpack.splitters.scenarios as scenarios
 
@@ -10,7 +9,7 @@ def test_timed_split(data_m, t):
     scenario = scenarios.Timed(t)
     scenario.split(data_m)
 
-    tr = scenario.training_data
+    tr = scenario.full_training_data
     te_data_in, te_data_out = scenario.test_data
 
     assert (tr.timestamps < t).all()
@@ -39,11 +38,13 @@ def test_timed_split_w_validation(data_m, t):
     scenario = scenarios.Timed(t, t_validation=t_validation, validation=True)
     scenario.split(data_m)
 
-    tr = scenario.training_data
+    val_tr = scenario.validation_training_data
+    full_tr = scenario.full_training_data
     te_data_in, te_data_out = scenario.test_data
     val_data_in, val_data_out = scenario.validation_data
 
-    assert (tr.timestamps < t_validation).all()
+    assert (val_tr.timestamps < t_validation).all()
+    assert (full_tr.timestamps < t).all()
     assert (te_data_in.timestamps < t).all()
     assert (te_data_out.timestamps >= t).all()
     assert (val_data_in.timestamps < t_validation).all()
@@ -77,11 +78,11 @@ def test_timed_split_w_validation_no_full_overlap_users(data_m_small):
     # using copy because the training data was a ref to the validation_data_in member
     # which is edited in the validation_data member fetching
     # Fix made it a copy internally, this test ensures this does not ever change back
-    t_1 = scenario.training_data.copy()
+    t_1 = scenario.full_training_data.copy()
 
     val_data_in, val_data_out = scenario.validation_data
 
-    training_data = scenario.training_data
+    training_data = scenario.validation_training_data
 
     assert t_1.active_users == training_data.active_users
     assert training_data.active_users != val_data_in.active_users
