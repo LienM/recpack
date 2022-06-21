@@ -336,7 +336,6 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         # the current and previous user and timestamp.
         full_df[["previous_user", "previous_timestamp"]] = full_df[[
             self.raw_user_ix, self.timestamp_ix]].shift(periods=1, axis=0)
-        # full_df["last_timestamp"] = full_df[self.timestamp_ix].shift(periods=1, axis=0)
 
         # Check if any of the conditions that trigger the start of a new session is met.
         # Transform boolean values to integer values.
