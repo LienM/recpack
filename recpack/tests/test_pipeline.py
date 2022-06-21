@@ -364,6 +364,19 @@ def test_pipeline(pipeline_builder):
     assert len(metrics[list(metrics.keys())[0]]) == len(pipeline.metrics)
 
 
+def test_pipeline_get_metrics_dataframe(pipeline_builder):
+    pipeline = pipeline_builder.build()
+
+    pipeline.run()
+
+    metric_df = pipeline.get_metrics_dataframe()
+    assert metric_df.shape == (len(pipeline.algorithms), len(pipeline.metrics))
+
+    metric_df_short = pipeline.get_metrics_dataframe(short=True)
+    assert metric_df.shape == metric_df_short.shape
+    assert all(["(" not in x for x in metric_df_short.index.values])
+
+
 def test_pipeline_save_metrics(pipeline_builder):
     pipeline = pipeline_builder.build()
 

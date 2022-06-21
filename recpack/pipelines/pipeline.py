@@ -3,7 +3,7 @@ from collections import defaultdict, namedtuple
 from collections.abc import Iterable
 import datetime
 import os
-from typing import Tuple, Union, Dict, List
+from typing import Tuple, Union, Dict, List, Optional
 import yaml
 
 import pandas as pd
@@ -229,16 +229,25 @@ class Pipeline(object):
         Returns a nested dict, with structure:
         <algorithm> -> <metric> -> value
 
-        It can be easily rendered into a well readable table using pandas::
-
-            import pandas as pd
-
-            pd.DataFrame.from_dict(pipeline.get_metrics())
-
         :return: Metric values as a nested dict.
         :rtype: Dict[str, Dict[str, float]]
         """
         return self._metric_acc.metrics
+
+    def get_metrics_dataframe(self, short: Optional[bool] = False):
+        """Get a dataframe with the algorithms as keys.
+
+        :param short: If short is True, only the algorithm names are returned, and not the parameters.
+            Defaults to False
+        :type short: Optional[bool]
+        """
+        df = pd.DataFrame.from_dict(self.get_metrics()).T
+        print(df)
+        if short:
+            # Parameters are between (), so if we split on the (,
+            # we can get just the algorithm name by taking the first of the splits.
+            df.index = df.index.map(lambda x: x.split("(")[0])
+        return df
 
     def save_metrics(self) -> None:
         """Save the metrics in a json file
