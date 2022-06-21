@@ -148,8 +148,8 @@ class DataFramePreprocessor:
         return self.process_many(df)[0]
 
     def process_many(self, *dfs: pd.DataFrame) -> List[InteractionMatrix]:
-        """
-        Process all DataFrames passed as arguments.
+        """Process all DataFrames passed as arguments.
+
         If your pipeline requires more than one DataFrame,
         pass all of them to a single call of process to guarantee
         that their dimensions will match.
@@ -305,9 +305,15 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         self.gap_between_sessions = gap_between_sessions
 
     def process_many(self, *dfs: pd.DataFrame):
-        """Process multiple dataframes into sessions.
+        """Process all DataFrames passed as arguments.
 
         Dataframes are processed together, such that interactions from two dataframes can be put into the same session.
+
+        :param dfs: Dataframes to process
+        :type dfs: pd.DataFrame
+        :return: A list of InteractionMatrix objects in the order
+            the pandas DataFrames were passed in.
+        :rtype: List[InteractionMatrix]
         """
 
         # In order to make sure that session_ids are correct, we will concatenate the dataframes,
