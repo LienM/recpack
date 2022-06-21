@@ -221,7 +221,7 @@ class DataFramePreprocessor:
 
 class SessionDataFramePreprocessor(DataFramePreprocessor):
     """Class to preprocess a Pandas Dataframe and turn it into a InteractionMatrix object.
-        User interaction histories are split into sessions.
+    User interaction histories are split into sessions.
 
     Preprocessing has four steps
 
