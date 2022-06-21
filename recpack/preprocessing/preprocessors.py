@@ -317,6 +317,8 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         # In order to make sure that session_ids are correct, we will concatenate the DataFrames,
         # split this DataFrame into sessions, and then split into the original DataFrames again.
         num_dfs = len(dfs)
+        # Concatenate DataFrames and add a unique index value
+        # for every original DataFrame using `keys`
         full_df = pd.concat(dfs, keys=range(0, num_dfs))
 
         # Check if all required columns are present
@@ -352,6 +354,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         session_df = full_df[[self.SESSION_IX, self.item_ix,
                               self.timestamp_ix]].sort_index()
 
-        # Separate original DataFrames.
+        # Separate original DataFrames by grouping on the DataFrame index
+        # And passing these groups to the super()-call
         grouped = session_df.groupby(level=0)
         return super().process_many(*[grouped.get_group(i) for i in grouped.groups.keys()])
