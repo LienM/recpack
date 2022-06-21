@@ -10,6 +10,28 @@ from recpack.preprocessing.preprocessors import (
 from recpack.data.matrix import InteractionMatrix
 
 
+@pytest.fixture
+def session_pageviews():
+    return pd.DataFrame.from_dict(
+        {
+            InteractionMatrix.USER_IX: [1, 1, 1, 2, 2, 3, 3, 5, 5],
+            InteractionMatrix.ITEM_IX: [0, 1, 2, 0, 1, 0, 1, 0, 1],
+            InteractionMatrix.TIMESTAMP_IX: [1, 5, 8, 1, 9, 1, 3, 1, 2],
+        }
+    )
+
+
+@pytest.fixture
+def session_purchases():
+    return pd.DataFrame.from_dict(
+        {
+            InteractionMatrix.USER_IX: [1, 2, 3, 5],
+            InteractionMatrix.ITEM_IX: [0, 0, 0, 0],
+            InteractionMatrix.TIMESTAMP_IX: [7, 5, 8, 9],
+        }
+    )
+
+
 def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
     processor = DataFramePreprocessor(
@@ -237,7 +259,7 @@ def test_session_dataframe_preprocessor_sunny_day(dataframe_with_fixed_timestamp
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
         timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
-        gap_between_sessions=2,
+        max_seconds_idle=2,
     )
     interaction_m = processor.process(dataframe_with_fixed_timestamps)
 
@@ -267,63 +289,6 @@ def test_session_dataframe_preprocessor_sunny_day(dataframe_with_fixed_timestamp
 
 
 @pytest.mark.parametrize(
-    "item_ix, user_ix, timestamp_ix",
-    [
-        (
-            "this_is_not_there",
-            InteractionMatrix.USER_IX,
-            InteractionMatrix.TIMESTAMP_IX,
-        ),
-        (
-            "this_is_not_there",
-            InteractionMatrix.USER_IX,
-            InteractionMatrix.TIMESTAMP_IX,
-        ),  # TODO: add more cases here
-        (
-            InteractionMatrix.ITEM_IX,
-            "this_is_not_here",
-            InteractionMatrix.TIMESTAMP_IX,
-        ),
-        (
-            InteractionMatrix.ITEM_IX,
-            InteractionMatrix.USER_IX,
-            "this_is_not_there",
-        ),
-        (
-            "this_is_not_there",
-            "this_is_not_there",
-            InteractionMatrix.TIMESTAMP_IX,
-        ),
-        (
-            "this_is_not_there",
-            InteractionMatrix.USER_IX,
-            "this_is_not_there",
-        ),
-        (
-            InteractionMatrix.ITEM_IX,
-            "this_is_not_there",
-            "this_is_not_there",
-        ),
-        (
-            "this_is_not_there",
-            "this_is_not_there",
-            "this_is_not_there",
-        ),
-    ],
-)
-def test_session_raises(dataframe, item_ix, user_ix, timestamp_ix):
-    processor = SessionDataFramePreprocessor(
-        item_ix,
-        user_ix,
-        timestamp_ix,
-    )
-
-    with pytest.raises(ValueError) as excinfo:
-        processor._cut_into_sessions(dataframe)
-    assert "One of the element doesn't exist!" in str(excinfo.value)
-
-
-@pytest.mark.parametrize(
     "column_to_drop",
     [
         InteractionMatrix.ITEM_IX,
@@ -338,31 +303,9 @@ def test_session_raises_missing_column(dataframe, column_to_drop):
         InteractionMatrix.TIMESTAMP_IX,
     )
     dataframe.drop(column_to_drop, axis="columns", inplace=True)
-    with pytest.raises(ValueError) as excinfo:
-        processor._cut_into_sessions(dataframe)
-    assert "One of the element doesn't exist!" in str(excinfo.value)
-
-
-@pytest.fixture
-def session_pageviews():
-    return pd.DataFrame.from_dict(
-        {
-            InteractionMatrix.USER_IX: [1, 1, 1, 2, 2, 3, 3, 5, 5],
-            InteractionMatrix.ITEM_IX: [0, 1, 2, 0, 1, 0, 1, 0, 1],
-            InteractionMatrix.TIMESTAMP_IX: [1, 5, 8, 1, 9, 1, 3, 1, 2],
-        }
-    )
-
-
-@pytest.fixture
-def session_purchases():
-    return pd.DataFrame.from_dict(
-        {
-            InteractionMatrix.USER_IX: [1, 2, 3, 5],
-            InteractionMatrix.ITEM_IX: [0, 0, 0, 0],
-            InteractionMatrix.TIMESTAMP_IX: [7, 5, 8, 9],
-        }
-    )
+    with pytest.raises(KeyError) as excinfo:
+        processor.process(dataframe)
+    assert "The SessionDataFrameProcessor is missing columns" in str(excinfo.value)
 
 
 def test_session_dataframe_preprocessor_process_many(
@@ -372,7 +315,7 @@ def test_session_dataframe_preprocessor_process_many(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,
         timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
-        gap_between_sessions=5,
+        max_seconds_idle=5,
     )
     pv_im, pur_im = processor.process_many(session_pageviews, session_purchases)
 
