@@ -6,7 +6,7 @@ from typing import List, Optional
 import pandas as pd
 
 import recpack.preprocessing.util as util
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.preprocessing.filters import Filter
 
 from tqdm.auto import tqdm
@@ -112,17 +112,13 @@ class DataFramePreprocessor:
     def _map_users(self, df):
         logger.debug("Map users")
         if not self.user_id_mapping:
-            raise RuntimeError(
-                "User ID Mapping should be fit before attempting to map users"
-            )
+            raise RuntimeError("User ID Mapping should be fit before attempting to map users")
         return df[self.user_ix].progress_map(lambda x: self.user_id_mapping.get(x))
 
     def _map_items(self, df):
         logger.debug("Map items")
         if not self.item_id_mapping:
-            raise RuntimeError(
-                "Item ID Mapping should be fit before attempting to map items"
-            )
+            raise RuntimeError("Item ID Mapping should be fit before attempting to map items")
         return df[self.item_ix].progress_map(lambda x: self.item_id_mapping.get(x))
 
     @property
@@ -163,10 +159,8 @@ class DataFramePreprocessor:
         for index, df in enumerate(dfs):
             logger.debug(f"Processing df {index}")
             logger.debug(f"\tinteractions before preprocess: {len(df.index)}")
-            logger.debug(
-                f"\titems before preprocess: {df[self.item_ix].nunique()}")
-            logger.debug(
-                f"\tusers before preprocess: {df[self.user_ix].nunique()}")
+            logger.debug(f"\titems before preprocess: {df[self.item_ix].nunique()}")
+            logger.debug(f"\tusers before preprocess: {df[self.user_ix].nunique()}")
 
         for filter in self.filters:
             logger.debug(f"applying filter: {filter}")
@@ -174,10 +168,8 @@ class DataFramePreprocessor:
             for index, df in enumerate(dfs):
                 logger.debug(f"df {index}")
                 logger.debug(f"\tinteractions after filter: {len(df.index)}")
-                logger.debug(
-                    f"\titems after filter: {df[self.item_ix].nunique()}")
-                logger.debug(
-                    f"\tusers after filter: {df[self.user_ix].nunique()}")
+                logger.debug(f"\titems after filter: {df[self.item_ix].nunique()}")
+                logger.debug(f"\tusers after filter: {df[self.user_ix].nunique()}")
 
         for index, df in enumerate(dfs):
             self._update_id_mappings(df)
@@ -211,12 +203,8 @@ class DataFramePreprocessor:
         item_ids = list(df[self.item_ix].unique())
         user_ids = list(df[self.user_ix].unique())
 
-        self.user_id_mapping = util.rescale_id_space(
-            user_ids, id_mapping=self.user_id_mapping
-        )
-        self.item_id_mapping = util.rescale_id_space(
-            item_ids, id_mapping=self.item_id_mapping
-        )
+        self.user_id_mapping = util.rescale_id_space(user_ids, id_mapping=self.user_id_mapping)
+        self.item_id_mapping = util.rescale_id_space(item_ids, id_mapping=self.item_id_mapping)
 
 
 class SessionDataFramePreprocessor(DataFramePreprocessor):
@@ -322,8 +310,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         full_df = pd.concat(dfs, keys=range(0, num_dfs))
 
         # Check if all required columns are present
-        missing_cols = {self.raw_user_ix, self.item_ix,
-                        self.timestamp_ix}.difference(full_df.columns)
+        missing_cols = {self.raw_user_ix, self.item_ix, self.timestamp_ix}.difference(full_df.columns)
 
         if missing_cols:
             raise KeyError(
@@ -336,8 +323,9 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         full_df = full_df.sort_values([self.raw_user_ix, self.timestamp_ix])
         # Shift users and timestamps by one, so that every row contains
         # the current and previous user and timestamp.
-        full_df[["previous_user", "previous_timestamp"]] = full_df[[
-            self.raw_user_ix, self.timestamp_ix]].shift(periods=1, axis=0)
+        full_df[["previous_user", "previous_timestamp"]] = full_df[[self.raw_user_ix, self.timestamp_ix]].shift(
+            periods=1, axis=0
+        )
 
         # Check if any of the conditions that trigger the start of a new session is met.
         # Transform boolean values to integer values.
@@ -351,8 +339,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         # rows within the same session are assigned the same cumsum value.
         full_df[self.SESSION_IX] = full_df["start_of_session"].cumsum()
 
-        session_df = full_df[[self.SESSION_IX, self.item_ix,
-                              self.timestamp_ix]].sort_index()
+        session_df = full_df[[self.SESSION_IX, self.item_ix, self.timestamp_ix]].sort_index()
 
         # Separate original DataFrames by grouping on the DataFrame index
         # And passing these groups to the super()-call

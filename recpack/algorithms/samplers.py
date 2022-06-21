@@ -3,7 +3,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.data.matrix import InteractionMatrix, to_binary
+from recpack.matrix import InteractionMatrix, to_binary
 from recpack.algorithms.util import get_batches
 
 
@@ -75,9 +75,7 @@ class PositiveNegativeSampler(Sampler):
         self.exact = exact
 
         if distribution not in self.ALLOWED_DISTRIBUTIONS:
-            raise ValueError(
-                f"unknown distribution, use one of {self.ALLOWED_DISTRIBUTIONS}"
-            )
+            raise ValueError(f"unknown distribution, use one of {self.ALLOWED_DISTRIBUTIONS}")
 
         self.distribution = distribution  # TODO: Enum style value, to avoid mismatches?
 
@@ -132,19 +130,15 @@ class PositiveNegativeSampler(Sampler):
         # Make sure we can actually sample the requested sample_size
         # without replacement samplesize should <= number of positives to choose from.
         if not self.replace and sample_size > num_positives:
-            raise RuntimeError(
-                "Can't sample more samples than positive entries without replacement"
-            )
+            raise RuntimeError("Can't sample more samples than positive entries without replacement")
 
         # Pick interactions at random, with replacement
-        samples = np.random.choice(
-            num_positives, size=(sample_size,), replace=self.replace
-        )
+        samples = np.random.choice(num_positives, size=(sample_size,), replace=self.replace)
 
         negative_sample_probabilities = self._get_distribution(X)
 
         for start in range(0, sample_size, self.batch_size):
-            sample_batch = samples[start: start + self.batch_size]
+            sample_batch = samples[start : start + self.batch_size]
 
             batch = positives[sample_batch]
             users = batch[:, 0]
@@ -162,9 +156,7 @@ class PositiveNegativeSampler(Sampler):
                 while True:
                     # Approximately fix the negatives that are equal to the positives,
                     # if there are any, assumes collisions are rare
-                    mask = np.apply_along_axis(
-                        lambda col: col == positives_batch, 0, negatives_batch
-                    )
+                    mask = np.apply_along_axis(lambda col: col == positives_batch, 0, negatives_batch)
                     num_incorrect = np.sum(mask)
 
                     if num_incorrect > 0:
@@ -181,9 +173,7 @@ class PositiveNegativeSampler(Sampler):
             else:
                 num_nonzeros = X.shape[1] - X.sum(axis=1)
                 if (num_nonzeros < self.U).any():
-                    raise ValueError(
-                        "Cannot request more negative samples than are possible."
-                    )
+                    raise ValueError("Cannot request more negative samples than are possible.")
 
                 negatives_batch = np.zeros((true_batch_size, self.U))
                 for i in range(0, self.U):
@@ -199,16 +189,12 @@ class PositiveNegativeSampler(Sampler):
 
                     while True:
 
-                        num_incorrect, negatives_mask = _spot_collisions(
-                            users, negatives_batch_col_i, X
-                        )
+                        num_incorrect, negatives_mask = _spot_collisions(users, negatives_batch_col_i, X)
 
                         # Check column against previous columns
                         additional_mask = np.zeros(true_batch_size, dtype=bool)
                         for j in range(0, i):
-                            additional_mask += (
-                                negatives_batch_col_i == negatives_batch[:, j]
-                            )
+                            additional_mask += negatives_batch_col_i == negatives_batch[:, j]
 
                         total_mask = negatives_mask + additional_mask
                         num_incorrect = total_mask.sum()
@@ -227,9 +213,7 @@ class PositiveNegativeSampler(Sampler):
 
                     negatives_batch[:, i] = negatives_batch_col_i
 
-            yield torch.LongTensor(users), torch.LongTensor(
-                positives_batch
-            ), torch.LongTensor(negatives_batch)
+            yield torch.LongTensor(users), torch.LongTensor(positives_batch), torch.LongTensor(negatives_batch)
 
 
 class BootstrapSampler(PositiveNegativeSampler):
@@ -292,9 +276,7 @@ class SequenceMiniBatchSampler(Sampler):
         self.pad_token = pad_token
         self.batch_size = batch_size
 
-    def sample(
-        self, X: InteractionMatrix
-    ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor]]:
+    def sample(self, X: InteractionMatrix) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor]]:
         # item_histories = list(X.sorted_item_history)
         # Do I introduce bias if I sort them by length?
         # item_histories.sort(key=lambda x: len(x[1]), reverse=True)
@@ -309,9 +291,7 @@ class SequenceMiniBatchSampler(Sampler):
             uid_batch = np.zeros((batch_size,), dtype=int)
 
             # Initialize seq_batch with self.pad_token
-            positives_batch = (
-                np.ones((batch_size, max_hist_len), dtype=int) * self.pad_token
-            )
+            positives_batch = np.ones((batch_size, max_hist_len), dtype=int) * self.pad_token
 
             # Add sequences in batch
             for batch_ix, (uid, hist) in enumerate(batch):
@@ -348,10 +328,7 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
 
     def sample(
         self, X: InteractionMatrix
-    ) -> Iterator[
-        Tuple[torch.LongTensor, torch.LongTensor,
-              torch.LongTensor, torch.LongTensor]
-    ]:
+    ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
         """Sample positives, targets and negatives from the input matrix.
 
         Yields tuples of:
@@ -383,9 +360,7 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
 
         # Generate batches of users. Take maximum len of history in batch
         for uid_batch, positives_batch in super().sample(X):
-            negatives_batch = np.random.randint(
-                0, num_items, (*positives_batch.shape, self.U)
-            )
+            negatives_batch = np.random.randint(0, num_items, (*positives_batch.shape, self.U))
 
             targets_batch = np.roll(positives_batch, -1, axis=1)
             # set last item to padding, otherwise 1st item is rolled till here
@@ -397,9 +372,7 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
                 num_incorrect = np.sum(mask)
 
                 if num_incorrect:
-                    new_negatives = np.random.randint(
-                        0, num_items, size=(num_incorrect,)
-                    )
+                    new_negatives = np.random.randint(0, num_items, size=(num_incorrect,))
 
                     negatives_batch[mask] = new_negatives
                 else:
@@ -413,9 +386,7 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
             )
 
 
-def _spot_collisions(
-    users: np.ndarray, negatives_batch: np.ndarray, X: csr_matrix
-) -> Tuple[int, np.ndarray]:
+def _spot_collisions(users: np.ndarray, negatives_batch: np.ndarray, X: csr_matrix) -> Tuple[int, np.ndarray]:
     """Spot collisions between the negative samples and the interactions in X.
 
     :param users: Ordered batch of users

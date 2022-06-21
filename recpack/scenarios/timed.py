@@ -1,4 +1,4 @@
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.scenarios import Scenario
 from recpack.scenarios.splitters import TimestampSplitter
 

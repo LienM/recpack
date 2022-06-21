@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 from typing import List
-from recpack.data.datasets.base import Dataset, _fetch_remote
+from recpack.datasets.base import Dataset, _fetch_remote
 
 from recpack.preprocessing.filters import (
     Filter,

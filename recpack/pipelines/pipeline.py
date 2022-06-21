@@ -12,7 +12,7 @@ from sklearn.model_selection import ParameterGrid
 from tqdm.auto import tqdm
 
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.scenarios import Scenario
 from recpack.pipelines.registries import MetricRegistry, AlgorithmRegistry
 

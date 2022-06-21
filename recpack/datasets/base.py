@@ -8,7 +8,7 @@ from urllib.request import urlretrieve
 from recpack.preprocessing.filters import (
     Filter,
 )
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.preprocessing.preprocessors import DataFramePreprocessor
 
 
@@ -56,9 +56,7 @@ class Dataset:
     DEFAULT_FILENAME = None
     """Default filename that will be used if it is not specified by the user."""
 
-    def __init__(
-        self, path: str = "data", filename: str = None, preprocess_default=True
-    ):
+    def __init__(self, path: str = "data", filename: str = None, preprocess_default=True):
         self.filename = filename
         if not self.filename:
             if self.DEFAULT_FILENAME:
@@ -67,9 +65,7 @@ class Dataset:
                 raise ValueError("No filename specified, and no default known.")
 
         self.path = path
-        self.preprocessor = DataFramePreprocessor(
-            self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX
-        )
+        self.preprocessor = DataFramePreprocessor(self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX)
         if preprocess_default:
             for f in self._default_filters:
                 self.add_filter(f)

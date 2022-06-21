@@ -2,7 +2,7 @@
 
 import pandas as pd
 from typing import List
-from recpack.data.datasets.base import Dataset
+from recpack.datasets.base import Dataset
 
 from recpack.preprocessing.filters import (
     Filter,

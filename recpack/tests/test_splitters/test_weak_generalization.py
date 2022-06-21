@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 import recpack.scenarios as scenarios
 
 

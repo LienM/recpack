@@ -2,7 +2,7 @@ import pytest
 import warnings
 
 import recpack.scenarios as scenarios
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 USER_IX = InteractionMatrix.USER_IX
 ITEM_IX = InteractionMatrix.ITEM_IX

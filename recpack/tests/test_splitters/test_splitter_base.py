@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 import numpy as np
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 import recpack.scenarios.splitters as splitters
 
 

@@ -296,8 +296,8 @@ def test_save_no_optimisation(pipeline_builder, mat):
     mocker = mock_open()
     mocker2 = mock_open()
     mocker3 = MagicMock()
-    with patch("recpack.data.matrix.pd.DataFrame.to_csv", mocker3):
-        with patch("recpack.data.matrix.open", mocker2):
+    with patch("recpack.matrix.pd.DataFrame.to_csv", mocker3):
+        with patch("recpack.matrix.open", mocker2):
             with patch("recpack.pipelines.pipeline.open", mocker):
                 pipeline_builder.save()
 
@@ -335,8 +335,8 @@ def test_load(pipeline_builder, mat):
         base_path=pipeline_builder.base_path,
     )
 
-    with patch("recpack.data.matrix.pd.read_csv", mocker3):
-        with patch("recpack.data.matrix.open", mocker2):
+    with patch("recpack.matrix.pd.read_csv", mocker3):
+        with patch("recpack.matrix.open", mocker2):
             with patch("recpack.pipelines.pipeline.open", mocker):
 
                 pb2.load()

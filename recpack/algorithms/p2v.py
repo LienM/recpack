@@ -14,7 +14,7 @@ from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.samplers import PositiveNegativeSampler
 from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
 from recpack.algorithms.util import sample_rows
-from recpack.data.matrix import InteractionMatrix, Matrix, to_csr_matrix
+from recpack.matrix import InteractionMatrix, Matrix, to_csr_matrix
 from recpack.util import get_top_K_values
 
 

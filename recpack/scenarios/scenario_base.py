@@ -4,7 +4,7 @@ from typing import Tuple, Union
 from warnings import warn
 
 from recpack.scenarios.splitters import StrongGeneralizationSplitter
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 class Scenario(ABC):

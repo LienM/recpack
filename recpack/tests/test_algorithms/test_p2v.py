@@ -8,9 +8,9 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 
 from recpack.algorithms.p2v import Prod2Vec, window
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.scenarios import LastItemPrediction
-from recpack.data.matrix import to_csr_matrix
+from recpack.matrix import to_csr_matrix
 from recpack.algorithms.util import get_users
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 

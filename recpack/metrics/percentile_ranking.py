@@ -2,7 +2,7 @@ from scipy.sparse import csr_matrix
 
 from recpack.metrics.base import Metric
 from recpack.util import get_top_K_ranks
-from recpack.data.matrix import to_binary
+from recpack.matrix import to_binary
 
 
 class PercentileRanking(Metric):
@@ -60,9 +60,7 @@ class PercentileRanking(Metric):
         # Ranking starts at 0 for this metric
         # ranking.data -= 1
         rank_values = ranking / self.num_items  # to get a percentile ranking
-        rank_values.data = rank_values.data - (
-            1 / self.num_items
-        )  # Ranking starts at 0
+        rank_values.data = rank_values.data - (1 / self.num_items)  # Ranking starts at 0
 
         # Compute the percentile rankings of hits in the topK
         hit_mat = y_true.multiply(rank_values)
@@ -79,9 +77,7 @@ class PercentileRanking(Metric):
 
         # Add the average rank for all non matches.
         pure_hit = y_true.multiply(y_pred)
-        ranking_mat = (y_true - to_binary(pure_hit)).multiply(
-            rank_for_misses_per_user
-        ) + hit_mat
+        ranking_mat = (y_true - to_binary(pure_hit)).multiply(rank_for_misses_per_user) + hit_mat
 
         # Multiply with 100 to get percents io fractions
         ranking_mat = ranking_mat * 100

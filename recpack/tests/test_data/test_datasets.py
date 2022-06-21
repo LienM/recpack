@@ -6,7 +6,7 @@ from tempfile import NamedTemporaryFile
 
 from unittest.mock import patch
 
-from recpack.data import datasets
+from recpack import datasets
 from recpack.preprocessing.filters import MinUsersPerItem, NMostPopular
 
 

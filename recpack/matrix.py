@@ -1,4 +1,34 @@
-"""Module with classes for representing data."""
+"""The matrix module contains the InteractionMatrix class to represent data within the Recpack framework.
+
+.. currentmodule:: recpack.matrix
+
+.. autosummary::
+    :toctree: generated/
+
+    InteractionMatrix
+    to_binary
+    to_csr_matrix
+
+Example
+~~~~~~~~~
+
+An InteractionMatrix object can be constructed from a pandas DataFrame
+with a row for each interaction.
+The ``item`` and ``user`` values will be indices in the resulting matrix.
+The following example constructs a 4x4 matrix, with 4 nonzero values::
+
+    import pandas as pd
+
+    from recpack.matrix import InteractionMatrix
+    data = {
+        "user": [3, 2, 1, 1],
+        "item": [1, 1, 2, 3],
+        "timestamp": [1613736000, 1613736300, 1613736600, 1613736900]
+    }
+    df = pd.DataFrame.from_dict(data)
+    demo_data = InteractionMatrix(df, "item", "user", timestamp_ix="timestamp")
+
+"""
 
 from dataclasses import dataclass, asdict
 import logging
@@ -116,7 +146,9 @@ class InteractionMatrix(DataMatrix):
             )
 
         if self.shape != im.shape:
-            raise ValueError(f"Shapes don't match. This InteractionMatrix has shape {self.shape}, the other {im.shape}")
+            raise ValueError(
+                f"Shapes don't match. This InteractionMatrix has shape {self.shape}, the other {im.shape}"
+            )
 
         timestamp_ix = self.TIMESTAMP_IX if self.has_timestamps else None
 

@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.scenarios import LastItemPrediction
 from recpack.algorithms.p2v import Prod2Vec
 

@@ -4,7 +4,7 @@ import pandas as pd
 import tarfile
 from typing import List
 
-from recpack.data.datasets.base import Dataset, _fetch_remote
+from recpack.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (
     Filter,
     MinItemsPerUser,
@@ -22,14 +22,6 @@ class AdressaOneWeek(Dataset):
 
     - Each remaining user has interacted with at least 3 items
     - Each remaining item has been interacted with by at least 5 users
-
-    To change the filter conditions, you can manually set the preprocessing filters.::
-
-        from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
-        from recpack.data.datasets import AdressaOneWeek
-        d = AdressaOneWeek(path='path/to', filename='file', preprocess_default=False)
-        d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
-        d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
     :param path: The path to the data directory.
         Defaults to `data`

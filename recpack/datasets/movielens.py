@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from typing import List
 import zipfile
-from recpack.data.datasets.base import Dataset, _fetch_remote
+from recpack.datasets.base import Dataset, _fetch_remote
 
 from recpack.preprocessing.filters import (
     Filter,
@@ -31,7 +31,7 @@ class MovieLens25M(Dataset):
     you have to manually set the preprocessing filters.::
 
         from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
-        from recpack.data.datasets import MovieLens25M
+        from recpack.datasets import MovieLens25M
         d = MovieLens25M('path/to/file', preprocess_default=False)
         d.add_filter(MinRating(3, d.RATING_IX, 3))
         d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
