@@ -1,7 +1,7 @@
 """Preprocessors turn data into Recpack internal representations."""
 
 import logging
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -24,7 +24,6 @@ class DataFramePreprocessor:
 
     - Apply filters to the input data
     - Map user and item identifiers to a consecutive id space.
-      Making them usable as indices in a matrix.
     - Construct an InteractionMatrix object
 
     In order to apply filters they should be added using :meth:`add_filter`.
@@ -164,8 +163,10 @@ class DataFramePreprocessor:
         for index, df in enumerate(dfs):
             logger.debug(f"Processing df {index}")
             logger.debug(f"\tinteractions before preprocess: {len(df.index)}")
-            logger.debug(f"\titems before preprocess: {df[self.item_ix].nunique()}")
-            logger.debug(f"\tusers before preprocess: {df[self.user_ix].nunique()}")
+            logger.debug(
+                f"\titems before preprocess: {df[self.item_ix].nunique()}")
+            logger.debug(
+                f"\tusers before preprocess: {df[self.user_ix].nunique()}")
 
         for filter in self.filters:
             logger.debug(f"applying filter: {filter}")
@@ -173,8 +174,10 @@ class DataFramePreprocessor:
             for index, df in enumerate(dfs):
                 logger.debug(f"df {index}")
                 logger.debug(f"\tinteractions after filter: {len(df.index)}")
-                logger.debug(f"\titems after filter: {df[self.item_ix].nunique()}")
-                logger.debug(f"\tusers after filter: {df[self.user_ix].nunique()}")
+                logger.debug(
+                    f"\titems after filter: {df[self.item_ix].nunique()}")
+                logger.debug(
+                    f"\tusers after filter: {df[self.user_ix].nunique()}")
 
         for index, df in enumerate(dfs):
             self._update_id_mappings(df)
@@ -217,15 +220,14 @@ class DataFramePreprocessor:
 
 
 class SessionDataFramePreprocessor(DataFramePreprocessor):
-    """Class to preprocess a Pandas Dataframe and turn it into a InteractionMatrix object,
-    while cutting user histories into sessions
+    """Class to preprocess a Pandas Dataframe and turn it into a InteractionMatrix object.
+        User interaction histories are split into sessions.
 
-    Preprocessing has Four steps
+    Preprocessing has four steps
 
     - Cut user histories into sessions based on the maximal allowed gap in seconds
     - Apply filters to the input data
     - Map session and item identifiers to a consecutive id space.
-      Making them usable as indices in a matrix.
     - Construct an InteractionMatrix object (where each user will represent a session)
 
     In order to apply filters they should be added using :meth:`add_filter`.
@@ -236,9 +238,8 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
     will lead to consistently mapped identifiers.
 
     .. note::
-        When processing multiple DataFrames all dataframes are processed together
-        Events in one can bridge a gap between events of another dataframe,
-        as such different sessions can be found than when processing the dataframes individually.
+        When processing multiple DataFrames all DataFrames are processed together.
+        This is because events in one can bridge a gap between events in another DataFrame.
 
     Example
     ~~~~~~~~~
@@ -247,7 +248,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
     Using filters to
 
     - Remove duplicates
-    - Make sure all users have at least 3 interactions
+    - Make sure all sessions contain at least 3 interactions
 
     ::
 
@@ -274,7 +275,7 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
             MinItemsPerUser(3, "item", "user")
         )
 
-        # apply preprocessing
+        # Apply preprocessing
         im = df_pp.process(df)
 
 
@@ -283,12 +284,11 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
     :param user_ix: Column name of the User ID column
     :type user_ix: str
     :param timestamp_ix: Column name of the timestamp column.
-        If None, no timestamps will be loaded, defaults to None
-    :type timestamp_ix: str, optional
-    :param gap_between_sessions: The maximal gap in seconds between consecutive events
-        before they are put into separate sessions.
-        Defaults to 30*3600 (30 minutes)
-    :type gap_between_sessions: int, optional
+    :type timestamp_ix: str
+    :param max_seconds_idle: If there are more than `max_seconds_idle`
+        between consecutive events, a new session is created.
+        Defaults to 30 * 60 (30 minutes)
+    :type max_seconds_idle: int, optional
     """
 
     SESSION_IX = "session_id"
@@ -298,16 +298,14 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         item_ix: str,
         user_ix: str,
         timestamp_ix: str,
-        gap_between_sessions: int = 30 * 3600,
+        max_seconds_idle: Optional[int] = 30 * 60,
     ):
         super().__init__(item_ix, self.SESSION_IX, timestamp_ix)
         self.raw_user_ix = user_ix
-        self.gap_between_sessions = gap_between_sessions
+        self.max_seconds_idle = max_seconds_idle
 
     def process_many(self, *dfs: pd.DataFrame):
         """Process all DataFrames passed as arguments.
-
-        Dataframes are processed together, such that interactions from two dataframes can be put into the same session.
 
         :param dfs: Dataframes to process
         :type dfs: pd.DataFrame
@@ -316,53 +314,45 @@ class SessionDataFramePreprocessor(DataFramePreprocessor):
         :rtype: List[InteractionMatrix]
         """
 
-        # In order to make sure that session_ids are correct, we will concatenate the dataframes,
-        # cut up this dataframe, and then disentangle everything again.
+        # In order to make sure that session_ids are correct, we will concatenate the DataFrames,
+        # split this DataFrame into sessions, and then split into the original DataFrames again.
+        num_dfs = len(dfs)
+        full_df = pd.concat(dfs, keys=range(0, num_dfs))
 
-        concatenated = pd.concat(dfs, ignore_index=True)
-        events_seen = 0
-        df_slices = []
-        for df in dfs:
-            start_ix = events_seen
-            events_seen = events_seen + df.shape[0]
-            end_ix = events_seen
-            df_slices.append((start_ix, end_ix))
+        # Check if all required columns are present
+        missing_cols = {self.raw_user_ix, self.item_ix,
+                        self.timestamp_ix}.difference(full_df.columns)
 
-        cut_df = self._cut_into_sessions(concatenated)
+        if missing_cols:
+            raise KeyError(
+                f"The SessionDataFrameProcessor is missing columns "
+                f"{missing_cols} in one or more of the DataFrames to process."
+            )
 
-        # Retrieve the right parts of the sessions for each dataframe, and process into interaction matrix
-        return super().process_many(
-            *[cut_df.loc[start_ix:end_ix, :] for start_ix, end_ix in df_slices]
-        )
+        full_df = full_df[[self.raw_user_ix, self.item_ix, self.timestamp_ix]]
+        # Sort the DataFrame
+        full_df = full_df.sort_values([self.raw_user_ix, self.timestamp_ix])
+        # Shift users and timestamps by one, so that every row contains
+        # the current and previous user and timestamp.
+        full_df[["previous_user", "previous_timestamp"]] = full_df[[
+            self.raw_user_ix, self.timestamp_ix]].shift(periods=1, axis=0)
+        # full_df["last_timestamp"] = full_df[self.timestamp_ix].shift(periods=1, axis=0)
 
-    def _cut_into_sessions(self, df) -> pd.DataFrame:
-        # make a copy to avoid editing in place
-        df = df.copy()
+        # Check if any of the conditions that trigger the start of a new session is met.
+        # Transform boolean values to integer values.
+        full_df["start_of_session"] = (
+            full_df["previous_user"].isna()
+            | (full_df[self.raw_user_ix] != full_df["previous_user"])
+            | (full_df[self.timestamp_ix] - full_df["previous_timestamp"] > self.max_seconds_idle)
+        ).astype(int)
 
-        if (
-            self.raw_user_ix not in df
-            or self.item_ix not in df
-            or self.timestamp_ix not in df
-        ):
-            raise ValueError("One of the element doesn't exist!")
+        # Apply cumsum to the "start_of_session" column so that all
+        # rows within the same session are assigned the same cumsum value.
+        full_df[self.SESSION_IX] = full_df["start_of_session"].cumsum()
 
-        df = df[[self.raw_user_ix, self.item_ix, self.timestamp_ix]]
-        # Sort the dataframe inplace
-        df.sort_values([self.raw_user_ix, self.timestamp_ix], inplace=True)
-        # By shifting one ahead, we give each row info about the last timestamp and user
-        df["last_user"] = df[self.raw_user_ix].shift()
-        df["last_timestamp"] = df[self.timestamp_ix].shift()
+        session_df = full_df[[self.SESSION_IX, self.item_ix,
+                              self.timestamp_ix]].sort_index()
 
-        # A new session starts if a new user is detected, or if the gap with the previous event is too big
-        df["start_of_session"] = (
-            df["last_user"].isna()
-            | (df[self.raw_user_ix] != df["last_user"])
-            | (df[self.timestamp_ix] - df["last_timestamp"] > self.gap_between_sessions)
-        )
-
-        # Cumsum on a boolean series makes sure that each value is equal to the number of sessions started.
-        # this gives values from 1 to ...
-        # by reducing by 1 again, we start counting at session 0.
-        df[self.SESSION_IX] = df["start_of_session"].cumsum() - 1
-
-        return df[[self.SESSION_IX, self.item_ix, self.timestamp_ix]].sort_index()
+        # Separate original DataFrames.
+        grouped = session_df.groupby(level=0)
+        return super().process_many(*[grouped.get_group(i) for i in grouped.groups.keys()])
