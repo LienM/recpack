@@ -22,7 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bugfixes
 * __splitters.scenarios__
     * Improved tests for WeakGeneralization scenario to confirm mismatches between train and validation_in are only due to users with not enough items and not a potential bug.
-    * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first. 
+    * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first.
+
+* __algorithms.experimental.time_decay_nearest_neighbour__
+    * Improved computation speed of the algorithm by changing typing
+    * Added `decay_interval` parameter to improve performance.
 
 ### Additions
 * __algorithms__
