@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
+    * Added the `SessionDataFramePreprocessor` which cuts user histories into sessions while processing data into InteractionMatrices.
 
 ## [0.2.2] - ![](https://img.shields.io/date/1643025589.svg?label=2022-01-24)
 
