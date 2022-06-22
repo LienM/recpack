@@ -7,7 +7,7 @@ from tempfile import NamedTemporaryFile
 from unittest.mock import patch
 
 from recpack import datasets
-from recpack.preprocessing.filters import MinUsersPerItem, NMostPopular
+from recpack.preprocessing.filters import MinItemsPerUser, MinUsersPerItem, NMostPopular, MinRating
 
 
 @pytest.fixture()
@@ -138,6 +138,27 @@ def test_movielens25m(path):
     filename = "ml-25m_sample.csv"
 
     d = datasets.MovieLens25M(path=path, filename=filename)
+
+    df = d.load_dataframe()
+    assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()
+
+    assert df.shape == (9999, 4)
+    assert df[d.USER_IX].nunique() == 75
+    assert df[d.ITEM_IX].nunique() == 3287
+
+    data = d.load_interaction_matrix()
+
+    assert data.shape == (75, 260)
+
+
+def test_movielens25m_no_rating_filters(path):
+    # To get sample we used head -10000 ratings.csv
+    filename = "ml-25m_sample.csv"
+
+    d = datasets.MovieLens25M(path=path, filename=filename, preprocess_default=False)
+    d.add_filter(MinRating(1, d.RATING_IX))
+    d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
+    d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()

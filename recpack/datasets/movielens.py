@@ -23,7 +23,8 @@ class MovieLens25M(Dataset):
 
     Default processing makes sure that:
 
-    - Each rating above or equal to 1 is used as interaction
+    - Each rating above or equal to 4 is used as interaction as is done in Liang, Dawen, et al.
+      "Variational autoencoders for collaborative filtering." Proceedings of the 2018 world wide web conference. 2018.
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
@@ -71,7 +72,7 @@ class MovieLens25M(Dataset):
         :rtype: List[Filter]
         """
         return [
-            MinRating(1, self.RATING_IX),
+            MinRating(4, self.RATING_IX),
             MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
             MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
         ]
