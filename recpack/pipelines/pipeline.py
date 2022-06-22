@@ -245,7 +245,7 @@ class Pipeline(object):
         print(df)
         if short:
             # Parameters are between (), so if we split on the (,
-            # we can get just the algorithm name by taking the first of the splits.
+            # we can get the algorithm name by taking the first of the splits.
             df.index = df.index.map(lambda x: x.split("(")[0])
         return df
 
