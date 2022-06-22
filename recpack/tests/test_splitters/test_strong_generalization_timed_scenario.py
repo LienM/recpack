@@ -1,6 +1,6 @@
 import pytest
 
-import recpack.splitters.scenarios as scenarios
+import recpack.scenarios as scenarios
 
 
 @pytest.mark.parametrize("frac_users_in, t", [(0.7, 50), (0.5, 75), (0.3, 40)])

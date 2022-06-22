@@ -1,4 +1,4 @@
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from scipy.sparse import csr_matrix
 import pandas as pd
 import pytest

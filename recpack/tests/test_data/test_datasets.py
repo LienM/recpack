@@ -6,7 +6,7 @@ from tempfile import NamedTemporaryFile
 
 from unittest.mock import patch
 
-from recpack.data import datasets
+from recpack import datasets
 from recpack.preprocessing.filters import MinUsersPerItem, NMostPopular
 
 
@@ -163,7 +163,7 @@ def test_recsys_challenge_2015(path):
 
     data = d.load_interaction_matrix()
 
-    assert data.shape == (54, 291)
+    assert data.shape == (83, 26)
 
     # We can't just download this dataset, since it requires Kaggle access
     with pytest.raises(NotImplementedError):

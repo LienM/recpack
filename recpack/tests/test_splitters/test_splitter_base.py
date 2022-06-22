@@ -2,8 +2,8 @@ import pandas as pd
 import pytest
 import numpy as np
 
-from recpack.data.matrix import InteractionMatrix
-import recpack.splitters.splitter_base as splitter_base
+from recpack.matrix import InteractionMatrix
+import recpack.scenarios.splitters as splitters
 
 
 USER_IX = InteractionMatrix.USER_IX
@@ -90,7 +90,7 @@ def check_values_timestamps_match(data):
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
 def test_strong_generalization_splitter(data_m_w_timestamps, in_perc):
-    splitter = splitter_base.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
+    splitter = splitters.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
 
     tr, te = splitter.split(data_m_w_timestamps)
 
@@ -104,7 +104,7 @@ def test_strong_generalization_splitter(data_m_w_timestamps, in_perc):
 
 @pytest.mark.parametrize("in_perc", [0.45, 0.75, 0.25])
 def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
-    splitter = splitter_base.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
+    splitter = splitters.StrongGeneralizationSplitter(in_perc, seed=42, error_margin=0.10)
 
     tr, te = splitter.split(data_m_w_dups)
 
@@ -126,7 +126,7 @@ def test_strong_generalization_splitter_w_dups(data_m_w_dups, in_perc):
     ],
 )
 def test_user_interaction_time_splitter(data_m_sessions, t, n_tr_expected, n_te_expected):
-    splitter = splitter_base.UserInteractionTimeSplitter(t)
+    splitter = splitters.UserInteractionTimeSplitter(t)
 
     tr, te = splitter.split(data_m_sessions)
 
@@ -147,7 +147,7 @@ def test_user_interaction_time_splitter(data_m_sessions, t, n_tr_expected, n_te_
 
 @pytest.mark.parametrize("t", [20, 15])
 def test_timestamp_splitter_no_limit(data_m_w_timestamps, t):
-    splitter = splitter_base.TimestampSplitter(t)
+    splitter = splitters.TimestampSplitter(t)
 
     tr, te = splitter.split(data_m_w_timestamps)
 
@@ -160,7 +160,7 @@ def test_timestamp_splitter_no_limit(data_m_w_timestamps, t):
 
 @pytest.mark.parametrize("t", [20, 15])
 def test_timestamp_splitter_no_limit_w_dups(data_m_w_dups, t):
-    splitter = splitter_base.TimestampSplitter(t)
+    splitter = splitters.TimestampSplitter(t)
 
     tr, te = splitter.split(data_m_w_dups)
 
@@ -173,7 +173,7 @@ def test_timestamp_splitter_no_limit_w_dups(data_m_w_dups, t):
 
 @pytest.mark.parametrize("t, delta_out", [(20, 10), (20, 3)])
 def test_timestamp_splitter_windowed_delta_out(data_m_w_timestamps, t, delta_out):
-    splitter = splitter_base.TimestampSplitter(t, delta_out=delta_out)
+    splitter = splitters.TimestampSplitter(t, delta_out=delta_out)
 
     tr, te = splitter.split(data_m_w_timestamps)
 
@@ -188,7 +188,7 @@ def test_timestamp_splitter_windowed_delta_out(data_m_w_timestamps, t, delta_out
 
 @pytest.mark.parametrize("t, delta_out", [(20, 10), (20, 3)])
 def test_timestamp_splitter_windowed_delta_out_w_dups(data_m_w_dups, t, delta_out):
-    splitter = splitter_base.TimestampSplitter(t, delta_out=delta_out)
+    splitter = splitters.TimestampSplitter(t, delta_out=delta_out)
 
     tr, te = splitter.split(data_m_w_dups)
 
@@ -203,7 +203,7 @@ def test_timestamp_splitter_windowed_delta_out_w_dups(data_m_w_dups, t, delta_ou
 
 @pytest.mark.parametrize("t, delta_in", [(20, 10), (20, 3)])
 def test_timestamp_splitter_windowed_alpha(data_m_w_timestamps, t, delta_in):
-    splitter = splitter_base.TimestampSplitter(t, delta_in=delta_in)
+    splitter = splitters.TimestampSplitter(t, delta_in=delta_in)
 
     tr, te = splitter.split(data_m_w_timestamps)
 
@@ -218,7 +218,7 @@ def test_timestamp_splitter_windowed_alpha(data_m_w_timestamps, t, delta_in):
 
 @pytest.mark.parametrize("t, delta_in", [(20, 10), (20, 3)])
 def test_timestamp_splitter_windowed_alpha_w_dups(data_m_w_dups, t, delta_in):
-    splitter = splitter_base.TimestampSplitter(t, delta_in=delta_in)
+    splitter = splitters.TimestampSplitter(t, delta_in=delta_in)
 
     tr, te = splitter.split(data_m_w_dups)
 
@@ -237,7 +237,7 @@ def test_most_recent_splitter(data_m_w_dups, n):
     last_action = m._df.groupby(USER_IX)[TIMESTAMP_IX].max()
     num_actions = m.values.toarray().sum(axis=1, keepdims=False)
 
-    splitter = splitter_base.MostRecentSplitter(n)
+    splitter = splitters.MostRecentSplitter(n)
     tr, te = splitter.split(m)
 
     # All users should have actions in both train and test sets
@@ -272,7 +272,7 @@ def test_user_splitter(data_m_w_timestamps):
     tr_u_in = users[:ix]
     te_u_in = users[ix:]
 
-    splitter = splitter_base.UserSplitter(tr_u_in, te_u_in)
+    splitter = splitters.UserSplitter(tr_u_in, te_u_in)
     tr, te = splitter.split(data_m_w_timestamps)
 
     tr_U, _ = tr.values.nonzero()
@@ -301,7 +301,7 @@ def test_perc_interaction_splitter(data_m_w_timestamps, tr_perc):
 
     num_te_interactions = num_interactions - num_tr_interactions
 
-    splitter = splitter_base.FractionInteractionSplitter(tr_perc, seed=42)
+    splitter = splitters.FractionInteractionSplitter(tr_perc, seed=42)
     tr, te = splitter.split(data_m_w_timestamps)
 
     assert len(tr.values.nonzero()[0]) == num_tr_interactions
@@ -313,11 +313,11 @@ def test_perc_interaction_splitter(data_m_w_timestamps, tr_perc):
 
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
 def test_fold_iterator_correctness(data_m_w_timestamps, batch_size):
-    splitter = splitter_base.FractionInteractionSplitter(0.7, seed=42)
+    splitter = splitters.FractionInteractionSplitter(0.7, seed=42)
 
     data_m_in, data_m_out = splitter.split(data_m_w_timestamps)
 
-    fold_iterator = splitter_base.FoldIterator(data_m_in, data_m_out, batch_size=batch_size)
+    fold_iterator = splitters.FoldIterator(data_m_in, data_m_out, batch_size=batch_size)
 
     for fold_in, fold_out, users in fold_iterator:
         assert fold_in.nnz > 0
@@ -329,7 +329,7 @@ def test_fold_iterator_correctness(data_m_w_timestamps, batch_size):
 @pytest.mark.parametrize("batch_size", [1, 2, 3])
 def test_fold_iterator_completeness(data_m_w_timestamps, batch_size):
 
-    fold_iterator = splitter_base.FoldIterator(data_m_w_timestamps, data_m_w_timestamps, batch_size=batch_size)
+    fold_iterator = splitters.FoldIterator(data_m_w_timestamps, data_m_w_timestamps, batch_size=batch_size)
 
     nonzero_users = set(data_m_w_timestamps.indices[0])
 

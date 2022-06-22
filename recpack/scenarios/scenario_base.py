@@ -3,8 +3,8 @@ import numpy as np
 from typing import Tuple, Union
 from warnings import warn
 
-import recpack.splitters.splitter_base as splitter_base
-from recpack.data.matrix import InteractionMatrix
+from recpack.scenarios.splitters import StrongGeneralizationSplitter
+from recpack.matrix import InteractionMatrix
 
 
 class Scenario(ABC):
@@ -31,7 +31,7 @@ class Scenario(ABC):
         self.seed = seed
         self.validation = validation
         if validation:
-            self.validation_splitter = splitter_base.StrongGeneralizationSplitter(0.8, seed=self.seed)
+            self.validation_splitter = StrongGeneralizationSplitter(0.8, seed=self.seed)
 
     @abstractmethod
     def _split(self, data_m: InteractionMatrix) -> None:

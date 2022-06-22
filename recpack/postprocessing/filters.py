@@ -4,7 +4,7 @@ from typing import List
 from abc import ABC, abstractmethod
 
 from scipy.sparse import csr_matrix
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 import numpy as np
 from numpy.typing import ArrayLike
 

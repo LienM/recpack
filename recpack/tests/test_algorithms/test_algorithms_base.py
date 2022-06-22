@@ -21,7 +21,7 @@ from recpack.algorithms import (
     Prod2VecClustered,
     ItemPNN,
 )
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 def test_check_prediction():
@@ -67,8 +67,19 @@ def test_check_fit_complete(pageviews):
 
 @pytest.mark.parametrize(
     "algo",
-    [ItemPNN, RecVAE, MultVAE, BPRMF, Random, NMFItemToItem, NMF, Prod2Vec,
-        Prod2VecClustered, GRU4RecCrossEntropy, GRU4RecNegSampling],
+    [
+        ItemPNN,
+        RecVAE,
+        MultVAE,
+        BPRMF,
+        Random,
+        NMFItemToItem,
+        NMF,
+        Prod2Vec,
+        Prod2VecClustered,
+        GRU4RecCrossEntropy,
+        GRU4RecNegSampling,
+    ],
 )
 def test_seed_is_set_consistently_None(algo):
 
@@ -78,8 +89,19 @@ def test_seed_is_set_consistently_None(algo):
 
 @pytest.mark.parametrize(
     "algo",
-    [ItemPNN, RecVAE, MultVAE, BPRMF, Random, NMFItemToItem, NMF, Prod2Vec,
-        Prod2VecClustered, GRU4RecNegSampling, GRU4RecCrossEntropy],
+    [
+        ItemPNN,
+        RecVAE,
+        MultVAE,
+        BPRMF,
+        Random,
+        NMFItemToItem,
+        NMF,
+        Prod2Vec,
+        Prod2VecClustered,
+        GRU4RecNegSampling,
+        GRU4RecCrossEntropy,
+    ],
 )
 def test_seed_is_set_consistently_42(algo):
 
@@ -91,8 +113,7 @@ def test_seed_is_set_consistently_42(algo):
 
 @pytest.mark.parametrize(
     "algo_class",
-    [RecVAE, MultVAE, BPRMF, Prod2Vec, Prod2VecClustered,
-        GRU4RecNegSampling, GRU4RecCrossEntropy],
+    [RecVAE, MultVAE, BPRMF, Prod2Vec, Prod2VecClustered, GRU4RecNegSampling, GRU4RecCrossEntropy],
 )
 def test_assert_is_interaction_matrix(algo_class, matrix_sessions):
     # No error when checking type
@@ -103,14 +124,12 @@ def test_assert_is_interaction_matrix(algo_class, matrix_sessions):
     with pytest.raises(TypeError) as type_error:
         algo._assert_is_interaction_matrix(matrix_sessions.binary_values)
 
-    assert type_error.match(
-        ".* requires Interaction Matrix as input. Got <class 'scipy.sparse._csr.csr_matrix'>.")
+    assert type_error.match(".* requires Interaction Matrix as input. Got <class 'scipy.sparse._csr.csr_matrix'>.")
 
 
 @pytest.mark.parametrize(
     "algo_class",
-    [RecVAE, MultVAE, BPRMF, Prod2Vec, Prod2VecClustered,
-        GRU4RecNegSampling, GRU4RecCrossEntropy],
+    [RecVAE, MultVAE, BPRMF, Prod2Vec, Prod2VecClustered, GRU4RecNegSampling, GRU4RecCrossEntropy],
 )
 def test_assert_has_timestamps(algo_class, matrix_sessions):
 
@@ -119,5 +138,4 @@ def test_assert_has_timestamps(algo_class, matrix_sessions):
     with pytest.raises(ValueError) as value_error:
         algo._assert_has_timestamps(matrix_sessions.eliminate_timestamps())
 
-    assert value_error.match(
-        ".* requires timestamp information in the InteractionMatrix.")
+    assert value_error.match(".* requires timestamp information in the InteractionMatrix.")

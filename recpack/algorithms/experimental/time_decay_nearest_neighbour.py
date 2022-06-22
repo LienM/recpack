@@ -2,7 +2,7 @@ from scipy.sparse import csr_matrix
 from tqdm.auto import tqdm
 
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.util import get_top_K_values
 
 
@@ -38,7 +38,7 @@ class TimeDecayingNearestNeighbour(TopKItemSimilarityMatrixAlgorithm):
     **Example of use**::
 
         import numpy as np
-        from recpack.data.matrix import InteractionMatrix
+        from recpack.matrix import InteractionMatrix
         from recpack.algorithms.experimental import TimeDecayingNearestNeighbour
 
         USER_IX = InteractionMatrix.USER_IX

@@ -6,7 +6,7 @@ import pytest
 from scipy.sparse.csr import csr_matrix
 
 from recpack.algorithms import ItemKNN
-from recpack.data.matrix import to_binary
+from recpack.matrix import to_binary
 from recpack.algorithms.nearest_neighbour import (
     ItemPNN,
     compute_conditional_probability,

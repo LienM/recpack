@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from recpack.splitters.scenarios import LastItemPrediction
+from recpack.scenarios import LastItemPrediction
 
 
 def test_next_item_prediction_split(data_m_small):

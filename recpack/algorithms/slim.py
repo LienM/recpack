@@ -8,7 +8,7 @@ import scipy.sparse
 from sklearn.linear_model import SGDRegressor
 
 from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
-from recpack.data.matrix import Matrix, to_csr_matrix
+from recpack.matrix import Matrix, to_csr_matrix
 
 
 class SLIM(ItemSimilarityMatrixAlgorithm):
@@ -52,9 +52,7 @@ class SLIM(ItemSimilarityMatrixAlgorithm):
     :type ignore_neg_weights: bool, optional
     """
 
-    def __init__(
-        self, l1_reg=0.0005, l2_reg=0.00005, fit_intercept=True, ignore_neg_weights=True
-    ):
+    def __init__(self, l1_reg=0.0005, l2_reg=0.00005, fit_intercept=True, ignore_neg_weights=True):
 
         super().__init__()
 
@@ -112,6 +110,4 @@ class SLIM(ItemSimilarityMatrixAlgorithm):
 
         # Construct similarity matrix.
         # Shape is determined by 2nd dimension of the shape of input matrix X
-        self.similarity_matrix_ = scipy.sparse.csr_matrix(
-            (data, (row, col)), shape=(X.shape[1], X.shape[1])
-        )
+        self.similarity_matrix_ = scipy.sparse.csr_matrix((data, (row, col)), shape=(X.shape[1], X.shape[1]))

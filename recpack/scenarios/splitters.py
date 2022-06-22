@@ -7,7 +7,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from tqdm.auto import tqdm
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 logger = logging.getLogger("recpack")
@@ -64,9 +64,7 @@ class UserSplitter(Splitter):
         self.users_in = users_in
         self.users_out = users_out
 
-    def split(
-        self, data: InteractionMatrix
-    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """Splits data by the user identifiers of the interactions.
 
         :param data: Interaction matrix to be split.
@@ -177,9 +175,7 @@ class UserInteractionTimeSplitter(Splitter):
         super().__init__()
         self.t = t
 
-    def split(
-        self, data: InteractionMatrix
-    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """Splits users based on the time of their most recent interactions.
 
         :param data: Interaction matrix to be split. Must contain timestamps.
@@ -227,9 +223,7 @@ class FractionInteractionSplitter(Splitter):
 
         self.seed = seed
 
-    def split(
-        self, data: InteractionMatrix
-    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """Splits data randomly, such that ``in_fraction``
         of interactions are assigned to ``data_in`` and the remainder to ``data_out``.
 
@@ -285,9 +279,7 @@ class TimestampSplitter(Splitter):
         self.delta_out = delta_out
         self.delta_in = delta_in
 
-    def split(
-        self, data: InteractionMatrix
-    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """Splits data so that ``data_in`` contains interactions in ``[t-delta_in, t[``,
         and ``data_out`` those in ``[t, t+delta_out[``.
 
@@ -310,9 +302,7 @@ class TimestampSplitter(Splitter):
             data_out = data.timestamps_gte(self.t)
         else:
             # timestamp >= t and timestamp < t + delta_out
-            data_out = data.timestamps_gte(self.t).timestamps_lt(
-                self.t + self.delta_out
-            )
+            data_out = data.timestamps_gte(self.t).timestamps_lt(self.t + self.delta_out)
 
         logger.debug(f"{self.identifier} - Split successful")
 
@@ -333,9 +323,7 @@ class MostRecentSplitter(Splitter):
         super().__init__()
         self.n = n
 
-    def split(
-        self, data: InteractionMatrix
-    ) -> Tuple[InteractionMatrix, InteractionMatrix]:
+    def split(self, data: InteractionMatrix) -> Tuple[InteractionMatrix, InteractionMatrix]:
         """Splits the n most recent interactions of a user into ``data_out``,
         and earlier interactions into ``data_in``.
 

@@ -13,7 +13,7 @@ import numpy as np
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.loss_functions import vae_loss
 from recpack.algorithms.util import naive_sparse2tensor
-from recpack.splitters.splitter_base import yield_batches
+from recpack.scenarios.splitters import yield_batches
 
 logger = logging.getLogger("recpack")
 

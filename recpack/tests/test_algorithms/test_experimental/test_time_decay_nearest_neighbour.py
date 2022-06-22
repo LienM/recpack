@@ -5,7 +5,7 @@ import scipy.sparse
 import pandas as pd
 import numpy as np
 import pytest
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 USER_IX = InteractionMatrix.USER_IX
