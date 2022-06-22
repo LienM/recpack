@@ -16,7 +16,7 @@ from recpack.scenarios import Timed
 def test_metric_registry():
     assert "CalibratedRecallK" in METRIC_REGISTRY
     assert "HitK" in METRIC_REGISTRY
-    assert "NormalizedDiscountedCumulativeGainK" in METRIC_REGISTRY
+    assert "NDCGK" in METRIC_REGISTRY
 
 
 def test_algorithm_registry():

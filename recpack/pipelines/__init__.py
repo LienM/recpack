@@ -31,7 +31,7 @@ An example of usage is::
     pipeline_builder.add_algorithm('ItemKNN', grid={'K': [100, 200, 400, 800]})
 
     # Add NDCG and Recall to be evaluated at 10, 20, 50 and 100
-    pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
+    pipeline_builder.add_metric('NDCGK', [10, 20, 50, 100])
     pipeline_builder.add_metric('RecallK', [10, 20, 50, 100])
 
     # Construct pipeline

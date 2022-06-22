@@ -242,7 +242,6 @@ class Pipeline(object):
         :type short: Optional[bool]
         """
         df = pd.DataFrame.from_dict(self.get_metrics()).T
-        print(df)
         if short:
             # Parameters are between (), so if we split on the (,
             # we can get the algorithm name by taking the first of the splits.
