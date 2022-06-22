@@ -4,8 +4,8 @@ import numpy.random
 from scipy.sparse import csr_matrix
 
 from recpack.metrics import (
-    NormalizedDiscountedCumulativeGainK,
-    DiscountedCumulativeGainK,
+    NDCGK,
+    DCGK,
     RecallK,
     ReciprocalRankK,
     CoverageK,
@@ -25,9 +25,7 @@ from recpack.metrics.base import (
 )
 
 
-@pytest.mark.parametrize(
-    "metric_cls", [HitK, IPSHitRateK, DiscountedGainK]
-)
+@pytest.mark.parametrize("metric_cls", [HitK, IPSHitRateK, DiscountedGainK])
 def test_results_elementwise_topK(metric_cls, X_true, X_pred):
     K = 2
 
@@ -56,10 +54,10 @@ def test_results_elementwise_topK(metric_cls, X_true, X_pred):
 @pytest.mark.parametrize(
     "metric_cls",
     [
-        DiscountedCumulativeGainK,
+        DCGK,
         RecallK,
         PrecisionK,
-        NormalizedDiscountedCumulativeGainK,
+        NDCGK,
         ReciprocalRankK,
         IntraListDiversityK,
     ],
@@ -96,12 +94,8 @@ def test_eliminate_zeros(X_true, X_pred):
     assert 2 == X_true_aft.shape[0]
 
 
-@pytest.mark.parametrize(
-    "metric_cls", [HitK, IPSHitRateK, DiscountedGainK]
-)
-def test_results_elementwise_topK_no_reco(
-    metric_cls, X_true_unrecommended_user, X_pred
-):
+@pytest.mark.parametrize("metric_cls", [HitK, IPSHitRateK, DiscountedGainK])
+def test_results_elementwise_topK_no_reco(metric_cls, X_true_unrecommended_user, X_pred):
     K = 2
 
     metric = metric_cls(K)
@@ -132,10 +126,10 @@ def test_results_elementwise_topK_no_reco(
 @pytest.mark.parametrize(
     "metric_cls",
     [
-        DiscountedCumulativeGainK,
+        DCGK,
         RecallK,
         PrecisionK,
-        NormalizedDiscountedCumulativeGainK,
+        NDCGK,
         ReciprocalRankK,
         IntraListDiversityK,
     ],
@@ -167,16 +161,14 @@ def test_results_listwise_topK_no_reco(metric_cls, X_true_unrecommended_user, X_
 def test_eliminate_zeros_no_reco(X_true_unrecommended_user, X_pred):
     recall = RecallK(2)
 
-    X_true_aft, X_pred_aft = recall._eliminate_empty_users(
-        X_true_unrecommended_user, X_pred
-    )
+    X_true_aft, X_pred_aft = recall._eliminate_empty_users(X_true_unrecommended_user, X_pred)
 
     assert X_true_unrecommended_user.shape[1] == X_true_aft.shape[1]
     assert 3 == X_true_aft.shape[0]
 
 
 def test_verify_shapes():
-    m = DiscountedCumulativeGainK(3)
+    m = DCGK(3)
 
     y_pred = csr_matrix(np.ones((3, 2)))
     y_true = csr_matrix(np.ones((2, 3)))

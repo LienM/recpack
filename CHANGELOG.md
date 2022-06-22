@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __datasets__:
     * Default min rating for `Movielens25M` was changed from 1 to 4 similar to most paper preprocessing of the dataset.
 
+* __metrics__:
+    * `DiscountedCumulativeGainK` is renamed to `DCGK`
+    * `NormalizedDiscountedCumulativeGainK` is renamed to `NDCGK`
+
 ### Bugfixes
 * __splitters.scenarios__
     * Improved tests for WeakGeneralization scenario to confirm mismatches between train and validation_in are only due to users with not enough items and not a potential bug.

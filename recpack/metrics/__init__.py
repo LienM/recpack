@@ -41,8 +41,8 @@ To obtain a global metric value, these per-user scores are averaged.
 .. autosummary::
     :toctree: generated/
 
-    DiscountedCumulativeGainK
-    NormalizedDiscountedCumulativeGainK
+    DCGK
+    NDCGK
     RecallK
     CalibratedRecallK
     PrecisionK
@@ -66,8 +66,8 @@ To obtain a global metric value, these scores are summed per user, then averaged
 
 from recpack.metrics.coverage import CoverageK
 from recpack.metrics.dcg import (
-    DiscountedCumulativeGainK,
-    NormalizedDiscountedCumulativeGainK,
+    DCGK,
+    NDCGK,
 )
 from recpack.metrics.diversity import IntraListDiversityK
 from recpack.metrics.hit import HitK, DiscountedGainK
@@ -79,8 +79,8 @@ from recpack.metrics.percentile_ranking import PercentileRanking
 
 METRICS = {
     "CoverageK": CoverageK,
-    "NormalizedDiscountedCumulativeGainK": NormalizedDiscountedCumulativeGainK,
-    "DiscountedCumulativeGainK": DiscountedCumulativeGainK,
+    "NDCGK": NDCGK,
+    "DCGK": DCGK,
     "IntraListDiversityK": IntraListDiversityK,
     "IPSHitRateK": IPSHitRateK,
     "HitK": HitK,

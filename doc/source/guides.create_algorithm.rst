@@ -688,7 +688,7 @@ As an example we will compare the SillyMF algorithm to an ItemKNN algorithm, and
     )
 
     # Add NDCG and Recall to be evaluated at 10, 20, 50 and 100
-    pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
+    pipeline_builder.add_metric('NDCGK', [10, 20, 50, 100])
     pipeline_builder.add_metric('RecallK', [10, 20, 50, 100])
 
     # Set the optimisation metric, this metric will be used to select the best values from grid for each algorithm
