@@ -12,21 +12,35 @@ from recpack.algorithms.util import get_users
 class NeuMFMLPOnly(TorchMLAlgorithm):
     """Implementation of Neural Matrix Factoration.
 
-    Neural Matrix Factorization based on MLP architecture
-    as presented in Figure 2 in He, Xiangnan, et al. "Neural collaborative filtering."
-    Proceedings of the 26th international conference on world wide web. 2017.
+    Neural Matrix Factorization based on the MLP architecture as presented in Figure 2 of
+    He, Xiangnan, et al. "Neural collaborative filtering."
+    In Proceedings of the 26th international conference on world wide web. 2017.
 
-    Represents the users and items using an embedding, and models similarity using a neural network.
-    An MLP is used with as input the concatenated embeddings of users and items.
+    Represents the users and items using an embedding, similarity between the two is modelled using a neural network.
 
-    As in the paper, the sum of square error is used as the loss function.
+    The network consists of an embedding for both users and items.
+    To compute similarity those two embeddings are concatenated and passed through the MLP
+    Finally the similarity is transformed to the [0,1] domain using a sigmoid function.
+
+    As in the paper, the sum of square errors is used as loss function.
     Positive items should get a prediction close to 1, while sampled negatives should get a value close to 0.
-    The MLP has 3 layers, whose dimensions are based on the `num_components` parameter.
-    Bottom layer has `num_components * 2`, middle layer `num_components`
-    and the top layer has `num_components / 2` dimensions.
 
-    :param num_components: Size of the embeddings, needs to be an even number.
-    :type num_components: int
+    The MLP has 3 layers, as suggested in the experiments section.
+    Bottom layer has dimension `4 * predictive_factors`, middle layer `2 * predictive_factors`
+    and the top layer has `predictive_factors`.
+
+    :param predictive_factors: Size of the embeddings, needs to be an even number.
+    :type predictive_factors: int
+    :param dropout: Dropout parameter used in MLP, defaults to 0.0
+    :type dropout: float, optional
+    :param n_negatives_per_positive: Amount of negatives to sample for each positive example, defaults to 1
+    :type n_negatives_per_positive: int, optional
+    :param exact_sampling: Enable or disable exact checks while sampling.
+        With exact sampling the sampled negatives are guaranteed to not have been visited by the user.
+        Non exact sampling assumes that the space for item selection is large enough,
+        such that most items are likely not seen before.
+        Defaults to False,
+    :type exact_sampling: bool, optional
     :param batch_size: How many samples to use in each update step.
         Higher batch sizes make each epoch more efficient,
         but increases the amount of epochs needed to converge to the optimum,
@@ -73,14 +87,14 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
     :type predict_topK: int, optional
     :param U: Amount of negatives to sample for each positive example, defaults to 1
     :type U: int, optional
-    :param dropout: Dropout parameter used in MLP, defaults to 0.0
-    :type dropout: float, optional
-
     """
 
     def __init__(
         self,
-        num_components: int,
+        predictive_factors: int,
+        dropout: Optional[float] = 0.0,
+        n_negatives_per_positive: Optional[int] = 1,
+        exact_sampling: Optional[bool] = False,
         batch_size: Optional[int] = 512,
         max_epochs: Optional[int] = 10,
         learning_rate: Optional[float] = 0.01,
@@ -92,8 +106,6 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         save_best_to_file: Optional[bool] = False,
         keep_last: Optional[bool] = False,
         predict_topK: Optional[int] = None,
-        U: Optional[int] = 1,
-        dropout: Optional[float] = 0.0,
     ):
         super().__init__(
             batch_size,
@@ -109,31 +121,19 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
             predict_topK,
         )
 
-        self.num_components = num_components
-        if self.num_components % 2 != 0:
-            raise ValueError("Please use an even number of components for training the NeuMF model.")
-
-        self.hidden_dims = [self.num_components * 2, self.num_components, self.num_components // 2]
-        self.U = U
+        self.predictive_factors = predictive_factors
         self.dropout = dropout
+        self.n_negatives_per_positive = n_negatives_per_positive
+        self.exact_sampling = exact_sampling
 
-        self.sampler = PositiveNegativeSampler(U=self.U, replace=False, batch_size=self.batch_size)
+        self.sampler = PositiveNegativeSampler(
+            U=self.n_negatives_per_positive, replace=False, batch_size=self.batch_size, exact=exact_sampling
+        )
 
     def _init_model(self, X: csr_matrix):
         num_users, num_items = X.shape
-        self.model_ = NeuMFMLPModule(self.num_components, num_users, num_items, self.hidden_dims, self.dropout).to(
-            self.device
-        )
+        self.model_ = NeuMFMLPModule(self.predictive_factors, num_users, num_items, self.dropout).to(self.device)
         self.optimizer = torch.optim.Adam(self.model_.parameters(), lr=self.learning_rate)
-
-    def _compute_loss(
-        self, positive_scores: torch.FloatTensor, negative_scores: torch.FloatTensor
-    ) -> torch.FloatTensor:
-        """Compute the Square Error loss given recommendations for positive items, and sampled negatives."""
-        mse = nn.MSELoss(reduction="sum")
-        return mse(positive_scores, torch.ones_like(positive_scores, dtype=torch.float)) + mse(
-            negative_scores, torch.zeros_like(negative_scores, dtype=torch.float)
-        )
 
     def _train_epoch(self, X: csr_matrix) -> List[int]:
         losses = []
@@ -158,6 +158,15 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
 
         return losses
 
+    def _compute_loss(
+        self, positive_scores: torch.FloatTensor, negative_scores: torch.FloatTensor
+    ) -> torch.FloatTensor:
+        """Compute the Square Error loss given recommendations for positive items, and sampled negatives."""
+        mse = nn.MSELoss(reduction="sum")
+        return mse(positive_scores, torch.ones_like(positive_scores, dtype=torch.float)) + mse(
+            negative_scores, torch.zeros_like(negative_scores, dtype=torch.float)
+        )
+
     def _construct_negative_prediction_input(self, users, negatives):
         """Since negatives has shape batch x U, and users is a 1d vector,
         these need to be turned into two 1d vectors of size batch*U
@@ -167,7 +176,7 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
 
         then both are reshaped to remove the 2nd dimension, resulting in a single long 1d vector
         """
-        return users.repeat(self.U, 1).T.reshape(-1), negatives.reshape(-1)
+        return users.repeat(self.n_negatives_per_positive, 1).T.reshape(-1), negatives.reshape(-1)
 
     def _batch_predict(self, X: csr_matrix, users: List[int]) -> csr_matrix:
         X_pred = lil_matrix(X.shape)
@@ -177,7 +186,10 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         _, n_items = X.shape
         n_users = len(users)
 
-        # Turn the np arrays and lists to torch tensors
+        # Create tensors such that each user, item pair gets a score.
+        # The user tensor contains the users in order
+        # (eg. [1, 1, 2, 2]),
+        # item indices are repeated (eg. [0, 1, 2, 0, 1, 2]).
         user_tensor = torch.LongTensor(users).repeat(n_items, 1).T.reshape(-1).to(self.device)
         item_tensor = torch.arange(n_items).repeat(n_users).to(self.device)
 
@@ -188,33 +200,31 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
 class NeuMFMLPModule(nn.Module):
     """Model that encodes the Neural Matrix Factorization Network.
 
-    :param num_components: size of the embeddings
-    :type num_components: int
+    Implements the 3 tiered network defined in the He et al. paper.
+
+    :param predictive_factors: size of the last hidden layer in MLP.
+        Embedding sizes computed as 2 * predictive_factors powers.
+    :type predictive_factors: int
     :param n_users: number of users in the network
     :type n_users: int
     :param n_items: number of items in the network
     :type n_items: int
-    :param hidden_dims: dimensions of the MLP hidden layers.
-    :type hidden_dims: Union[int, List[int]]
     :param dropout: Dropout chance between layers of the MLP
     :type dropout: float
     """
 
-    def __init__(
-        self, num_components: int, n_users: int, n_items: int, hidden_dims: Union[int, List[int]], dropout: float
-    ):
+    def __init__(self, predictive_factors: int, n_users: int, n_items: int, dropout: float):
         super().__init__()
 
-        self.user_embedding = nn.Embedding(n_users, num_components)
-        self.item_embedding = nn.Embedding(n_items, num_components)
+        self.user_embedding = nn.Embedding(n_users, 2 * predictive_factors)
+        self.item_embedding = nn.Embedding(n_items, 2 * predictive_factors)
 
-        # 2 x embedding size as input, since the user and item embedding are concatenated.
-        # Output is always 1, since we need a single score for u,i
-        self.mlp = MLP(2 * num_components, 1, hidden_dims, dropout=dropout)
+        # we use a three tiered MLP as described in the experiments of the paper.
+        hidden_dims = [4 * predictive_factors, 2 * predictive_factors, predictive_factors]
 
-        # In order to interpret the output as a probability, the score should be between 0 and 1
-        # The papers mentions probit / logistic activation,
-        # but in pytorch sigmoid seems like the only one to give 0 to 1 values
+        # Output is always shape 1, since we need a single score for u,i
+        self.mlp = MLP(4 * predictive_factors, 1, hidden_dims, dropout=dropout)
+
         self.final = nn.Sigmoid()
 
         # weight initialization
@@ -238,28 +248,24 @@ class NeuMFMLPModule(nn.Module):
         return self.final(self.mlp(torch.hstack([user_emb, item_emb])))
 
 
-# Code used from https://github.com/facebookresearch/multimodal/blob/5dec8a/torchmultimodal/modules/layers/mlp.py
-# Another option is to use torchvision.ops.MLP
-# which is nearly identical in implementation, but is in torchvision and not in base torch
-# TODO: move to it's own file?
 class MLP(nn.Module):
     """A multi-layer perceptron module.
     This module is a sequence of linear layers plus activation functions.
     The user can optionally add normalization and/or dropout to each of the layers.
 
-    Code used from https://github.com/facebookresearch/multimodal/blob/5dec8a/torchmultimodal/modules/layers/mlp.py
-    Args:
-        in_dim (int): Input dimension.
-        out_dim (int): Output dimension.
-        hidden_dims ([List[int]]): Output dimension for each hidden layer.
-        dropout (float): Probability for dropout layer.
-        activation (Callable[..., nn.Module]): Which activation
-            function to use. Supports module type or partial.
-        normalization (Optional[Callable[..., nn.Module]]): Which
-            normalization layer to use (None for no normalization).
-            Supports module type or partial.
-    Inputs:
-        x (Tensor): Tensor containing a batch of input sequences.
+    Code based on https://github.com/facebookresearch/multimodal/blob/5dec8a/torchmultimodal/modules/layers/mlp.py
+
+    :param in_dim: Input dimension.
+    :type in_dim: int
+    :param out_dim: Output dimension.
+    :type out_dim: int
+    :param hidden_dims: Output dimension for each hidden layer.
+    :type hidden_dims: Optional[Union[int, List[int]]]
+    :param dropout: Probability for dropout layers between each hidden layer.
+    :type dropout: float
+    :param activation: Which activation function to use.
+        Supports module type or partial.
+    :type activation: Callable[..., nn.Module]
     """
 
     def __init__(
@@ -269,8 +275,6 @@ class MLP(nn.Module):
         hidden_dims: Optional[Union[int, List[int]]],
         dropout: float = 0.1,
         activation: Callable[..., nn.Module] = nn.ReLU,
-        normalization: Optional[Callable[..., nn.Module]] = None,
-        **kwargs,
     ) -> None:
         super().__init__()
 
@@ -281,8 +285,6 @@ class MLP(nn.Module):
 
         for hidden_dim in hidden_dims:
             layers.append(nn.Linear(in_dim, hidden_dim))
-            if normalization:
-                layers.append(normalization(hidden_dim))
             layers.append(activation())
             layers.append(nn.Dropout(dropout))
             in_dim = hidden_dim

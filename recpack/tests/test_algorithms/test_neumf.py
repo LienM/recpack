@@ -14,12 +14,12 @@ def test_MLP():
 
 
 @pytest.mark.parametrize(
-    "num_components, num_users, num_items, hidden_sizes",
-    [(5, 10, 10, [10]), (5, 10, 10, [10, 5, 3]), (5, 3, 10, [10]), (1, 3, 3, [10])],
+    "predictive_factors, num_users, num_items",
+    [(5, 10, 10), (5, 10, 10), (5, 3, 10), (1, 3, 3)],
 )
-def test_output_shapes_NeuMFMLPModule(num_components, num_users, num_items, hidden_sizes):
+def test_output_shapes_NeuMFMLPModule(predictive_factors, num_users, num_items):
     """Check that no mather the inner settings of the network, the output is always correct"""
-    mod = NeuMFMLPModule(num_components, num_users, num_items, hidden_sizes, 0)
+    mod = NeuMFMLPModule(predictive_factors, num_users, num_items, 0)
 
     user_tensor = torch.LongTensor([1, 2])
     item_tensor = torch.LongTensor([1, 2])
@@ -35,8 +35,8 @@ def test_output_shapes_NeuMFMLPModule(num_components, num_users, num_items, hidd
 def test_training_epoch(mat):
     X = mat.binary_values
     a = NeuMFMLPOnly(
-        num_components=8,
-        U=2,
+        predictive_factors=4,
+        n_negatives_per_positive=2,
     )
     device = a.device
     a._init_model(X)
@@ -50,16 +50,11 @@ def test_training_epoch(mat):
     assert_changed(params_before, params, device)
 
 
-def test_num_components_even():
-    with pytest.raises(ValueError):
-        NeuMFMLPOnly(num_components=5)
-
-
 @pytest.mark.parametrize("users", [[0, 1], [0], [0, 1, 3]])
 def test_batch_predict(mat, users):
     a = NeuMFMLPOnly(
-        num_components=4,
-        U=2,
+        predictive_factors=2,
+        n_negatives_per_positive=2,
     )
     device = a.device
     a.fit(mat, (mat, mat))
@@ -83,30 +78,30 @@ def test_batch_predict(mat, users):
     ],
 )
 def test_negative_input_construction(users, negatives):
-    U = negatives.shape[1]
+    n_negatives_per_positive = negatives.shape[1]
     a = NeuMFMLPOnly(
-        num_components=8,
-        U=U,
+        predictive_factors=4,
+        n_negatives_per_positive=n_negatives_per_positive,
     )
 
     users_input, negatives_input = a._construct_negative_prediction_input(users, negatives)
     assert users_input.shape == negatives_input.shape
     assert len(users_input.shape) == 1  # 1d vectors
 
-    # Check that both are in the right order (each user is repeated U times before the next user is present)
+    # Check that both are in the right order (each user is repeated n_negatives_per_positive times before the next user is present)
     for ix in range(users_input.shape[0]):
-        assert users_input[ix] == users[ix // U]
-        assert negatives_input[ix] == negatives[ix // U, ix % U]
+        assert users_input[ix] == users[ix // n_negatives_per_positive]
+        assert negatives_input[ix] == negatives[ix // n_negatives_per_positive, ix % n_negatives_per_positive]
 
 
 def test_overfit(mat):
     m = NeuMFMLPOnly(
-        num_components=10,
+        predictive_factors=5,
         batch_size=1,
         max_epochs=20,
         learning_rate=0.02,
         stopping_criterion="ndcg",
-        U=1,
+        n_negatives_per_positive=1,
     )
 
     # set sampler to exact sampling
