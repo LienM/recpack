@@ -14700,7 +14700,6 @@ div.jp-OutputPrompt {
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <h2 id="What-is-Recpack?">What is Recpack?<a class="anchor-link" href="#What-is-Recpack?">&#182;</a></h2><h3 id="Architecture">Architecture<a class="anchor-link" href="#Architecture">&#182;</a></h3><p><img src="RecpackPipeline.png" alt="pipeline"></p>
-<p>This image has been designed using resources from Flaticon.com</p>
 
 </div>
 </div>
@@ -14770,19 +14769,8 @@ div.jp-OutputPrompt {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
-<h3 id="Implementing-MLP-network">Implementing MLP network<a class="anchor-link" href="#Implementing-MLP-network">&#182;</a></h3><p><img src="MLPArchitecture.png" alt="MLPArchitecture"></p>
-
-</div>
-</div>
-</div>
-</div></section></section><section><section>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <h2 id="Implementing-the-Neural-Architecture">Implementing the Neural Architecture<a class="anchor-link" href="#Implementing-the-Neural-Architecture">&#182;</a></h2><p><img src="NeuMFArchitecture.png" alt="Architecture"></p>
+<p><em>image from He, Xiangnan, et al. "Neural collaborative filtering." In Proceedings of the 26th international conference on world wide web. 2017.</em></p>
 
 </div>
 </div>
@@ -14797,23 +14785,23 @@ div.jp-OutputPrompt {
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">NMFModule</span><span class="p">(</span><span class="n">NMFModule</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">predictive_powers</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_users</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_items</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dropout</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">predictive_factors</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_users</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_items</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dropout</span><span class="p">:</span> <span class="nb">float</span>
     <span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="n">num_components</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">predictive_powers</span>
+        <span class="n">embedding_size</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">predictive_factors</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">user_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_users</span><span class="p">,</span> <span class="n">num_components</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">item_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_items</span><span class="p">,</span> <span class="n">num_components</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_users</span><span class="p">,</span> <span class="n">embedding_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">item_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">n_items</span><span class="p">,</span> <span class="n">embedding_size</span><span class="p">)</span>
 
         <span class="c1"># we use a three tiered MLP as described in the experiments of the paper.</span>
         <span class="n">hidden_dims</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="mi">4</span> <span class="o">*</span> <span class="n">predictive_powers</span><span class="p">,</span> 
-            <span class="mi">2</span> <span class="o">*</span> <span class="n">predictive_powers</span><span class="p">,</span> 
-            <span class="n">predictive_powers</span>
+            <span class="mi">4</span> <span class="o">*</span> <span class="n">predictive_factors</span><span class="p">,</span> 
+            <span class="mi">2</span> <span class="o">*</span> <span class="n">predictive_factors</span><span class="p">,</span> 
+            <span class="n">predictive_factors</span>
         <span class="p">]</span>
 
-        <span class="c1"># Output is always 1, since we need a single score for u,i</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mlp</span> <span class="o">=</span> <span class="n">MLP</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">predictive_powers</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> 
+        <span class="c1"># Output is always shape 1, since we need a single score for u,i</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mlp</span> <span class="o">=</span> <span class="n">MLP</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">predictive_factors</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> 
                        <span class="n">hidden_dims</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">final</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>
