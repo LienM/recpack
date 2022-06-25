@@ -6,7 +6,7 @@ from scipy.sparse import csr_matrix
 import torch
 from unittest.mock import MagicMock
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.algorithms.gru4rec import GRU4RecCrossEntropy
 from recpack.tests.test_algorithms.util import assert_changed, assert_same
 from recpack.tests.test_algorithms.test_loss_functions import sigmoid

@@ -1,5 +1,5 @@
 import recpack.preprocessing.filters as filters
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 def test_min_users_per_item_filter(dataframe):
@@ -154,12 +154,7 @@ def test_deduplicate(dataframe_with_fixed_timestamps_inverted):
     # 4 duplicates
     assert filtered_df.shape[0] == dataframe_with_fixed_timestamps_inverted.shape[0] - 4
     # removes the last events
-    assert (
-        filtered_df[filtered_df[InteractionMatrix.USER_IX] == 4][
-            InteractionMatrix.TIMESTAMP_IX
-        ].max()
-        == 1
-    )
+    assert filtered_df[filtered_df[InteractionMatrix.USER_IX] == 4][InteractionMatrix.TIMESTAMP_IX].max() == 1
 
 
 def test_apply_all(dataframe):

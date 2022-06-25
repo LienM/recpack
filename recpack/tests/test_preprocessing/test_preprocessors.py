@@ -7,7 +7,7 @@ from recpack.preprocessing.preprocessors import (
     DataFramePreprocessor,
     SessionDataFramePreprocessor,
 )
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 @pytest.fixture
@@ -42,12 +42,8 @@ def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
     interaction_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique()
-    )
-    assert len(processor.user_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.USER_IX].unique()
-    )
+    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
     assert interaction_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
     assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
@@ -76,12 +72,8 @@ def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
 
     interaction_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique()
-    )
-    assert len(processor.user_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.USER_IX].unique()
-    )
+    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
     assert interaction_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
     assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
@@ -106,12 +98,8 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
 
     interaction_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.ITEM_IX].unique()
-    )
-    assert len(processor.user_id_mapping.keys()) == len(
-        dataframe[InteractionMatrix.USER_IX].unique()
-    )
+    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
     assert interaction_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
     assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
@@ -157,12 +145,8 @@ def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
     assert len(processor.item_id_mapping.keys()) == len(unique_items)
     assert len(processor.user_id_mapping.keys()) == len(unique_users)
 
-    assert len(processor.item_id_mapping.keys()) != len(
-        dataframe_2[InteractionMatrix.ITEM_IX].unique()
-    )
-    assert len(processor.user_id_mapping.keys()) != len(
-        dataframe_2[InteractionMatrix.USER_IX].unique()
-    )
+    assert len(processor.item_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.USER_IX].unique())
 
     assert interaction_ms[0].shape[0] == len(unique_users)
     assert interaction_ms[0].shape[1] == len(unique_items)
@@ -204,19 +188,11 @@ def test_dataframe_preprocessor_w_filter_no_duplicates(dataframe):
 
     filtered_df = myfilter.apply(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(
-        filtered_df[InteractionMatrix.ITEM_IX].unique()
-    )
-    assert len(processor.user_id_mapping.keys()) == len(
-        filtered_df[InteractionMatrix.USER_IX].unique()
-    )
+    assert len(processor.item_id_mapping.keys()) == len(filtered_df[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor.user_id_mapping.keys()) == len(filtered_df[InteractionMatrix.USER_IX].unique())
 
-    assert interaction_m.shape[0] == len(
-        filtered_df[InteractionMatrix.USER_IX].unique()
-    )
-    assert interaction_m.shape[1] == len(
-        filtered_df[InteractionMatrix.ITEM_IX].unique()
-    )
+    assert interaction_m.shape[0] == len(filtered_df[InteractionMatrix.USER_IX].unique())
+    assert interaction_m.shape[1] == len(filtered_df[InteractionMatrix.ITEM_IX].unique())
 
 
 def test_add_filter(dataframe):
@@ -264,10 +240,7 @@ def test_session_dataframe_preprocessor_sunny_day(dataframe_with_fixed_timestamp
     interaction_m = processor.process(dataframe_with_fixed_timestamps)
 
     # User 1 has 2 sessions, all other users have a single one.
-    assert (
-        interaction_m.shape[0]
-        == dataframe_with_fixed_timestamps[InteractionMatrix.USER_IX].nunique() + 1
-    )
+    assert interaction_m.shape[0] == dataframe_with_fixed_timestamps[InteractionMatrix.USER_IX].nunique() + 1
 
     session_interaction_counts = interaction_m.values.sum(axis=1).T
 
@@ -308,9 +281,7 @@ def test_session_raises_missing_column(dataframe, column_to_drop):
     assert "The SessionDataFrameProcessor is missing columns" in str(excinfo.value)
 
 
-def test_session_dataframe_preprocessor_process_many(
-    session_pageviews, session_purchases
-):
+def test_session_dataframe_preprocessor_process_many(session_pageviews, session_purchases):
     processor = SessionDataFramePreprocessor(
         InteractionMatrix.ITEM_IX,
         InteractionMatrix.USER_IX,

@@ -7,7 +7,7 @@ import torch.nn as nn
 from scipy.sparse import csr_matrix
 
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 INPUT_SIZE = 1000
 USER_IX = InteractionMatrix.USER_IX

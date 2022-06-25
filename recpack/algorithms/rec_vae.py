@@ -15,7 +15,7 @@ from recpack.algorithms.util import (
     log_norm_pdf,
     naive_sparse2tensor,
 )
-from recpack.splitters.splitter_base import yield_batches
+from recpack.scenarios.splitters import yield_batches
 
 
 logger = logging.getLogger("recpack")

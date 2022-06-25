@@ -21,7 +21,7 @@ from recpack.algorithms.samplers import (
     SequenceMiniBatchPositivesTargetsNegativesSampler,
     SequenceMiniBatchSampler,
 )
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 logger = logging.getLogger("recpack")
@@ -345,7 +345,9 @@ class GRU4Rec(TorchMLAlgorithm):
                             .numpy()
                         )
 
-                        X_pred[uid_batch_w_last_item] = self._get_top_k_recommendations(csr_matrix(item_scores[:, :-1]))
+                        X_pred[uid_batch_w_last_item] = self._get_top_k_recommendations(
+                            csr_matrix(item_scores[:, :-1])
+                        )
 
         return X_pred.tocsr()
 

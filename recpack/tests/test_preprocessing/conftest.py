@@ -3,7 +3,7 @@ import random
 import pandas as pd
 import pytest
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 @pytest.fixture(scope="function")
@@ -14,9 +14,7 @@ def dataframe():
     input_dict = {
         InteractionMatrix.USER_IX: users,
         InteractionMatrix.ITEM_IX: items,
-        InteractionMatrix.TIMESTAMP_IX: [
-            random.randint(0, 400) for _ in range(len(users))
-        ],
+        InteractionMatrix.TIMESTAMP_IX: [random.randint(0, 400) for _ in range(len(users))],
     }
 
     df = pd.DataFrame.from_dict(input_dict)
@@ -66,9 +64,7 @@ def rating_dataframe():
     input_dict = {
         InteractionMatrix.USER_IX: users,
         InteractionMatrix.ITEM_IX: items,
-        InteractionMatrix.TIMESTAMP_IX: [
-            random.randint(0, 400) for _ in range(len(users))
-        ],
+        InteractionMatrix.TIMESTAMP_IX: [random.randint(0, 400) for _ in range(len(users))],
         "rating": ratings,
     }
 

@@ -8,7 +8,7 @@ from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans
 
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 from recpack.util import get_top_K_values
 from recpack.algorithms.p2v import Prod2Vec
 
@@ -196,9 +196,7 @@ class Prod2VecClustered(Prod2Vec):
         cluster_assignments = self._cluster()
 
         # Compute cluster to cluster similarities
-        cluster_to_cluster_neighbours = self._get_top_K_clusters(
-            X, cluster_assignments
-        )
+        cluster_to_cluster_neighbours = self._get_top_K_clusters(X, cluster_assignments)
 
         cluster_neighbour_cnt = cluster_to_cluster_neighbours.sum(axis=1)
 
@@ -208,8 +206,7 @@ class Prod2VecClustered(Prod2Vec):
         # Compute similarities per cluster
         for cluster in np.arange(self.num_clusters):
             # Get clusters that occur after `cluster` often.
-            cluster_neighbours = cluster_to_cluster_neighbours[cluster, :].nonzero()[
-                1]
+            cluster_neighbours = cluster_to_cluster_neighbours[cluster, :].nonzero()[1]
 
             if not cluster_neighbours.any():
                 continue
@@ -218,18 +215,15 @@ class Prod2VecClustered(Prod2Vec):
 
             context = embedding[cluster_items, :]
 
-            adjacent_cluster_items = np.asarray(np.isin(
-                cluster_assignments, cluster_neighbours)).nonzero()[0]
+            adjacent_cluster_items = np.asarray(np.isin(cluster_assignments, cluster_neighbours)).nonzero()[0]
 
             target = embedding[adjacent_cluster_items, :]
 
             local_sims = lil_matrix((cluster_items.shape[0], num_items))
 
-            local_sims[:, adjacent_cluster_items] = cosine_similarity(
-                context, target)
+            local_sims[:, adjacent_cluster_items] = cosine_similarity(context, target)
 
-            item_cosine_similarity_[cluster_items] = get_top_K_values(
-                local_sims.tocsr(), K)
+            item_cosine_similarity_[cluster_items] = get_top_K_values(local_sims.tocsr(), K)
 
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
@@ -246,9 +240,7 @@ class Prod2VecClustered(Prod2Vec):
         cluster_assignments = kmeans.fit_predict(embedding)
         return cluster_assignments
 
-    def _get_top_K_clusters(
-        self, X: InteractionMatrix, item_to_cluster: np.ndarray
-    ) -> csr_matrix:
+    def _get_top_K_clusters(self, X: InteractionMatrix, item_to_cluster: np.ndarray) -> csr_matrix:
         """Compute the clusters that should be considered neighbours.
 
         Similarity between two clusters i, j is computed by the number of times
@@ -278,8 +270,7 @@ class Prod2VecClustered(Prod2Vec):
         )
 
         # Cut to topK most similar neighborhoods.
-        cluster_neighbourhood = get_top_K_values(
-            cluster_to_cluster_csr, self.Kcl)
+        cluster_neighbourhood = get_top_K_values(cluster_to_cluster_csr, self.Kcl)
 
         return cluster_neighbourhood
 
@@ -287,8 +278,14 @@ class Prod2VecClustered(Prod2Vec):
         """
         Create pairs of positive samples.
         """
-        windowed_sequences = np.array([w.tolist(
-        ) for _, sequence in X.sorted_item_history if len(sequence) >= 2 for w in sliding_window_view(sequence, 2)])
+        windowed_sequences = np.array(
+            [
+                w.tolist()
+                for _, sequence in X.sorted_item_history
+                if len(sequence) >= 2
+                for w in sliding_window_view(sequence, 2)
+            ]
+        )
         context = windowed_sequences[:, 0]
         focus = windowed_sequences[:, 1]
 
