@@ -44,12 +44,14 @@ pages:
     - cd doc
     # Generate the auto generated pages.
     - sphinx-autogen -o source/generated/ source/recpack.algorithms.rst -t source/_templates/
-    - sphinx-autogen -o source/generated/ source/recpack.data.rst -t source/_templates/
+    - sphinx-autogen -o source/generated/ source/recpack.datasets.rst -t source/_templates/
     - sphinx-autogen -o source/generated/ source/recpack.metrics.rst -t source/_templates/
     - sphinx-autogen -o source/generated/ source/recpack.preprocessing.rst -t source/_templates/
-    - sphinx-autogen -o source/generated/ source/recpack.splitters.rst -t source/_templates/
+    - sphinx-autogen -o source/generated/ source/recpack.scenarios.rst -t source/_templates/
     - sphinx-autogen -o source/generated/ source/recpack.postprocessing.rst -t source/_templates/
     - sphinx-autogen -o source/generated/ source/recpack.pipelines.rst -t source/_templates/
+    - sphinx-autogen -o source/generated/ source/recpack.matrix.rst -t source/_templates/
+
     # Render HTML
     - make html
     # Move the build to public
