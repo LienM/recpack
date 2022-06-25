@@ -214,9 +214,9 @@ we update ``_transform_fit_input``.
         def _transform_fit_input(self, X):
             # X needs to be an InteractionMatrix for us to have access to
             # the time of interaction at fitting time
-            assert isinstance(X, InteractionMatrix)
+            self._assert_is_interaction_matrix(X)
             # X needs to have timestamps available
-            assert X.has_timestamps
+            self._assert_has_timestamps(X)
             # No transformation needed
             return X
 
