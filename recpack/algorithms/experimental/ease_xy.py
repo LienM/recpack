@@ -5,7 +5,7 @@ import numpy as np
 import scipy.sparse
 
 from recpack.algorithms import EASE
-from recpack.data.matrix import Matrix, to_csr_matrix
+from recpack.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 

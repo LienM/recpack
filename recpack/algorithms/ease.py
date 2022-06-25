@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse
 
 from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
-from recpack.data.matrix import Matrix, to_csr_matrix
+from recpack.matrix import Matrix, to_csr_matrix
 
 logger = logging.getLogger("recpack")
 
@@ -108,8 +108,7 @@ class EASE(ItemSimilarityMatrixAlgorithm):
 
         # Compute P
         XTX = (X.T @ X).toarray()
-        P = np.linalg.inv(
-            XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
+        P = np.linalg.inv(XTX + self.l2 * np.identity((X.shape[1]), dtype=np.float32))
 
         # Compute B
         B = np.identity(X.shape[1]) - P @ np.diag(1.0 / np.diag(P))
@@ -135,7 +134,5 @@ class EASE(ItemSimilarityMatrixAlgorithm):
             int(self.density * np.product(self.similarity_matrix_.shape)),
             self.similarity_matrix_.nnz,
         )
-        self.similarity_matrix_.data[
-            np.argpartition(abs(self.similarity_matrix_.data), -K)[0:-K]
-        ] = 0
+        self.similarity_matrix_.data[np.argpartition(abs(self.similarity_matrix_.data), -K)[0:-K]] = 0
         self.similarity_matrix_.eliminate_zeros()

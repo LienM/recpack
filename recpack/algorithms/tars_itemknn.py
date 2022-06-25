@@ -8,7 +8,7 @@ from recpack.algorithms.nearest_neighbour import (
     compute_conditional_probability,
     compute_cosine_similarity,
 )
-from recpack.data.matrix import InteractionMatrix, Matrix
+from recpack.matrix import InteractionMatrix, Matrix
 from recpack.util import get_top_K_values
 
 
