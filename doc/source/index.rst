@@ -4,7 +4,7 @@ Welcome to Recpack's documentation!
 .. toctree::
    :maxdepth: 2
 
-   recpack.data
+   recpack.datasets
    recpack.preprocessing
    recpack.algorithms
    recpack.scenarios
