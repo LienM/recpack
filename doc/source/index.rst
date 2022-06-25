@@ -7,10 +7,11 @@ Welcome to Recpack's documentation!
    recpack.data
    recpack.preprocessing
    recpack.algorithms
-   recpack.splitters
-   recpack.metrics
+   recpack.scenarios
    recpack.postprocessing
+   recpack.metrics
    recpack.pipelines
+   recpack.matrix
    guides
 
 Indices and tables

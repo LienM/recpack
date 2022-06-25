@@ -18,12 +18,12 @@ sys.path.insert(0, os.path.abspath("../"))
 
 # -- Project information -----------------------------------------------------
 
-project = "Recpack"
-copyright = "2021, Lien Michiels"
-author = "Lien Michiels"
+project = "RecPack"
+copyright = "2022, Lien Michiels"
+author = "Lien Michiels and Robin Verachtert"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.1"
+release = "0.3.0"
 
 
 # -- General configuration ---------------------------------------------------
