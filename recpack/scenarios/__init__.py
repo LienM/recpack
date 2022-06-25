@@ -19,7 +19,7 @@ hold out all interactions after T".
 Should you want to implement a new scenario that is not yet supported,
 you can use the splitters submodule to help you build it from the ground up.
 
-.. currentmodule:: recpack.splitters
+.. currentmodule:: recpack.scenarios
 
 .. contents:: Table of Contents
     :depth: 2
