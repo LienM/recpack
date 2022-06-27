@@ -180,7 +180,7 @@ class Pipeline(object):
                 # If we run for a fixed number of iterations, it doesn't matter anyway.
                 algo.fit(self.validation_training_data, self.validation_data)
             else:
-                algo.fit(self.full_training_data)
+                algo.fit(self.validation_training_data)
             metric = METRIC_REGISTRY.get(metric_entry.name)(K=metric_entry.K)
 
             prediction = algo.predict(self.validation_data[0])
