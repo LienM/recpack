@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="recpack",
-    version="0.2.2",
+    version="0.3.0",
     python_requires=">=3.6",
     packages=find_packages(),
     install_requires=[

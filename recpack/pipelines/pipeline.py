@@ -177,7 +177,7 @@ class Pipeline(object):
                 # If we run for a fixed number of iterations, it doesn't matter anyway.
                 algo.fit(self.validation_training_data, self.validation_data)
             else:
-                algo.fit(self.full_training_data)
+                algo.fit(self.validation_training_data)
             metric = METRIC_REGISTRY.get(metric_entry.name)(K=metric_entry.K)
 
             prediction = algo.predict(self.validation_data[0])
@@ -223,16 +223,21 @@ class Pipeline(object):
                 m.calculate(test_out.binary_values, recommendations)
                 self._metric_acc.add(m, algo.identifier, m.name)
 
-    def get_metrics(self) -> Dict[str, Dict[str, float]]:
+    def get_metrics(self, short: Optional[bool] = False) -> pd.DataFrame:
         """Get the metrics for the pipeline.
 
-        Returns a nested dict, with structure:
-        <algorithm> -> <metric> -> value
-
-        :return: Metric values as a nested dict.
-        :rtype: Dict[str, Dict[str, float]]
+        :param short: If short is True, only the algorithm names are returned, and not the parameters.
+            Defaults to False
+        :type short: Optional[bool]
+        :return: Algorithms and their respective performance.
+        :rtype: pd.DataFrame
         """
-        return self._metric_acc.metrics
+        df = pd.DataFrame.from_dict(self._metric_acc.metrics).T
+        if short:
+            # Parameters are between (), so if we split on the (,
+            # we can get the algorithm name by taking the first of the splits.
+            df.index = df.index.map(lambda x: x.split("(")[0])
+        return df
 
     def get_metrics_dataframe(self, short: Optional[bool] = False):
         """Get a dataframe with the algorithms as keys.

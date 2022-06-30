@@ -5,8 +5,8 @@
 .. autosummary::
     :toctree: generated/
 
-    pipeline.PipelineBuilder
-    pipeline.Pipeline
+    PipelineBuilder
+    Pipeline
 
     registries.AlgorithmRegistry
     registries.MetricRegistry

@@ -1,10 +1,8 @@
 import os
 from pathlib import Path
 import pytest
-import shutil
 from tempfile import NamedTemporaryFile
 
-from unittest.mock import patch
 
 from recpack import datasets
 from recpack.preprocessing.filters import MinItemsPerUser, MinUsersPerItem, NMostPopular, MinRating
@@ -22,10 +20,8 @@ def path():
 
 
 def test_fetch_dataset(demo_data):
-    """Test that
-
-    :param demo_data: [description]
-    :type demo_data: [type]
+    """Test that fetch gets the data correctly. Downloading a file when not present,
+    not downloading when present, and overwriting when force is True.
     """
 
     with NamedTemporaryFile() as f:

@@ -87,7 +87,7 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
     EASE
 
 
-Session Aware Algorithms
+Session-Based Algorithms
 -------------------------
 
 .. autosummary::
@@ -112,12 +112,11 @@ For more information on how to create your own recpack algorithm, see :ref:`guid
     :toctree: generated/
     :template: autosummary/base_algorithm_class.rst
 
-    base.Algorithm
-    base.ItemSimilarityMatrixAlgorithm
-    base.TopKItemSimilarityMatrixAlgorithm
-    base.FactorizationAlgorithm
-    base.TorchMLAlgorithm
-    GRU4Rec
+    Algorithm
+    ItemSimilarityMatrixAlgorithm
+    TopKItemSimilarityMatrixAlgorithm
+    FactorizationAlgorithm
+    TorchMLAlgorithm
 
 Stopping Criterion
 --------------------
@@ -190,7 +189,7 @@ Use these to simplify certain tasks (such as batching) when creating a new algor
 """
 
 
-from recpack.algorithms.base import Algorithm
+from recpack.algorithms.base import Algorithm, TopKItemSimilarityMatrixAlgorithm, TorchMLAlgorithm, ItemSimilarityMatrixAlgorithm, FactorizationAlgorithm
 from recpack.algorithms.baseline import Popularity, Random
 from recpack.algorithms.factorization import (
     NMF,
