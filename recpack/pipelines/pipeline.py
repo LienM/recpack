@@ -153,10 +153,11 @@ class Pipeline(object):
     # TODO Work with csr_matrices
     def _predict_and_postprocess(self, algorithm: Algorithm, data_in: InteractionMatrix) -> csr_matrix:
         X_pred = algorithm.predict(data_in)
-        X_pred = self.post_processor.process(X_pred)
 
         if self.remove_history:
             X_pred = X_pred - X_pred.multiply(data_in.binary_values)
+
+        X_pred = self.post_processor.process(X_pred)
 
         return X_pred
 
