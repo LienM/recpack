@@ -19,7 +19,7 @@ from recpack.algorithms.util import (
     get_batches,
     get_users,
 )
-from recpack.data.matrix import InteractionMatrix, to_csr_matrix, Matrix
+from recpack.matrix import InteractionMatrix, to_csr_matrix, Matrix
 from recpack.util import get_top_K_values
 
 logger = logging.getLogger("recpack")
@@ -119,10 +119,7 @@ class Algorithm(BaseEstimator):
         predicted_users = set(X_pred.nonzero()[0])
         missing = users.difference(predicted_users)
         if len(missing) > 0:
-            warnings.warn(
-                f"{self.name} failed to recommend any items "
-                f"for {len(missing)} users"
-            )
+            warnings.warn(f"{self.name} failed to recommend any items " f"for {len(missing)} users")
 
     def _transform_fit_input(self, X: Matrix) -> csr_matrix:
         """Transform the training data to expected type
@@ -147,6 +144,18 @@ class Algorithm(BaseEstimator):
         :rtype: csr_matrix
         """
         return to_csr_matrix(X, binary=True)
+
+    def _assert_is_interaction_matrix(self, *matrices: Matrix) -> None:
+        """Make sure that the passed matrices are all an InteractionMatrix."""
+        for X in matrices:
+            if type(X) != InteractionMatrix:
+                raise TypeError(f"{self.name} requires Interaction Matrix as input. Got {type(X)}.")
+
+    def _assert_has_timestamps(self, *matrices: InteractionMatrix):
+        """Make sure that the matrices all have timestamp information."""
+        for X in matrices:
+            if not X.has_timestamps:
+                raise ValueError(f"{self.name} requires timestamp information in the InteractionMatrix.")
 
     def fit(self, X: Matrix) -> "Algorithm":
         """Fit the model to the input interaction matrix.
@@ -519,13 +528,11 @@ class TorchMLAlgorithm(Algorithm):
         """
         raise NotImplementedError()
 
-    def _batch_predict(self, X: Matrix, users: List[int] = None) -> csr_matrix:
+    def _batch_predict(self, X: Matrix, users: List[int]) -> csr_matrix:
         """Predict scores for matrix X, given the selected users in this batch
 
-        If there are no selected users, assumes X is a full matrix,
-        and users can be retrieved as the nonzero indices in the X matrix.
-
-        :param X: Matrix of user item interactions
+        :param X: Matrix of user item interactions,
+            expected to only contain interactions for those users that are in `users`
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
@@ -558,6 +565,7 @@ class TorchMLAlgorithm(Algorithm):
         :return: The predicted affinity of users for items.
         :rtype: csr_matrix
         """
+
         results = lil_matrix(X.shape)
         self.model_.eval()
         with torch.no_grad():
@@ -569,9 +577,7 @@ class TorchMLAlgorithm(Algorithm):
                     batch[users] = X[users]
                     batch = batch.tocsr()
 
-                results[users] = self._get_top_k_recommendations(
-                    self._batch_predict(batch, users=users)[users]
-                )
+                results[users] = self._get_top_k_recommendations(self._batch_predict(batch, users=users)[users])
 
         logger.debug(f"shape of response ({results.shape})")
 
@@ -594,6 +600,7 @@ class TorchMLAlgorithm(Algorithm):
         return to_csr_matrix((X, validation_data), binary=True)
 
     def _transform_predict_input(self, X: Matrix) -> csr_matrix:
+        # Checking shape
         return to_csr_matrix(X, binary=True)
 
     @property
@@ -618,9 +625,7 @@ class TorchMLAlgorithm(Algorithm):
         with open(self.filename, "wb") as f:
             torch.save(self.model_, f)
 
-    def fit(
-        self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
-    ) -> "TorchMLAlgorithm":
+    def fit(self, X: Matrix, validation_data: Tuple[Matrix, Matrix]) -> "TorchMLAlgorithm":
         """Fit the parameters of the model.
 
         Interaction Matrix X will be used for training,
@@ -687,9 +692,7 @@ class TorchMLAlgorithm(Algorithm):
                     start_time = time.time()
                     self._evaluate(val_in, val_out)
                     end_time = time.time()
-                    logger.info(
-                        f"Evaluation at end of {epoch} took {end_time-start_time :.2f} s."
-                    )
+                    logger.info(f"Evaluation at end of {epoch} took {end_time-start_time :.2f} s.")
         except EarlyStoppingException:
             pass
 
@@ -724,7 +727,4 @@ class TorchMLAlgorithm(Algorithm):
         predicted_users = set(X_pred.nonzero()[0])
         missing = users.difference(predicted_users)
         if len(missing) > 0:
-            warnings.warn(
-                f"{self.name} failed to recommend any items "
-                f"for {len(missing)} users"
-            )
+            warnings.warn(f"{self.name} failed to recommend any items " f"for {len(missing)} users")

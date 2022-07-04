@@ -9,7 +9,7 @@ import torch
 
 from recpack.algorithms import Algorithm
 from recpack.algorithms.util import naive_sparse2tensor, get_batches, get_users
-from recpack.data.matrix import to_binary
+from recpack.matrix import to_binary
 
 logger = logging.getLogger("recpack")
 
@@ -89,7 +89,7 @@ class WeightedMatrixFactorization(Algorithm):
         num_components: int = 100,
         regularization: float = 0.01,
         iterations: int = 20,
-        batch_size: int = 100
+        batch_size: int = 100,
     ):
         """
         Initialize the weighted matrix factorization algorithm
@@ -130,28 +130,23 @@ class WeightedMatrixFactorization(Algorithm):
 
         C = self._generate_confidence(X_nonzero)
 
-        item_factors = torch.rand(
-            (self.num_items, self.num_components), dtype=torch.float32, device=self.device) * 0.01
+        item_factors = (
+            torch.rand((self.num_items, self.num_components), dtype=torch.float32, device=self.device) * 0.01
+        )
 
         for i in tqdm(range(self.iterations)):
             # User iteration
-            user_factors = self._least_squares(
-                C, item_factors, (num_nonzero_users, self.num_components)
-            )
+            user_factors = self._least_squares(C, item_factors, (num_nonzero_users, self.num_components))
 
             # Item iteration
-            item_factors = self._least_squares(
-                C.T, user_factors, (self.num_items, self.num_components)
-            )
+            item_factors = self._least_squares(C.T, user_factors, (self.num_items, self.num_components))
 
             X_pred = user_factors @ item_factors.T
-            loss = self.loss(X_pred, naive_sparse2tensor(
-                X_nonzero).to(self.device))
+            loss = self.loss(X_pred, naive_sparse2tensor(X_nonzero).to(self.device))
             logger.debug(f"Current MSE Loss: {loss.item()}")
 
         self.item_factors_ = item_factors
-        self.user_factors_ = torch.zeros(
-            self.num_users, self.num_components, device=self.device)
+        self.user_factors_ = torch.zeros(self.num_users, self.num_components, device=self.device)
         self.user_factors_[self.user_id_map_, :] = user_factors
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
@@ -165,12 +160,9 @@ class WeightedMatrixFactorization(Algorithm):
         :rtype: csr_matrix
         """
         U_conf = self._generate_confidence(X)
-        U_user_factors = self._least_squares(
-            U_conf, self.item_factors_, (self.num_users, self.num_components)
-        )
+        U_user_factors = self._least_squares(U_conf, self.item_factors_, (self.num_users, self.num_components))
 
-        score_matrix = csr_matrix(
-            (U_user_factors @ self.item_factors_.T).detach().cpu().numpy())
+        score_matrix = csr_matrix((U_user_factors @ self.item_factors_.T).detach().cpu().numpy())
 
         self._check_prediction(score_matrix, X)
         return score_matrix
@@ -205,12 +197,7 @@ class WeightedMatrixFactorization(Algorithm):
 
         return X[nonzero_users, :]
 
-    def _least_squares(
-        self,
-        C: csr_matrix,
-        Y: torch.Tensor,
-        other_factor_dim: Tuple[int, int]
-    ) -> torch.Tensor:
+    def _least_squares(self, C: csr_matrix, Y: torch.Tensor, other_factor_dim: Tuple[int, int]) -> torch.Tensor:
         """Calculate the one factor matrix based on the confidence matrix and the other factor matrix with the least squares algorithm.
 
         :param C: (Transposed) Confidence matrix.
@@ -239,18 +226,15 @@ class WeightedMatrixFactorization(Algorithm):
 
         for id_batch in get_batches(get_users(C), batch_size=self.batch_size):
             # Create batches of batch_size
-            C_diag_batch = torch.Tensor(
-                C[id_batch, :].toarray()).to(self.device)
+            C_diag_batch = torch.Tensor(C[id_batch, :].toarray()).to(self.device)
 
             # Used in both A and B
-            Y_T_diag = (Y.T * C_diag_batch.unsqueeze(1))
+            Y_T_diag = Y.T * C_diag_batch.unsqueeze(1)
 
             # A batch needs to be a tensor.
-            A_batch = YtY + Y_T_diag @ Y + self.regularization * \
-                torch.eye(self.num_components, device=self.device)
+            A_batch = YtY + Y_T_diag @ Y + self.regularization * torch.eye(self.num_components, device=self.device)
 
-            P_batch = naive_sparse2tensor(
-                binary_C[id_batch, :]).unsqueeze(-1).to(self.device)
+            P_batch = naive_sparse2tensor(binary_C[id_batch, :]).unsqueeze(-1).to(self.device)
 
             B_batch = (Y.T + Y_T_diag) @ P_batch
 

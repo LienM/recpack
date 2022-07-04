@@ -105,6 +105,7 @@ class AlgorithmEntry(NamedTuple):
         where the key is the name of the hyperparameter and value is the value it should take.
     :type params: Optional[Dict[str, Any]]
     """
+
     name: str
     grid: Optional[Dict[str, List]] = None
     params: Optional[Dict[str, Any]] = None

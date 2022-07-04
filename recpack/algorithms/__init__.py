@@ -35,12 +35,14 @@ they have interacted with.
 
     SLIM
     ItemKNN
+    TARSItemKNNLiu
+    TARSItemKNN
     ItemPNN
     NMFItemToItem
     SVDItemToItem
     Prod2Vec
     Prod2VecClustered
-    
+
 
 Hybrid Similarity Algorithms
 ----------------------------
@@ -84,7 +86,7 @@ More information on autoencoders can be found on `Wikipedia <https://en.wikipedi
     EASE
 
 
-Recurrent Neural Networks
+Session-Based Algorithms
 -------------------------
 
 .. autosummary::
@@ -92,6 +94,7 @@ Recurrent Neural Networks
 
     GRU4RecNegSampling
     GRU4RecCrossEntropy
+    STAN
 
 .. _algorithm-base-classes:
 
@@ -108,12 +111,11 @@ For more information on how to create your own recpack algorithm, see :ref:`guid
     :toctree: generated/
     :template: autosummary/base_algorithm_class.rst
 
-    base.Algorithm
-    base.ItemSimilarityMatrixAlgorithm
-    base.TopKItemSimilarityMatrixAlgorithm
-    base.FactorizationAlgorithm
-    base.TorchMLAlgorithm
-    GRU4Rec
+    Algorithm
+    ItemSimilarityMatrixAlgorithm
+    TopKItemSimilarityMatrixAlgorithm
+    FactorizationAlgorithm
+    TorchMLAlgorithm
 
 Stopping Criterion
 --------------------
@@ -186,7 +188,7 @@ Use these to simplify certain tasks (such as batching) when creating a new algor
 """
 
 
-from recpack.algorithms.base import Algorithm
+from recpack.algorithms.base import Algorithm, TopKItemSimilarityMatrixAlgorithm, TorchMLAlgorithm, ItemSimilarityMatrixAlgorithm, FactorizationAlgorithm
 from recpack.algorithms.baseline import Popularity, Random
 from recpack.algorithms.factorization import (
     NMF,
@@ -211,4 +213,11 @@ from recpack.algorithms.wmf import WeightedMatrixFactorization
 
 from recpack.algorithms.p2v import Prod2Vec
 from recpack.algorithms.p2v_clustered import Prod2VecClustered
-from recpack.algorithms.gru4rec import GRU4Rec, GRU4RecNegSampling, GRU4RecCrossEntropy
+from recpack.algorithms.gru4rec import (
+    GRU4Rec,
+    GRU4RecNegSampling,
+    GRU4RecCrossEntropy,
+)
+
+from recpack.algorithms.stan import STAN
+from recpack.algorithms.tars_itemknn import TARSItemKNN, TARSItemKNNLiu

@@ -4,13 +4,14 @@ Welcome to Recpack's documentation!
 .. toctree::
    :maxdepth: 2
 
-   recpack.data
+   recpack.datasets
    recpack.preprocessing
    recpack.algorithms
-   recpack.splitters
-   recpack.metrics
+   recpack.scenarios
    recpack.postprocessing
+   recpack.metrics
    recpack.pipelines
+   recpack.matrix
    guides
 
 Indices and tables

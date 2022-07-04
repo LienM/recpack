@@ -6,8 +6,8 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from recpack.data.matrix import InteractionMatrix
-from recpack.splitters.scenarios import LastItemPrediction
+from recpack.matrix import InteractionMatrix
+from recpack.scenarios import LastItemPrediction
 from recpack.algorithms.p2v import Prod2Vec
 
 
@@ -102,9 +102,7 @@ def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
     sorted_expected_positive_pairs = list(map(tuple, expected_positive_pairs))
     sorted_expected_positive_pairs.sort()
 
-    np.testing.assert_array_equal(
-        sorted_generated_positive_pairs, sorted_expected_positive_pairs
-    )
+    np.testing.assert_array_equal(sorted_generated_positive_pairs, sorted_expected_positive_pairs)
 
 
 def test_overfit(prod2vec):

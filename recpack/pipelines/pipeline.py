@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Tuple, Union, Dict, List, Any
+from typing import Tuple, Union, Dict, List, Any, Optional
 
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -8,8 +8,6 @@ from sklearn.model_selection import ParameterGrid
 from tqdm.auto import tqdm
 
 from recpack.algorithms.base import Algorithm, TorchMLAlgorithm
-from recpack.data.matrix import InteractionMatrix
-from recpack.metrics.base import Metric
 from recpack.pipelines.registries import (
     ALGORITHM_REGISTRY,
     METRIC_REGISTRY,
@@ -19,6 +17,7 @@ from recpack.pipelines.registries import (
 )
 from recpack.postprocessing.postprocessors import Postprocessor
 
+from recpack.matrix import InteractionMatrix
 
 logger = logging.getLogger("recpack")
 
@@ -68,7 +67,9 @@ class Pipeline(object):
 
     Results can be accessed via the :meth:`get_metrics` method.
 
-    # TODO results_directory is not documented
+    :param results_directory: Path to a directory in which to save results of the pipeline
+        when save_metrics() is called.
+    :type results_directory: string
     :param algorithm_entries: List of AlgorithmEntry objects to evaluate in this pipeline.
         An AlgorithmEntry defines which algorithm to train, with which fixed parameters
         (params) and which parameters to optimize (grid).
@@ -85,9 +86,12 @@ class Pipeline(object):
     :param test_data: The data to perform evaluation, as (`test_in`, `test_out`) tuple.
     :type: Tuple[InteractionMatrix, InteractionMatrix]
     :param optimisation_metric: The metric to optimise each algorithm on.
+    :type optimisation_metric: Union[OptimisationMetricEntry, None]
     :param post_processor: A postprocessor instance to apply filters
         on the recommendation scores.
     :type post_processor: Postprocessor
+    :param remove_history: Boolean to configure if the recommendations can include already interacted with items.
+    :type remove_history: Boolean
     """
 
     def __init__(
@@ -100,10 +104,8 @@ class Pipeline(object):
         validation_data: Union[Tuple[InteractionMatrix, InteractionMatrix], None],
         test_data: Tuple[InteractionMatrix, InteractionMatrix],
         optimisation_metric_entry: Union[OptimisationMetricEntry, None],
-        # TODO Nullable or not?
-        post_processor: Union[Postprocessor, None],
-        # TODO Document
-        recommend_history: bool
+        post_processor: Postprocessor,
+        remove_history: bool,
     ):
         self.results_directory = results_directory
         self.algorithm_entries = algorithm_entries
@@ -114,7 +116,7 @@ class Pipeline(object):
         self.test_data_in, self.test_data_out = test_data
         self.optimisation_metric_entry = optimisation_metric_entry
         self.post_processor = post_processor
-        self.recommend_history = recommend_history
+        self.remove_history = remove_history
 
         self._metric_acc = MetricAccumulator()
         # All dataframes from optimisation are accumulated in this list
@@ -132,17 +134,16 @@ class Pipeline(object):
 
             algorithm = ALGORITHM_REGISTRY.get(algorithm_entry.name)(**params)
             # Train the final version of the algorithm
-            self._train(algorithm, params, self.full_training_data)
+            self._train(algorithm, self.full_training_data)
             # Make predictions
             X_pred = self._predict_and_postprocess(algorithm, self.test_data_in)
 
             for metric_entry in self.metric_entries:
-                # m = self._evaluate(metric_entry, self.test_data_out.binary_values, X_pred)
                 metric = METRIC_REGISTRY.get(metric_entry.name)(K=metric_entry.K)
                 metric.calculate(self.test_data_out.binary_values, X_pred)
                 self._metric_acc.add(metric, algorithm.identifier, metric.name)
 
-    def _train(self, algorithm: Algorithm, params: Dict[str, Any], training_data: InteractionMatrix) -> Algorithm:
+    def _train(self, algorithm: Algorithm, training_data: InteractionMatrix) -> Algorithm:
         if isinstance(algorithm, TorchMLAlgorithm):
             algorithm.fit(training_data, self.validation_data)
         else:
@@ -154,34 +155,27 @@ class Pipeline(object):
         X_pred = algorithm.predict(data_in)
         X_pred = self.post_processor.process(X_pred)
 
-        if not self.recommend_history:
+        if self.remove_history:
             X_pred = X_pred - X_pred.multiply(data_in.binary_values)
 
         return X_pred
-
-    def _evaluate(self, metric: MetricEntry, X_true: csr_matrix, X_pred: csr_matrix) -> Metric:
-        m = METRIC_REGISTRY.get(metric.name)(K=metric.K)
-        m.calculate(X_true, X_pred)
-        return m
 
     def _optimise(self, algorithm_entry: AlgorithmEntry) -> Dict[str, Any]:
         results = []
         # Construct grid:
         optimisation_params = ParameterGrid(algorithm_entry.grid)
         for p in optimisation_params:
-            algorithm = ALGORITHM_REGISTRY.get(algorithm_entry.name)(**p)
+            algorithm = ALGORITHM_REGISTRY.get(algorithm_entry.name)(**p, **algorithm_entry.params)
             # Train with given hyperparameter instantiations
-            self._train(algorithm, p, self.validation_training_data)
-            # Makre predictions and postprocess
+            self._train(algorithm, self.validation_training_data)
+            # Make predictions and postprocess
             validation_data_in, validation_data_out = self.validation_data
             X_pred_val = self._predict_and_postprocess(algorithm, validation_data_in)
             # Compute optimisation metric value
-            optimisation_metric = METRIC_REGISTRY.get(self.optimisation_metric_entry.name)(K=self.optimisation_metric_entry.K)
+            optimisation_metric = METRIC_REGISTRY.get(self.optimisation_metric_entry.name)(
+                K=self.optimisation_metric_entry.K
+            )
             optimisation_metric.calculate(validation_data_out.binary_values, X_pred_val)
-            # optimisation_metric = self._evaluate(self.optimisation_metric_entry, validation_data_out.binary_values, X_pred_val)
-            # metric = evaluate_recommendations(target, recommendations, self.optimisation_metric)
-
-            params = p
 
             results.append(
                 {
@@ -201,29 +195,28 @@ class Pipeline(object):
         self._optimisation_results.extend(results)
         return optimal_params
 
-    def get_metrics(self) -> Dict[str, Dict[str, float]]:
+    def get_metrics(self, short: Optional[bool] = False) -> pd.DataFrame:
         """Get the metrics for the pipeline.
 
-        Returns a nested dict, with structure:
-        <algorithm> -> <metric> -> value
-
-        It can be easily rendered into a well readable table using pandas::
-
-            import pandas as pd
-
-            pd.DataFrame.from_dict(pipeline.get_metrics())
-
-        :return: Metric values as a nested dict.
-        :rtype: Dict[str, Dict[str, float]]
+        :param short: If short is True, only the algorithm names are returned, and not the parameters.
+            Defaults to False
+        :type short: Optional[bool]
+        :return: Algorithms and their respective performance.
+        :rtype: pd.DataFrame
         """
-        return self._metric_acc.metrics
+        df = pd.DataFrame.from_dict(self._metric_acc.metrics).T
+        if short:
+            # Parameters are between (), so if we split on the (,
+            # we can get the algorithm name by taking the first of the splits.
+            df.index = df.index.map(lambda x: x.split("(")[0])
+        return df
 
     def save_metrics(self) -> None:
         """Save the metrics in a json file
 
         The file will be saved in the experiment directory.
         """
-        df = pd.DataFrame.from_dict(self.get_metrics())
+        df = self.get_metrics()
         df.to_json(f"{self.results_directory}/results.json")
 
     def get_num_users(self) -> int:

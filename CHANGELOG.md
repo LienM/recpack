@@ -9,13 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking Changes
+* __scenarios__
+    * Parameters of the `WeakGeneralization` scenario have been changed to now only accept a single `frac_data_in` parameter. Which makes sure the validation task is as difficult as the test tasks.
+    * Training data structure has changed. Rather than a single training dataset, we use two training datasets. `validation_training_data` is used to train models while optimising their parameters, and evaluation happens on the validation data. `full_training_data` is the union of training and validation data on which the final model should be trained during evaluation on the test dataset.
+
+* __pipelines__
+    * PipelineBuilder's `set_train_data` function has been replaced with `set_full_training_data` and `set_validation_training_data` to set the two separate training datasets.
+    * Added `set_data_from_scenario` function to `PipelineBuilder`, which makes setting data easy based on a split scenario.
+    * Updated `get_metrics` function, which returns the metrics as a dataframe, rather than a dict.
+
+* Several module changes were made:
+    * splitters module was restructured. Base module is called scenarios. Inside scenarios the splitters submodule contains the splitters functionality.
+    * data module was removed, and the submodules were turned into modules.  (`dataset` and `matrix`)
+
+
+
 ### Bugfixes
 * __splitters.scenarios__
     * Improved tests for WeakGeneralization scenario to confirm mismatches between train and validation_in are only due to users with not enough items and not a potential bug.
-    * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first. 
+    * Changed order of checks when accessing validation data, so that error when no validation data is configured, is thrown first, rather than the error about split first.
+
+* __algorithms.experimental.time_decay_nearest_neighbour__
+    * Improved computation speed of the algorithm by changing typing
+    * Added `decay_interval` parameter to improve performance.
+
 ### Additions
+* __algorithms__
+    * Standardised train and predict input validation functions have been added, and used to make sure inputs are InteractionMatrix objects when needed, and contain timestamps when needed.
+    * Added `TARSItemKNNLiu` and `TARSItemKNN` algorithms, which compute item-item similarities based on a weighted matrix based on the age of events.
+        * `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
+
+    * Added `STAN` algorithm, presented in Garg, Diksha, et al.
+    "Sequence and time aware neighborhood for session-based recommendations: Stan". 
+    This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
+
+* __data.matrix__
+    * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.
+
+* __data.datasets__
+    * Added `AdressaOneWeek` dataset.
+
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
+    * Added the `SessionDataFramePreprocessor` which cuts user histories into sessions while processing data into InteractionMatrices.
 
 ## [0.2.2] - ![](https://img.shields.io/date/1643025589.svg?label=2022-01-24)
 

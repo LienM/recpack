@@ -6,7 +6,7 @@ import yaml
 
 from recpack.pipelines import PipelineBuilder, Pipeline
 from recpack.postprocessing.filters import ExcludeItems
-from recpack.splitters.scenarios import Timed
+from recpack.scenarios import Timed
 
 
 def test_pipeline_builder(mat):
@@ -206,16 +206,20 @@ def test_default_name():
 
     assert pb.folder_name != pb2.folder_name
 
+
 def test_add_post_filter(pipeline_builder):
     pipeline_builder.add_post_filter(ExcludeItems)
 
     pipe = pipeline_builder.build()
     assert len(pipe.post_processor.filters) == 1
 
+
 # TODO Test history filtering
-# def test_error_adding_remove_history_filter(pipeline_builder, mat):
-    # with pytest.raises(ValueError):
-    #     pipeline_builder.add_post_filter(RemoveHistory(mat))
+def test_remove_history(pipeline_builder):
+    assert pipeline_builder.remove_history
+
+    pipeline_builder.remove_history = False
+    assert not pipeline_builder.remove_history
 
 
 def test_set_data_from_scenario(mat):

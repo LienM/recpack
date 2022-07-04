@@ -3,7 +3,7 @@ import enum
 import numpy as np
 
 from recpack.algorithms.base import ItemSimilarityMatrixAlgorithm
-from recpack.data.matrix import Matrix, to_csr_matrix
+from recpack.matrix import Matrix, to_csr_matrix
 from scipy.sparse import csr_matrix
 
 

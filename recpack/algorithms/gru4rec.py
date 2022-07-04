@@ -21,7 +21,7 @@ from recpack.algorithms.samplers import (
     SequenceMiniBatchPositivesTargetsNegativesSampler,
     SequenceMiniBatchSampler,
 )
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 logger = logging.getLogger("recpack")
@@ -185,17 +185,11 @@ class GRU4Rec(TorchMLAlgorithm):
         ).to(self.device)
 
         if self.optimization_algorithm == "sgd":
-            self.optimizer = optim.SGD(
-                self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum
-            )
+            self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate, momentum=self.momentum)
         elif self.optimization_algorithm == "adagrad":
-            self.optimizer = optim.Adagrad(
-                self.model_.parameters(), lr=self.learning_rate
-            )
+            self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
-        self.predict_sampler = SequenceMiniBatchSampler(
-            self.pad_token, batch_size=self.batch_size
-        )
+        self.predict_sampler = SequenceMiniBatchSampler(self.pad_token, batch_size=self.batch_size)
 
         self.fit_sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(
             self.U, self.pad_token, batch_size=self.batch_size
@@ -215,14 +209,14 @@ class GRU4Rec(TorchMLAlgorithm):
         :return: The transformed matrices
         :rtype: Tuple[csr_matrix, Tuple[csr_matrix, csr_matrix]]
         """
-        if not isinstance(X, InteractionMatrix):
-            raise TypeError(
-                "GRU4Rec requires training and validation data to be an instance of InteractionMatrix."
-            )
+        self._assert_is_interaction_matrix(X, *validation_data)
+        self._assert_has_timestamps(X, *validation_data)
 
         return X, validation_data
 
     def _transform_predict_input(self, X: InteractionMatrix) -> InteractionMatrix:
+        self._assert_is_interaction_matrix(X)
+        self._assert_has_timestamps(X)
         return X
 
     def _train_epoch(self, X: InteractionMatrix) -> List[float]:
@@ -267,21 +261,15 @@ class GRU4Rec(TorchMLAlgorithm):
                 # If there are any values remaining
                 if true_input_chunk.any():
                     self.optimizer.zero_grad()
-                    output, hidden[:, true_rows, :] = self.model_(
-                        true_input_chunk, true_hidden
-                    )
+                    output, hidden[:, true_rows, :] = self.model_(true_input_chunk, true_hidden)
 
-                    loss = self._compute_loss(
-                        output, true_target_chunk, true_neg_chunk, true_input_mask
-                    )
+                    loss = self._compute_loss(output, true_target_chunk, true_neg_chunk, true_input_mask)
 
                     batch_loss += loss.item()
                     loss.backward()
 
                     if self.clipnorm:
-                        nn.utils.clip_grad_norm_(
-                            self.model_.parameters(), self.clipnorm
-                        )
+                        nn.utils.clip_grad_norm_(self.model_.parameters(), self.clipnorm)
 
                     self.optimizer.step()
 
@@ -300,9 +288,7 @@ class GRU4Rec(TorchMLAlgorithm):
     ) -> torch.Tensor:
         raise NotImplementedError()
 
-    def _chunk(
-        self, chunk_size: int, *tensors: torch.LongTensor
-    ) -> Iterator[Tuple[torch.LongTensor, ...]]:
+    def _chunk(self, chunk_size: int, *tensors: torch.LongTensor) -> Iterator[Tuple[torch.LongTensor, ...]]:
         """Split tensors into chunks of self.bptt width.
         Chunks can be of width self.bptt - 1 if max_hist_len % self. bptt != 0.
 
@@ -329,11 +315,8 @@ class GRU4Rec(TorchMLAlgorithm):
 
                 # Process the history in chunks, otherwise the linear layer goes OOM.
                 # 3M entries seemed a reasonable max
-                chunk_size = int(
-                    (10 ** 9) / (self.batch_size * self.num_items))
-                for (input_chunk,) in self._chunk(
-                    chunk_size, positives_batch.to(self.device)
-                ):
+                chunk_size = int((10 ** 9) / (self.batch_size * self.num_items))
+                for (input_chunk,) in self._chunk(chunk_size, positives_batch.to(self.device)):
                     input_mask = input_chunk != self.pad_token
                     # Remove rows with only pad tokens from chunk and from hidden.
                     # We can do this because the array is sorted.
@@ -343,26 +326,18 @@ class GRU4Rec(TorchMLAlgorithm):
 
                     # If there are any values remaining
                     if true_input_chunk.any():
-                        output_chunk, hidden[:, true_rows, :] = self.model_(
-                            true_input_chunk, true_hidden
-                        )
+                        output_chunk, hidden[:, true_rows, :] = self.model_(true_input_chunk, true_hidden)
                         # Use only the prediction for the final iten, i.e. last non-padding ID.
-                        last_item_ix_in_chunk = (input_chunk != self.pad_token).sum(
-                            axis=1
-                        ) - 1
+                        last_item_ix_in_chunk = (input_chunk != self.pad_token).sum(axis=1) - 1
 
                         is_last_item_in_chunk = last_item_ix_in_chunk >= 0
                         # Item scores is a matrix with the scores for each item
                         # based on the last item in the sequence
                         last_item_ix = last_item_ix_in_chunk[is_last_item_in_chunk]
-                        uid_batch_w_last_item = (
-                            uid_batch[is_last_item_in_chunk].detach(
-                            ).cpu().numpy()
-                        )
+                        uid_batch_w_last_item = uid_batch[is_last_item_in_chunk].detach().cpu().numpy()
                         item_scores = (
                             output_chunk[
-                                torch.arange(
-                                    0, last_item_ix.shape[0], dtype=int),
+                                torch.arange(0, last_item_ix.shape[0], dtype=int),
                                 last_item_ix,
                             ]
                             .detach()
@@ -430,7 +405,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
     :param bptt: Number of backpropagation through time steps.
         Defaults to 1
     :type bptt: int, optional
-        :param batch_size: Number of examples in a mini-batch.
+    :param batch_size: Number of examples in a mini-batch.
         Defaults to 512.
     :type batch_size: int, optional
     :param max_epochs: Max training runs through entire dataset.
@@ -701,9 +676,7 @@ class GRU4RecNegSampling(GRU4Rec):
         # Select score for positive and negative sample for all tokens
         # For each target, gather the score predicted in output.
         # positive_scores has shape (batch_size x bptt x 1)
-        positive_scores = torch.gather(output, 2, targets_chunk.unsqueeze(-1)).squeeze(
-            -1
-        )
+        positive_scores = torch.gather(output, 2, targets_chunk.unsqueeze(-1)).squeeze(-1)
         # negative scores has shape (batch_size x bptt x U)
         negative_scores = torch.gather(output, 2, negatives_chunk)
 
@@ -712,14 +685,10 @@ class GRU4RecNegSampling(GRU4Rec):
         true_batch_size, max_hist_len = positive_scores.shape
 
         # Check if I need to do all this flattening
-        true_input_mask_flat = true_input_mask.view(
-            true_batch_size * max_hist_len)
+        true_input_mask_flat = true_input_mask.view(true_batch_size * max_hist_len)
 
-        positive_scores_flat = positive_scores.view(
-            true_batch_size * max_hist_len, 1)
-        negative_scores_flat = negative_scores.view(
-            true_batch_size * max_hist_len, negative_scores.shape[2]
-        )
+        positive_scores_flat = positive_scores.view(true_batch_size * max_hist_len, 1)
+        negative_scores_flat = negative_scores.view(true_batch_size * max_hist_len, negative_scores.shape[2])
 
         return self._criterion(
             positive_scores_flat[true_input_mask_flat],
@@ -755,7 +724,7 @@ class GRU4RecTorch(nn.Module):
         dropout: float = 0,
     ):
         super().__init__()
-        self.input_size = num_items
+        self.num_items = num_items
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size
         self.output_size = num_items
@@ -763,8 +732,7 @@ class GRU4RecTorch(nn.Module):
         self.drop = nn.Dropout(dropout, inplace=True)
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
-        self.emb = nn.Embedding(
-            num_items + 1, embedding_size, padding_idx=pad_token)
+        self.emb = nn.Embedding(num_items + 1, embedding_size, padding_idx=pad_token)
         self.rnn = nn.GRU(
             embedding_size,
             hidden_size,
@@ -776,9 +744,7 @@ class GRU4RecTorch(nn.Module):
         self.lin = nn.Linear(hidden_size, num_items + 1)
         self.init_weights()
 
-    def forward(
-        self, x: torch.LongTensor, hidden: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.LongTensor, hidden: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Computes scores for each item given an action sequence and previous
         hidden state.
@@ -798,14 +764,11 @@ class GRU4RecTorch(nn.Module):
         if any_row_requires_padding:
             seq_lengths = (x != self.pad_token).sum(axis=1)
 
-            padded_emb_x = nn.utils.rnn.pack_padded_sequence(
-                emb_x, seq_lengths.cpu(), batch_first=True
-            )
+            padded_emb_x = nn.utils.rnn.pack_padded_sequence(emb_x, seq_lengths.cpu(), batch_first=True)
 
             padded_rnn_x, hidden = self.rnn(padded_emb_x, hidden)
 
-            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(
-                padded_rnn_x, batch_first=True)
+            rnn_x, _ = nn.utils.rnn.pad_packed_sequence(padded_rnn_x, batch_first=True)
 
         else:
             rnn_x, hidden = self.rnn(emb_x, hidden)

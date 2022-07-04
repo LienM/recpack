@@ -7,7 +7,8 @@ from typing import Tuple, Union, Dict, List, Optional, Any
 import numpy as np
 
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
+from recpack.pipelines.pipeline import Pipeline
 from recpack.pipelines.registries import (
     ALGORITHM_REGISTRY,
     METRIC_REGISTRY,
@@ -15,15 +16,11 @@ from recpack.pipelines.registries import (
     MetricEntry,
     OptimisationMetricEntry,
 )
-from recpack.pipelines.pipeline import Pipeline
 from recpack.postprocessing.filters import PostFilter
 from recpack.postprocessing.postprocessors import Postprocessor
-from recpack.splitters.scenario_base import Scenario
+from recpack.scenarios import Scenario
 
 logger = logging.getLogger("recpack")
-
-# Pipeline processes everything, including postprocessing of recommendations (because metrics are computed on post-processed recommendations)
-# Postprocessing needs to be separated for validation and test phase. 
 
 
 class PipelineBuilder(object):
@@ -53,14 +50,8 @@ class PipelineBuilder(object):
         self.algorithm_entries = []
         self.post_processor = Postprocessor()
 
-        self.recommend_history = False
+        self.remove_history = True
 
-        self._config_file_path = f"{self.base_path}/{self.folder_name}/config.yaml"
-        self._train_file_path = f"{self.base_path}/{self.folder_name}/train"
-        self._test_in_file_path = f"{self.base_path}/{self.folder_name}/test_in"
-        self._test_out_file_path = f"{self.base_path}/{self.folder_name}/test_out"
-        self._validation_in_file_path = f"{self.base_path}/{self.folder_name}/validation_in"
-        self._validation_out_file_path = f"{self.base_path}/{self.folder_name}/validation_out"
         self.results_directory = f"{self.base_path}/{self.folder_name}"
 
     def _arg_to_str(self, arg: Union[type, str]) -> str:
@@ -102,7 +93,12 @@ class PipelineBuilder(object):
             else:
                 self.metric_entries[metric_name] = MetricEntry(metric, K)
 
-    def add_algorithm(self, algorithm: Union[str, type], grid: Optional[Dict[str, List]] = None, params: Optional[Dict[str, Any]] = None):
+    def add_algorithm(
+        self,
+        algorithm: Union[str, type],
+        grid: Optional[Dict[str, List]] = None,
+        params: Optional[Dict[str, Any]] = None,
+    ):
         """Add an algorithm to run.
 
         Parameters in grid will be optimised during running of pipeline.
@@ -216,15 +212,15 @@ class PipelineBuilder(object):
 
     # TODO Do we even need an explicit property anymore?
     @property
-    def recommend_history(self):
-        return self._recommend_history
+    def remove_history(self):
+        return self._remove_history
 
-    @recommend_history.setter
-    def recommend_history(self, value):
-        """Pass `True' to enable recommending a user's history,
-        False to disable. Defaults to False.
+    @remove_history.setter
+    def remove_history(self, value):
+        """Pass `True' to enable removal of a user's history,
+        False to disable. Defaults to True.
         """
-        self._recommend_history = value
+        self._remove_history = value
 
     def _check_readiness(self):
         if len(self.metric_entries) == 0:
@@ -301,5 +297,5 @@ class PipelineBuilder(object):
             self.test_data,
             self.optimisation_metric if hasattr(self, "optimisation_metric") else None,
             self.post_processor,
-            self.recommend_history
+            self.remove_history,
         )

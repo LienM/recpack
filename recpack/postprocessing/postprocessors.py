@@ -23,7 +23,15 @@ class Postprocessor:
         self.filters = []
 
     def add_filter(self, _filter: PostFilter, index: Optional[int] = None):
-        """ Add a post-processing filter.
+        """Add a post-processing filter.
+
+        :param _filter: filter to be applied
+        :type _filter: PostFilter
+        :param index: Index at which to insert the filter. Follows the list.insert behaviour,
+            None (and values larger than maximal index) will append (default behaviour),
+            0 will prepend,
+            -1 will insert the item at the second to last position.
+        :type index: int, optional
         """
         if index is None:
             self.filters.append(_filter)

@@ -6,7 +6,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.data.matrix import Matrix, to_binary
+from recpack.matrix import Matrix, to_binary
 
 
 def swish(x):
@@ -83,9 +83,7 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     :rtype: List[csr_matrix]
     """
     nonzero_users = list(set(args[0].nonzero()[0]))
-    users = np.random.choice(
-        nonzero_users, size=min(sample_size, len(nonzero_users)), replace=False
-    )
+    users = np.random.choice(nonzero_users, size=min(sample_size, len(nonzero_users)), replace=False)
 
     sampled_matrices = []
 
