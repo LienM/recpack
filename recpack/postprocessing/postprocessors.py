@@ -60,7 +60,6 @@ class Postprocessor:
         # TODO Can I improve this?
         for index, X_pred in enumerate(X_preds):
             logger.debug(f"Processing X_pred {index}")
-            # logger.debug(f"\tusers with recommendations before preprocess: {sum(np.diff(X_pred.indptr) != 0)}")
 
         for filter in self.filters:
             logger.debug(f"Applying post processing filter: {filter}")

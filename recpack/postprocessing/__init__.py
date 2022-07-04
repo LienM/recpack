@@ -46,7 +46,7 @@ Filters can be applied manually, simply pass the csr_matrix to be processed to t
     filter = ExcludeItems(items_to_remove)
     processed = filter.apply(recommendations)
 
-The preferred to use filters though is through the :class:`recpack.postprocessing.postprocessors.Postprocessor`.
+The preferred way to use filters though is through the :class:`recpack.postprocessing.postprocessors.Postprocessor`.
 That way all postprocessing happens in a more controlled way, leaving less room for error.::
 
     import numpy as np

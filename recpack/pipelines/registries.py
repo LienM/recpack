@@ -92,9 +92,8 @@ OptimisationMetricEntry = namedtuple("OptimisationMetricEntry", ["name", "K", "m
 
 
 class AlgorithmEntry(NamedTuple):
-    """
-    Attributes
-    ----------
+    """Config class to represent an algorithm when configuring the pipeline.
+
     :param name: Name of the algorithm
     :type name: str
     :param grid: Optimization grid as key-value pairs,
@@ -115,7 +114,6 @@ class AlgorithmEntry(NamedTuple):
         return True if self.grid is not None and len(self.grid) != 0 else False
 
 
-# AlgorithmEntry = namedtuple("AlgorithmEntry", ["name", "grid", "params"])
 
 ALGORITHM_REGISTRY = AlgorithmRegistry()
 """Registry for algorithms.

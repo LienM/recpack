@@ -214,7 +214,6 @@ def test_add_post_filter(pipeline_builder):
     assert len(pipe.post_processor.filters) == 1
 
 
-# TODO Test history filtering
 def test_remove_history(pipeline_builder):
     assert pipeline_builder.remove_history
 
