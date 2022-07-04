@@ -45,11 +45,7 @@ from scipy.sparse import csr_matrix
 logger = logging.getLogger("recpack")
 
 
-class DataMatrix:
-    """Base class for representing data"""
-
-
-class InteractionMatrix(DataMatrix):
+class InteractionMatrix:
     """An InteractionMatrix contains interactions between users and items at a certain time.
 
     It provides a number of properties and methods for easy manipulation of this interaction data.
