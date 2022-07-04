@@ -11,32 +11,30 @@ AMOUNT_SELECTED = 5
 
 
 @pytest.mark.parametrize(
-    "filter_items, interaction_history",
-    [
-        (
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(AMOUNT_SELECTED), replace=False),
-            csr_matrix(np.random.randint(0, 2, size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-        )
-    ],
+    "filter_items",
+    [(np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(AMOUNT_SELECTED), replace=False),)],
 )
-def test_add_filter(filter_items, interaction_history):
+def test_add_filter(filter_items):
     post_processor = Postprocessor()
 
     post_processor.add_filter(filters.ExcludeItems(filter_items))
-    post_processor.add_filter(
-        filters.RemovePreviousInteractions(InteractionMatrix.from_csr_matrix(interaction_history))
-    )
+    post_processor.add_filter(filters.SelectItems(filter_items))
 
     assert type(post_processor.filters[0]) == filters.ExcludeItems
-    assert type(post_processor.filters[1]) == filters.RemovePreviousInteractions
+    assert type(post_processor.filters[1]) == filters.SelectItems
 
-    post_processor.add_filter(
-        filters.RemovePreviousInteractions(InteractionMatrix.from_csr_matrix(interaction_history)), 0
-    )
+    post_processor.add_filter(filters.SelectItems(filter_items), 0)
 
-    assert type(post_processor.filters[0]) == filters.RemovePreviousInteractions
+    assert type(post_processor.filters[0]) == filters.SelectItems
     assert type(post_processor.filters[1]) == filters.ExcludeItems
-    assert type(post_processor.filters[2]) == filters.RemovePreviousInteractions
+    assert type(post_processor.filters[2]) == filters.SelectItems
+
+    post_processor.add_filter(filters.ExcludeItems(filter_items), 5)
+    # Following list.insert behaviour, specifying an index beyond the maximal index present will append.
+    assert type(post_processor.filters[0]) == filters.SelectItems
+    assert type(post_processor.filters[1]) == filters.ExcludeItems
+    assert type(post_processor.filters[2]) == filters.SelectItems
+    assert type(post_processor.filters[3]) == filters.ExcludeItems
 
 
 @pytest.mark.parametrize(
@@ -45,7 +43,11 @@ def test_add_filter(filter_items, interaction_history):
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
     ],
 )
@@ -83,8 +85,16 @@ def test_process_many_diff_size(prediction_matrix1, prediction_matrix2, filter_i
     [
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
     ],
 )

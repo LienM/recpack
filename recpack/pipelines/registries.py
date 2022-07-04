@@ -1,4 +1,5 @@
-from typing import Dict
+from collections import namedtuple
+from typing import Dict, NamedTuple, List, Optional, Any
 
 import recpack.algorithms
 import recpack.metrics
@@ -9,7 +10,6 @@ class Registry:
     A Registry is a wrapper for a dictionary that maps
     names to Python types (most often classes).
     """
-
 
     def __init__(self, src):
         self.registered: Dict[str, type] = {}
@@ -85,3 +85,74 @@ class MetricRegistry(Registry):
 
     def __init__(self):
         super().__init__(recpack.metrics)
+
+
+MetricEntry = namedtuple("MetricEntry", ["name", "K"])
+OptimisationMetricEntry = namedtuple("OptimisationMetricEntry", ["name", "K", "minimise"])
+
+
+class AlgorithmEntry(NamedTuple):
+    """Config class to represent an algorithm when configuring the pipeline.
+
+    :param name: Name of the algorithm
+    :type name: str
+    :param grid: Optimization grid as key-value pairs,
+        where the key is the name of the hyperparameter and the value
+        is a list of hyperparameter values to explore.
+    :type grid: Optional[Dict[str, List]]
+    :param params: Parameters that do not require optimization as key-value pairs,
+        where the key is the name of the hyperparameter and value is the value it should take.
+    :type params: Optional[Dict[str, Any]]
+    """
+
+    name: str
+    grid: Optional[Dict[str, List]] = None
+    params: Optional[Dict[str, Any]] = None
+
+    @property
+    def optimise(self):
+        return True if self.grid is not None and len(self.grid) != 0 else False
+
+
+
+ALGORITHM_REGISTRY = AlgorithmRegistry()
+"""Registry for algorithms.
+
+Contains the Recpack algorithms by default,
+and allows registration of new algorithms via the `register` function.
+
+Example::
+
+    from recpack.pipelines import ALGORITHM_REGISTRY
+
+    # Construct an ItemKNN object with parameter K=20
+    algo = ALGORITHM_REGISTRY.get('ItemKNN')(K=20)
+
+    from recpack.algorithms import ItemKNN
+    ALGORITHM_REGISTRY.register('HelloWorld', ItemKNN)
+
+    # Also construct an ItemKNN object with parameter K=20
+    algo = ALGORITHM_REGISTRY.get('HelloWorld')(K=20)
+"""
+
+
+METRIC_REGISTRY = MetricRegistry()
+"""Registry for metrics.
+
+Contains the Recpack metrics by default,
+and allows registration of new metrics via the `register` function.
+
+Example::
+
+    from recpack.pipelines import METRIC_REGISTRY
+
+    # Construct a Recall object with parameter K=20
+    algo = METRIC_REGISTRY.get('Recall')(K=20)
+
+    from recpack.algorithms import Recall
+    METRIC_REGISTRY.register('HelloWorld', Recall)
+
+    # Also construct a Recall object with parameter K=20
+    algo = METRIC_REGISTRY.get('HelloWorld')(K=20)
+
+"""
