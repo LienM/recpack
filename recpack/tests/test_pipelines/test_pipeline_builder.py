@@ -215,10 +215,10 @@ def test_add_post_filter(pipeline_builder):
 
 
 def test_remove_history(pipeline_builder):
-    assert pipeline_builder.remove_history
+    assert pipeline_builder.build().remove_history
 
     pipeline_builder.remove_history = False
-    assert not pipeline_builder.remove_history
+    assert not pipeline_builder.build().remove_history
 
 
 def test_set_data_from_scenario(mat):
