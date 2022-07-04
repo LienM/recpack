@@ -29,6 +29,10 @@ class PipelineBuilder(object):
     The builder contains functions to set specific values for the pipeline.
     Save and Load make it possible to easily recreate pipelines.
 
+    To disable history filtering in the pipeline, set the `remove_history` attribute to False.::
+
+        pipeline_builder.remove_history = False
+
     :param folder_name: The name of the folder where pipeline
         information will be stored.
         If no name is specified, the timestamp of creation is used.
@@ -99,18 +103,20 @@ class PipelineBuilder(object):
         grid: Optional[Dict[str, List]] = None,
         params: Optional[Dict[str, Any]] = None,
     ):
-        """Add an algorithm to run.
+        """Add an algorithm to use in the pipeline.
 
-        Parameters in grid will be optimised during running of pipeline.
+        If the algorithm is not implemented by default in recpack,
+        you should register it in the `ALGORITHM_REGISTRY`
 
-        # TODO Improve doc string description, is not very clear
-        :param algorithm: Algorithm name or algorithm type.
+        :param algorithm: Algorithm class name or type of the algorithm to add.
         :type algorithm: Union[str, type]
-        :param grid: Parameters to optimise, and the values to use in grid search, defaults to None
-        :type grid: Optional[Dict[str, List]], optional
-        :param params: The key-values that are set fixed for running, defaults to None
+        :param grid: Parameters to optimise, the dict will be turned into a grid such that each combination of values
+            is used. Defaults to None
+        :type grid: Optional[Dict[str, List]]
+        :param params: The fixed parameters for running the algorithm, represented as a key-value dictionary.
+            Defaults to None
         :type params: Optional[Dict[str, Any]], optional
-        :raises ValueError: If algorithm can't be resolved to a key
+        :raises ValueError: If the passed algorithm can't be resolved to a key
             in the `ALGORITHM_REGISTRY`.
         """
         algorithm = self._arg_to_str(algorithm)
@@ -210,7 +216,6 @@ class PipelineBuilder(object):
             self.set_validation_training_data(scenario.validation_training_data)
             self.set_validation_data(scenario.validation_data)
 
-    # TODO Do we even need an explicit property anymore?
     @property
     def remove_history(self):
         return self._remove_history

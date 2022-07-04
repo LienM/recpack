@@ -15,17 +15,8 @@
 In order to simplify running an experiment,
 the pipelines module contains a pipeline which makes sure the necessary steps
 are performed in the right order.
-To define a pipeline, you should use the PipelineBuilder class, 
+To define a pipeline, you should use the PipelineBuilder class,
 which makes it possible to construct the pipeline with a few intuitive functions.
-
-# TODO Fix documentation
-There are 2 seperate pipeline classes. :class:`Pipeline` is the default one,
-where recommendations will get postprocessed to remove the user's history, i.e. items they previously interacted with.
-In some cases it is useful to keep historical interactions in the recommendations,
-for this the :class:`RecommendHistoryPipeline` is designed.
-
-Choosing to build the latter is done by using :meth:`disable_history_filtering`
-on the pipeline builder.
 
 An example of usage is::
 
@@ -56,9 +47,8 @@ An example of usage is::
 
 
 If you want to use the pipelines with your own algorithms or metrics,
-you should register them using the registries.
-For info on the functions see :class:`registries.AlgorithmRegistry`
-and :class:`registries.MetricRegistry`.
+you should register them using the `ALGORITHM_REGISTRY` and `METRIC_REGISTRY respectively.
+For detailed info see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
 
 Example to register an algorithm::
 
