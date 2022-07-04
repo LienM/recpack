@@ -239,26 +239,12 @@ class Pipeline(object):
             df.index = df.index.map(lambda x: x.split("(")[0])
         return df
 
-    def get_metrics_dataframe(self, short: Optional[bool] = False):
-        """Get a dataframe with the algorithms as keys.
-
-        :param short: If short is True, only the algorithm names are returned, and not the parameters.
-            Defaults to False
-        :type short: Optional[bool]
-        """
-        df = pd.DataFrame.from_dict(self.get_metrics()).T
-        if short:
-            # Parameters are between (), so if we split on the (,
-            # we can get the algorithm name by taking the first of the splits.
-            df.index = df.index.map(lambda x: x.split("(")[0])
-        return df
-
     def save_metrics(self) -> None:
         """Save the metrics in a json file
 
         The file will be saved in the experiment directory.
         """
-        df = pd.DataFrame.from_dict(self.get_metrics())
+        df = self.get_metrics()
         df.to_json(f"{self.results_directory}/results.json")
 
     def get_num_users(self) -> int:
