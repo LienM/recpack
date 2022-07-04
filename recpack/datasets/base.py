@@ -95,7 +95,7 @@ class Dataset:
         return []
 
     def add_filter(self, _filter: Filter, index=None):
-        """Add a filter to be used when calling load_interaction_matrix().
+        """Add a filter to be used when calling load().
 
         If the index is specified, the filter is inserted at the specified index.
         Otherwise it is appended.
@@ -132,7 +132,7 @@ class Dataset:
         """
         raise NotImplementedError("Needs to be implemented")
 
-    def load_interaction_matrix(self) -> InteractionMatrix:
+    def load(self) -> InteractionMatrix:
         """Loads data into an InteractionMatrix object.
 
         Data is loaded into a DataFrame using the `load_dataframe` function.

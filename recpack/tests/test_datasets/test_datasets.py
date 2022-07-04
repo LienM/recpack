@@ -95,7 +95,7 @@ def test_add_filter(path):
 
     d.add_filter(NMostPopular(3, d.ITEM_IX))
 
-    data = d.load_interaction_matrix()
+    data = d.load()
 
     assert data.shape[1] == 3
 
@@ -124,7 +124,7 @@ def test_citeulike(path):
     assert df[d.USER_IX].nunique() == 1000
     assert df[d.ITEM_IX].nunique() == 13689
 
-    data = d.load_interaction_matrix()
+    data = d.load()
 
     assert data.shape == (963, 1748)
 
@@ -142,7 +142,7 @@ def test_movielens25m(path):
     assert df[d.USER_IX].nunique() == 75
     assert df[d.ITEM_IX].nunique() == 3287
 
-    data = d.load_interaction_matrix()
+    data = d.load()
 
     assert data.shape == (75, 260)
 
@@ -163,7 +163,7 @@ def test_movielens25m_no_rating_filters(path):
     assert df[d.USER_IX].nunique() == 75
     assert df[d.ITEM_IX].nunique() == 3287
 
-    data = d.load_interaction_matrix()
+    data = d.load()
 
     assert data.shape == (75, 565)
 
@@ -178,7 +178,7 @@ def test_recsys_challenge_2015(path):
     assert df[d.USER_IX].nunique() == 272
     assert df[d.ITEM_IX].nunique() == 570
 
-    data = d.load_interaction_matrix()
+    data = d.load()
 
     assert data.shape == (83, 26)
 
@@ -242,7 +242,7 @@ def test_cosmeticsshop(
     assert df.shape == (num_events, len(d._columns))
 
     # assert
-    data = d.load_interaction_matrix()
+    data = d.load()
 
     assert data.shape == final_shape
 
@@ -303,7 +303,7 @@ def test_retail_rocket(
     assert df.shape == (num_events, len(d._columns))
 
     # assert
-    data = d.load_interaction_matrix()
+    data = d.load()
 
     assert data.shape == final_shape
 
@@ -348,7 +348,7 @@ def test_dummy_dataset():
         df_after_filter_1.drop_duplicates([d.USER_IX, d.ITEM_IX]).groupby(d.USER_IX)[d.ITEM_IX].count() < 2
     ).sum()
 
-    im = d.load_interaction_matrix()
+    im = d.load()
     assert im.shape == (
         df[d.USER_IX].nunique() - users_removed,
         items_kept.enough_interactions.sum(),
@@ -393,7 +393,7 @@ def test_adressa_one_week(path, adressa_dataset):
     assert df[adressa_dataset.USER_IX].nunique() == 3
     assert df[adressa_dataset.ITEM_IX].nunique() == 2
 
-    im = adressa_dataset.load_interaction_matrix()
+    im = adressa_dataset.load()
 
     assert im.shape == (3, 1)
     assert im.num_interactions == 15
