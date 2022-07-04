@@ -1,17 +1,19 @@
 """The dataset module allows users to easily use to publicly available datasets in their experiments.
 
+.. currentmodule:: datasets
+
 
 .. autosummary::
     :toctree: generated/
 
-    datasets.Dataset
-    datasets.DummyDataset
-    datasets.CiteULike
-    datasets.MovieLens25M
-    datasets.RecsysChallenge2015
-    datasets.ThirtyMusicSessions
-    datasets.CosmeticsShop
-    datasets.RetailRocket
+    Dataset
+    DummyDataset
+    CiteULike
+    MovieLens25M
+    RecsysChallenge2015
+    ThirtyMusicSessions
+    CosmeticsShop
+    RetailRocket
 
 Example
 ~~~~~~~~~
