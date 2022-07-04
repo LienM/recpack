@@ -4,19 +4,11 @@ from recpack.scenarios.splitters import TimestampSplitter, StrongGeneralizationS
 
 
 class StrongGeneralizationTimed(Scenario):
-    """Splits data into non overlapping train, validation and test user sets
-    and uses temporal information to split validation and test into in and out folds.
+    """Strong Generalization scenario with random user splits
+    and targets are based on the timestamp of the event.
 
-    A scenario is stateful. After calling :attr:`split` on your dataset,
-    the datasets can be retrieved under
-    :attr:`full_training_data`, :attr:`validation_training_data`,
-    :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
-    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
-
-    - :attr:`full_training_data` contains interactions
-      from ``frac_users_in`` of the users.
-      Only interactions whose timestamps are
-      in the interval ``[t - delta_in, t[`` are used.
+    - :attr:`full_training_data` contains interactions from ``frac_users_in`` of the users.
+      Only interactions whose timestamps are in the interval ``[t - delta_in, t[`` are used.
 
     - :attr:`test_data_in` contains data from the ``1-frac_users_in`` users
       for which the events' timestamps are in ``[t - delta_in, t[``.
@@ -86,21 +78,18 @@ class StrongGeneralizationTimed(Scenario):
         time    0   1   2   3   4   5
         Carol                       X
 
-    :param frac_users_in: The fraction of users to use
-        for the training(_validation) dataset.
+    :param frac_users_in: The fraction of users to use as training users.
     :type frac_users_in: float
     :param t: Timestamp to split the interactions of the test users into
         :attr:`test_data_out` and :attr:`test_data_in`; and select
-        :attr:`training_data` out of all interactions of the training users
-        if validation is False.
+        :attr:`full_training_data` out of all interactions of the training users.
     :type t: int
     :param t_validation: Timestamp to split the interactions of the validation users
         into :attr:`validation_data_out` and :attr:`validation_data_in`; and select
-        :attr:`validation_training_data` out of all interactions of the training users
-        if validation is True. Required if validation is True.
+        :attr:`validation_training_data` out of all interactions of the training users.
+        Required if validation is True.
     :type t_validation: int, optional
-    :param delta_out: Size of interval in seconds for
-        both :attr:`validation_data_out` and :attr:`test_data_out`.
+    :param delta_out: Size of interval in seconds for the target datasets.
         Both sets will contain interactions that occurred within ``delta_out`` seconds
         after the splitting timestamp.
         Defaults to None (all interactions past the splitting timestamp).

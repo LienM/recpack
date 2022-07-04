@@ -4,14 +4,7 @@ from recpack.scenarios.splitters import FractionInteractionSplitter, StrongGener
 
 
 class StrongGeneralization(Scenario):
-    """Split your data so that a user can only be in one of
-    training, validation or test set.
-
-    A scenario is stateful. After calling :attr:`split` on your dataset,
-    the datasets can be retrieved under
-    :attr:`full_training_data`, :attr:`validation_training_data`,
-    :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
-    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
+    """Strong Generalization data with randomly split users and randomly sampled targets.
 
     During splitting each user is randomly assigned to one of three groups of users:
     training, validation and testing.

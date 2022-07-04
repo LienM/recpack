@@ -4,27 +4,26 @@ from recpack.scenarios.splitters import MostRecentSplitter
 
 
 class LastItemPrediction(Scenario):
-    """Split data so that a user's previous ``n_most_recent`` interactions are used to
-    predict their last interaction. Trains on all other interactions.
+    """Predict a users' next interactions.
 
-    A scenario is stateful. After calling :attr:`split` on your dataset,
-    the datasets can be retrieved under
-    :attr:`full_training_data`, :attr:`validation_training_data`,
-    :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
-    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
+    Scenario frequently used in evaluation of sequential recommendation algorithms.
+    The scenario can only be used when the dataset has timestamp information,
+    because the order of interactions is needed to correctly split the data.
+
+    The scenario splits the data such that the last interaction of a user is the targets for prediction,
+    while the earlier ones are used for training and as history.
 
     - :attr:`full_training_data` contains all but the most recent
       interaction for each of the users.
+    - :attr:`test_data_in`: contains the ``n_most_recent`` interactions before
+      the last interaction of all users.
+    - :attr:`test_data_out` contains the last interaction of all users.
     - :attr: `validation_training_data` contains
       all but the most recent interaction of each user in the full training dataset.
     - :attr:`validation_data_in` contains the ``n_most_recent`` interactions before
       the last interaction of each user in the full training dataset.
     - :attr:`validation_data_out` contains the most recent interaction
       of each user in the full training dataset
-
-    - :attr:`test_data_in`: contains the ``n_most_recent`` interactions before
-      the last interaction of all users.
-    - :attr:`test_data_out` contains the last interaction of all users.
 
     **Example**
 
@@ -76,7 +75,7 @@ class LastItemPrediction(Scenario):
         else split without validation data into only a full training and test dataset.
     :type validation: boolean, optional
     :param seed: Seed for randomisation parts of the scenario.
-        This scenario is deterministic, so changing seed should not matter.
+        This scenario is deterministic, so changing seed does not matter.
         Defaults to None, so random seed will be generated.
     :type seed: int, optional
     :param n_most_recent: How much of the historic events to use as input history.
