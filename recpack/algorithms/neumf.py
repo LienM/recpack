@@ -10,7 +10,7 @@ from recpack.algorithms.util import get_users
 
 
 class NeuMFMLPOnly(TorchMLAlgorithm):
-    """Implementation of Neural Matrix Factoration.
+    """Implementation of Neural Matrix Factoration using only the MLP component.
 
     Neural Matrix Factorization based on the MLP architecture as presented in Figure 2 of
     He, Xiangnan, et al. "Neural collaborative filtering."
@@ -29,11 +29,11 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
     Bottom layer has dimension `4 * predictive_factors`, middle layer `2 * predictive_factors`
     and the top layer has `predictive_factors`.
 
-    :param predictive_factors: Size of the embeddings, needs to be an even number.
-    :type predictive_factors: int
+    :param predictive_factors: Size of the final hidden layer in the MLP. Defaults to 16
+    :type predictive_factors: int, optional
     :param dropout: Dropout parameter used in MLP, defaults to 0.0
     :type dropout: float, optional
-    :param n_negatives_per_positive: Amount of negatives to sample for each positive example, defaults to 1
+    :param n_negatives_per_positive: Amount of negatives to sample for each positive example, defaults to 4
     :type n_negatives_per_positive: int, optional
     :param exact_sampling: Enable or disable exact checks while sampling.
         With exact sampling the sampled negatives are guaranteed to not have been visited by the user.
@@ -85,19 +85,17 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
-    :param U: Amount of negatives to sample for each positive example, defaults to 1
-    :type U: int, optional
     """
 
     def __init__(
         self,
-        predictive_factors: int,
+        predictive_factors: int = 16,
         dropout: Optional[float] = 0.0,
-        n_negatives_per_positive: Optional[int] = 1,
+        n_negatives_per_positive: Optional[int] = 4,
         exact_sampling: Optional[bool] = False,
         batch_size: Optional[int] = 512,
         max_epochs: Optional[int] = 10,
-        learning_rate: Optional[float] = 0.01,
+        learning_rate: Optional[float] = 0.001,
         stopping_criterion: Optional[str] = "ndcg",
         stop_early: Optional[bool] = False,
         max_iter_no_change: Optional[int] = 5,
@@ -105,7 +103,7 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         seed: Optional[int] = None,
         save_best_to_file: Optional[bool] = False,
         keep_last: Optional[bool] = False,
-        predict_topK: Optional[int] = None,
+        predict_topK: Optional[int] = 100,
     ):
         super().__init__(
             batch_size,
