@@ -66,6 +66,5 @@ class Postprocessor:
             X_preds = filter.apply_all(*X_preds)
             for index, X_pred in enumerate(X_preds):
                 logger.debug(f"X_pred {index}")
-                # logger.debug(f"\tusers with recommendations after preprocess: {sum(np.diff(X_pred.indptr) != 0)}")
 
         return X_preds
