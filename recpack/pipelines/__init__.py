@@ -15,7 +15,7 @@
 In order to simplify running an experiment,
 the pipelines module contains a pipeline which makes sure the necessary steps
 are performed in the right order.
-To define a pipeline, you should use the PipelineBuilder class, 
+To define a pipeline, you should use the PipelineBuilder class,
 which makes it possible to construct the pipeline with a few intuitive functions.
 
 An example of usage is::
@@ -30,9 +30,9 @@ An example of usage is::
     # We'll have the pipeline optimise the K parameter from the given values.
     pipeline_builder.add_algorithm('ItemKNN', grid={'K': [100, 200, 400, 800]})
 
-    # Add NDCG and Recall to be evaluated at 10, 20, 50 and 100
-    pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
-    pipeline_builder.add_metric('RecallK', [10, 20, 50, 100])
+    # Add NDCG and Recall to be evaluated at 10, 20 and 50
+    pipeline_builder.add_metric('NDCGK', [10, 20, 50])
+    pipeline_builder.add_metric('RecallK', [10, 20, 50])
 
     # Construct pipeline
     pipeline = pipeline_builder.build()
@@ -46,8 +46,9 @@ An example of usage is::
     pd.DataFrame.from_dict(pipeline.get_metrics())
 
 
-If you want to use the pipelines with your own algorithms or metrics, you should register them using the registries.
-For info on the functions see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
+If you want to use the pipelines with your own algorithms or metrics,
+you should register them using the `ALGORITHM_REGISTRY` and `METRIC_REGISTRY respectively.
+For detailed info see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
 
 Example to register an algorithm::
 
@@ -79,9 +80,8 @@ Example to register a metric::
     algo = METRIC_REGISTRY.get('NewMetric')(K=20)
 """
 
-from recpack.pipelines.pipeline import (
-    Pipeline,
-    PipelineBuilder,
-    ALGORITHM_REGISTRY,
-    METRIC_REGISTRY,
-)
+from recpack.pipelines.pipeline import Pipeline
+
+from recpack.pipelines.registries import ALGORITHM_REGISTRY, METRIC_REGISTRY
+
+from recpack.pipelines.pipeline_builder import PipelineBuilder
