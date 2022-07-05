@@ -201,7 +201,7 @@ class Pipeline(object):
 
         :param short: If short is True, only the algorithm names are returned, and not the parameters.
             Defaults to False
-        :type short: Optional[bool]
+        :type short: bool, optional
         :return: Algorithms and their respective performance.
         :rtype: pd.DataFrame
         """

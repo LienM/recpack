@@ -46,18 +46,18 @@ class NeuMFMLPOnly(TorchMLAlgorithm):
         but increases the amount of epochs needed to converge to the optimum,
         by reducing the amount of updates per epoch.
         Defaults to 512.
-    :type batch_size: Optional[int]
+    :type batch_size: int, optional
     :param max_epochs: The max number of epochs to train.
         If the stopping criterion uses early stopping, less epochs could be used.
         Defaults to 10.
-    :type max_epochs: Optional[int]
+    :type max_epochs: int, optional
     :param learning_rate: How much to update the weights at each update. Defaults to 0.01
-    :type learning_rate: Optional[float]
+    :type learning_rate: float, optional
     :param stopping_criterion: Name of the stopping criterion to use for training.
         For available values,
         check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
         Defaults to 'ndcg'
-    :type stopping_criterion: Optional[str]
+    :type stopping_criterion: str, optional
     :param stop_early: If True, early stopping is enabled,
         and after ``max_iter_no_change`` iterations where improvement of loss function
         is below ``min_improvement`` the optimisation is stopped,
@@ -258,7 +258,7 @@ class MLP(nn.Module):
     :param out_dim: Output dimension.
     :type out_dim: int
     :param hidden_dims: Output dimension for each hidden layer.
-    :type hidden_dims: Optional[Union[int, List[int]]]
+    :type hidden_dims: Union[int, List[int]], optional
     :param dropout: Probability for dropout layers between each hidden layer.
     :type dropout: float
     :param activation: Which activation function to use.

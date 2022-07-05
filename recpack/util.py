@@ -48,7 +48,7 @@ def get_top_K_ranks(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
     :param X: Matrix from which we will select K values in every row.
     :type X: csr_matrix
     :param K: Amount of values to select.
-    :type K: Optional[int]
+    :type K: int, optional
     :return: Matrix with K values per row.
     :rtype: csr_matrix
     """
@@ -78,7 +78,7 @@ def get_top_K_values(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
     :param X: Matrix from which we will select K values in every row.
     :type X: csr_matrix
     :param K: Amount of values to select.
-    :type K: Optional[int]
+    :type K: int, optional
     :return: Matrix with K values per row.
     :rtype: csr_matrix
     """

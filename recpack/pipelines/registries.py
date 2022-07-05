@@ -99,10 +99,10 @@ class AlgorithmEntry(NamedTuple):
     :param grid: Optimization grid as key-value pairs,
         where the key is the name of the hyperparameter and the value
         is a list of hyperparameter values to explore.
-    :type grid: Optional[Dict[str, List]]
+    :type grid: Dict[str, List], optional
     :param params: Parameters that do not require optimization as key-value pairs,
         where the key is the name of the hyperparameter and value is the value it should take.
-    :type params: Optional[Dict[str, Any]]
+    :type params: Dict[str, Any], optional
     """
 
     name: str
@@ -112,7 +112,6 @@ class AlgorithmEntry(NamedTuple):
     @property
     def optimise(self):
         return True if self.grid is not None and len(self.grid) != 0 else False
-
 
 
 ALGORITHM_REGISTRY = AlgorithmRegistry()

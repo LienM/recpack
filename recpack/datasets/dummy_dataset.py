@@ -18,10 +18,10 @@ class DummyDataset(Dataset):
 
     :param path: The path to the data directory. UNUSED because dataset is generated and not read from file.
         Defaults to `data`
-    :type path: Optional[str]
+    :type path: str, optional
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         UNUSED because dataset is generated and not read from file.
-    :type filename: Optional[str]
+    :type filename: str, optional
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
     :param seed: Seed for the random data generation. Defaults to None.
