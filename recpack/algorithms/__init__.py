@@ -7,9 +7,6 @@ such as commonly used loss functions and sampling methods.
 
 .. currentmodule:: recpack.algorithms
 
-.. contents:: Table of Contents
-    :depth: 2
-
 Baselines
 ------------------
 
