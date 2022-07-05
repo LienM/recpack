@@ -3,32 +3,22 @@ Python package for easy experimentation with recsys algorithms.
 
 ## Installation
 
-### From private Pypi repository
-Recpack is currently available only in a private pypi server, managed by gitlab.
+All released versions of recpack are published on [Pypi](https://pypi.org/project/recpack/), and can be installed using:
 
-1. Create a gitlab access token
-    1. Go to preferences > access tokens
-    2. Create a new gitlab access token with at least 'read api' access.
-2. add the token to your ~/.bashrc or equivalent
-    1. export GITLAB_PYPI_TOKEN = 
-    2. export GITLAB_PYPI_TOKEN_NAME = 
-3. Install the package:
-   `pip install --extra-index-url "https://${GITLAB_PYPI_TOKEN_NAME}:${GITLAB_PYPI_TOKEN}@gitlab.com/api/v4/projects/17121765/packages/pypi/simple" recpack`
-4. To make installation easier, you can add the extra-index-url to the `PIP_EXTRA_INDEX_URL`. If you have more than 1 extra index url to use, you can specify them space separated as `"<index_1> <index_2>"`. Now you can just use `pip install recpack`
+`pip install recpack`
 
-
-### Building it yourself
+### Build it yourself
 1. Clone repository
 2. check out tag needed
 3. run `pip install .`
 
 
 ## documentation
-Documentation and tutorials can be found at https://adrem-recommenders.gitlab.io/recpack/
+Documentation and tutorials can be found at https://recpack.froomle.ai
 
 ## Usage
 RecPack provides a framework for experimentation with recommendation algorithms. 
-It comes pre-packed with a number of commonly used evaluation scenarios (splitters),
+It comes pre-packed with a number of commonly used evaluation scenarios (scenarios),
 evaluation metrics (metrics) and state-of-the-art algorithm implementations (algorithms).
 New algorithms and evaluation scenarios can be added easily, by subclassing the appropriate base classes. 
 A number of lower level data splitters are provided that can be used to build up more complex evaluation scenarios.
@@ -69,7 +59,7 @@ Important to note is that when you use multiple data inputs as in the example ab
 
 RecPack provides a number of state-of-the-art algorithm implementations. 
 
-To get the list of all algorithms see [algorithms documentation page](https://adrem-recommenders.gitlab.io/recpack/recpack.algorithms.html):
+To get the list of all algorithms see [algorithms documentation page](https://recpack.froomle.ai/recpack.algorithms.html):
 
 To create an algorithm instance use:
 
@@ -116,24 +106,24 @@ class Popularity(Algorithm):
         return f"popularity_{self.K}"
 ```
 
-For a full tutorial on creating your own algorithm check out the [documentation](https://adrem-recommenders.gitlab.io/recpack/guides.create_algorithm.html)
+For a full tutorial on creating your own algorithm check out the [documentation](https://recpack.froomle.ai/guides.create_algorithm.html)
+
 ### Selecting a scenario
 To evaluate the merits of your algorithms, you use them in specific evaluation scenarios: This is what Scenarios are used for. 
 RecPack has implementations for the most commonly used evaluation scenarios:
-StrongGeneralization: How well does my algorithm generalize to unseen users? 
-Timed: How well does my algorithm predict future interactions for this user?
-WeakGeneralization: How well can my algorithm predict a random set of interactions of this user, based on all other interactions?
+
+* StrongGeneralization: How well does my algorithm generalize to unseen users? 
+* Timed: How well does my algorithm predict future interactions for this user?
+* WeakGeneralization: How well can my algorithm predict a random set of interactions of this user, based on all other interactions?
 
 
 ```python
-from recpack.splitters.scenarios import StrongGeneralization
-# Construct a splitter object which uses strong generalization to split the data into
-# three data objects. Train will contain 50% of the users, validation 20% and test 30%
-# The seed parameter is useful for creating reproducible results.
+from recpack.scenarios import StrongGeneralization
 scenario = StrongGeneralizationSplit(0.5, 0.2, seed=42)
 scenario.split(pur_m)
 
-scenario.training_data.binary_values  # Training Data, as binary values csr_matrix
+scenario.full_training_data.binary_values  # full training Data, as binary values csr_matrix
+validation_training_data.binary_values # Training data to use when optimising parameters
 validation_data_in, validation_data_out = scenario.validation_data  # Validation Data: Split across historical interactions -> interactions to predict
 test_data_in, test_data_out = scenario.test_data  # Test Data: Split across historical interactions -> interactions to predict
 ```
@@ -146,8 +136,7 @@ import recpack.pipelines
 # Construct a pipeline which computes NDCG and Recall @ 10, 20, 50 and 100
 # Only a single algorithm is evaluated, but you could select multiple algorithms to be evaluated at the same time.
 pipeline_builder = recpack.pipelines.PipelineBuilder('demo')
-pipeline_builder.set_train_data(scenario.training_data)
-pipeline_builder.set_test_data(scenario.test_data)
+pipeline_builder.set_data_from_scenario(scenario)
 
 pipeline_builder.add_algorithm('Popularity')
 pipeline_builder.add_metric('NormalizedDiscountedCumulativeGainK', [10, 20, 50, 100])
@@ -158,7 +147,5 @@ pipeline = pipeline_builder.build()
 pipeline.run()
 
 # Get the metric results.
-# This will be a dict with the results of the run.
-# Turning it into a dataframe makes reading easier
-pd.DataFrame.from_dict(pipeline.get_metrics()) 
+pipeline.get_metrics()
 ```
