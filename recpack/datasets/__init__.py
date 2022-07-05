@@ -1,6 +1,6 @@
 """The dataset module allows users to easily use to publicly available datasets in their experiments.
 
-.. currentmodule:: datasets
+.. currentmodule:: recpack.datasets
 
 
 .. autosummary::

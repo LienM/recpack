@@ -12,7 +12,7 @@ It also makes initialisation more declarative, rather than having to chain outpu
 .. autosummary::
     :toctree: generated/
 
-    postprocessors.Postprocessor
+    Postprocessor
 
 Filters
 -----------------------
@@ -27,7 +27,6 @@ recommendations, setting the rest to 0.
 
     PostFilter
     ExcludeItems
-    RemovePreviousInteractions
     SelectItems
 
 
