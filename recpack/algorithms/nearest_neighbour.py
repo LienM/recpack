@@ -174,7 +174,7 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         to discount contributions of very popular items.
         Should be between 0 and 1. If None, apply no discounting.
         Defaults to None.
-    :type pop_discount: Optional[float], optional
+    :type pop_discount: float, optional
     :param normalize_X: Normalize rows in the interaction matrix so that
         the contribution of users who have viewed more items is smaller,
         defaults to False
@@ -347,7 +347,7 @@ class ItemPNN(ItemKNN):
         to discount contributions of very popular items.
         Should be between 0 and 1. If None, apply no discounting.
         Defaults to None.
-    :type pop_discount: Optional[float], optional
+    :type pop_discount: float, optional
     :param normalize_X: Normalize rows in the interaction matrix so that
         the contribution of users who have viewed more items is smaller,
         defaults to False

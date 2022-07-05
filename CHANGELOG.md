@@ -7,7 +7,10 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.3.0] - ![](https://img.shields.io/date/1657025737.svg?label=2022-07-05)
+
+The 0.3.0 release contains large amounts of changes compared to 0.2.2, these changes should make the library more intuitively useable, and better serve our users.
+In addition to interface changes and additions we also made a big effort to increase documentation, and improve it's readability.
 
 ### Breaking Changes
 * __scenarios__
@@ -21,9 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Several module changes were made:
     * splitters module was restructured. Base module is called scenarios. Inside scenarios the splitters submodule contains the splitters functionality.
-    * data module was removed, and the submodules were turned into modules.  (`dataset` and `matrix`)
+    * data module was removed, and the submodules were turned into modules (`dataset` and `matrix`). The matrix file is split into additional files as well.
 
+* __datasets__:
+    * Default min rating for `Movielens25M` was changed from 1 to 4 similar to most paper preprocessing of the dataset.
+    * `load_interaction_matrix` function was renamed to `load`
 
+* __metrics__:
+    * `DiscountedCumulativeGainK` is renamed to `DCGK`
+    * `NormalizedDiscountedCumulativeGainK` is renamed to `NDCGK`
 
 ### Bugfixes
 * __splitters.scenarios__
@@ -53,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __preprocessing.filters__
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
     * Added the `SessionDataFramePreprocessor` which cuts user histories into sessions while processing data into InteractionMatrices.
+
+* Notebook with implementation of NeuMF for demonstration purposes.
 
 ## [0.2.2] - ![](https://img.shields.io/date/1643025589.svg?label=2022-01-24)
 

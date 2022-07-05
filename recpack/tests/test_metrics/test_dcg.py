@@ -1,8 +1,8 @@
 import numpy as np
 
 from recpack.metrics.dcg import (
-    DiscountedCumulativeGainK,
-    NormalizedDiscountedCumulativeGainK,
+    DCGK,
+    NDCGK,
     dcg_k,
     ndcg_k,
 )
@@ -10,7 +10,7 @@ from recpack.metrics.dcg import (
 
 def test_dcgk_simple(X_pred, X_true_simplified):
     K = 2
-    metric = DiscountedCumulativeGainK(K)
+    metric = DCGK(K)
 
     metric.calculate(X_true_simplified, X_pred)
 
@@ -22,16 +22,14 @@ def test_dcgk_simple(X_pred, X_true_simplified):
 
 def test_ndcgk_simple(X_pred, X_true_simplified):
     K = 2
-    metric = NormalizedDiscountedCumulativeGainK(K)
+    metric = NDCGK(K)
 
     metric.calculate(X_true_simplified, X_pred)
 
     #  Number of true items for each user is one.
     IDCG = sum(1 / np.log2((i + 1) + 1) for i in range(0, 1))
 
-    expected_value = (
-        (1 / np.log2(2 + 1)) / IDCG + 1  # rank 1  # rank 0
-    ) / 2  # 2 users
+    expected_value = ((1 / np.log2(2 + 1)) / IDCG + 1) / 2  # rank 1  # rank 0  # 2 users
 
     assert metric.num_users == 2
     np.testing.assert_almost_equal(metric.value, expected_value)
@@ -39,7 +37,7 @@ def test_ndcgk_simple(X_pred, X_true_simplified):
 
 def test_dcgk(X_pred, X_true):
     K = 2
-    metric = DiscountedCumulativeGainK(K)
+    metric = DCGK(K)
 
     metric.calculate(X_true, X_pred)
 
@@ -57,7 +55,7 @@ def test_dcgk(X_pred, X_true):
 
 def test_ndcg(X_pred, X_true):
     K = 2
-    metric = NormalizedDiscountedCumulativeGainK(K)
+    metric = NDCGK(K)
 
     metric.calculate(X_true, X_pred)
 
@@ -78,7 +76,7 @@ def test_ndcg(X_pred, X_true):
 
 def test_dcgk_3(X_pred, X_true):
     K = 3
-    metric = DiscountedCumulativeGainK(K)
+    metric = DCGK(K)
 
     metric.calculate(X_true, X_pred)
 
@@ -94,7 +92,7 @@ def test_dcgk_3(X_pred, X_true):
 
 def test_ndcg_k3(X_pred, X_true):
     K = 3
-    metric = NormalizedDiscountedCumulativeGainK(K)
+    metric = NDCGK(K)
 
     metric.calculate(X_true, X_pred)
 
@@ -114,7 +112,7 @@ def test_ndcg_k3(X_pred, X_true):
 
 def test_dcgk_empty_reco(X_pred, X_true_unrecommended_user):
     K = 2
-    metric = DiscountedCumulativeGainK(K)
+    metric = DCGK(K)
 
     metric.calculate(X_true_unrecommended_user, X_pred)
 
@@ -132,7 +130,7 @@ def test_dcgk_empty_reco(X_pred, X_true_unrecommended_user):
 
 def test_ndcg_empty_reco(X_pred, X_true_unrecommended_user):
     K = 2
-    metric = NormalizedDiscountedCumulativeGainK(K)
+    metric = NDCGK(K)
 
     metric.calculate(X_true_unrecommended_user, X_pred)
 
@@ -168,9 +166,7 @@ def test_ndcgk_simple_func(X_pred, X_true_simplified):
     #  Number of true items for each user is one.
     IDCG = sum(1 / np.log2((i + 1) + 1) for i in range(0, 1))
 
-    expected_value = (
-        (1 / np.log2(2 + 1)) / IDCG + 1  # rank 1  # rank 0
-    ) / 2  # 2 users
+    expected_value = ((1 / np.log2(2 + 1)) / IDCG + 1) / 2  # rank 1  # rank 0  # 2 users
 
     np.testing.assert_almost_equal(value, expected_value)
 

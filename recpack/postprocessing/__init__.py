@@ -1,9 +1,9 @@
 """Module with classes for postprocessing recommendations
 
-.. currentmodule:: recpack.postprocessing
-
 Postprocessor
 -----------------------
+
+.. currentmodule:: recpack.postprocessing.postprocessors
 
 The post processor provides all functionality to bundle postprocessing in  one step.
 This makes it less prone to error, when applying the same processing to different recommendation outputs.
@@ -12,10 +12,12 @@ It also makes initialisation more declarative, rather than having to chain outpu
 .. autosummary::
     :toctree: generated/
 
-    postprocessors.Postprocessor
+    Postprocessor
 
 Filters
 -----------------------
+
+.. currentmodule:: recpack.postprocessing.filters
 
 Filters provide functionality to retain only a part of the generated
 recommendations, setting the rest to 0.
@@ -23,10 +25,9 @@ recommendations, setting the rest to 0.
 .. autosummary::
     :toctree: generated/
 
-    filters.PostFilter
-    filters.ExcludeItems
-    filters.RemovePreviousInteractions
-    filters.SelectItems
+    PostFilter
+    ExcludeItems
+    SelectItems
 
 
 Filters can be applied manually, simply pass the csr_matrix to be processed to the apply function.::

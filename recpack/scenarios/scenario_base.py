@@ -12,12 +12,15 @@ class Scenario(ABC):
 
     A scenario is a set of steps that splits data into training,
     validation and test datasets.
-    Both validation and test dataset are made up of two components:
+    The test dataset is made up of two components:
     a fold-in set of interactions that is used to predict another held-out
     set of interactions.
+    The creation of the validation dataset, from the full training dataset,
+    should follow the same splitting strategy as
+    the one used to create training and test datasets from the full dataset.
 
-    :param validation: Create a validation dataset when True,
-    else split into training and test datasets.
+    :param validation: Create validation datasets when True,
+        else split into training and test datasets.
     :type validation: boolean, optional
     :param seed: Seed for randomisation parts of the scenario.
         Defaults to None, so random seed will be generated.

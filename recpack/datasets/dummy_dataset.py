@@ -18,10 +18,10 @@ class DummyDataset(Dataset):
 
     :param path: The path to the data directory. UNUSED because dataset is generated and not read from file.
         Defaults to `data`
-    :type path: Optional[str]
+    :type path: str, optional
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         UNUSED because dataset is generated and not read from file.
-    :type filename: Optional[str]
+    :type filename: str, optional
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
     :param seed: Seed for the random data generation. Defaults to None.
@@ -91,14 +91,14 @@ class DummyDataset(Dataset):
         pass
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return as a Pandas DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
 
-        Downloads the data file if it is not yet present.
-        The output will contain a dataframe with a user_id and item_id column.
-        Each interaction is stored in a separate row.
+        .. warning::
 
-        :return: The interactions as a dataframe, with a row for each interaction.
-        :rtype: pandas.DataFrame
+            This does not apply any preprocessing, and returns the raw dataset.
+
+        :return: The interaction data as a DataFrame with a row per interaction.
+        :rtype: pd.DataFrame
         """
         np.random.seed(self.seed)
 

@@ -4,16 +4,10 @@ from recpack.scenarios.splitters import MostRecentSplitter, UserInteractionTimeS
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
-    """Split users into non-overlapping training,
-    validation and test user sets based on the time of
-    their most recent interaction.
+    """Predict the next interaction(s) for previously unseen users.
 
-    A scenario is stateful. After calling :attr:`split` on your dataset,
-    the datasets can be retrieved under
-    :attr:`full_training_data`, :attr:`validation_training_data`,
-    :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
-    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
-
+    - :attr:`full_training_data` contains events from all users
+      whose most recent interaction was before ``t``
 
     Test data contains all users whose most recent interactions was after ``t``:
 
@@ -21,19 +15,20 @@ class StrongGeneralizationTimedMostRecent(Scenario):
       a user whose most recent interactions was after ``t``.
     - :attr:`test_data_in` contains all earlier interactions of the test users.
 
-    - :attr:`full_training_data` contains events from all users
-    whose most recent interaction was before ``t``
-
-    If validation is True, validation evaluation users are those whose most recent interaction
-    is after ``t_validation``.
+    If validation data is requested, validation evaluation users are those training users whose most recent interaction
+    occurred after ``t_validation``.
 
     - :attr:`validation_training_data` contains users whose most
-    recent interaction happened before ``t_validation``.
+      recent interaction happened before ``t_validation``.
 
     - :attr:`validation_data_out` contains the ``n`` most recent interactions of
       a user whose most recent interactions was in the interval ``[t_validation, t[``.
     - :attr:`validaton_data_in` contains all earlier interactions of the
       validation_evaluation users.
+
+    .. warning::
+
+        The scenario can only be used when the dataset has timestamp information.
 
     **Example**
 
@@ -70,23 +65,21 @@ class StrongGeneralizationTimedMostRecent(Scenario):
     test_data_in::
 
         time    0   1   2   3   4   5
-        Alice
-        Bob         X   X   X
+        Bob         X   X
 
     test_data_out::
 
         time    0   1   2   3   4   5
-        Alice
-        Bob                     X
+        Bob                 X   X
 
     :param t: Users whose last action has ``time >= t`` are placed in the test set,
-              all other users are placed in the training or validation sets.
+        all other users are placed in the training or validation sets.
     :param t_validation: Users whose last action has ``time >= t_validation`` and
-                         ``time < t`` are put in the validation set. Users whose
-                         last action has ``time < t_validation`` are put in train.
-                         Only required if validation is True.
-    :param n: The n most recent user actions to split off. If a negative number,
-              split off all but the ``n`` earliest actions.
+        ``time < t`` are put in the validation set. Users whose
+        last action has ``time < t_validation`` are put in train.
+        Only required if validation is True.
+    :param n: The n most recent user actions to consider as target. If a negative number,
+        split off all but the ``n`` earliest actions.
     :param validation: Assign a portion of the full training dataset
         to validation data if True,
         else split without validation data into only a training and test dataset.

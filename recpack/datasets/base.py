@@ -38,10 +38,10 @@ class Dataset:
 
     :param path: The path to the data directory.
         Defaults to `data`
-    :type path: Optional[str]
+    :type path: str, optional
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
-    :type filename: Optional[str]
+    :type filename: str, optional
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
     """
@@ -74,7 +74,7 @@ class Dataset:
 
     @property
     def file_path(self):
-        """The fully classified path to the file that should be loaded from/saved to."""
+        """The fully classified path to the file from which dataset will be loaded."""
         # TODO: correctness check?
         return os.path.join(self.path, self.filename)
 
@@ -95,7 +95,7 @@ class Dataset:
         return []
 
     def add_filter(self, _filter: Filter, index=None):
-        """Add a filter to be used when calling load_interaction_matrix().
+        """Add a filter to be applied when loading the data.
 
         If the index is specified, the filter is inserted at the specified index.
         Otherwise it is appended.
@@ -125,14 +125,18 @@ class Dataset:
         raise NotImplementedError("Should still be implemented")
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the DataFrame from file, and return it as a pandas DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
+
+        .. warning::
+
+            This does not apply any preprocessing, and returns the raw dataset.
 
         :return: The interaction data as a DataFrame with a row per interaction.
         :rtype: pd.DataFrame
         """
         raise NotImplementedError("Needs to be implemented")
 
-    def load_interaction_matrix(self) -> InteractionMatrix:
+    def load(self) -> InteractionMatrix:
         """Loads data into an InteractionMatrix object.
 
         Data is loaded into a DataFrame using the `load_dataframe` function.

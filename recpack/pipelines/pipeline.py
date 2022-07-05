@@ -58,12 +58,11 @@ class Pipeline(object):
     """Performs optimisation, training, prediction and evaluation, keeping track of results.
 
     Pipeline is run per algorithm.
-    First grid parameters are optimised by training on validation_training_data and
-    evaluation on validation_data_out.
-    Next, unless the model requires validation data, the model with optimised parameters is retrained
-    on the full training data.
-    :class:`recpack.algorithms.TorchMLAlgorithm` based algorithms will be trained on validation data again.
-    Predictions are generated with test_in as input and evaluated on test_out.
+    First grid parameters are optimised by training on `validation_training_data` and
+    evaluating using `validation_data`.
+    Next, unless the model is based on :class:`recpack.algorithms.TorchMLAlgorithm`,
+    the model with optimised parameters is retrained on `full_training_data`.
+    The final evaluation happens using the `test_data`.
 
     Results can be accessed via the :meth:`get_metrics` method.
 
@@ -206,7 +205,7 @@ class Pipeline(object):
 
         :param short: If short is True, only the algorithm names are returned, and not the parameters.
             Defaults to False
-        :type short: Optional[bool]
+        :type short: bool, optional
         :return: Algorithms and their respective performance.
         :rtype: pd.DataFrame
         """

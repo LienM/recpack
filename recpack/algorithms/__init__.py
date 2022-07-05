@@ -7,9 +7,6 @@ such as commonly used loss functions and sampling methods.
 
 .. currentmodule:: recpack.algorithms
 
-.. contents:: Table of Contents
-    :depth: 2
-
 Baselines
 ------------------
 
@@ -119,6 +116,7 @@ For more information on how to create your own recpack algorithm, see :ref:`guid
 
 Stopping Criterion
 --------------------
+.. currentmodule:: recpack.algorithms.stopping_criterion
 
 When creating an algorithm that learns a model iteratively,
 we need a way to decide which is the best model, and when to stop.
@@ -127,11 +125,13 @@ The Stopping Criterion module provides this functionality.
 .. autosummary::
     :toctree: generated/
 
-    stopping_criterion.StoppingCriterion
-    stopping_criterion.EarlyStoppingException
+    StoppingCriterion
+    EarlyStoppingException
 
 Loss Functions
 ----------------
+
+.. currentmodule:: recpack.algorithms.loss_functions
 
 Recommendation models learned iteratively by means of gradient descent (or ascent)
 require a loss function.
@@ -144,18 +144,20 @@ we also provide metric wrappers around the raw loss functions.
 .. autosummary::
     :toctree: generated/
 
-    loss_functions.covariance_loss
-    loss_functions.warp_loss
-    loss_functions.warp_loss_wrapper
-    loss_functions.bpr_loss
-    loss_functions.bpr_loss_wrapper
-    loss_functions.vae_loss
-    loss_functions.bpr_max_loss
-    loss_functions.top1_loss
-    loss_functions.top1_max_loss
+    covariance_loss
+    warp_loss
+    warp_loss_wrapper
+    bpr_loss
+    bpr_loss_wrapper
+    vae_loss
+    bpr_max_loss
+    top1_loss
+    top1_max_loss
 
 Samplers
 ----------
+
+.. currentmodule:: recpack.algorithms.samplers
 
 In multiple recommendation algorithms (e.g. BPRMF) sampling methods play
 an important role.
@@ -164,31 +166,40 @@ As such recpack contains a number of commonly used sampling methods.
 .. autosummary::
     :toctree: generated/
 
-    samplers.PositiveNegativeSampler
-    samplers.BootstrapSampler
-    samplers.WarpSampler
-    samplers.SequenceMiniBatchSampler
-    samplers.SequenceMiniBatchPositivesTargetsNegativesSampler
+    PositiveNegativeSampler
+    BootstrapSampler
+    WarpSampler
+    SequenceMiniBatchSampler
+    SequenceMiniBatchPositivesTargetsNegativesSampler
 
 
 Utility Functions
 -------------------
 
+.. currentmodule:: recpack.algorithms.util
+
 The ``util`` module contains a number of utility functions
 used across algorithms.
 Use these to simplify certain tasks (such as batching) when creating a new algorithm.
 
+
 .. autosummary::
     :toctree: generated/
 
-    util.get_batches
-    util.sample_rows
-    util.naive_sparse2tensor
-    util.naive_tensor2sparse
+    get_batches
+    sample_rows
+    naive_sparse2tensor
+    naive_tensor2sparse
 """
 
 
-from recpack.algorithms.base import Algorithm, TopKItemSimilarityMatrixAlgorithm, TorchMLAlgorithm, ItemSimilarityMatrixAlgorithm, FactorizationAlgorithm
+from recpack.algorithms.base import (
+    Algorithm,
+    TopKItemSimilarityMatrixAlgorithm,
+    TorchMLAlgorithm,
+    ItemSimilarityMatrixAlgorithm,
+    FactorizationAlgorithm,
+)
 from recpack.algorithms.baseline import Popularity, Random
 from recpack.algorithms.factorization import (
     NMF,

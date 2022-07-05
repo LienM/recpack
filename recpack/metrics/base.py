@@ -90,17 +90,13 @@ class Metric:
         """
         check = y_true.shape == y_pred.shape
         if not check:
-            raise AssertionError(
-                f"Shape mismatch between y_true: {y_true.shape} and y_pred: {y_pred.shape}"
-            )
+            raise AssertionError(f"Shape mismatch between y_true: {y_true.shape} and y_pred: {y_pred.shape}")
         return check
 
     def _set_shape(self, y_true):
         self.num_users_, self.num_items_ = y_true.shape
 
-    def _eliminate_empty_users(
-        self, y_true: csr_matrix, y_pred: csr_matrix
-    ) -> Tuple[csr_matrix, csr_matrix]:
+    def _eliminate_empty_users(self, y_true: csr_matrix, y_pred: csr_matrix) -> Tuple[csr_matrix, csr_matrix]:
         """Eliminate users that have no interactions in ``y_true``.
 
         We cannot make accurate predictions of interactions for
@@ -250,7 +246,7 @@ class ElementwiseMetricK(MetricTopK):
 class ListwiseMetricK(MetricTopK):
     """Base class for all metrics that can be calculated for every Top-K recommendation list,
     i.e. one value for each user.
-    Examples are: DiversityK, NormalizedDiscountedCumulativeGainK, ReciprocalRankK, RecallK
+    Examples are: DiversityK, NDCGK, ReciprocalRankK, RecallK
 
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int

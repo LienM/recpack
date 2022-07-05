@@ -7,11 +7,10 @@ import pytest
 from unittest.mock import MagicMock, mock_open, patch
 import yaml
 
-from recpack.matrix import (
-    to_csr_matrix,
+from recpack.matrix.util import (
     UnsupportedTypeError,
-    InteractionMatrix,
 )
+from recpack.matrix import InteractionMatrix, to_csr_matrix
 from scipy.sparse import csr_matrix
 
 
@@ -413,9 +412,9 @@ def test_to_binary_csr3(m_csr, m_datam, m_csr_binary):
 
 def test_save(larger_mat):
     mocker = mock_open()
-    open_name = "recpack.matrix.open"
+    open_name = "recpack.matrix.interaction_matrix.open"
     mocker2 = MagicMock()
-    with patch("recpack.matrix.pd.DataFrame.to_csv", mocker2):
+    with patch("recpack.matrix.interaction_matrix.pd.DataFrame.to_csv", mocker2):
 
         with patch(open_name, mocker):
             larger_mat.save("test_data")
@@ -434,9 +433,9 @@ def test_save(larger_mat):
 def test_load(larger_mat):
 
     mocker2 = MagicMock(return_value=larger_mat._df)
-    with patch("recpack.matrix.pd.read_csv", mocker2):
+    with patch("recpack.matrix.interaction_matrix.pd.read_csv", mocker2):
         with patch(
-            "recpack.matrix.open",
+            "recpack.matrix.interaction_matrix.open",
             mock_open(read_data=yaml.safe_dump(larger_mat.properties.to_dict())),
         ) as mocker:
             im = InteractionMatrix.load("test_data")

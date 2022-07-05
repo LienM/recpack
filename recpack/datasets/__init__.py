@@ -1,5 +1,7 @@
 """The dataset module allows users to easily use to publicly available datasets in their experiments.
 
+.. currentmodule:: recpack.datasets
+
 
 .. autosummary::
     :toctree: generated/
@@ -25,7 +27,7 @@ Subsequent loading of the dataset then happens from this file. ::
     # Folder needs to exist, file will be downloaded if not present
     # This can take a while
     ml_loader = MovieLens25M(path='datasets/' filename='ml-25m.csv')
-    data = ml_loader.load_interaction_matrix()
+    data = ml_loader.load()
 
 Each dataset has its own default preprocessing steps, documented in the classes respectively.
 To use custom preprocessing a couple more lines should be added to the example. ::
@@ -33,10 +35,10 @@ To use custom preprocessing a couple more lines should be added to the example. 
     from recpack.datasets import MovieLens25M
     from recpack.preprocessing.filters import MinRating, MinUsersPerItem, MinItemsPerUser
 
-    ml_loader = MovieLens25M('datasets/ml-25m.csv', preprocess_default=False)
-    # Only consider ratings 4 or higher as interactions
+    ml_loader = MovieLens25M(path='datasets/', filename='ml-25m.csv', preprocess_default=False)
+    # Consider ratings 2 or higher as interactions
     ml_loader.add_filter(MinRating(
-        4,
+        2,
         ml_loader.RATING_IX,
     ))
     # Keep users with at least 5 interactions
@@ -52,9 +54,9 @@ To use custom preprocessing a couple more lines should be added to the example. 
         ml_loader.USER_IX,
     ))
 
-    data = ml_loader.load_interaction_matrix()
+    data = ml_loader.load()
 
-For an overview of available filters see :ref:`recpack.preprocessing`
+For an overview of available filters see :mod:`recpack.preprocessing`
 """
 
 

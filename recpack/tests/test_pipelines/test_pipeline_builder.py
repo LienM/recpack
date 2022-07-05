@@ -1,10 +1,8 @@
 import os
 import pytest
 import time
-from unittest.mock import MagicMock, mock_open, patch
-import yaml
 
-from recpack.pipelines import PipelineBuilder, Pipeline
+from recpack.pipelines import PipelineBuilder
 from recpack.postprocessing.filters import ExcludeItems
 from recpack.scenarios import Timed
 

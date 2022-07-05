@@ -4,30 +4,23 @@ from recpack.scenarios.splitters import TimestampSplitter
 
 
 class Timed(Scenario):
-    """Split your dataset into a training, validation and test dataset
-        based on the timestamp of the interaction.
-
-    A scenario is stateful. After calling :attr:`split` on your dataset,
-    the datasets can be retrieved under
-    :attr:`full_training_data`, :attr:`validation_training_data`,
-    :attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
-    and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`) respectively.
-
-    .. note::
-        This scenario duplicates interactions across training, validation
-        and test datasets:
+    """Predict users' future interactions, given information about historical interactions.
 
     - :attr:`full_training_data` is constructed by using
       all interactions whose timestamps
       are in the interval ``[t - delta_in, t[``
-    - :attr:`full_training_data` are all interactions
+    - :attr:`test_data_in` are events with timestamps in  ``[t - delta_in, t[``.
+    - :attr:`test_data_out` are events with timestamps in ``[t, t + delta_out[``.
+    - :attr:`validation_training_data` are all interactions
       with timestamps in ``[t_validation - delta_in, t_validation[``.
     - :attr:`validation_data_in` are interactions with timestamps in
       ``[t_validation - delta_in, t_validation[``
     - :attr:`validation_data_out` are interactions with timestamps in
       ``[t_validation, min(t, t_validation + delta_out)[``.
-    - :attr:`test_data_in` are events with timestamps in  ``[t - delta_in, t[``.
-    - :attr:`test_data_out` are events with timestamps in ``[t, t + delta_out[``.
+
+    .. warning::
+
+        The scenario can only be used when the dataset has timestamp information.
 
     **Example**
 

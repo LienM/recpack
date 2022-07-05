@@ -42,7 +42,7 @@ class NMF(FactorizationAlgorithm):
     :type num_components: int
     :param seed: The seed for the random state to allow for comparison,
                             defaults to None
-    :type seed: Optional[int], optional
+    :type seed: int, optional
     :param alpha: Regularization parameter, defines how much regularization is applied.
     :type alpha: float, optional
     :param l1_ratio: Defines how much L1 normalisation is used,
@@ -53,7 +53,9 @@ class NMF(FactorizationAlgorithm):
     :type l1_ratio: float, optional
     """
 
-    def __init__(self, num_components: int = 100, seed: Optional[int] = None, alpha: float = 0.0, l1_ratio: float = 0.0):
+    def __init__(
+        self, num_components: int = 100, seed: Optional[int] = None, alpha: float = 0.0, l1_ratio: float = 0.0
+    ):
         super().__init__(num_components)
         self.seed = seed
         self.alpha = alpha
@@ -116,7 +118,7 @@ class SVD(FactorizationAlgorithm):
     :param num_components: The size of the latent dimension
     :type num_components: int
     :param seed: The seed for the random state to allow for comparison, defaults to None
-    :type seed: Optional[int]
+    :type seed: int, optional
     """
 
     def __init__(self, num_components: int = 100, seed: Optional[int] = None):
@@ -126,9 +128,7 @@ class SVD(FactorizationAlgorithm):
 
     def _fit(self, X: csr_matrix):
 
-        model = sklearn.decomposition.TruncatedSVD(
-            n_components=self.num_components, n_iter=7, random_state=self.seed
-        )
+        model = sklearn.decomposition.TruncatedSVD(n_components=self.num_components, n_iter=7, random_state=self.seed)
         # Factorization computes U x Sigma x V
         # U are the user features,
         # Sigma x V are the item features.

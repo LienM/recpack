@@ -30,9 +30,9 @@ An example of usage is::
     # We'll have the pipeline optimise the K parameter from the given values.
     pipeline_builder.add_algorithm('ItemKNN', grid={'K': [100, 200, 400, 800]})
 
-    # Add NDCG and Recall to be evaluated at 10, 20 and 50
-    pipeline_builder.add_metric('NDCGK', [10, 20, 50])
-    pipeline_builder.add_metric('RecallK', [10, 20, 50])
+    # Add NDCG and Recall to be evaluated at 10, 20, 50 and 100
+    pipeline_builder.add_metric('NDCGK', [10, 20, 50, 100])
+    pipeline_builder.add_metric('RecallK', [10, 20, 50, 100])
 
     # Construct pipeline
     pipeline = pipeline_builder.build()
@@ -47,8 +47,8 @@ An example of usage is::
 
 
 If you want to use the pipelines with your own algorithms or metrics,
-you should register them using the `ALGORITHM_REGISTRY` and `METRIC_REGISTRY respectively.
-For detailed info see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
+you should register them using the :data:`ALGORITHM_REGISTRY` and :data:`METRIC_REGISTRY` respectively.
+For info on the functions see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
 
 Example to register an algorithm::
 

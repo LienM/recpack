@@ -23,7 +23,8 @@ class MovieLens25M(Dataset):
 
     Default processing makes sure that:
 
-    - Each rating above or equal to 1 is used as interaction
+    - Each rating above or equal to 4 is used as interaction as is done in Liang, Dawen, et al.
+      "Variational autoencoders for collaborative filtering." Proceedings of the 2018 world wide web conference. 2018.
     - Each remaining user has interacted with at least 3 items
     - Each remaining  item has been interacted with by at least 5 users
 
@@ -39,10 +40,10 @@ class MovieLens25M(Dataset):
 
     :param path: The path to the data directory.
         Defaults to `data`
-    :type path: Optional[str]
+    :type path: str, optional
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
-    :type filename: Optional[str]
+    :type filename: str, optional
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
 
@@ -71,7 +72,7 @@ class MovieLens25M(Dataset):
         :rtype: List[Filter]
         """
         return [
-            MinRating(1, self.RATING_IX),
+            MinRating(4, self.RATING_IX),
             MinItemsPerUser(3, self.ITEM_IX, self.USER_IX),
             MinUsersPerItem(5, self.ITEM_IX, self.USER_IX),
         ]
@@ -94,13 +95,14 @@ class MovieLens25M(Dataset):
         os.rename(os.path.join(self.path, "ml-25m/ratings.csv"), self.file_path)
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return as a Pandas DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
 
-        Downloads the data file if it is not yet present.
-        The output will contain the data of the CSV file as a Pandas DataFrame.
+        .. warning::
 
-        :return: The interactions as a Pandas DataFrame, with a row for each interaction.
-        :rtype: pandas.DataFrame
+            This does not apply any preprocessing, and returns the raw dataset.
+
+        :return: The interaction data as a DataFrame with a row per interaction.
+        :rtype: pd.DataFrame
         """
 
         self.fetch_dataset()

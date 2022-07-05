@@ -8,7 +8,7 @@ logger = logging.getLogger("recpack")
 
 
 def to_tuple(el):
-    """Whether single element or tuple, always returns as tuple. """
+    """Whether single element or tuple, always returns as tuple."""
     if type(el) == tuple:
         return el
     else:
@@ -21,9 +21,7 @@ def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
     else:
         if value_ix is not None:
             # value_ix provided, but not in df
-            logger.warning(
-                f"Value column {value_ix} not found in dataframe. Using ones instead."
-            )
+            logger.warning(f"Value column {value_ix} not found in dataframe. Using ones instead.")
 
         num_entries = df.shape[0]
         # Scipy sums up the entries when an index-pair occurs more than once,
@@ -37,9 +35,7 @@ def df_to_sparse(df, item_ix, user_ix, value_ix=None, shape=None):
 
     if shape is None:
         shape = df[user_ix].max() + 1, df[item_ix].max() + 1
-    sparse_matrix = csr_matrix(
-        (values, indices), shape=shape, dtype=values.dtype
-    )
+    sparse_matrix = csr_matrix((values, indices), shape=shape, dtype=values.dtype)
 
     return sparse_matrix
 
@@ -52,23 +48,17 @@ def get_top_K_ranks(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
     :param X: Matrix from which we will select K values in every row.
     :type X: csr_matrix
     :param K: Amount of values to select.
-    :type K: Optional[int]
+    :type K: int, optional
     :return: Matrix with K values per row.
     :rtype: csr_matrix
     """
     U, I, V = [], [], []
-    for row_ix, (le, ri) in enumerate(
-            zip(X.indptr[:-1], X.indptr[1:])):
+    for row_ix, (le, ri) in enumerate(zip(X.indptr[:-1], X.indptr[1:])):
         K_row_pick = min(K, ri - le) if K is not None else ri - le
 
         if K_row_pick != 0:
 
-            top_k_row = X.indices[
-                le
-                + np.argpartition(X.data[le:ri], list(range(-K_row_pick, 0)))[
-                    -K_row_pick:
-                ]
-            ]
+            top_k_row = X.indices[le + np.argpartition(X.data[le:ri], list(range(-K_row_pick, 0)))[-K_row_pick:]]
 
             for rank, col_ix in enumerate(reversed(top_k_row)):
                 U.append(row_ix)
@@ -88,7 +78,7 @@ def get_top_K_values(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
     :param X: Matrix from which we will select K values in every row.
     :type X: csr_matrix
     :param K: Amount of values to select.
-    :type K: Optional[int]
+    :type K: int, optional
     :return: Matrix with K values per row.
     :rtype: csr_matrix
     """
@@ -96,3 +86,16 @@ def get_top_K_values(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
     top_K_ranks[top_K_ranks > 0] = 1  # ranks to binary
 
     return top_K_ranks.multiply(X)  # elementwise multiplication
+
+
+def to_binary(X: csr_matrix) -> csr_matrix:
+    """Converts a matrix to binary by setting all non-zero values to 1.
+
+    :param X: Matrix to convert to binary.
+    :type X: csr_matrix
+    :return: Binary matrix.
+    :rtype: csr_matrix
+    """
+    X_binary = X.astype(bool).astype(X.dtype)
+
+    return X_binary

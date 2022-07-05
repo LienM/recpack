@@ -24,10 +24,10 @@ class RecsysChallenge2015(Dataset):
 
     :param path: The path to the data directory.
         Defaults to `data`
-    :type path: Optional[str]
+    :type path: str, optional
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
-    :type filename: Optional[str]
+    :type filename: str, optional
     :param preprocess_default: Should a default set of filters be initialised? Defaults to True
     :type preprocess_default: bool, optional
 
@@ -59,12 +59,13 @@ class RecsysChallenge2015(Dataset):
         ]
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return a DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
 
-        The output will contain a DataFrame with a ``session``, ``item_id`` and ``seconds_since_epoch`` column.
-        Each interaction is stored in a separate row.
+        .. warning::
 
-        :return: The interactions as a DataFrame, with a row for each interaction.
+            This does not apply any preprocessing, and returns the raw dataset.
+
+        :return: The interaction data as a DataFrame with a row per interaction.
         :rtype: pd.DataFrame
         """
 

@@ -36,10 +36,10 @@ class PipelineBuilder(object):
     :param folder_name: The name of the folder where pipeline
         information will be stored.
         If no name is specified, the timestamp of creation is used.
-    :type folder_name: Optional[str]
+    :type folder_name: str, optional
     :param base_path: The base_path to store pipeline in,
         defaults to the current working directory.
-    :type base_path: Optional[str]
+    :type base_path: str, optional
     """
 
     def __init__(self, folder_name: Optional[str] = None, base_path: Optional[str] = None):
@@ -112,10 +112,10 @@ class PipelineBuilder(object):
         :type algorithm: Union[str, type]
         :param grid: Parameters to optimise, the dict will be turned into a grid such that each combination of values
             is used. Defaults to None
-        :type grid: Optional[Dict[str, List]]
+        :type grid: Dict[str, List], optional
         :param params: The fixed parameters for running the algorithm, represented as a key-value dictionary.
             Defaults to None
-        :type params: Optional[Dict[str, Any]], optional
+        :type params: Dict[str, Any], optional
         :raises ValueError: If the passed algorithm can't be resolved to a key
             in the `ALGORITHM_REGISTRY`.
         """

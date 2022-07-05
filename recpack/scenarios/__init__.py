@@ -12,45 +12,49 @@ set of interactions.
 Each scenario describes a complex situation, e.g. "Train on all user
 interactions before time T, predict interactions after T+10 using interactions
 from T+5 until T+10".
-A splitter on the other hand performs a simple split into two InteractionMatrices
-according to one, simple criterion, e.g. "Fold in is all interactions before T,
-hold out all interactions after T".
-
-Should you want to implement a new scenario that is not yet supported,
-you can use the splitters submodule to help you build it from the ground up.
 
 .. currentmodule:: recpack.scenarios
-
-.. contents:: Table of Contents
-    :depth: 2
-
-Scenarios
-------------------
 
 .. autosummary::
     :toctree: generated/
 
     Scenario
 
-    StrongGeneralization
-    WeakGeneralization
     Timed
+    LastItemPrediction
+    WeakGeneralization
+    StrongGeneralization
     StrongGeneralizationTimed
     StrongGeneralizationTimedMostRecent
-    LastItemPrediction
+
+A scenario is stateful. At initialization the parameters for the scenario are passed.
+Only after calling :attr:`Scenario.split` given a :class:`recpack.matrix.InteractionMatrix`,
+can splits be retrieved under
+:attr:`Scenario.full_training_data`, :attr:`Scenario.validation_training_data`,
+:attr:`Scenario.validation_data` and :attr:`Scenario.test_data`.
+
 
 Splitters
 ------------
 
+Splitters are the building blocks for the scenarios. A splitter performs a simple split into two InteractionMatrices
+according to one, simple criterion, e.g. "Fold in is all interactions before T,
+hold out all interactions after T".
+
+Should you want to implement a new scenario that is not yet supported,
+these splitters facilitate easy implementation.
+
+.. currentmodule:: recpack.scenarios.splitters
+
 .. autosummary::
     :toctree: generated/
 
-    splitters.UserSplitter
-    splitters.FractionInteractionSplitter
-    splitters.TimestampSplitter
-    splitters.StrongGeneralizationSplitter
-    splitters.UserInteractionTimeSplitter
-    splitters.MostRecentSplitter
+    UserSplitter
+    FractionInteractionSplitter
+    TimestampSplitter
+    StrongGeneralizationSplitter
+    UserInteractionTimeSplitter
+    MostRecentSplitter
 
 """
 

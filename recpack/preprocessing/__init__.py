@@ -1,9 +1,17 @@
-"""Module with classes for preprocessing datasets
-
+"""
 .. currentmodule:: recpack.preprocessing
+
+In collaborative filtering it is customary to transform the data into a user-item interaction matrix.
+To do so efficiently, :class:`preprocessors.DataFramePreprocessor` transforms
+the user and item identifiers into matrix indices.
+Secondly, it is common to apply some filtering to your raw dataset.
+For this purpose RecPack provides a set of preimplemented Filters.
+
 
 Preprocessors
 -----------------------
+
+.. currentmodule:: recpack.preprocessing.preprocessors
 
 The preprocessor provides all functionality to bundle preprocessing in  one step.
 This makes it less prone to error, when applying the same  processing to different input data.
@@ -12,10 +20,12 @@ It also makes initialisation more declarative, rather than having to chain outpu
 .. autosummary::
     :toctree: generated/
 
-    preprocessors.DataFramePreprocessor
+    DataFramePreprocessor
 
 Filters
 ---------
+
+.. currentmodule:: recpack.preprocessing.filters
 
 Preprocessing is a fundamental part of any experiment.
 The raw data needs to be cleaned up, to make an optimally useful dataset.
@@ -23,14 +33,14 @@ The raw data needs to be cleaned up, to make an optimally useful dataset.
 .. autosummary::
     :toctree: generated/
 
-    filters.Filter
-    filters.MinUsersPerItem
-    filters.MinItemsPerUser
-    filters.MaxItemsPerUser
-    filters.NMostPopular
-    filters.NMostRecent
-    filters.Deduplicate
-    filters.MinRating
+    Filter
+    MinUsersPerItem
+    MinItemsPerUser
+    MaxItemsPerUser
+    NMostPopular
+    NMostRecent
+    Deduplicate
+    MinRating
 
 Filters can be applied manually, simply pass the DataFrame to be processed to the apply function.::
 
@@ -49,7 +59,7 @@ Filters can be applied manually, simply pass the DataFrame to be processed to th
     processed_df = f.apply(df)
 
 The preferred way to use filters though is through
-the ``recpack.preprocessing.preprocessors.DataFramePreprocessor``.
+the :class:`recpack.preprocessing.preprocessors.DataFramePreprocessor`.
 That way all preprocessing happens in a more controlled way, leaving less room for error.::
 
     import pandas as pd
@@ -67,7 +77,7 @@ That way all preprocessing happens in a more controlled way, leaving less room f
     df_pp.add_filter(
         Deduplicate("item", "user", "timestamp")
     )
-    # Output will be an InteractionMatrix of shape (3,3)
+    # Output will be an InteractionMatrix of shape (3,3)
     # With all interactions except the second (3, 1) interaction.
     im = df_pp.process(df)
 """

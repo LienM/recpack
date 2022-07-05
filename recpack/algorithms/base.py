@@ -600,7 +600,6 @@ class TorchMLAlgorithm(Algorithm):
         return to_csr_matrix((X, validation_data), binary=True)
 
     def _transform_predict_input(self, X: Matrix) -> csr_matrix:
-        # Checking shape
         return to_csr_matrix(X, binary=True)
 
     @property

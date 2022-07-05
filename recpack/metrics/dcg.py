@@ -11,7 +11,7 @@ from recpack.metrics.util import sparse_divide_nonzero
 logger = logging.getLogger("recpack")
 
 
-class DiscountedCumulativeGainK(ListwiseMetricK):
+class DCGK(ListwiseMetricK):
     """Computes the sum of gains of all items in a recommendation list.
 
     Relevant items that are ranked higher in the Top-K recommendations have a higher gain.
@@ -57,13 +57,13 @@ def dcg_k(y_true, y_pred, k=50):
     :return: global dcg value
     :rtype: float
     """
-    r = DiscountedCumulativeGainK(K=k)
+    r = DCGK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value
 
 
-class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
+class NDCGK(ListwiseMetricK):
 
     """Computes the normalized sum of gains of all items in a recommendation list.
 
@@ -94,9 +94,7 @@ class NormalizedDiscountedCumulativeGainK(ListwiseMetricK):
         self.discount_template = 1.0 / np.log2(np.arange(2, K + 2))
         # Calculate IDCG values by creating a list of partial sums (the
         # functional way)
-        self.IDCG_cache = np.array(
-            [1] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y))
-        )
+        self.IDCG_cache = np.array([1] + list(itertools.accumulate(self.discount_template, lambda x, y: x + y)))
 
     def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
 
@@ -135,7 +133,7 @@ def ndcg_k(y_true, y_pred, k=50):
     :return: ndcg value
     :rtype: float
     """
-    r = NormalizedDiscountedCumulativeGainK(K=k)
+    r = NDCGK(K=k)
     r.calculate(y_true, y_pred)
 
     return r.value

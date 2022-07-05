@@ -25,11 +25,11 @@ class AdressaOneWeek(Dataset):
 
     :param path: The path to the data directory.
         Defaults to `data`
-    :type path: Optional[str]
+    :type path: str, optional
     :param filename: Name of the file, if no name is provided the dataset default
         will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
-    :type filename: Optional[str]
+    :type filename: str, optional
     :param preprocess_default: Should a default set of filters be initialised?
         Defaults to True
     :type preprocess_default: bool, optional
@@ -100,13 +100,14 @@ class AdressaOneWeek(Dataset):
         df.to_csv(os.path.join(self.path, self.filename), header=True, index=False)
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return as a Pandas DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
 
-        Downloads the data file if it is not yet present.
-        The output will contain the data of the CSV file as a Pandas DataFrame.
+        .. warning::
 
-        :return: The interactions as a Pandas DataFrame, with a row for each interaction.
-        :rtype: pandas.DataFrame
+            This does not apply any preprocessing, and returns the raw dataset.
+
+        :return: The interaction data as a DataFrame with a row per interaction.
+        :rtype: pd.DataFrame
         """
 
         self.fetch_dataset()
