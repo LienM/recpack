@@ -46,14 +46,14 @@ Filters can be applied manually, simply pass the csr_matrix to be processed to t
     filter = ExcludeItems(items_to_remove)
     processed = filter.apply(recommendations)
 
-The preferred to use filters though is through the :class:`recpack.postprocessing.postprocessors.PostProcessor`.
+The preferred way to use filters though is through the :class:`recpack.postprocessing.postprocessors.Postprocessor`.
 That way all postprocessing happens in a more controlled way, leaving less room for error.::
 
     import numpy as np
     from scipy.sparse import csr_matrix
 
     from recpack.postprocessing.filters import ExcludeItems, RemovePreviousInteractions
-    from recpack.postprocessing.postprocessors import PostProcessor
+    from recpack.postprocessing.postprocessors import Postprocessor
 
     # Generate random recommendations
     AMOUNT_OF_USERS = 20

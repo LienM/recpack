@@ -4,7 +4,6 @@ from typing import List
 from abc import ABC, abstractmethod
 
 from scipy.sparse import csr_matrix
-from recpack.matrix import InteractionMatrix
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -47,24 +46,6 @@ class PostFilter(ABC):
     def __str__(self):
         attrs = self.__dict__
         return f"{self.__class__.__name__}({', '.join((f'{k}={v}' for k, v in attrs.items()))})"
-
-
-class RemovePreviousInteractions(PostFilter):
-    """Remove those items for the recommendations which the user has previously consumed.
-
-    :param interaction_history: Name of the column in which user identifiers are listed.
-    :type interaction_history: InteractionMatrix
-    """
-
-    def __init__(
-        self,
-        interaction_history: InteractionMatrix,
-    ):
-        self.interaction_history = interaction_history
-
-    def apply(self, X_pred: csr_matrix) -> csr_matrix:
-        mask = self.interaction_history.binary_values
-        return X_pred - X_pred.multiply(mask)
 
 
 class ExcludeItems(PostFilter):

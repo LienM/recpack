@@ -100,9 +100,11 @@ class DataFramePreprocessor:
 
         :param _filter: The filter to be applied
         :type _filter: Filter
-        :param index: The index to insert the filter at,
-            None will append the filter. Defaults to None
-        :type index: int
+        :param index: Index at which to insert the filter. Follows the list.insert behaviour,
+            None (and values larger than maximal index) will append (default behaviour),
+            0 will prepend,
+            -1 will insert the item at the second to last position.
+        :type index: int, optional
         """
         if index is None:
             self.filters.append(_filter)

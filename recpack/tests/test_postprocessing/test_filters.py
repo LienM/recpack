@@ -4,28 +4,10 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 import recpack.postprocessing.filters as filters
-from recpack.matrix import InteractionMatrix
 
 AMOUNT_OF_USERS = 100
 AMOUNT_OF_ITEMS = 25
 AMOUNT_SELECTED = 5
-
-
-@pytest.mark.parametrize(
-    "prediction_matrix, interaction_history",
-    [
-        (
-            csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            csr_matrix(np.random.randint(0, 2, size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-        ),
-    ],
-)
-def test_previously_interacted(prediction_matrix, interaction_history):
-    myfilter = filters.RemovePreviousInteractions(InteractionMatrix.from_csr_matrix(interaction_history))
-    filter_pred = myfilter.apply(prediction_matrix)
-
-    assert filter_pred.shape == prediction_matrix.shape
-    assert not filter_pred[interaction_history.nonzero()].any()
 
 
 @pytest.mark.parametrize(
@@ -75,7 +57,11 @@ def test_select_items_array_like(prediction_matrix, items):
     [
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
     ],
 )
@@ -93,7 +79,11 @@ def test_exclude_items(prediction_matrix, items):
         (
             csr_matrix(np.random.random_sample(size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
             csr_matrix(np.random.random_sample(size=(2 * AMOUNT_OF_USERS, AMOUNT_OF_ITEMS))),
-            np.random.choice(range(AMOUNT_OF_ITEMS), np.random.randint(1, AMOUNT_SELECTED), replace=False),
+            np.random.choice(
+                range(AMOUNT_OF_ITEMS),
+                np.random.randint(1, AMOUNT_SELECTED),
+                replace=False,
+            ),
         ),
     ],
 )
@@ -157,12 +147,3 @@ def test_filter_items_str_repr(filter_input, filter_class, name):
 
     assert name in myfilter.__str__()
     assert f"{filter_input}" in myfilter.__str__()
-
-
-@pytest.mark.parametrize(
-    "filter_input", [csr_matrix(np.random.randint(0, 2, size=(AMOUNT_OF_USERS, AMOUNT_OF_ITEMS)))]
-)
-def test_prev_int_str_repr(filter_input):
-    myfilter = filters.RemovePreviousInteractions(filter_input)
-
-    assert "RemovePreviousInteractions" in myfilter.__str__()
