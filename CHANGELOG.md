@@ -63,6 +63,8 @@ In addition to interface changes and additions we also made a big effort to incr
     * Added MaxItemsPerUser filter to remove users with extreme amounts of interactions from a dataframe.
     * Added the `SessionDataFramePreprocessor` which cuts user histories into sessions while processing data into InteractionMatrices.
 
+* Notebook with implementation of NeuMF for demonstration purposes.
+
 ## [0.2.2] - ![](https://img.shields.io/date/1643025589.svg?label=2022-01-24)
 
 ### Additions
