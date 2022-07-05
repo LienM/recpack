@@ -18,7 +18,8 @@ Using RecPack, you can:
 
 A typical experimentation pipeline for top-N recommendation is shown in the Figure below.
 RecPack provides a dedicated module to support each step. For the detailed documentation on each module, check out their documentation pages below.
-.. image:: img/Recpack Pipeline Diagram - Without Attribution - v2.png
+
+.. image:: ./img/diagram.png
 
 
 .. toctree::
@@ -26,12 +27,12 @@ RecPack provides a dedicated module to support each step. For the detailed docum
 
    recpack.datasets
    recpack.preprocessing
-   recpack.algorithms
+   recpack.matrix
    recpack.scenarios
+   recpack.algorithms
    recpack.postprocessing
    recpack.metrics
    recpack.pipelines
-   recpack.matrix
    guides
 
 Indices and tables
