@@ -18,8 +18,8 @@ class LastItemPrediction(Scenario):
     - :attr:`test_data_in`: contains the ``n_most_recent`` interactions before
       the last interaction of all users.
     - :attr:`test_data_out` contains the last interaction of all users.
-    - :attr: `validation_training_data` contains
-      all but the most recent interaction of each user in the full training dataset.
+    - :attr:`validation_training_data` contains all but the most recent interaction of
+      each user in the full training dataset.
     - :attr:`validation_data_in` contains the ``n_most_recent`` interactions before
       the last interaction of each user in the full training dataset.
     - :attr:`validation_data_out` contains the most recent interaction
@@ -27,8 +27,7 @@ class LastItemPrediction(Scenario):
 
     **Example**
 
-    As an example, we split this data with
-    ``validation = True`` and ``n_most_recent = 1``::
+    As an example, we split this data with ``validation = True`` and ``n_most_recent = 1``::
 
         time    0   1   2   3   4   5
         Alice   X   X   X

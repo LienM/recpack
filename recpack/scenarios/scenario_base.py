@@ -20,7 +20,7 @@ class Scenario(ABC):
     but used only on the training part of the dataset.
 
     :param validation: Create a validation dataset when True,
-    else split into training and test datasets.
+        else split into training and test datasets.
     :type validation: boolean, optional
     :param seed: Seed for randomisation parts of the scenario.
         Defaults to None, so random seed will be generated.

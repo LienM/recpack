@@ -21,9 +21,11 @@ class StrongGeneralizationTimed(Scenario):
 
     - :attr:`validation_training_data` contains interactions of validation training users
       with timestamps in ``[t_validation - delta_in, t_validation[``
+
     - :attr:`validation_data_in` contains all interactions
       of the validation evaluation users
       with timestamps in ``[t_validation - delta_in, t_validation[``.
+
     - :attr:`validation_data_out` are the interactions
       of the validation evaluation users,
       with timestamps in ``[t_validation, min(t, t_validation + delta_out)[``
@@ -65,6 +67,7 @@ class StrongGeneralizationTimed(Scenario):
         Bob         X
 
     validation_data_out::
+
         time    0   1   2   3   4   5
         Bob             X   X
 

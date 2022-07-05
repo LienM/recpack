@@ -8,17 +8,19 @@ class StrongGeneralizationTimedMostRecent(Scenario):
     targets are the last interactions of each user.
 
     - :attr:`full_training_data` contains events from all users
-    whose most recent interaction was before ``t``
-    - Test data contains all users whose most recent interactions was after ``t``:
-        - :attr:`test_data_out` contains the ``n`` most recent interactions of
-            a user whose most recent interactions was after ``t``.
-        - :attr:`test_data_in` contains all earlier interactions of the test users.
+      whose most recent interaction was before ``t``
+
+    Test data contains all users whose most recent interactions was after ``t``:
+
+    - :attr:`test_data_out` contains the ``n`` most recent interactions of
+      a user whose most recent interactions was after ``t``.
+    - :attr:`test_data_in` contains all earlier interactions of the test users.
 
     If validation data is requested, validation evaluation users are those training users whose most recent interaction
     occurred after ``t_validation``.
 
     - :attr:`validation_training_data` contains users whose most
-    recent interaction happened before ``t_validation``.
+      recent interaction happened before ``t_validation``.
 
     - :attr:`validation_data_out` contains the ``n`` most recent interactions of
       a user whose most recent interactions was in the interval ``[t_validation, t[``.
