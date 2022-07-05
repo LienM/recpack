@@ -47,8 +47,8 @@ An example of usage is::
 
 
 If you want to use the pipelines with your own algorithms or metrics,
-you should register them using the :py:data:`ALGORITHM_REGISTRY` and :py:data:`METRIC_REGISTRY` respectively.
-For info on the functions see :py:class:`registries.AlgorithmRegistry` and :py:class:`registries.MetricRegistry`.
+you should register them using the :data:`ALGORITHM_REGISTRY` and :data:`METRIC_REGISTRY` respectively.
+For info on the functions see :class:`registries.AlgorithmRegistry` and :class:`registries.MetricRegistry`.
 
 Example to register an algorithm::
 

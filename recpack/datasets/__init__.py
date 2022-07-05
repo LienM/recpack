@@ -56,7 +56,7 @@ To use custom preprocessing a couple more lines should be added to the example. 
 
     data = ml_loader.load()
 
-For an overview of available filters see :py:mod:`recpack.preprocessing`
+For an overview of available filters see :mod:`recpack.preprocessing`
 """
 
 
