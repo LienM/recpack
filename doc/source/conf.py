@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "RecPack"
-copyright = "2022, Lien Michiels"
+copyright = "2022, Froomle"
 author = "Lien Michiels and Robin Verachtert"
 
 # The full version, including alpha/beta/rc tags
@@ -60,7 +60,7 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 
 html_css_files = [
-    'css/custom.css',
+    "css/custom.css",
 ]
 
 # -- Options for MathJax --------
