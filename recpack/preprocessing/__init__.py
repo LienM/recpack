@@ -1,6 +1,12 @@
-"""Module with classes for preprocessing datasets
-
+"""
 .. currentmodule:: recpack.preprocessing
+
+In collaborative filtering it is customary to transform the data into a user-item interaction matrix.
+To do so efficiently, :class:`preprocessors.DataFramePreprocessor` transforms
+the user and item identifiers into matrix indices.
+Secondly, it is common to apply some filtering to your raw dataset.
+For this purpose RecPack provides a set of preimplemented Filters.
+
 
 Preprocessors
 -----------------------
@@ -53,7 +59,7 @@ Filters can be applied manually, simply pass the DataFrame to be processed to th
     processed_df = f.apply(df)
 
 The preferred way to use filters though is through
-the ``recpack.preprocessing.preprocessors.DataFramePreprocessor``.
+the :class:`recpack.preprocessing.preprocessors.DataFramePreprocessor`.
 That way all preprocessing happens in a more controlled way, leaving less room for error.::
 
     import pandas as pd
