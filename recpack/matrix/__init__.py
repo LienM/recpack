@@ -6,8 +6,6 @@
     :toctree: generated/
 
     InteractionMatrix
-    to_binary
-    to_csr_matrix
 
 Example
 ~~~~~~~~~
