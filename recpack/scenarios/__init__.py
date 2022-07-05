@@ -28,11 +28,10 @@ from T+5 until T+10".
     LastItemPrediction
 
 A scenario is stateful. At initialization the parameters for the scenario are passed.
-Only after calling :attr:`split` given an :class:`InteractionMatrix`,
+Only after calling :attr:`Scenario.split` given a :class:`recpack.matrix.InteractionMatrix`,
 can splits be retrieved under
-:attr:`full_training_data`, (:attr:`validation_training_data`),
-:attr:`validation_data` (:attr:`validation_data_in`, :attr:`validation_data_out`)
-and :attr:`test_data` (:attr:`test_data_in`, :attr:`test_data_out`).
+:attr:`Scenario.full_training_data`, :attr:`Scenario.validation_training_data`,
+:attr:`Scenario.validation_data` and :attr:`Scenario.test_data`.
 
 
 Splitters
