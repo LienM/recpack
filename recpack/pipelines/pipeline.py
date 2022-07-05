@@ -61,8 +61,9 @@ class Pipeline(object):
     First grid parameters are optimised by training on validation_training_data and
     evaluation on validation_data_out.
     Next, unless the model requires validation data, the model with optimised parameters is retrained
-    on the full training data. (:class:`recpack.algorithms.TorchMLAlgorithm` based algorithms will be trained on validation data again).
-    Predictions are then generated with test_in as input and evaluated on test_out.
+    on the full training data.
+    :class:`recpack.algorithms.TorchMLAlgorithm` based algorithms will be trained on validation data again.
+    Predictions are generated with test_in as input and evaluated on test_out.
 
     Results can be accessed via the :meth:`get_metrics` method.
 
@@ -77,8 +78,10 @@ class Pipeline(object):
         A MetricEntry defines which metric and value of the parameter K
         (number of recommendations).
     :type metric_entries: List[MetricEntry]
-    :param train_data: The data to train models on.
-    :type train_data: InteractionMatrix
+    :param full_training_data: The data to train models on, in the final evaluation.
+    :type full_training_data: InteractionMatrix
+    :param validation_training_data: The data to train models on when optimising parameters.
+    :type validation_training_data: InteractionMatrix
     :param validation_data: The data to use for optimising parameters,
         can be None only if none of the algorithms require optimisation.
     :type validation_data: Union[Tuple[InteractionMatrix, InteractionMatrix], None]
