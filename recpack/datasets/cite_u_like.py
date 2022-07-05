@@ -61,14 +61,14 @@ class CiteULike(Dataset):
         _fetch_remote(DATASETURL, self.file_path)
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return as a Pandas DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
 
-        Downloads the data file if it is not yet present.
-        The output will contain a DataFrame with a ``user_id`` and ``item_id`` column.
-        Each interaction is stored in a separate row.
+        .. warning::
 
-        :return: The interactions as a DataFrame, with a row for each interaction.
-        :rtype: pandas.DataFrame
+            This does not apply any preprocessing, and returns the raw dataset.
+
+        :return: The interaction data as a DataFrame with a row per interaction.
+        :rtype: pd.DataFrame
         """
 
         # This will download the dataset if necessary

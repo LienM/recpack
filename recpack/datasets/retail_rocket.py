@@ -99,12 +99,13 @@ class RetailRocket(Dataset):
         return columns
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return a DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
 
-        The output will contain a DataFrame.
-        Each interaction is stored in a separate row.
+        .. warning::
 
-        :return: The interactions as a DataFrame, with a row for each interaction.
+            This does not apply any preprocessing, and returns the raw dataset.
+
+        :return: The interaction data as a DataFrame with a row per interaction.
         :rtype: pd.DataFrame
         """
 

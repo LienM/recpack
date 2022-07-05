@@ -95,13 +95,14 @@ class MovieLens25M(Dataset):
         os.rename(os.path.join(self.path, "ml-25m/ratings.csv"), self.file_path)
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the data from file, and return as a Pandas DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
 
-        Downloads the data file if it is not yet present.
-        The output will contain the data of the CSV file as a Pandas DataFrame.
+        .. warning::
 
-        :return: The interactions as a Pandas DataFrame, with a row for each interaction.
-        :rtype: pandas.DataFrame
+            This does not apply any preprocessing, and returns the raw dataset.
+
+        :return: The interaction data as a DataFrame with a row per interaction.
+        :rtype: pd.DataFrame
         """
 
         self.fetch_dataset()

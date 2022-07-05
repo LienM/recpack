@@ -74,7 +74,7 @@ class Dataset:
 
     @property
     def file_path(self):
-        """The fully classified path to the file that should be loaded from/saved to."""
+        """The fully classified path to the file from which dataset will be loaded."""
         # TODO: correctness check?
         return os.path.join(self.path, self.filename)
 
@@ -95,7 +95,7 @@ class Dataset:
         return []
 
     def add_filter(self, _filter: Filter, index=None):
-        """Add a filter to be used when calling load().
+        """Add a filter to be applied when loading the data.
 
         If the index is specified, the filter is inserted at the specified index.
         Otherwise it is appended.
@@ -125,7 +125,11 @@ class Dataset:
         raise NotImplementedError("Should still be implemented")
 
     def load_dataframe(self) -> pd.DataFrame:
-        """Load the DataFrame from file, and return it as a pandas DataFrame.
+        """Load the raw dataset from file, and return it as a pandas DataFrame.
+
+        .. warning::
+
+            This does not apply any preprocessing, and returns the raw dataset.
 
         :return: The interaction data as a DataFrame with a row per interaction.
         :rtype: pd.DataFrame
