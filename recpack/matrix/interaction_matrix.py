@@ -1,39 +1,7 @@
-"""The matrix module contains the InteractionMatrix class to represent data within the Recpack framework.
-
-.. currentmodule:: recpack.matrix
-
-.. autosummary::
-    :toctree: generated/
-
-    InteractionMatrix
-    to_binary
-    to_csr_matrix
-
-Example
-~~~~~~~~~
-
-An InteractionMatrix object can be constructed from a pandas DataFrame
-with a row for each interaction.
-The ``item`` and ``user`` values will be indices in the resulting matrix.
-The following example constructs a 4x4 matrix, with 4 nonzero values::
-
-    import pandas as pd
-
-    from recpack.matrix import InteractionMatrix
-    data = {
-        "user": [3, 2, 1, 1],
-        "item": [1, 1, 2, 3],
-        "timestamp": [1613736000, 1613736300, 1613736600, 1613736900]
-    }
-    df = pd.DataFrame.from_dict(data)
-    demo_data = InteractionMatrix(df, "item", "user", timestamp_ix="timestamp")
-
-"""
-
 from dataclasses import dataclass, asdict
 import logging
 import operator
-from typing import Any, Callable, List, Optional, Set, Tuple, Union, Iterator
+from typing import Callable, List, Optional, Set, Tuple, Union, Iterator
 import warnings
 import yaml
 
@@ -41,6 +9,7 @@ import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
 
+from recpack.util import to_binary
 
 logger = logging.getLogger("recpack")
 
@@ -609,81 +578,3 @@ class InteractionMatrix:
         df = pd.DataFrame({cls.USER_IX: uids, cls.ITEM_IX: iids})
 
         return InteractionMatrix(df, cls.ITEM_IX, cls.USER_IX, shape=X.shape)
-
-
-# Conversion and validation of the various matrix data types supported by recpack.
-
-# In this module the Matrix type is defined, as the union of the InteractionMatrix object,
-# and csr_matrix, the typically used sparse represenation.
-
-# This allows you to use the classes that support Matrix as parameter type
-# to be used without the use of the InteractionMatrix object.
-Matrix = Union[InteractionMatrix, csr_matrix]
-
-_supported_types = Matrix.__args__  # type: ignore
-
-
-def to_csr_matrix(
-    X: Union[Matrix, Tuple[Matrix, ...]], binary: bool = False
-) -> Union[csr_matrix, Tuple[csr_matrix, ...]]:
-    """Convert a matrix-like object to a scipy csr_matrix.
-
-    :param X: Matrix-like object or tuple of objects to convert.
-    :type X: csr_matrix
-    :param binary: If true, ensure matrix is binary by setting non-zero values to 1.
-    :type binary: bool, optional
-    :raises: UnsupportedTypeError
-    :return: Matrices as csr_matrix.
-    :rtype: Union[csr_matrix, Tuple[csr_matrix, ...]]
-    """
-    if isinstance(X, (tuple, list)):
-        return type(X)(to_csr_matrix(x, binary=binary) for x in X)
-    if isinstance(X, csr_matrix):
-        res = X
-    elif isinstance(X, InteractionMatrix):
-        res = X.values
-    else:
-        raise UnsupportedTypeError(X)
-    return to_binary(res) if binary else res
-
-
-def to_binary(X: csr_matrix) -> csr_matrix:
-    """Converts a matrix to binary by setting all non-zero values to 1.
-
-    :param X: Matrix to convert to binary.
-    :type X: csr_matrix
-    :return: Binary matrix.
-    :rtype: csr_matrix
-    """
-    X_binary = X.astype(bool).astype(X.dtype)
-
-    return X_binary
-
-
-def _is_supported(t: Any) -> bool:
-    """Returns whether a given matrix type is supported by recpack.
-
-    :param t: The type of the object.
-    :type t: Any
-    :return: True if supported, else False.
-    :rtype: bool
-    """
-    if not isinstance(t, type):
-        t = type(t)
-    return issubclass(t, _supported_types)
-
-
-class UnsupportedTypeError(Exception):
-    """Raised when a matrix of type not supported by recpack is received.
-
-    :param X: The matrix object received
-    :type X: Any
-    """
-
-    def __init__(self, X: Any):
-        assert not _is_supported(X)
-        super().__init__(
-            "Recpack only supports matrix types {}. Received {}.".format(
-                ", ".join(t.__name__ for t in _supported_types), type(X).__name__
-            )
-        )
