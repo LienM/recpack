@@ -4,13 +4,16 @@ from recpack.scenarios.splitters import MostRecentSplitter
 
 
 class LastItemPrediction(Scenario):
-    """Predict a users' next interactions.
+    """Predict a user's next interaction.
 
     Scenario frequently used in evaluation of sequential recommendation algorithms.
-    The scenario can only be used when the dataset has timestamp information,
-    because the order of interactions is needed to correctly split the data.
 
-    The scenario splits the data such that the last interaction of a user is the targets for prediction,
+    .. warning::
+
+        The scenario can only be used when the dataset has timestamp information,
+        because the order of interactions is needed to correctly split the data.
+
+    The scenario splits the data such that the last interaction of a user is the target for prediction,
     while the earlier ones are used for training and as history.
 
     - :attr:`full_training_data` contains all but the most recent

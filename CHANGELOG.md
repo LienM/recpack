@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Several module changes were made:
     * splitters module was restructured. Base module is called scenarios. Inside scenarios the splitters submodule contains the splitters functionality.
-    * data module was removed, and the submodules were turned into modules.  (`dataset` and `matrix`)
+    * data module was removed, and the submodules were turned into modules (`dataset` and `matrix`). The matrix file is split into additional files as well.
 
 
 * Several module changes were made:

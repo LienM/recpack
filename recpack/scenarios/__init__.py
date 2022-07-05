@@ -20,12 +20,12 @@ from T+5 until T+10".
 
     Scenario
 
-    StrongGeneralization
-    WeakGeneralization
     Timed
+    LastItemPrediction
+    WeakGeneralization
+    StrongGeneralization
     StrongGeneralizationTimed
     StrongGeneralizationTimedMostRecent
-    LastItemPrediction
 
 A scenario is stateful. At initialization the parameters for the scenario are passed.
 Only after calling :attr:`Scenario.split` given a :class:`recpack.matrix.InteractionMatrix`,

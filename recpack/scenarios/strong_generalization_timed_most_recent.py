@@ -4,8 +4,7 @@ from recpack.scenarios.splitters import MostRecentSplitter, UserInteractionTimeS
 
 
 class StrongGeneralizationTimedMostRecent(Scenario):
-    """Strong Generalization scenario where user splits are based on the timestamps of their last interactions and
-    targets are the last interactions of each user.
+    """Predict the next interaction(s) for previously unseen users.
 
     - :attr:`full_training_data` contains events from all users
       whose most recent interaction was before ``t``
@@ -26,6 +25,10 @@ class StrongGeneralizationTimedMostRecent(Scenario):
       a user whose most recent interactions was in the interval ``[t_validation, t[``.
     - :attr:`validaton_data_in` contains all earlier interactions of the
       validation_evaluation users.
+
+    .. warning::
+
+        The scenario can only be used when the dataset has timestamp information.
 
     **Example**
 

@@ -4,7 +4,7 @@ from recpack.scenarios.splitters import TimestampSplitter
 
 
 class Timed(Scenario):
-    """Simulates a single train and future prediction.
+    """Predict users' future interactions, given information about historical interactions.
 
     - :attr:`full_training_data` is constructed by using
       all interactions whose timestamps
@@ -17,6 +17,10 @@ class Timed(Scenario):
       ``[t_validation - delta_in, t_validation[``
     - :attr:`validation_data_out` are interactions with timestamps in
       ``[t_validation, min(t, t_validation + delta_out)[``.
+
+    .. warning::
+
+        The scenario can only be used when the dataset has timestamp information.
 
     **Example**
 

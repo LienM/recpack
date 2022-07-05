@@ -4,23 +4,19 @@ from recpack.scenarios.splitters import FractionInteractionSplitter
 
 
 class WeakGeneralization(Scenario):
-    """Scenario where each user is used for both training and evaluation, with events split per user at random.
+    """Predict (randomly) held-out interactions for all users, with remaining data used for training.
 
     For each user their events ``I_u`` are distributed over the datasets as follows:
 
     - :attr:`full_training_data` (``IT_u``) contains ``frac_data_in * |I_u|`` (rounded up)
       of the user's interactions in the full dataset.
-    - :attr:`test_data_in` contains the same events as :attr:`test_training_data`
-      for users with enough interactions to also have an event in the test out dataset.
-    - :attr:`test_training_data` contains the remaining ``(1 - frac_data_in) * |I_u|``
+    - :attr:`test_data_in` contains the same events as :attr:`full_training_data`.
+    - :attr:`test_data_out` contains the remaining ``(1 - frac_data_in) * |I_u|``
       of the user's interactions in the full dataset.
     - :attr:`validation_training_data` contains ``frac_data_in * |IT_u|`` (rounded up)
       of the user's interactions in the full training dataset.
-    - :attr:`validation_data_in` contains the same
-      events as :attr:`validation_training_data`
-      for users with enough interactions to also
-      have one in the validation data out dataset.
-    - :attr:`validation_data_in` contains the remaining ``(1 - frac_data_in) * |IT_u|``
+    - :attr:`validation_data_in` contains the same events as :attr:`validation_training_data`
+    - :attr:`validation_data_out` contains the remaining ``(1 - frac_data_in) * |IT_u|``
       (rounded down) of the user's interactions in the full training dataset.
 
     **Example**

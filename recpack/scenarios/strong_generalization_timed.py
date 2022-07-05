@@ -4,8 +4,7 @@ from recpack.scenarios.splitters import TimestampSplitter, StrongGeneralizationS
 
 
 class StrongGeneralizationTimed(Scenario):
-    """Strong Generalization scenario with random user splits
-    and targets are based on the timestamp of the event.
+    """Predict future interactions for previously unseen users.
 
     - :attr:`full_training_data` contains interactions from ``frac_users_in`` of the users.
       Only interactions whose timestamps are in the interval ``[t - delta_in, t[`` are used.
@@ -29,6 +28,10 @@ class StrongGeneralizationTimed(Scenario):
     - :attr:`validation_data_out` are the interactions
       of the validation evaluation users,
       with timestamps in ``[t_validation, min(t, t_validation + delta_out)[``
+
+    .. warning::
+
+        The scenario can only be used when the dataset has timestamp information.
 
     **Example**
 

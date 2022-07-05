@@ -4,7 +4,7 @@ from recpack.scenarios.splitters import FractionInteractionSplitter, StrongGener
 
 
 class StrongGeneralization(Scenario):
-    """Strong Generalization data with randomly split users and randomly sampled targets.
+    """Predict (randomly) held-out interactions of previously unseen users.
 
     During splitting each user is randomly assigned to one of three groups of users:
     training, validation and testing.

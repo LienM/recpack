@@ -15,11 +15,11 @@ class Scenario(ABC):
     The test dataset is made up of two components:
     a fold-in set of interactions that is used to predict another held-out
     set of interactions.
-    The creation validation dataset should follow the same splitting strategy as
-    used to create training and test datasets from the full dataset,
-    but used only on the training part of the dataset.
+    The creation of the validation dataset, from the full training dataset,
+    should follow the same splitting strategy as
+    the one used to create training and test datasets from the full dataset.
 
-    :param validation: Create a validation dataset when True,
+    :param validation: Create validation datasets when True,
         else split into training and test datasets.
     :type validation: boolean, optional
     :param seed: Seed for randomisation parts of the scenario.
