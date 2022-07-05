@@ -55,14 +55,13 @@ class MetricAccumulator:
 
 
 class Pipeline(object):
-    """Performs all steps in order and holds on to results.
+    """Performs optimisation, training, prediction and evaluation, keeping track of results.
 
     Pipeline is run per algorithm.
-    First grid parameters are optimised by training on train_data and
-    evaluation on validation_data.
-    Next, unless the model requires validation data,
-    the model with optimised parameters is retrained
-    on the combination of train_data and validation_data.
+    First grid parameters are optimised by training on validation_training_data and
+    evaluation on validation_data_out.
+    Next, unless the model requires validation data, the model with optimised parameters is retrained
+    on the full training data. (:class:`recpack.algorithms.TorchMLAlgorithm` based algorithms will be trained on validation data again).
     Predictions are then generated with test_in as input and evaluated on test_out.
 
     Results can be accessed via the :meth:`get_metrics` method.
@@ -134,7 +133,10 @@ class Pipeline(object):
 
             algorithm = ALGORITHM_REGISTRY.get(algorithm_entry.name)(**params)
             # Train the final version of the algorithm
-            self._train(algorithm, self.full_training_data)
+            if isinstance(algorithm, TorchMLAlgorithm):
+                self._train(algorithm, self.validation_training_data)
+            else:
+                self._train(algorithm, self.full_training_data)
             # Make predictions
             X_pred = self._predict_and_postprocess(algorithm, self.test_data_in)
 
@@ -190,7 +192,7 @@ class Pipeline(object):
         optimal_params = sorted(
             results,
             key=lambda x: x[optimisation_metric.name],
-            reverse=~self.optimisation_metric_entry.minimise,
+            reverse=not self.optimisation_metric_entry.minimise,
         )[0]["params"]
 
         self._optimisation_results.extend(results)
