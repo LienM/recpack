@@ -25,5 +25,5 @@ class TARSItemKNNDing(TARSItemKNN):
 
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability"]
 
-    def __init__(self, K: int, predict_decay: float, similarity: str = "cosine"):
+    def __init__(self, K: int = 200, predict_decay: float = 1 / 3600, similarity: str = "cosine"):
         super().__init__(K=K, fit_decay=0, predict_decay=predict_decay, similarity=similarity)

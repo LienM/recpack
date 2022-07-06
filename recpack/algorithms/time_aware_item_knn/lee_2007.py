@@ -2,7 +2,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 
 from recpack.algorithms.time_aware_item_knn.base import TARSItemKNN
-from recpack.data.matrix import InteractionMatrix
+from recpack.matrix import InteractionMatrix
 
 
 class TARSItemKNNLee(TARSItemKNN):
