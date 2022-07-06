@@ -40,6 +40,7 @@ class TARSItemKNNLiu2012(TARSItemKNN):
 
     def __init__(self, K=200, decay=2):
         super().__init__(K=K, fit_decay=decay, predict_decay=decay, decay_function="log", similarity="cosine")
+        self.decay = decay
 
     def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay: float) -> csr_matrix:
         """Weight the interaction matrix based on age of the events.
