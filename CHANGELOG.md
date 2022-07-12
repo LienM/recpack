@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Additions
 * __algorithms__
     * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to TARSItemKNNXia to distinguish it from other time aware item KNN models.
+    * Added `time_aware_user_knn` module
+        * `TARSUserKNNAnelli` as described in Anelli, Vito Walter, et al. "Local popularity and time in top-n recommendation." European Conference on Information Retrieval. Springer, Cham, 2019.
 
 ### Bugfixes
 * __metrics__
