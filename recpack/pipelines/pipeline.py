@@ -269,10 +269,7 @@ class Pipeline(object):
         df = self.get_metrics()
         df.to_json(f"{self.results_directory}/results.json")
 
-        try:
-            self.optimisation_results.to_json(f"{self.results_directory}/optimisation_results.json")
-        except AttributeError:
-            pass
+        self.optimisation_results.to_json(f"{self.results_directory}/optimisation_results.json")
 
     def get_num_users(self) -> int:
         """Get the amount of users used in the evaluation.
