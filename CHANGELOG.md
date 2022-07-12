@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to TARSItemKNNXia to distinguish it from other time aware item KNN models.
     * Added `time_aware_user_knn` module
         * `TARSUserKNNAnelli` as described in Anelli, Vito Walter, et al. "Local popularity and time in top-n recommendation." European Conference on Information Retrieval. Springer, Cham, 2019.
+    * Added `linear_decay_steeper` function to the decay functions. This decay functions allows a steeper decay, and if the linear line drops below 0, the value is set to 0.
+
+* __pipelines__
+    * `save_metrics` function has been improved, it now creates a directory when it does not yet exist. And it also saves the optimisation metrics now.
 
 ### Bugfixes
 * __metrics__

@@ -123,3 +123,31 @@ def linear_decay(age_arr: np.array, decay: float):
 
     m = age_arr.max()
     return 1 - (age_arr / m) * decay
+
+
+def linear_decay_steeper(age_arr: np.array, decay: float):
+    """Applies a linear decay function.
+
+    For each value x in the ``age_arr`` the decayed value is computed as
+
+    .. math::
+
+        1 - (\\frac{x}{max_{x \\in X_u}(x)}) \\alpha
+
+    where alpha is the decay parameter. If the decayed value is below 0, it is set to 0
+
+    :param age_array: array of age of events which will be decayed.
+    :type age_array: np.array
+    :param decay: The decay parameter, should be in the [0, +inf[ interval.
+    :type decay: float
+    :returns: The decayed input time array. Larger values in the original array will have lower values.
+    :rtype: np.array
+    """
+
+    if not (0 <= decay):
+        raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, +inf[.")
+
+    m = age_arr.max()
+    results = 1 - (age_arr / m) * decay
+    results[results < 0] = 0
+    return results
