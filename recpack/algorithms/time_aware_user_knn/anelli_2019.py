@@ -89,6 +89,7 @@ class TARSUserKNNAnelli(Algorithm):
         self.precursors_ = csr_matrix(candidate_precursor_counts > avg_cooc_per_user, dtype=int)
 
     def _predict(self, X: InteractionMatrix) -> csr_matrix:
+        # TODO: in base tarsItemKNN I use now = max() does that make sense?
         now = X.timestamps.max() + 1  # 1 second past the last timestamp in the history matrix.
 
         user_last = X.last_timestamps_matrix.max(axis=1)

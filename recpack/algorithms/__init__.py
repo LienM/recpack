@@ -132,6 +132,9 @@ Time Aware Algorithms
     TARSItemKNNLiu
     TARSItemKNNLiu2012
     TARSItemKNNXia
+    TARSItemKNNVaz
+
+    TARSUserKNNAnelli
 
 .. _algorithm-base-classes:
 
@@ -274,10 +277,14 @@ from recpack.algorithms.stan import STAN
 from recpack.algorithms.time_aware_item_knn import (
     TARSItemKNN,
     TARSItemKNNDing,
+    TARSItemKNNHermann,
     TARSItemKNNLee,
     TARSItemKNNLee_W3,
     TARSItemKNNLee_W5,
     TARSItemKNNLiu,
     TARSItemKNNLiu2012,
     TARSItemKNNXia,
+    TARSItemKNNVaz,
 )
+
+from recpack.algorithms.time_aware_user_knn.anelli_2019 import TARSUserKNNAnelli

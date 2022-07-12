@@ -19,4 +19,4 @@ class TARSItemKNNVaz(TARSItemKNN):
     """
 
     def __init__(self, K: int = 200, fit_decay: float = 1 / (24 * 3600), predict_decay: float = 1 / (24 * 3600)):
-        super().__init__(self, K, fit_decay, predict_decay, similarity="pearson")
+        super().__init__(K, fit_decay, predict_decay, similarity="pearson", decay_function="exponential")
