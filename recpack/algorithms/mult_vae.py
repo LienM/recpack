@@ -7,7 +7,7 @@
 
 import logging
 from typing import List, Tuple
-from scipy.sparse.lil import lil_matrix
+from scipy.sparse import lil_matrix
 
 import torch.nn as nn
 import torch.nn.functional as F
