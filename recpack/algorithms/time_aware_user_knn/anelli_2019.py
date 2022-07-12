@@ -4,12 +4,44 @@ from scipy.sparse import csr_matrix, lil_matrix
 from recpack.algorithms import Algorithm
 from recpack.algorithms.time_aware_item_knn.decay_functions import exponential_decay
 from recpack.matrix import InteractionMatrix, Matrix
+from recpack.util import get_top_K_values
 
 # TODO: make memory efficient (if at all possible)
 
 
 class TARSUserKNNAnelli(Algorithm):
-    def __init__(self, decay, min_number_of_recommendations=20):
+    """Time aware user KNN based on precursor users.
+
+    Described in Anelli, Vito Walter, et al. "Local popularity and time in top-n recommendation."
+    European Conference on Information Retrieval. Springer, Cham, 2019.
+
+    For each user a set of precursor users are computed.
+    These are users that frequently interact with items before the user does.
+    These precursor users are assumed to inspire the user,
+    and so the other items they interacted with are what it will recommend.
+
+    For recommendation an exponential decay :math:`e^{\\lambda \\Delta t}` is applied to give more weight
+    to recently active precursors as well as recently visited items by precursors.
+    Given that :math:`t_0` is the 'now' timestamp
+    (computed as the last interaction in the prediction input matrix + 1 second),
+    :math:`t_{u',l}` is the last interaction of the precursor :math:`u'`
+    and :math:`t_{u',i}` is the time of interaction between the precursor and an item.
+
+    .. math::
+
+        \\Delta t = |t_0 - 2 t_{u',l} + t_{u',i}|
+
+    Users with no precursors get global popularity.
+
+    :param decay: The scaling factor :math:`\\lambda` in the exponential.
+    :type decay: float
+    :param min_number_of_recommendations: The minimal requested number of recommendations per user, if users get
+        recommended fewer items, their recommendations are filled up with popularity.
+        Defaults to 100
+    :type min_number_of_recommendations: int, optional
+    """
+
+    def __init__(self, decay: float, min_number_of_recommendations: int = 100):
         self.decay = decay
         self.min_number_of_recommendations = min_number_of_recommendations
 
@@ -24,11 +56,7 @@ class TARSUserKNNAnelli(Algorithm):
         return X
 
     def _fit(self, X: InteractionMatrix):
-        """Computes precursors for each user.
-
-        Args:
-            X (csr_matrix): _description_
-        """
+        """Computes precursors for each user."""
         if X.shape[1] < self.min_number_of_recommendations:
             raise ValueError(
                 "Can't fit model on an interaction matrix with fewer items than "
@@ -37,7 +65,9 @@ class TARSUserKNNAnelli(Algorithm):
         self.history_ = X.copy()
 
         # Will be used as fallback in prediction
-        self.popularity_ = X.binary_values.sum(axis=0)
+        self.popularity_ = get_top_K_values(
+            csr_matrix(X.binary_values.sum(axis=0)), self.min_number_of_recommendations
+        )
 
         last_t = X.last_timestamps_matrix
 

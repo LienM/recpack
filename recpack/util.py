@@ -81,6 +81,7 @@ def get_top_K_values(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
     """Returns a matrix of only the K largest values for every row in X.
 
     Selects the top-K items for every user (which is equal to the K nearest neighbours.)
+    In case of a tie for the last position, the item with the largest index of the tied items is used.
 
     :param X: Matrix from which we will select K values in every row.
     :type X: csr_matrix

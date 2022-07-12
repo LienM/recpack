@@ -39,13 +39,14 @@ def test_predict(algorithm, mat_no_zero_timestamp):
 
     pred = algorithm.predict(mat_no_zero_timestamp)
 
+    # Because of the way get_top_K_values works, ties are broken in reverse index order
     expected_prediction = np.array(
         [
             [2 * np.exp(-3 / 2), 2 * np.exp(-2), 0, 0, 0],
-            [3, 3, 3, 1, 1],
-            [3, 3, 3, 1, 1],
+            [0, 3, 3, 0, 0],
+            [0, 3, 3, 0, 0],
             [0, 0, np.exp(-1), np.exp(-1 / 2), 0],
-            [3, 3, 3, 1, 1],
+            [0, 3, 3, 0, 0],
             [0, 0, np.exp(-1), np.exp(-1 / 2), 0],
         ]
     )
@@ -58,14 +59,15 @@ def test_predict_w_fallback(algorithm_at_least_4_recos, mat_no_zero_timestamp):
 
     pred = algorithm_at_least_4_recos.predict(mat_no_zero_timestamp)
     print(pred.toarray())
+    # Because of the way get_top_K_values works, ties are broken in reverse index order
     expected_prediction = np.array(
         [
-            [2 * np.exp(-3 / 2), 2 * np.exp(-2), (2 * np.exp(-2) / 4) * 3, 2 * np.exp(-2) / 4, 2 * np.exp(-2) / 4],
-            [3, 3, 3, 1, 1],
-            [3, 3, 3, 1, 1],
-            [(np.exp(-1) / 4) * 3, (np.exp(-1) / 4) * 3, np.exp(-1), np.exp(-1 / 2), (np.exp(-1) / 4) * 1],
-            [3, 3, 3, 1, 1],
-            [(np.exp(-1) / 4) * 3, (np.exp(-1) / 4) * 3, np.exp(-1), np.exp(-1 / 2), (np.exp(-1) / 4) * 1],
+            [2 * np.exp(-3 / 2), 2 * np.exp(-2), (2 * np.exp(-2) / 4) * 3, 0, 2 * np.exp(-2) / 4],
+            [3, 3, 3, 0, 1],
+            [3, 3, 3, 0, 1],
+            [(np.exp(-1) / 4) * 3, (np.exp(-1) / 4) * 3, np.exp(-1), np.exp(-1 / 2), (np.exp(-1) / 4)],
+            [3, 3, 3, 0, 1],
+            [(np.exp(-1) / 4) * 3, (np.exp(-1) / 4) * 3, np.exp(-1), np.exp(-1 / 2), (np.exp(-1) / 4)],
         ]
     )
 
