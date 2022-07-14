@@ -117,6 +117,7 @@ Session-Based Algorithms
     GRU4RecNegSampling
     GRU4RecCrossEntropy
     STAN
+    SequentialRules
 
 Time Aware Algorithms
 ----------------------
@@ -288,3 +289,5 @@ from recpack.algorithms.time_aware_item_knn import (
 )
 
 from recpack.algorithms.time_aware_user_knn.anelli_2019 import TARSUserKNNAnelli
+
+from recpack.algorithms.sequential_rules import SequentialRules
