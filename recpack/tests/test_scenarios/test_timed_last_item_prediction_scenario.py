@@ -114,7 +114,7 @@ def test_timed_most_recent_w_val(data_m_sessions, t, t_val):
 
 @pytest.mark.parametrize("t, n_history", [(4, 1), (5, 2)])
 def test_timed_last_item_split_n_history(data_m_sessions, t, n_history):
-    scenario = TimedLastItemPrediction(t=t, n=n, n_history=n_history)
+    scenario = TimedLastItemPrediction(t=t, n_history=n_history)
     scenario.split(data_m_sessions)
     tr = scenario.full_training_data
     te_data_in, te_data_out = scenario.test_data
@@ -169,7 +169,7 @@ def test_timed_last_item_split_delta_out(data_m_sessions, t, delta_out):
 @pytest.mark.parametrize(
     "t, n_history, expected_error",
     [
-        (5, -2, 0, "Using n_history = 0 is not supported."),
+        (5, 0, "Using n_history = 0 is not supported."),
     ],
 )
 def test_timed_last_item_split_zero_values_for_n(t, n_history, expected_error):
