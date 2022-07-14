@@ -30,21 +30,20 @@ class TimedLastItemPrediction(Scenario):
     - :attr:`full_training_data` contains all events from all users before ``t``
     - :attr:`validation_training_data` contains all events from all users before ``t_validation``
 
-    - :attr:`validation_data_out` contains the ``n`` most recent interactions of
-      a user with interactions in the interval ``[t_validation, min(t, t_validation + t_delta_out)[``.
+    - :attr:`validation_data_out` contains the most recent interaction of
+      a user in the interval ``[t_validation, min(t, t_validation + t_delta_out)[``.
     - :attr:`validaton_data_in` contains the earlier interactions of the validation users.
-      If `n_history` is not None, only the `n_history` most recent interactions are present, otherwise all.
+      If `n_history` is not None, only the `n_history` most recent interactions are used, otherwise all.
 
-    - :attr:`test_data_out` contains the ``n`` most recent interactions of
-      a user with an interaction in the interval ``[t, t + delta_out]``.
+    - :attr:`test_data_out` contains the most recent interaction of
+      a user in the interval ``[t, t + delta_out]``.
     - :attr:`test_data_in` contains the earlier interactions of the test users.
-      If `n_history` is not None, only the `n_history` most recent interactions are present.
+      If `n_history` is not None, only the `n_history` most recent interactions are used, otherwise all.
 
 
     **Example**
 
-    As an example, splitting following data with ``t = 4``, ``t_validation=2``,
-    ``n = 1`` and ``validation=True``::
+    As an example, splitting following data with ``t = 4``, ``t_validation=2`` and ``validation=True``::
 
         time    0   1   2   3   4   5
         Alice   X   X
@@ -92,10 +91,6 @@ class TimedLastItemPrediction(Scenario):
         Simulates a training moment in real time evaluation.
     :param t_validation: timestamp for splitting validation training and evaluation data.
         Only required if validation is True.
-    :param n: The number of recent interactions to use as target. If a negative number,
-              use all but the ``n`` earliest actions.
-              Defaults to 1.
-    :type n: int
     :param n_history: The number of interactions to use as history.
         Defaults to None.
     :type n_history: int, optional
@@ -117,7 +112,6 @@ class TimedLastItemPrediction(Scenario):
         self,
         t: float,
         t_validation: float = None,
-        n: int = 1,
         n_history: Optional[int] = None,
         delta_out: int = np.iinfo(np.int32).max,
         validation: bool = False,
@@ -126,22 +120,22 @@ class TimedLastItemPrediction(Scenario):
         super().__init__(validation=validation, seed=seed)
         self.t = t
         self.t_validation = t_validation
-        self.n = n
         self.n_history = n_history
         self.delta_out = delta_out
         if self.validation and not self.t_validation:
             raise Exception("t_validation should be provided when using validation split.")
 
-        self.user_splitter_test = UserInteractionTimeSplitter(t)
+        # Used to select test users (users with an interaction after t)
+        self.user_selector_test = UserInteractionTimeSplitter(t)
+
         self.splitter_full_training_data = TimestampSplitter(t)
         if self.validation:
             assert self.t_validation < self.t
-            self.user_splitter_val = UserInteractionTimeSplitter(t_validation)
+            # Used to select validation users
+            self.user_selector_val = UserInteractionTimeSplitter(t_validation)
             self.splitter_validation_training = TimestampSplitter(t_validation)
-        self.target_splitter = MostRecentSplitter(n)
 
-        if n == 0:
-            raise ValueError("Using n = 0 is not supported.")
+        self.most_recent_splitter = MostRecentSplitter(1)
 
         if n_history == 0:
             raise ValueError("Using n_history = 0 is not supported.")
@@ -150,31 +144,33 @@ class TimedLastItemPrediction(Scenario):
             self.history_splitter = MostRecentSplitter(n_history)
 
     def _split(self, data: InteractionMatrix):
-        """Splits users into non-overlapping training,
-            validation and test user sets based on the time of
-            their most recent interaction.
-
-        :param data: Interaction matrix to be split. Must contain timestamps.
-        :type data: InteractionMatrix
-        """
 
         self._full_train_X, _ = self.splitter_full_training_data.split(data)
-        _, te_data = self.user_splitter_test.split(data.timestamps_lt(self.t + self.delta_out))
 
-        self._test_data_in, self._test_data_out = self.target_splitter.split(te_data)
+        # Selects data from users with an interaction in the [t, t+delta_out[ interval
+        _, te_data = self.user_selector_test.split(data.timestamps_lt(self.t + self.delta_out))
 
+        # target data is the last item for each of the test users
+        self._test_data_in, self._test_data_out = self.most_recent_splitter.split(te_data)
+
+        # cut the history to the requested size.
         if self.n_history is not None:
             _, self._test_data_in = self.history_splitter.split(self._test_data_in)
 
         if self.validation:
             self._validation_train_X, _ = self.splitter_validation_training.split(self._full_train_X)
-            _, val_data = self.user_splitter_val.split(
+
+            # Selects data from users with an interaction in the [t_val, min(t_val+delta_out, t)[ interval
+            _, val_data = self.user_selector_val.split(
                 self._full_train_X.timestamps_lt(self.t_validation + self.delta_out)
             )
+
+            # target data is the last item for each validation user
             (
                 self._validation_data_in,
                 self._validation_data_out,
-            ) = self.target_splitter.split(val_data)
+            ) = self.most_recent_splitter.split(val_data)
 
+            # cut history
             if self.n_history is not None:
                 _, self._validation_data_in = self.history_splitter.split(self._validation_data_in)
