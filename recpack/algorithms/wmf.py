@@ -51,11 +51,11 @@ class WeightedMatrixFactorization(Algorithm):
         # Predictions is a csr matrix, inspecting the scores with
         predictions.toarray()
 
-    :param conficence_scheme: Which confidence scheme should be used
+    :param confidence_scheme: Which confidence scheme should be used
         to calculate the confidence matrix.
         Options are ["minimal", "log-scaling"].
         Defaults to "minimal"
-    :type conficence_scheme: string, optional
+    :type confidence_scheme: string, optional
     :param alpha: Scaling parameter for generating confidences from ratings.
         Defaults to 40.
     :type alpha: int, optional
