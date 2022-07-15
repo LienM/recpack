@@ -34,7 +34,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
     This class is the baseclass for ItemKNN weighting approaches, combining their functionality,
     and allowing unpublished combinations of settings.
-    Includes work by Liu, Nathan N., et al. (2010), Ding et al. (2005) and Lee et al. (2007)
+    Includes work by Liu, Nathan N., et al. (2010), Ding et al. (2005) and Lee et al. (2007).
 
     The standard framework for all of these approaches can be summarised as:
 
@@ -42,7 +42,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     - Similarities are computed on this weighted matrix, using various similarity measures.
     - When predicting the interactions are similarly weighted, giving more weight to more recent interactions.
     - Recommendation scores are obtained by multiplying the weighted interaction matrix with
-      the previously computed similarity matrix
+      the previously computed similarity matrix.
 
     The default weighting in this base class is:
     .. math::
@@ -61,7 +61,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     :param predict_decay: Defines the decay scaling used for decay during prediction.
         Defaults to (1/3600), such that the half life is 1 hour.
     :type predict_decay: float, Optional
-    :param similarity: Which similarity measure to use. Defaults to `"cosine"`
+    :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
     :type similarity: str, Optional
     """
 
@@ -81,8 +81,8 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         K: int = 200,
         fit_decay: float = 1 / 3600,
         predict_decay: float = 1 / 3600,
-        similarity="cosine",
-        decay_function="exponential",
+        similarity: str = "cosine",
+        decay_function: str = "exponential",
     ):
         # Uses other default parameters for ItemKNN
         super().__init__(K=K)
@@ -99,7 +99,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         self.decay_function = decay_function
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
-        """Predict scores for nonzero users in X
+        """Predict scores for nonzero users in X.
 
         Scores are computed by matrix multiplication of weighted X
         with the stored similarity matrix.
@@ -113,19 +113,19 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         return super()._predict(X)
 
     def _transform_fit_input(self, X: Matrix) -> InteractionMatrix:
-        """Weight each of the interactions by the decay factor of its timestamp"""
+        """Weight each of the interactions by the decay factor of its timestamp."""
         self._assert_is_interaction_matrix(X)
         self._assert_has_timestamps(X)
         return X
 
     def _transform_predict_input(self, X: Matrix) -> InteractionMatrix:
-        """Weight each of the interactions by the decay factor of its timestamp"""
+        """Weight each of the interactions by the decay factor of its timestamp."""
         self._assert_is_interaction_matrix(X)
         self._assert_has_timestamps(X)
         return X
 
     def _fit(self, X: csr_matrix) -> None:
-        """Fit a cosine similarity matrix from item to item"""
+        """Fit a cosine similarity matrix from item to item."""
         X = self._add_decay_to_interaction_matrix(X, self.fit_decay)
 
         if self.similarity == "cosine":
@@ -144,7 +144,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         :param X: Interaction matrix.
         :type X: InteractionMatrix
-        :param decay: decay parameter, is 1/half_life
+        :param decay: decay parameter, is 1/half_life.
         :type decay: float
         :return: Weighted csr matrix.
         :rtype: csr_matrix

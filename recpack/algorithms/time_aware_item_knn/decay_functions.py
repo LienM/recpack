@@ -134,7 +134,7 @@ def linear_decay_steeper(age_arr: np.array, decay: float):
 
         1 - (\\frac{x}{max_{x \\in X_u}(x)}) \\alpha
 
-    where alpha is the decay parameter. If the decayed value is below 0, it is set to 0
+    where alpha is the decay parameter. If the decayed value is below 0, it is set to 0.
 
     :param age_array: array of age of events which will be decayed.
     :type age_array: np.array

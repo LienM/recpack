@@ -21,7 +21,7 @@ class TARSItemKNNXia(TopKItemSimilarityMatrixAlgorithm):
 
     First described in 'Dynamic Item-Based Recommendation Algorithm with Time Decay'
     Chaolun Xia, Xiaohong Jiang, Sen Liu, Zhaobo Luo, Zhang Yu,
-    2010 Sixth International Conference on Natural Computation (ICNC 2010)
+    2010 Sixth International Conference on Natural Computation (ICNC 2010).
 
     For each item the K most similar items are computed during fit.
     Decay function parameter decides how to compute the similarity between two items.
@@ -29,7 +29,7 @@ class TARSItemKNNXia(TopKItemSimilarityMatrixAlgorithm):
     .. math::
         \\text{sim}(i,j) = \\sum\\limits_{u=1}^{|U|} R_{u,i} \\cdot R_{u,j} \\cdot \\theta(|T_{u,i} - T_{u,j}|)
 
-    Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``
+    Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``.
 
     - Concave decay function between item i and j is computed as:
     .. math::
@@ -82,20 +82,20 @@ class TARSItemKNNXia(TopKItemSimilarityMatrixAlgorithm):
 
     :param K: How many neigbours to use per item,
         make sure to pick a value below the number of columns of the matrix to fit on.
-        Defaults to 200
+        Defaults to 200.
     :type K: int, optional
     :param decay_coeff: How strongly the decay function should influence the scores,
         make sure to pick a value in the correct interval
         for the selected decay function.
-        Defaults to 0.5
+        Defaults to 0.5.
     :type decay_coeff: float, optional
     :param decay_fn: The decay function that needs to
         be applied on the item similarity scores.
-        Defaults to concave
+        Defaults to `"concave"`.
     :type decay_fn: str, optional
     :param decay_interval: Defines the basic time interval unit in seconds.
         Defaults to 24*3600.
-    :typ decay_interval: Optional[int]
+    :typ decay_interval: int, optional
     """
 
     SUPPORTED_COEFF_RANGES = {
@@ -104,7 +104,7 @@ class TARSItemKNNXia(TopKItemSimilarityMatrixAlgorithm):
         "linear": lambda x: 0 <= x <= 1,
     }
 
-    """The supported Decay function options"""
+    """The supported Decay function options."""
 
     def __init__(
         self,

@@ -32,7 +32,7 @@ class TARSItemKNNLiu(TARSItemKNN):
     :param predict_decay: Defines the decay scaling used for decay during prediction.
         Defaults to (1/3600), such that the half life is 1 hour.
     :type predict_decay: float, Optional
-    :param similarity: Which similarity measure to use. Defaults to `"cosine"`
+    :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
     :type similarity: str, Optional
     """
 
