@@ -30,15 +30,15 @@ from recpack.util import get_top_K_values
 
 
 class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
-    """ItemKNN algorithm where older interactions have less weight during both prediction and training.
+    """ItemKNN algorithm where older interactions have less weight during prediction, training or both.
 
     This class is the baseclass for ItemKNN weighting approaches, combining their functionality,
     and allowing unpublished combinations of settings.
-    Includes work by Liu, Nathan N., et al. (2010), Ding et al. (2005) and lee et al. (2007)
+    Includes work by Liu, Nathan N., et al. (2010), Ding et al. (2005) and Lee et al. (2007)
 
     The standard framework for all of these approaches can be summarised as:
 
-    - When training the user interaction matrix is weighted to take into account temporal information available
+    - When training the user interaction matrix is weighted to take into account temporal information available.
     - Similarities are computed on this weighted matrix, using various similarity measures.
     - When predicting the interactions are similarly weighted, giving more weight to more recent interactions.
     - Recommendation scores are obtained by multiplying the weighted interaction matrix with
