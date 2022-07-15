@@ -126,7 +126,7 @@ class STAN(Algorithm):
         full_session_similarity_matrix = lil_matrix((X.shape[0], X.shape[0]))
 
         for user_batch in get_batches(X.active_users, batch_size=1000):
-            session_similarity = self._compute_session_similarity(timestamp_matrix[user_batch, :])
+            session_similarity = self._compute_session_similarity(timestamp_matrix[user_batch, :]).tolil()
             session_similarity = session_similarity.multiply(
                 self._compute_session_similarity_weights(timestamp_matrix[user_batch, :], session_similarity)
             )
@@ -134,8 +134,8 @@ class STAN(Algorithm):
             # Rows are indexed 0 - len(batch), cols are index by original user ids.
             session_similarity[np.arange(len(user_batch)), user_batch] = 0
 
-            full_session_similarity_matrix[user_batch, :] = get_top_K_values(session_similarity, K=self.K)
-        predictions = self._compute_prediction_scores(full_session_similarity_matrix.tocsr(), X)
+            full_session_similarity_matrix[user_batch, :] = get_top_K_values(session_similarity.tocsr(), K=self.K)
+        predictions = self._compute_prediction_scores(full_session_similarity_matrix, X)
         return predictions
 
     def _compute_session_similarity(self, session_timestamps: csr_matrix) -> csr_matrix:
@@ -232,7 +232,7 @@ class STAN(Algorithm):
             neighborhood_scores = session_similarity[session, :].toarray()
 
             # Get the positions of visits in the neighborhood sessions
-            neighborhood_positions = csr_matrix(
+            neighborhood_positions = lil_matrix(
                 self.session_interactions_positions_.multiply((neighborhood_scores > 0).T)
             )
 
