@@ -116,7 +116,7 @@ Usually, simple code does the trick just fine though.
 
 It's better to cry wolf when there is none, than to let the wolves feast. 
 Same goes for errors. 
-Errors should thrown as soon as possible, preferably before the most intensive computations are done. 
+Errors should be thrown as soon as possible, preferably before the most intensive computations are done. 
 
 Additionally, we strongly prefer simple inheritance, and will only result to multiple inheritance when we *really* need to. 
 
