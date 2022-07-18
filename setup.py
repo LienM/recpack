@@ -26,6 +26,6 @@ setup(
     description=SHORT_DESCRIPTION,
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.com/adrem-recommenders/recpack",
+    url="https://gitlab.com/recpack-maintainers/recpack",
     project_urls={"Documentation": "https://recpack.froomle.ai"},
 )

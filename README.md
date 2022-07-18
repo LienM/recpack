@@ -8,7 +8,7 @@ All released versions of recpack are published on [Pypi](https://pypi.org/projec
 
 `pip install recpack`
 
-## documentation
+## Documentation
 Documentation and tutorials can be found at https://recpack.froomle.ai
 
 ## Usage
@@ -18,8 +18,8 @@ evaluation metrics (metrics) and state-of-the-art algorithm implementations (alg
 New algorithms and evaluation scenarios can be added easily, by subclassing the appropriate base classes. 
 A number of lower level data splitters are provided that can be used to build up more complex evaluation scenarios.
 
-Users can choose between the Pipeline interface, and manually connecting components for running experiments. 
-Pipelines are easier to set up comparisons between algorithms, for full control manual linking is available.
+Users can choose to use the Pipeline interface or manually connect components for running experiments. 
+The Pipeline interface is recommended for easy comparison between algorithms. For optimal flexibility you should manually connect components. 
 
 For details and examples, check out the [quickstart documentation](recpack.froomle.ai/guides.quickstart.html)
 
