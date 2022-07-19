@@ -7,6 +7,12 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Additions
+* __scenarios__
+    * Added `TimedLastItemPrediction` scenario, which is different from LastItemPrediction, in that it only trains its model on data before a certain timestamp, and evaluates only on data after that timestamp, thus avoiding leakage.
+
 ## [0.3.0] - ![](https://img.shields.io/date/1657025737.svg?label=2022-07-05)
 
 The 0.3.0 release contains large amounts of changes compared to 0.2.2, these changes should make the library more intuitively useable, and better serve our users.
