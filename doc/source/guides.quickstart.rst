@@ -13,7 +13,7 @@ The latest version can be installed from `Pypi <https://pypi.org/project/recpack
 Basic Usage
 -----------
 
-Recpack was set up to allow easy experimentation with various algorithms,
+RecPack was set up to allow easy experimentation with various algorithms,
 using different datasets or scenarios.
 
 When running an experiment, the first step is to load and preprocess a dataset.
@@ -24,30 +24,30 @@ RecPack provides a set of classes to handle some of the most used datasets. ( :m
     dataset.fetch_dataset()
 
 
-Here we select to use the MovieLens25M dataset, setting the path to where a stored copy can be found.
-When calling ``.fetch_dataset()`` the code will check if the file is present, and if it is not, it will download it.
+Here we select the MovieLens25M dataset. We explicitly set a path to where the dataset should be stored.
+When calling ``.fetch_dataset()`` the code will check if a file containing the dataset is present and download it if it is not.
 
-Now that we have the dataset, we want to load it and preprocess it, so that it is ready for use in the experiment.
-RecPack Datasets have default preprocessing steps defined, such that they follow frequently used preprocessing from literature.
-In the case of MovieLens25M the rating data will be turned into implicit data, by keeping only the data with rating 4 or higher as positive interactions.
-Further users with less than 3 interactions are removed and items with less than 5 interactions are removed.
+Now that we have the Dataset, we want to load it and preprocess it so that it is ready for use in the experiment.
+RecPack Datasets have default preprocessing steps defined such that they follow frequently used preprocessing from literature.
+In the case of MovieLens25M the rating data will be turned into binary data, by keeping only interactions with rating 4 or higher.
+Further, users with less than 3 interactions are removed as well as items with less than 5 interactions.
 
-The preprocessing step also creates a consecutive user and item index. Since it is common to represent the data as an user-item interaction matrix.
+The preprocessing step also creates a consecutive user and item index, since it is common to represent the data as a user-item interaction matrix.
 
-To apply preprocessing, load the dataset::
+To download the dataset and preprocess, call::
 
     interaction_matrix = dataset.load()
 
-The result of loading the dataset is an :class:`recpack.matrix.InteractionMatrix` object.
-This class provides a wrapper around the data that provides frequently used views on interaction data.
+The result is an :class:`recpack.matrix.InteractionMatrix` object.
+This class is a wrapper around the data that provides frequently used views of the interaction data.
 
-eg. ``interaction_matrix.values`` is a sparse matrix representation of the interaction counts for user and item pairs.
-``interaction_matrix.sorted_item_history`` is an iterator to get the sorted histories per user.
+For example, ``interaction_matrix.values`` returns a csr_matrix, where users are rows and items are column and the value is the number of interactions this user had with this item.
+Similarly, ``interaction_matrix.sorted_item_history`` returns an iterator of the sorted item histories per user.
 
-Next step in an experiment is to separate training, validation and test data to avoid data leakage in any of the experiments.
-Recpack handles this using the :mod:`recpack.scenarios` module. It provides most of the common experimentation scenarios.
+Next step in an experiment is to separate training, validation and test data to avoid data leakage.
+RecPack handles this using the :mod:`recpack.scenarios` module. It includes some of the most common experimentation scenarios.
 
-Choosing the right scenario is crucial in getting correct experimental results, so make sure to check the documentation of the scenarios to make sure they match your intent.
+Choosing the right scenario is crucial in getting representative experimental results, so make sure to check the documentation of the scenarios to make sure they match your intent.
 
 .. currentmodule:: recpack.scenarios
 
@@ -57,22 +57,22 @@ Choosing the right scenario is crucial in getting correct experimental results, 
     scenario = WeakGeneralization(0.75, validation=True)
 
 Here we use :class:`WeakGeneralization` as it is a frequently used scenario for MovieLens25M.
-25% of each user's interactions are used as test target data the remaining 75% are used as both history and full training data.
+We set ``frac_data_in`` to 0.75. As a result, 25% of each user's interactions are used as test target data and the remaining 75% are used as both history and full training data.
 Because we also request validation data (so we can perform parameter optmisation), the full training data will be further split 75/25 into validation train (and history) and validation target data.
 
-Now that we have our data preprocessed, and divided into train, validation and test datasets we can set up the experiment.
-Rather than linking up the remaining components (Algorithm, Optimisation, Postprocessing, Evaluation) separately, we will use the recpack Pipeline.
+Now that we have our data preprocessed and divided into train, validation and test datasets we can set up a pipeline to optimize our hyperparameters and obtain performance metrics.
+Rather than linking up the remaining components (Algorithm, Optimisation, Postprocessing, Metrics) separately, we will use the recpack Pipeline.
 To facilitate building a pipeline we use :class:`recpack.pipelines.PipelineBuilder`. ::
 
     from recpack.pipelines import PipelineBuilder
     
     builder = PipelineBuilder()
 
-To use our split dataset in the pipeline we pass the scenario to the builder ::
+To use our training, validation and test dataset we pass the scenario to the builder ::
 
     builder.set_data_from_scenario(scenario)
 
-Now we select the algorithms to use in the experiment, and their hyper-parameters.
+Next we select the algorithms to use in the experiment and their hyper-parameters.
 To optimise hyper-parameters, they are specified in the ``grid`` option, specifying per parameter the values to try.
 These will be combined into a full grid such that every combination of parameters is tried. ::
 
@@ -109,7 +109,7 @@ Should you want to see what effects parameter optimisation had, you can also ins
 
 You should now be able to set up your own experiments.
 
-Using non supported Datasets
+Using your own dataset
 ----------------------------
 
 .. currentmodule:: recpack.preprocessing.preprocessors
@@ -128,9 +128,9 @@ In this case you can load the data manually into a pandas DataFrame, and use the
     interaction_matrix = proc.process(df)
 
 In this example we preprocess an existing dataframe ``df`` into an interaction matrix.
-The user identifiers should be in column ``'user_id'`` in the original dataframe, item identifiers in ``'item_id'`` 
+Here we've assumed the user identifiers are stored in column ``'user_id'`` in the original dataframe and item identifiers in ``'item_id'``. Timestamps are optional, but our example dataset includes them in column ``ts``. 
 and timestamps in column ``'ts'``
-During processing we filter users with fewer than 5 interactions, and items with fewer than 5 interactions.
+We filter out users with fewer than 5 interactions, and items with fewer than 5 interactions.
 
 Creating your own algorithm
 ---------------------------
