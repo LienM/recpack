@@ -9,7 +9,7 @@ long_description = (this_directory / "README.md").read_text()
 setup(
     name="recpack",
     version="0.3.1",
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     packages=find_packages(),
     install_requires=[
         "numpy>=1.21.2, ==1.*",
