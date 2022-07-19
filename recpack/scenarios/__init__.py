@@ -22,6 +22,7 @@ from T+5 until T+10".
 
     Timed
     LastItemPrediction
+    TimedLastItemPrediction
     WeakGeneralization
     StrongGeneralization
     StrongGeneralizationTimed
@@ -65,4 +66,5 @@ from recpack.scenarios.strong_generalization_timed_most_recent import StrongGene
 from recpack.scenarios.strong_generalization_timed import StrongGeneralizationTimed
 from recpack.scenarios.strong_generalization import StrongGeneralization
 from recpack.scenarios.timed import Timed
+from recpack.scenarios.timed_last_item_prediction import TimedLastItemPrediction
 from recpack.scenarios.weak_generalization import WeakGeneralization

@@ -20,7 +20,7 @@ When running an experiment, the first step is to load and preprocess a dataset.
 RecPack provides a set of classes to handle some of the most used datasets. ( :mod:`recpack.datasets` ) ::
 
     from recpack.datasets import MovieLens25M
-    dataset = MovieLens25M(path='/path/to/file')
+    dataset = MovieLens25M(path='/path/to/folder/containing/dataset/')
     dataset.fetch_dataset()
 
 
