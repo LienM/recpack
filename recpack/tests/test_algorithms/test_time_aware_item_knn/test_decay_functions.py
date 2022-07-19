@@ -8,6 +8,7 @@ from recpack.algorithms.time_aware_item_knn.decay_functions import (
     linear_decay_steeper,
     convex_decay,
     concave_decay,
+    inverse_decay,
 )
 
 
@@ -124,4 +125,17 @@ def test_concave_decay(input, decay, expected_output):
 )
 def test_linear_steeper_decay(input, decay, expected_output):
     result = linear_decay_steeper(input, decay)
+    np.testing.assert_array_almost_equal(result, expected_output)
+
+
+@pytest.mark.parametrize(
+    "input, decay, expected_output",
+    [
+        (np.array([1, 1]), 1, np.array([1, 1])),
+        (np.array([7200, 3600]), 3600, np.array([1 / 7200, 1 / 3600])),
+        (np.array([0, 1]), 1, np.array([1, 1])),
+    ],
+)
+def test_inverse_decay(input, decay, expected_output):
+    result = inverse_decay(input, decay)
     np.testing.assert_array_almost_equal(result, expected_output)

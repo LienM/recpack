@@ -42,7 +42,7 @@ def algorithm():
 
 @pytest.fixture()
 def algorithm_1h_interval():
-    return TARSItemKNNHermann(K=2, time_unit_seconds=3600)
+    return TARSItemKNNHermann(K=2, decay_interval=3600)
 
 
 def test_time_decay_knn_fit(mat, algorithm):

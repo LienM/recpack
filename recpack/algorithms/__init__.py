@@ -132,8 +132,11 @@ Time Aware Algorithms
     TARSItemKNNLee_W5
     TARSItemKNNLiu
     TARSItemKNNLiu2012
-    TARSItemKNNXia
     TARSItemKNNVaz
+    
+    TARSItemKNNCoocDistance
+    TARSItemKNNHermann
+    TARSItemKNNXia
 
     TARSUserKNNAnelli
 
@@ -277,6 +280,7 @@ from recpack.algorithms.gru4rec import (
 from recpack.algorithms.stan import STAN
 from recpack.algorithms.time_aware_item_knn import (
     TARSItemKNN,
+    TARSItemKNNCoocDistance,
     TARSItemKNNDing,
     TARSItemKNNHermann,
     TARSItemKNNLee,

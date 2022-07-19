@@ -151,3 +151,19 @@ def linear_decay_steeper(age_arr: np.array, decay: float):
     results = 1 - (age_arr / m) * decay
     results[results < 0] = 0
     return results
+
+
+def inverse_decay(age_arr: np.array, decay: float):
+    """Invert the scores.
+
+    Decay parameter only added for interface unity.
+
+    .. math::
+
+        \\frac{1}{x}
+
+    """
+    results = age_arr.astype(float).copy()
+    results[results > 0] = 1 / results[results > 0]
+    results[results == 0] = 1
+    return results
