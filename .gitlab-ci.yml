@@ -26,9 +26,13 @@ test:
   needs: []
   script:
     - pytest --cov=recpack recpack/tests/ --cov-config=.coveragerc
-    # - python setup.py test
-    # - pip install tox flake8 # you can also use tox
-    # - tox -e py36,flake8
+    - coverage xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
 pages:
   stage: deploy
