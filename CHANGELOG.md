@@ -139,6 +139,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Added `validation_sample_size` parameter to the TorchMLAlgorithm base class and all child classes. This parameter allows a user to select only a sample of the validation data in every evaluation iteration. This speeds up the evaluation step after every training epoch significantly.
 
 
+* __algorithms__
+    * Added `validation_sample_size` parameter to the TorchMLAlgorithm baseclass, and all children. This allows a speadup of evaluation by only sampling the validation data when evaluating after each epoch.
+
 ## [0.3.0] - ![](https://img.shields.io/date/1657025737.svg?label=2022-07-05)
 
 The 0.3.0 release contains large amounts of changes compared to 0.2.2, these changes should make the library more intuitively useable, and better serve our users.
