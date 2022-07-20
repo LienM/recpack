@@ -127,10 +127,12 @@ class GRU4Rec(TorchMLAlgorithm):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
-    :param validation_sample_size: Amount of users that will be sampled to calculate
-        validation loss and stopping criterion value.
-        This reduces computation time during validation, such that training times are strongly reduced.
-        If None, all nonzero users are used. Defaults to None.
+    :param validation_sample_size: Amount of users to sample when computing
+        validation score.
+        This reduces computation time during validation,
+        such that training times are strongly reduced.
+        If None, all nonzero users are used.
+        Defaults to None.
     :type validation_sample_size: int, optional
     """
 
@@ -457,10 +459,19 @@ class GRU4RecCrossEntropy(GRU4Rec):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
+<<<<<<< HEAD
     :param validation_sample_size: Amount of users that will be sampled to calculate
         validation loss and stopping criterion value.
         This reduces computation time during validation, such that training times are strongly reduced.
         If None, all nonzero users are used. Defaults to None.
+=======
+    :param validation_sample_size: Amount of users to sample when computing
+        validation score.
+        This reduces computation time during validation,
+        such that training times are strongly reduced.
+        If None, all nonzero users are used.
+        Defaults to None.
+>>>>>>> 94ebef3 (Added validation sampling option to torch algorithms)
     :type validation_sample_size: int, optional
     """
 
@@ -626,10 +637,19 @@ class GRU4RecNegSampling(GRU4Rec):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
+<<<<<<< HEAD
     :param validation_sample_size: Amount of users that will be sampled to calculate
         validation loss and stopping criterion value.
         This reduces computation time during validation, such that training times are strongly reduced.
         If None, all nonzero users are used. Defaults to None.
+=======
+    :param validation_sample_size: Amount of users to sample when computing
+        validation score.
+        This reduces computation time during validation,
+        such that training times are strongly reduced.
+        If None, all nonzero users are used.
+        Defaults to None.
+>>>>>>> 94ebef3 (Added validation sampling option to torch algorithms)
     :type validation_sample_size: int, optional
     """
 
