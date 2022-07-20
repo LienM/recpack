@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Added `TARSItenKNNHermann` as Presented in Hermann, Christoph. "Time-based recommendations for lecture materials." EdMedia+ Innovate Learning. Association for the Advancement of Computing in Education (AACE), 2010.
     * Added `TARSItemKNNVaz` as described in Vaz, Paula Cristina, Ricardo Ribeiro, and David Martins De Matos. "Understanding the Temporal Dynamics of Recommendations across Different Rating Scales." UMAP Workshops. 2013.
     * Added `SequentialRules` as described in Ludewig, Malte, and Dietmar Jannach. "Evaluation of session-based recommendation algorithms." User Modeling and User-Adapted Interaction 28.4 (2018): 331-390.
-    * Added `validation_sample_size` parameter to the TorchMLAlgorithm baseclass, and all children. This allows a speadup of evaluation by only sampling the validation data when evaluating after each epoch.
+    * Added `validation_sample_size` parameter to the TorchMLAlgorithm base class and all child classes. This parameter allows a user to select only a sample of the validation data in every evaluation iteration. This speeds up the evaluation step after every training epoch significantly.
 
 * __pipelines__
     * `save_metrics` function has been improved, it now creates a directory when it does not yet exist. And it also saves the optimisation metrics now.
