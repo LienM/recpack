@@ -112,27 +112,19 @@ def test_time_decay_knn(
 
 
 @pytest.mark.parametrize(
-    "decay_function, fit_decay, expected_similarities, expected_out",
+    "decay_function, fit_decay",
     [
         (
             "convex",
             0.5,
-            np.array(
-                [
-                    [0.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0],
-                ]
-            ),
-            [[0.0, 0.0, 0.0]],
         ),
     ],
 )
-def test_time_decay_knn_empty(mat_no_timestamps, decay_function, fit_decay, expected_similarities, expected_out):
+def test_time_decay_knn_empty(mat_no_timestamps, decay_function, fit_decay):
 
     algo = TARSItemKNNXia(K=2, fit_decay=fit_decay, decay_function=decay_function, decay_interval=1)
 
-    with pytest.raises(AssertionError) as record:
+    with pytest.raises(ValueError) as record:
         algo.fit(mat_no_timestamps)
 
 

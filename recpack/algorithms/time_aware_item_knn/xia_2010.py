@@ -128,15 +128,6 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
             decay_function=decay_function,
         )
 
-    def _transform_fit_input(self, X):
-        # X needs to be an InteractionMatrix for us to have access to
-        # the time of interaction at fitting time
-        assert isinstance(X, InteractionMatrix)
-        # X needs to have timestamps available
-        assert X.has_timestamps
-        # No transformation needed
-        return X
-
     def _concave_matrix_decay(self, X: csr_matrix, max_delta: int) -> csr_matrix:
         X_copy = X.copy()
         X_copy.data = self.fit_decay ** (X.data / self.decay_interval)
