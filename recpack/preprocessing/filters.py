@@ -74,9 +74,7 @@ class MinUsersPerItem(Filter):
             else df.drop_duplicates([self.user_ix, self.item_ix])[self.item_ix]
         )
         cnt_users_per_item = iids.value_counts()
-        items_of_interest = list(
-            cnt_users_per_item[cnt_users_per_item >= self.min_ui].index
-        )
+        items_of_interest = list(cnt_users_per_item[cnt_users_per_item >= self.min_ui].index)
 
         return df[df[self.item_ix].isin(items_of_interest)]
 
@@ -125,9 +123,7 @@ class NMostRecent(Filter):
         self.timestamp_ix = timestamp_ix
 
     def apply(self, df):
-        sorted_df = df[[self.item_ix, self.timestamp_ix]].sort_values(
-            by=self.timestamp_ix, ascending=False
-        )
+        sorted_df = df[[self.item_ix, self.timestamp_ix]].sort_values(by=self.timestamp_ix, ascending=False)
         ids = sorted_df[[self.item_ix]].drop_duplicates()
 
         return df[df[self.item_ix].isin(ids[: self.N][self.item_ix])]
@@ -166,9 +162,7 @@ class MinItemsPerUser(Filter):
             else df.drop_duplicates([self.user_ix, self.item_ix])[self.user_ix]
         )
         cnt_items_per_user = uids.value_counts()
-        users_of_interest = list(
-            cnt_items_per_user[cnt_items_per_user >= self.min_iu].index
-        )
+        users_of_interest = list(cnt_items_per_user[cnt_items_per_user >= self.min_iu].index)
 
         return df[df[self.user_ix].isin(users_of_interest)]
 
@@ -208,22 +202,20 @@ class MaxItemsPerUser(Filter):
             else df.drop_duplicates([self.user_ix, self.item_ix])[self.user_ix]
         )
         cnt_items_per_user = uids.value_counts()
-        users_of_interest = list(
-            cnt_items_per_user[cnt_items_per_user <= self.max_iu].index
-        )
+        users_of_interest = list(cnt_items_per_user[cnt_items_per_user <= self.max_iu].index)
 
         return df[df[self.user_ix].isin(users_of_interest)]
 
 
 class MinRating(Filter):
-    """Keep the DataFrame of only ratings above min_rating.
+    """Keep ratings above or equal to  min_rating.
     This filter is used to turn a rating dataset into an interaction dataset.
 
     After filtering, the rating_ix column will also be removed from the DataFrame.
 
     :param min_rating: The minimum rating for a rating to be considered an interaction.
     :type min_rating: int
-    :param rating_ix: the column that will contain ratings in the DataFrame
+    :param rating_ix: The column that contains ratings in the DataFrame.
     :type str:
     """
 
