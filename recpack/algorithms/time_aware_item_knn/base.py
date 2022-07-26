@@ -191,7 +191,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
         predict_decay: float = 1 / 3600,
         decay_interval: int = 1,
         similarity: str = "cosine",
-        decay_function: str = "conditional_probability",
+        decay_function: str = "exponential",
         event_age_weight: float = 0,
     ):
 

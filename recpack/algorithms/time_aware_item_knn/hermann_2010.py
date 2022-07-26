@@ -25,7 +25,7 @@ class TARSItemKNNHermann(TARSItemKNNCoocDistance):
 
     .. math::
 
-        s_{u,i,j} = \\frac{1}{\\Delta t_{u,i,j} + \\Delta d_{u,i,j}}
+        S_{u,i,j} = \\frac{1}{\\Delta t_{u,i,j} + \\Delta d_{u,i,j}}
 
     where :math:`\\Delta t_{u,i,j}` is the distance in time units between the user interacting with item i and j.
     :math:`\\Delta d_{u,i,j}` is the maximal distance in time units between a user interactions with i or j to now.
