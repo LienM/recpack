@@ -8,8 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [UNRELEASED]
-
 ### Additions
+
+* __datasets__
+    * Changed behaviour of `force=True` on the Adressa dataset, it is now guaranteed to redownload the tar file, and will no longer look for a local tar file. The tar file will also be deleted at the end of the download method.
+    * Added `Netflix` dataset to use the Netflix Prize dataset.
+
 * __scenarios__
     * Added `TimedLastItemPrediction` scenario, which is different from LastItemPrediction, in that it only trains its model on data before a certain timestamp, and evaluates only on data after that timestamp, thus avoiding leakage.
 

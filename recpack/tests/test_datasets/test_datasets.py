@@ -14,11 +14,6 @@ def demo_data():
     return s
 
 
-@pytest.fixture()
-def path():
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), "datasets")
-
-
 def test_fetch_dataset(demo_data):
     """Test that fetch gets the data correctly. Downloading a file when not present,
     not downloading when present, and overwriting when force is True.
@@ -88,10 +83,10 @@ def test_error_no_default_filename():
         _ = datasets.Dataset()
 
 
-def test_add_filter(path):
+def test_add_filter(dataset_path):
     filename = "citeulike_sample.dat"
 
-    d = datasets.CiteULike(path=path, filename=filename)
+    d = datasets.CiteULike(path=dataset_path, filename=filename)
 
     d.add_filter(NMostPopular(3, d.ITEM_IX))
 
@@ -100,10 +95,10 @@ def test_add_filter(path):
     assert data.shape[1] == 3
 
 
-def test_add_filter_w_index(path):
+def test_add_filter_w_index(dataset_path):
     filename = "citeulike_sample.dat"
 
-    d = datasets.CiteULike(path=path, filename=filename)
+    d = datasets.CiteULike(path=dataset_path, filename=filename)
 
     d.add_filter(NMostPopular(3, d.ITEM_IX), index=0)
 
@@ -111,11 +106,11 @@ def test_add_filter_w_index(path):
     assert len(d.preprocessor.filters) == 3
 
 
-def test_citeulike(path):
+def test_citeulike(dataset_path):
     # To get sample we used head -1000 users.dat
     filename = "citeulike_sample.dat"
 
-    d = datasets.CiteULike(path=path, filename=filename)
+    d = datasets.CiteULike(path=dataset_path, filename=filename)
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX]).all()
@@ -129,11 +124,11 @@ def test_citeulike(path):
     assert data.shape == (963, 1748)
 
 
-def test_movielens25m(path):
+def test_movielens25m(dataset_path):
     # To get sample we used head -10000 ratings.csv
     filename = "ml-25m_sample.csv"
 
-    d = datasets.MovieLens25M(path=path, filename=filename)
+    d = datasets.MovieLens25M(path=dataset_path, filename=filename)
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()
@@ -147,11 +142,11 @@ def test_movielens25m(path):
     assert data.shape == (75, 260)
 
 
-def test_movielens25m_no_rating_filters(path):
+def test_movielens25m_no_rating_filters(dataset_path):
     # To get sample we used head -10000 ratings.csv
     filename = "ml-25m_sample.csv"
 
-    d = datasets.MovieLens25M(path=path, filename=filename, preprocess_default=False)
+    d = datasets.MovieLens25M(path=dataset_path, filename=filename, preprocess_default=False)
     d.add_filter(MinRating(1, d.RATING_IX))
     d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
     d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
@@ -168,9 +163,9 @@ def test_movielens25m_no_rating_filters(path):
     assert data.shape == (75, 565)
 
 
-def test_recsys_challenge_2015(path):
+def test_recsys_challenge_2015(dataset_path):
     # To get sample we used head -1000 ratings.csv
-    d = datasets.RecsysChallenge2015(path=path)
+    d = datasets.RecsysChallenge2015(path=dataset_path)
 
     df = d.load_dataframe()
     assert (df.columns == [d.USER_IX, d.TIMESTAMP_IX, d.ITEM_IX]).all()
@@ -214,7 +209,7 @@ def test_recsys_challenge_2015(path):
     ],
 )
 def test_cosmeticsshop(
-    path,
+    dataset_path,
     extra_cols,
     event_types,
     num_events,
@@ -223,14 +218,14 @@ def test_cosmeticsshop(
     # To get sample we used head -100 2019-Dec.csv
     if event_types is None:
         d = datasets.CosmeticsShop(
-            path=path,
+            path=dataset_path,
             filename="cosmeticsshop-sample.csv",
             preprocess_default=False,
             extra_cols=extra_cols,
         )
     else:
         d = datasets.CosmeticsShop(
-            path=path,
+            path=dataset_path,
             filename="cosmeticsshop-sample.csv",
             preprocess_default=False,
             extra_cols=extra_cols,
@@ -251,10 +246,10 @@ def test_cosmeticsshop(
         d._download_dataset()
 
 
-def test_cosmeticsshop_bad_event_type(path):
+def test_cosmeticsshop_bad_event_type(dataset_path):
     with pytest.raises(ValueError):
         _ = datasets.CosmeticsShop(
-            path=path,
+            path=dataset_path,
             filename="cosmeticsshop-sample.csv",
             preprocess_default=False,
             event_types=["hello"],
@@ -278,7 +273,7 @@ def test_cosmeticsshop_bad_event_type(path):
     ],
 )
 def test_retail_rocket(
-    path,
+    dataset_path,
     event_types,
     num_events,
     final_shape,
@@ -286,13 +281,13 @@ def test_retail_rocket(
     # To get sample we used head -100 2019-Dec.csv
     if event_types is None:
         d = datasets.RetailRocket(
-            path=path,
+            path=dataset_path,
             filename="retailrocket-sample.csv",
             preprocess_default=False,
         )
     else:
         d = datasets.RetailRocket(
-            path=path,
+            path=dataset_path,
             filename="retailrocket-sample.csv",
             preprocess_default=False,
             event_types=event_types,
@@ -312,10 +307,10 @@ def test_retail_rocket(
         d._download_dataset()
 
 
-def test_retail_rocket_bad_event_type(path):
+def test_retail_rocket_bad_event_type(dataset_path):
     with pytest.raises(ValueError):
         _ = datasets.CosmeticsShop(
-            path=path,
+            path=dataset_path,
             filename="retailrocket-sample.csv",
             preprocess_default=False,
             event_types=["hello"],
@@ -353,47 +348,3 @@ def test_dummy_dataset():
         df[d.USER_IX].nunique() - users_removed,
         items_kept.enough_interactions.sum(),
     )
-
-
-@pytest.fixture()
-def adressa_dataset(path):
-    filename = "adressa_views.csv"
-    ds = datasets.AdressaOneWeek(path, filename, preprocess_default=False)
-    ds.add_filter(MinUsersPerItem(2, ds.ITEM_IX, ds.USER_IX))
-
-    ds.fetch_dataset(force=True)
-
-    yield ds
-
-    # Clean up the created file
-    os.remove(os.path.join(path, filename))
-
-
-def test_adressa_one_week(path, adressa_dataset):
-    """Check if loading adressa works properly
-
-    zipfile contents were constructed with specific checks in mind:
-    20170101 -> contains 3 non view events + 5 view events with a 3rd user
-    20170102 -> Contains 5 views with no user_ids -> events should be skipped
-    20170103 -> Contains 5 views without a timestamp -> should be skipped
-    20170104 -> Contains 5 views with new user
-    20170105 -> Contains 5 views with new item
-    20170106 -> Contains 5 views with no item -> should be skipped
-    20170107 -> Contains 5 base views
-
-    The resulting interaction matrix should contain 3 users with 1 item.
-    Each user should have 5 visits of the same item.
-
-    """
-
-    df = adressa_dataset.load_dataframe()
-    assert (df.columns == [adressa_dataset.USER_IX, adressa_dataset.ITEM_IX, adressa_dataset.TIMESTAMP_IX]).all()
-
-    assert df.shape == (20, 3)
-    assert df[adressa_dataset.USER_IX].nunique() == 3
-    assert df[adressa_dataset.ITEM_IX].nunique() == 2
-
-    im = adressa_dataset.load()
-
-    assert im.shape == (3, 1)
-    assert im.num_interactions == 15
