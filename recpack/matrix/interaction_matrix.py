@@ -20,18 +20,24 @@ class InteractionMatrix:
     It provides a number of properties and methods for easy manipulation of this interaction data.
 
     .. note::
+
         The InteractionMatrix does not assume binary user-item pairs.
         If a user interacts with an item more than once, there will be two entries for this user-item pair.
 
     :param df: Dataframe containing user-item interactions. Must contain at least
-               item ids and user ids.
+        item ids and user ids.
+    :type df: pd.DataFrame
     :param item_ix: Item ids column name.
+    :type item_ix: string
     :param user_ix: User ids column name.
+    :type user_ix: string
     :param timestamp_ix: Interaction timestamps column name.
+    :type timestamp_ix: string, optional
     :param shape: The desired shape of the matrix, i.e. the number of users and items.
-                  If no shape is specified, the number of users will be equal to the
-                  maximum user id plus one, the number of items to the maximum item
-                  id plus one.
+        If no shape is specified, the number of users will be equal to the
+        maximum user id plus one, the number of items to the maximum item
+        id plus one.
+    :type shape: Tuple[int, int], optional
     """
 
     ITEM_IX = "iid"
@@ -141,8 +147,8 @@ class InteractionMatrix:
     def save(self, file_prefix: str) -> None:
         """Save the interaction matrix to files.
 
-        Creates two files one at `{file_prefix}.csv` with the raw dataframe,
-        and a second at `{file_prefix}_properties.yaml` which contains the properties
+        Creates two files one at ``<file_prefix>.csv`` with the raw dataframe,
+        and a second at ``<file_prefix>_properties.yaml`` which contains the properties
         of the interaction matrix.
 
         :param file_prefix: The prefix of the files to save, should end in the filename,
@@ -163,6 +169,7 @@ class InteractionMatrix:
         :param file_prefix: The prefix of the files to load, should end in the filename,
             but without extension (no .csv or such).
         :type file_prefix: str
+
         :return: InteractionMatrix created from file.
         :rtype: InteractionMatrix
         """
@@ -213,6 +220,7 @@ class InteractionMatrix:
             to fetch the timestamp of.
         :type interaction_id: int
         :raises AttributeError: Raised if the object does not have timestamps.
+
         :return: The timestamp of the interaction.
         :rtype: int
         """
@@ -243,8 +251,7 @@ class InteractionMatrix:
     def last_timestamps_matrix(self) -> csr_matrix:
         """A sparse matrix with the last timestamp for each user, item pair.
 
-        By using the maximal timestamp for each pair,
-        we make it possible to use non deduplicated datasets.
+        By using the maximal timestamp for each pair, we make it possible to use non deduplicated datasets.
         """
         timestamps = self.timestamps.groupby(["uid", "iid"]).max().reset_index()
         timestamp_mat = csr_matrix(
@@ -311,8 +318,6 @@ class InteractionMatrix:
     def timestamps_gt(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions after a given timestamp.
 
-        Performs _timestamps_cmp operation to select rows for which t > timestamp.
-
         :param timestamp: The timestamp with which
             the interactions timestamp is compared.
         :type timestamp: float
@@ -325,8 +330,6 @@ class InteractionMatrix:
 
     def timestamps_lt(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions up to a given timestamp.
-
-        Performs _timestamps_cmp operation to select rows for which t < timestamp.
 
         :param timestamp: The timestamp with which
             the interactions timestamp is compared.
@@ -341,8 +344,6 @@ class InteractionMatrix:
     def timestamps_gte(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions after and including a given timestamp.
 
-        Performs _timestamps_cmp operation to select rows for which t >= timestamp.
-
         :param timestamp: The timestamp with which
             the interactions timestamp is compared.
         :type timestamp: float
@@ -355,8 +356,6 @@ class InteractionMatrix:
 
     def timestamps_lte(self, timestamp: float, inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select interactions up to and including a given timestamp.
-
-        Performs _timestamps_cmp operation to select rows for which t <= timestamp.
 
         :param timestamp: The timestamp with which
             the interactions timestamp is compared.

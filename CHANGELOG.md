@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Additions
 * __scenarios__
     * Added `TimedLastItemPrediction` scenario, which is different from LastItemPrediction, in that it only trains its model on data before a certain timestamp, and evaluates only on data after that timestamp, thus avoiding leakage.
+* Configured optional extra installs:
+    * `pip install recpack[doc]` will install the dependencies to generate documentation
+    * `pip install recpack[test]` will install the dependencies to run tests.
+
+### Bugfixes
+* Pinned version of 
 
 ## [0.3.0] - ![](https://img.shields.io/date/1657025737.svg?label=2022-07-05)
 
