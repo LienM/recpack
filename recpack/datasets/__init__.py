@@ -8,8 +8,10 @@
 
     Dataset
     DummyDataset
+    AdressaOneWeek
     CiteULike
     MovieLens25M
+    Netflix
     RecsysChallenge2015
     ThirtyMusicSessions
     CosmeticsShop
@@ -66,6 +68,7 @@ from recpack.datasets.cite_u_like import CiteULike
 from recpack.datasets.cosmetics_shop import CosmeticsShop
 from recpack.datasets.dummy_dataset import DummyDataset
 from recpack.datasets.movielens import MovieLens25M
+from recpack.datasets.netflix import Netflix
 from recpack.datasets.recsys_challenge import RecsysChallenge2015
 from recpack.datasets.retail_rocket import RetailRocket
 from recpack.datasets.thirty_music_sessions import ThirtyMusicSessions

@@ -70,9 +70,10 @@ class AdressaOneWeek(Dataset):
         """
 
         zipfile_name = "one_week.tar.gz"
-        if not os.path.exists(os.path.join(self.path, zipfile_name)):
-            # Download the zip into the data directory
-            _fetch_remote(self.DATASET_URL, os.path.join(self.path, zipfile_name))
+        zipfile_full_path = os.path.join(self.path, zipfile_name)
+
+        # Download the zip into the data directory
+        _fetch_remote(self.DATASET_URL, zipfile_full_path)
 
         # Subfiles that should be present in the tarfile
         fs = [
@@ -85,7 +86,7 @@ class AdressaOneWeek(Dataset):
             "20170107",
         ]
 
-        tar = tarfile.open(os.path.join(self.path, zipfile_name))
+        tar = tarfile.open(zipfile_full_path)
         dfs = []
         # For each file in the directory:
         for f in fs:
@@ -98,6 +99,8 @@ class AdressaOneWeek(Dataset):
 
         df.dropna(inplace=True)
         df.to_csv(os.path.join(self.path, self.filename), header=True, index=False)
+
+        os.remove(zipfile_full_path)
 
     def load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
