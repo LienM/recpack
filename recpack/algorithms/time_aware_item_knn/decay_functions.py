@@ -82,7 +82,7 @@ def log_decay(age_arr: np.array, decay: float):
 
     .. math::
 
-        log_\\alpha ((\\alpha-1)(1-\\frac{x}{max_{x \\in X_u}(x)}) + 1) + 1
+        log_\\alpha ((\\alpha-1)(1-\\frac{x}{max_{x \\in X_u}(x)}) + 1)
 
     where alpha is the decay parameter.
 
@@ -97,7 +97,7 @@ def log_decay(age_arr: np.array, decay: float):
         raise ValueError(f"decay parameter = {decay} is not in the supported range: ]1, inf[.")
 
     m = age_arr.max()
-    return (np.log(((decay - 1) * (1 - age_arr / m)) + 1) / np.log(decay)) + 1
+    return np.log(((decay - 1) * (1 - age_arr / m)) + 1) / np.log(decay)
 
 
 def linear_decay(age_arr: np.array, decay: float):
