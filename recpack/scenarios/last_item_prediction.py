@@ -64,13 +64,13 @@ class LastItemPrediction(Scenario):
 
         time    0   1   2   3   4   5
         Alice       X
-        Bob            X
+        Bob                 X
 
     test_data_out::
 
         time    0   1   2   3   4   5
         Alice           X
-        Bob                 X
+        Bob                     X
 
 
     :param validation: construct validation datasets if True,
