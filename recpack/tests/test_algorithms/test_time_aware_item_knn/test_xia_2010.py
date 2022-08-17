@@ -81,16 +81,22 @@ def mat_1_user_2_visits():
             [[2 / 3, 2 / 3, 4 / 3]],
         ),
         (
-            "concave",
+            "convex",
             0.5,
             np.array([[0.0, 1 / 4, 1 / 8], [1 / 4, 0.0, 1 / 2], [1 / 8, 1 / 2, 0.0]]),
             [[1 / 4, 1 / 4, 5 / 8]],
         ),
         (
-            "convex",
+            "concave",
             0.5,
-            np.array([[0.0, 1 / 2, 0.0], [1 / 2, 0.0, 3 / 4], [0.0, 3 / 4, 0.0]]),
-            [[1 / 2, 1 / 2, 3 / 4]],
+            np.array(
+                [
+                    [0.0, 1 - (0.5 ** (1 / 3)), 0.0],
+                    [1 - (0.5 ** (1 / 3)), 0.0, 1 - (0.5 ** (2 / 3))],
+                    [0.0, 1 - (0.5 ** (2 / 3)), 0.0],
+                ]
+            ),
+            [[1 - (0.5 ** (1 / 3)), 1 - (0.5 ** (1 / 3)), 1 - (0.5 ** (2 / 3))]],
         ),
     ],
 )
@@ -177,30 +183,6 @@ def test_time_decay_knn_predict(mat, mat_diag, decay_function, fit_decay):
     assert type(result) is scipy.sparse.csr_matrix
 
     np.testing.assert_array_equal(result.toarray(), algo.similarity_matrix_.toarray())
-
-
-@pytest.mark.parametrize("interval", [20, 3600, 24 * 3600])
-def test_decay_interval(interval):
-    algo_1 = TARSItemKNNXia(K=2, decay_interval=1)
-    algo_2 = TARSItemKNNXia(K=2, decay_interval=interval)
-
-    input_matrix_1 = scipy.sparse.csr_matrix([[1, 2, 3], [4, 5, 6]])
-    input_matrix_2 = scipy.sparse.csr_matrix([[1, 2, 3], [4, 5, 6]]) * interval
-
-    concave_decayed_1 = algo_1._concave_matrix_decay(input_matrix_1, 5)
-    concave_decayed_2 = algo_2._concave_matrix_decay(input_matrix_2, 5 * interval)
-
-    np.testing.assert_array_equal(concave_decayed_1.toarray(), concave_decayed_2.toarray())
-
-    convex_decayed_1 = algo_1._convex_matrix_decay(input_matrix_1, 5)
-    convex_decayed_2 = algo_2._convex_matrix_decay(input_matrix_2, 5 * interval)
-
-    np.testing.assert_array_equal(convex_decayed_1.toarray(), convex_decayed_2.toarray())
-
-    linear_decayed_1 = algo_1._linear_matrix_decay(input_matrix_1, 5)
-    linear_decayed_2 = algo_2._linear_matrix_decay(input_matrix_2, 5 * interval)
-
-    np.testing.assert_array_equal(linear_decayed_1.toarray(), linear_decayed_2.toarray())
 
 
 @pytest.mark.parametrize("decay_interval", [0, 0.5])

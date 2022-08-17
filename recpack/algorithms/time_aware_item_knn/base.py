@@ -204,25 +204,36 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
 
         # Get the timestamps matrix, and apply the interval
         last_timestamps_matrix = X.last_timestamps_matrix / self.decay_interval
-        now = last_timestamps_matrix.max() + 1
+        print(self.decay_interval)
+        now = last_timestamps_matrix.max() + 1 / self.decay_interval
 
         self.similarity_matrix_ = lil_matrix((X.shape[1], X.shape[1]))
 
+        max_age_possible = last_timestamps_matrix.data.max() - last_timestamps_matrix.data.min()
+        print("max_age_possible", max_age_possible)
         # Loop over all items as centers
         for i in tqdm(range(num_items)):
+            print("last_timestamps_matrix")
+            print(last_timestamps_matrix[:, i])
             n_center_occ = (last_timestamps_matrix[:, i] > 0).sum()
             if n_center_occ == 0:  # Unvisited item, no neighbours
                 continue
 
             cooc_ts = last_timestamps_matrix.multiply(last_timestamps_matrix[:, i] > 0)
             distance = cooc_ts - (cooc_ts > 0).multiply(last_timestamps_matrix[:, i])
+            distance.data = np.abs(distance.data)
 
             # Add the
             if self.event_age_weight > 0:
-                distance = distance + self.event_age_weight * (
-                    now - np.minimum(cooc_ts.toarray(), last_timestamps_matrix[:, i].toarray())
+                distance = distance + (distance > 0).multiply(
+                    self.event_age_weight
+                    * (now - np.minimum(cooc_ts.toarray(), last_timestamps_matrix[:, i].toarray()))
                 )
-            distance.data = self.DECAY_FUNCTIONS[self.decay_function](np.abs(distance.data), self.fit_decay)
+            print("distance")
+            print(distance.toarray())
+            distance.data = self.DECAY_FUNCTIONS[self.decay_function](
+                distance.data, self.fit_decay, max_age=max_age_possible
+            )
             similarities = csr_matrix(distance.sum(axis=0))
 
             # Normalisation options.

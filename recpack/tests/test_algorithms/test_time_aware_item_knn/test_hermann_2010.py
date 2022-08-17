@@ -1,5 +1,4 @@
 from recpack.algorithms import TARSItemKNNHermann
-import scipy.sparse
 import pandas as pd
 import numpy as np
 import pytest

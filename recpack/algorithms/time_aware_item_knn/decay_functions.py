@@ -3,7 +3,7 @@ import numpy as np
 # TODO: docstrings!
 
 
-def exponential_decay(age_arr: np.array, decay: float):
+def exponential_decay(age_arr: np.array, decay: float, max_age: float = None):
     """Applies a exponential based decay function.
 
     For each value x in the ``age_arr`` the decayed value is computed as
@@ -18,6 +18,8 @@ def exponential_decay(age_arr: np.array, decay: float):
     :type age_array: np.array
     :param decay: The decay parameter, should be in the [0, 1] interval.
     :type decay: float
+    :param max_age: The max age normalisation parameter (Unused in this decay)
+    :type max_age: float, optional
     :returns: The decayed input time array. Larger values in the original array will have lower values.
     :rtype: np.array
     """
@@ -26,7 +28,7 @@ def exponential_decay(age_arr: np.array, decay: float):
     return np.exp(-decay * age_arr)
 
 
-def convex_decay(age_arr: np.array, decay: float):
+def convex_decay(age_arr: np.array, decay: float, max_age: float = None):
     """Applies a convex decay function.
 
     For each value x in the ``age_arr`` the decayed value is computed as
@@ -41,6 +43,8 @@ def convex_decay(age_arr: np.array, decay: float):
     :type age_array: np.array
     :param decay: The decay parameter, should be in the ]0, 1] interval.
     :type decay: float
+    :param max_age: The max age normalisation parameter (Unused in this decay)
+    :type max_age: float, optional
     :returns: The decayed input time array. Larger values in the original array will have lower values.
     :rtype: np.array
     """
@@ -50,7 +54,7 @@ def convex_decay(age_arr: np.array, decay: float):
     return np.power(decay, age_arr)
 
 
-def concave_decay(age_arr: np.array, decay: float):
+def concave_decay(age_arr: np.array, decay: float, max_age: float = None):
     """Applies a concave decay function.
 
     For each value x in the ``age_arr`` the decayed value is computed as
@@ -65,17 +69,19 @@ def concave_decay(age_arr: np.array, decay: float):
     :type age_array: np.array
     :param decay: The decay parameter, should be in the [0, 1[ interval.
     :type decay: float
+    :param max_age: The max age normalisation parameter
+    :type max_age: float, optional
     :returns: The decayed input time array. Larger values in the original array will have lower values.
     :rtype: np.array
     """
     if not (0 <= decay < 1):
         raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, 1[.")
 
-    m = age_arr.max()
-    return 1 - np.power(decay, 1 - (age_arr / m))
+    max_age = max_age if max_age is not None else age_arr.max()
+    return 1 - np.power(decay, 1 - (age_arr / max_age))
 
 
-def log_decay(age_arr: np.array, decay: float):
+def log_decay(age_arr: np.array, decay: float, max_age: float = None):
     """Applies a log decay function.
 
     For each value x in the ``age_arr`` the decayed value is computed as
@@ -90,17 +96,19 @@ def log_decay(age_arr: np.array, decay: float):
     :type age_array: np.array
     :param decay: The decay parameter, should be in the ]1, inf[ interval.
     :type decay: float
+    :param max_age: The max age normalisation parameter
+    :type max_age: float, optional
     :returns: The decayed input time array. Larger values in the original array will have lower values.
     :rtype: np.array
     """
     if not (1 < decay):
         raise ValueError(f"decay parameter = {decay} is not in the supported range: ]1, inf[.")
 
-    m = age_arr.max()
-    return np.log(((decay - 1) * (1 - age_arr / m)) + 1) / np.log(decay)
+    max_age = max_age if max_age is not None else age_arr.max()
+    return np.log(((decay - 1) * (1 - age_arr / max_age)) + 1) / np.log(decay)
 
 
-def linear_decay(age_arr: np.array, decay: float):
+def linear_decay(age_arr: np.array, decay: float, max_age: float = None):
     """Applies a linear decay function.
 
     For each value x in the ``age_arr`` the decayed value is computed as
@@ -115,17 +123,19 @@ def linear_decay(age_arr: np.array, decay: float):
     :type age_array: np.array
     :param decay: The decay parameter, should be in the [0, 1] interval.
     :type decay: float
+    :param max_age: The max age normalisation parameter
+    :type max_age: float, optional
     :returns: The decayed input time array. Larger values in the original array will have lower values.
     :rtype: np.array
     """
     if not (0 <= decay <= 1):
         raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, 1].")
 
-    m = age_arr.max()
-    return 1 - (age_arr / m) * decay
+    max_age = max_age if max_age is not None else age_arr.max()
+    return 1 - (age_arr / max_age) * decay
 
 
-def linear_decay_steeper(age_arr: np.array, decay: float):
+def linear_decay_steeper(age_arr: np.array, decay: float, max_age: float = None):
     """Applies a linear decay function.
 
     For each value x in the ``age_arr`` the decayed value is computed as
@@ -140,6 +150,8 @@ def linear_decay_steeper(age_arr: np.array, decay: float):
     :type age_array: np.array
     :param decay: The decay parameter, should be in the [0, +inf[ interval.
     :type decay: float
+    :param max_age: The max age normalisation parameter
+    :type max_age: float, optional
     :returns: The decayed input time array. Larger values in the original array will have lower values.
     :rtype: np.array
     """
@@ -147,13 +159,13 @@ def linear_decay_steeper(age_arr: np.array, decay: float):
     if not (0 <= decay):
         raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, +inf[.")
 
-    m = age_arr.max()
-    results = 1 - (age_arr / m) * decay
+    max_age = max_age if max_age is not None else age_arr.max()
+    results = 1 - (age_arr / max_age) * decay
     results[results < 0] = 0
     return results
 
 
-def inverse_decay(age_arr: np.array, decay: float):
+def inverse_decay(age_arr: np.array, decay: float, max_age: float = None):
     """Invert the scores.
 
     Decay parameter only added for interface unity.
