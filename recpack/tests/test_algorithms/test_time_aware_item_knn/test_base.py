@@ -8,12 +8,17 @@
 import numpy as np
 import pytest
 
-from recpack.algorithms.time_aware_item_knn import TARSItemKNN
+from recpack.algorithms.time_aware_item_knn import TARSItemKNN, TARSItemKNNCoocDistance
 
 
 @pytest.fixture(params=["cosine", "conditional_probability"])
 def algorithm(request) -> TARSItemKNN:
     return TARSItemKNN(K=2, fit_decay=0.5, predict_decay=0.5, similarity=request.param)
+
+
+@pytest.fixture()
+def cooc_algorithm():
+    return TARSItemKNNCoocDistance(K=2, fit_decay=0.5, predict_decay=0.5, similarity="cooc")
 
 
 def test_check_input(algorithm, matrix_sessions):
@@ -78,3 +83,49 @@ def test_predict(algorithm, mat):
 
     assert mat.shape == predictions.shape
     # TODO: value check?
+
+
+def test_cooc_decay_fit(cooc_algorithm, mat_no_zero_timestamp):
+    cooc_algorithm.fit(mat_no_zero_timestamp)
+
+    expected_similarities = np.array(
+        [
+            [0, np.exp(-1 / 2) * 3, 0, 0, 0],
+            [np.exp(-1 / 2) * 3, 0, 0, 0, 0],
+            [0, 0, 0, np.exp(-3 / 2), np.exp(-2 / 2)],
+            [0, 0, np.exp(-3 / 2), 0, 0],
+            [0, 0, np.exp(-2 / 2), 0, 0],
+        ]
+    )
+
+    np.testing.assert_array_almost_equal(cooc_algorithm.similarity_matrix_.toarray(), expected_similarities)
+
+    # hacky overwrite of the similarity
+    cooc_algorithm.similarity = "hermann"
+    cooc_algorithm.fit(mat_no_zero_timestamp)
+
+    expected_similarities = np.array(
+        [
+            [0, np.exp(-1 / 2), 0, 0, 0],
+            [np.exp(-1 / 2), 0, 0, 0, 0],
+            [0, 0, 0, np.exp(-3 / 2), np.exp(-2 / 2)],
+            [0, 0, np.exp(-3 / 2), 0, 0],
+            [0, 0, np.exp(-2 / 2), 0, 0],
+        ]
+    )
+    np.testing.assert_array_almost_equal(cooc_algorithm.similarity_matrix_.toarray(), expected_similarities)
+
+    # hacky overwrite of the similarity
+    cooc_algorithm.similarity = "conditional_probability"
+    cooc_algorithm.fit(mat_no_zero_timestamp)
+    expected_similarities = np.array(
+        [
+            [0, np.exp(-1 / 2), 0, 0, 0],
+            [np.exp(-1 / 2), 0, 0, 0, 0],
+            [0, 0, 0, np.exp(-3 / 2) / 3, np.exp(-2 / 2) / 3],
+            [0, 0, np.exp(-3 / 2), 0, 0],
+            [0, 0, np.exp(-2 / 2), 0, 0],
+        ]
+    )
+
+    np.testing.assert_array_almost_equal(cooc_algorithm.similarity_matrix_.toarray(), expected_similarities)

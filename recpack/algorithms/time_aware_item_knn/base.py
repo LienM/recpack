@@ -180,6 +180,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
 class TARSItemKNNCoocDistance(TARSItemKNN):
 
+    # TODO: think about reasonable other similarity functions.
     SUPPORTED_SIMILARITIES = ["cooc", "conditional_probability", "hermann"]
     """Supported similarities, ``hermann`` is the similarity defined in Hermann et al. (2010), 
     dividing the sum of weighted cooccurrences by the number of cooccurrences"""
@@ -190,7 +191,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
         fit_decay: float = 1 / 3600,
         predict_decay: float = 1 / 3600,
         decay_interval: int = 1,
-        similarity: str = "cosine",
+        similarity: str = "cooc",
         decay_function: str = "exponential",
         event_age_weight: float = 0,
     ):
@@ -201,71 +202,36 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
     def _fit(self, X: InteractionMatrix):
         num_users, num_items = X.shape
 
-        # Get the timestamps multi index
-        last_timestamps_matrix = X.last_timestamps_matrix
+        # Get the timestamps matrix, and apply the interval
+        last_timestamps_matrix = X.last_timestamps_matrix / self.decay_interval
         now = last_timestamps_matrix.max() + 1
 
-        # # Rescale the timestamps matrix to be in the right 'time units'
-        # last_timestamps_matrix = last_timestamps_matrix
-        # item_similarities = csr_matrix((num_items, num_items))
-        # for user in X.active_users:
-        #     # Construct user history as np array
-        #     user_hist = last_timestamps_matrix[user, :].T
+        self.similarity_matrix_ = lil_matrix((X.shape[1], X.shape[1]))
 
-        #     # Compute the Cooc matrix for this user,
-        #     # with the difference in timestamp as value.
-        #     # 1. compute cooc matrix,
-        #     #   such that cooc_one_ts[i,j] = t(j) if hist[i] and hist[j]
-        #     cooc_one_ts = user_hist.astype(bool) @ (user_hist.T)
+        # Loop over all items as centers
+        for i in tqdm(range(num_items)):
+            n_center_occ = (last_timestamps_matrix[:, i] > 0).sum()
+            if n_center_occ == 0:  # Unvisited item, no neighbours
+                continue
 
-        #     # 2. construct the cooc matrix with timsteamps of item i
-        #     cooc_other_ts = cooc_one_ts.astype(bool).multiply(user_hist)
-        #     # By adding a small value to one of the timestamps, we avoid vanishing zero distances.
-        #     cooc_other_ts.data = cooc_other_ts.data + EPSILON
+            cooc_ts = last_timestamps_matrix.multiply(last_timestamps_matrix[:, i] > 0)
+            distance = cooc_ts - (cooc_ts > 0).multiply(last_timestamps_matrix[:, i])
 
-        #     # 3. Construct cooc csr matrix with the time delta between interactions
-        #     cooc_time_delta = csr_matrix(
-        #         abs(cooc_one_ts - cooc_other_ts),
-        #     )
+            # Add the
+            if self.event_age_weight > 0:
+                distance = distance + self.event_age_weight * (
+                    now - np.minimum(cooc_ts.toarray(), last_timestamps_matrix[:, i].toarray())
+                )
+            distance.data = self.DECAY_FUNCTIONS[self.decay_function](np.abs(distance.data), self.fit_decay)
+            similarities = csr_matrix(distance.sum(axis=0))
 
-        #     # 4. Compute the maximal timedelta with t_0
-        #     cooc_distance_to_now = (cooc_one_ts < cooc_other_ts).multiply(cooc_one_ts) + (
-        #         cooc_other_ts < cooc_one_ts
-        #     ).multiply(cooc_other_ts)
-        #     cooc_distance_to_now.data = now - cooc_distance_to_now.data
+            # Normalisation options.
+            if self.similarity == "hermann":
+                n_cooc = (cooc_ts > 0).sum(axis=0)
+                similarities = similarities.multiply(invert(n_cooc))
+            elif self.similarity == "conditional_probability":
+                similarities = similarities.multiply(1 / n_center_occ)
 
-        #     # Compute similarity contribution as 1/(delta_t + delta_d)
-        #     similarity_contribution = cooc_time_delta + (self.event_age_weight * cooc_distance_to_now)
-        #     similarity_contribution.data = self._decay_contribution(similarity_contribution.data)
+            self.similarity_matrix_[i] = get_top_K_values(csr_matrix(similarities), self.K)
 
-        #     item_similarities += similarity_contribution
-
-        item_similarities = lil_matrix((X.shape[1], X.shape[1]))
-
-        for user, hist in tqdm(X.sorted_item_history):
-            for ix, context in enumerate(hist):
-                context_ts = last_timestamps_matrix[user, context]
-                for target in hist[ix + 1 :]:
-                    target_ts = last_timestamps_matrix[user, target]
-                    event_distance = abs(context_ts - target_ts)
-                    max_distance_to_now = now - min(context_ts, target_ts)
-
-                    contrib = self._decay_contribution(event_distance + self.event_age_weight * max_distance_to_now)
-                    item_similarities[context, target] += contrib
-                    item_similarities[target, context] += contrib
-
-        # normalise the similarities
-        if self.similarity == "hermann":
-            cooc = csr_matrix(X.binary_values.T @ X.binary_values)
-            item_similarities = item_similarities.multiply(invert(cooc))
-        elif self.similarity == "conditional_probability":
-            item_similarities = item_similarities.multiply(invert(X.binary_values.sum(axis=0)))
-
-        # item_similarities[np.arange(num_items), np.arange(num_items)] = 0
-
-        self.similarity_matrix_ = get_top_K_values(csr_matrix(item_similarities), self.K)
-
-    def _decay_contribution(self, contribution):
-        return self.DECAY_FUNCTIONS[self.decay_function](
-            np.array([contribution / self.decay_interval]), self.fit_decay
-        )
+        self.similarity_matrix_ = self.similarity_matrix_.tocsr()
