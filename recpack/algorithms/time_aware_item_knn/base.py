@@ -182,7 +182,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
 
     # TODO: think about reasonable other similarity functions.
     SUPPORTED_SIMILARITIES = ["cooc", "conditional_probability", "hermann"]
-    """Supported similarities, ``hermann`` is the similarity defined in Hermann et al. (2010), 
+    """Supported similarities, ``hermann`` is the similarity defined in Hermann et al. (2010),
     dividing the sum of weighted cooccurrences by the number of cooccurrences"""
 
     def __init__(
@@ -195,7 +195,6 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
         decay_function: str = "exponential",
         event_age_weight: float = 0,
     ):
-
         super().__init__(K, fit_decay, predict_decay, decay_interval, similarity, decay_function)
         self.event_age_weight = event_age_weight
 
@@ -204,45 +203,45 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
 
         # Get the timestamps matrix, and apply the interval
         last_timestamps_matrix = X.last_timestamps_matrix / self.decay_interval
-        print(self.decay_interval)
         now = last_timestamps_matrix.max() + 1 / self.decay_interval
 
         self.similarity_matrix_ = lil_matrix((X.shape[1], X.shape[1]))
 
         max_age_possible = last_timestamps_matrix.data.max() - last_timestamps_matrix.data.min()
-        print("max_age_possible", max_age_possible)
         # Loop over all items as centers
         for i in tqdm(range(num_items)):
-            print("last_timestamps_matrix")
-            print(last_timestamps_matrix[:, i])
             n_center_occ = (last_timestamps_matrix[:, i] > 0).sum()
             if n_center_occ == 0:  # Unvisited item, no neighbours
                 continue
 
+            # Compute |t_i - t_j| for each j cooccurring with item i
             cooc_ts = last_timestamps_matrix.multiply(last_timestamps_matrix[:, i] > 0)
             distance = cooc_ts - (cooc_ts > 0).multiply(last_timestamps_matrix[:, i])
             distance.data = np.abs(distance.data)
 
-            # Add the
+            # Add min age of i and j to the distance computed.
             if self.event_age_weight > 0:
-                distance = distance + (distance > 0).multiply(
-                    self.event_age_weight
-                    * (now - np.minimum(cooc_ts.toarray(), last_timestamps_matrix[:, i].toarray()))
+                broadcasted_age_of_center = (last_timestamps_matrix > 0).multiply(last_timestamps_matrix[:, i])
+                target_has_smallest_age = last_timestamps_matrix < broadcasted_age_of_center
+                center_has_smallest_age = (cooc_ts > 0) - target_has_smallest_age
+                min_age = target_has_smallest_age.multiply(last_timestamps_matrix) + center_has_smallest_age.multiply(
+                    last_timestamps_matrix[:, i]
                 )
-            print("distance")
-            print(distance.toarray())
+                min_age.data = now - min_age.data
+                distance = distance + (distance > 0).multiply(self.event_age_weight * min_age)
+
+            # Decay the distances
             distance.data = self.DECAY_FUNCTIONS[self.decay_function](
                 distance.data, self.fit_decay, max_age=max_age_possible
             )
-            similarities = csr_matrix(distance.sum(axis=0))
 
+            similarities = csr_matrix(distance.sum(axis=0))
             # Normalisation options.
             if self.similarity == "hermann":
                 n_cooc = (cooc_ts > 0).sum(axis=0)
                 similarities = similarities.multiply(invert(n_cooc))
             elif self.similarity == "conditional_probability":
                 similarities = similarities.multiply(1 / n_center_occ)
-
             self.similarity_matrix_[i] = get_top_K_values(csr_matrix(similarities), self.K)
 
         self.similarity_matrix_ = self.similarity_matrix_.tocsr()
