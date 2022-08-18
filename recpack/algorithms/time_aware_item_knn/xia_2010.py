@@ -14,7 +14,6 @@ from recpack.matrix import InteractionMatrix
 from recpack.util import get_top_K_values
 
 
-# TODO: can I use the TARSItemKNN class
 
 
 class TARSItemKNNXia(TARSItemKNNCoocDistance):
