@@ -6,7 +6,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 import torch
 
-from recpack.matrix import Matrix, to_binary
+from recpack.matrix import InteractionMatrix, Matrix, to_binary
 
 
 def swish(x):
@@ -71,7 +71,7 @@ def get_batches(users: Iterable, batch_size=1000) -> Iterator[List]:
         # end_ix += batch_size
 
 
-def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
+def sample_rows(*args: Matrix, sample_size: int = 1000) -> List[Matrix]:
     """Samples rows from the matrices
 
     Rows are sampled from the nonzero rows in the first csr_matrix argument.
@@ -80,16 +80,18 @@ def sample_rows(*args: csr_matrix, sample_size: int = 1000) -> List[csr_matrix]:
     :param sample_size: Number of rows to sample, defaults to 1000
     :type sample_size: int, optional
     :return: List of all matrices passed as args
-    :rtype: List[csr_matrix]
+    :rtype: List[Matrix]
     """
     nonzero_users = list(set(args[0].nonzero()[0]))
     users = np.random.choice(nonzero_users, size=min(sample_size, len(nonzero_users)), replace=False)
-
     sampled_matrices = []
 
     for mat in args:
-        sampled_mat = csr_matrix(mat.shape)
-        sampled_mat[users, :] = mat[users, :]
+        if type(mat) == InteractionMatrix:
+            sampled_mat = mat.users_in(users)
+        else:
+            sampled_mat = csr_matrix(mat.shape)
+            sampled_mat[users, :] = mat[users, :]
 
         sampled_matrices.append(sampled_mat)
 

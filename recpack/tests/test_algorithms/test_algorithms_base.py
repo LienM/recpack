@@ -1,9 +1,9 @@
 import warnings
 
 import numpy as np
-import pandas as pd
 import pytest
 import scipy.sparse
+from unittest.mock import MagicMock
 
 
 from recpack.algorithms.base import Algorithm
@@ -21,7 +21,6 @@ from recpack.algorithms import (
     Prod2VecClustered,
     ItemPNN,
 )
-from recpack.matrix import InteractionMatrix
 
 
 def test_check_prediction():
@@ -139,3 +138,29 @@ def test_assert_has_timestamps(algo_class, matrix_sessions):
         algo._assert_has_timestamps(matrix_sessions.eliminate_timestamps())
 
     assert value_error.match(".* requires timestamp information in the InteractionMatrix.")
+
+
+@pytest.mark.parametrize(
+    "algo_class",
+    [RecVAE, MultVAE, BPRMF, Prod2Vec, Prod2VecClustered, GRU4RecNegSampling, GRU4RecCrossEntropy],
+)
+def test_sampled_validation(algo_class, larger_mat):
+    N_SAMPLES = 50
+    algo = algo_class(validation_sample_size=N_SAMPLES, max_epochs=5)
+
+    # We will mock the update function, so we can check it's input has N_SAMPLES rows,
+    # as we expect this behaviour after the sample.
+    mock = MagicMock()
+    mock.update.return_value = True
+
+    algo.stopping_criterion = mock
+
+    algo.fit(larger_mat, (larger_mat, larger_mat))
+
+    # Make sure that the model was fitted
+    assert algo.model_ is not None
+
+    for c in mock.update.call_args_list:
+        val_out, X_pred = c.args
+        assert len(set(val_out.nonzero()[0])) == N_SAMPLES
+        assert len(set(X_pred.nonzero()[0])) == N_SAMPLES

@@ -46,7 +46,6 @@ def test_pipeline_optimisation_results(pipeline_builder_optimisation):
     assert len(metrics[list(metrics.keys())[0]]) == len(pipeline.metric_entries)
 
     # 3 parameters tried for knn and 2 for ease.
-    print(pipeline.optimisation_results)
     assert pipeline.optimisation_results.shape[0] == 5
 
 

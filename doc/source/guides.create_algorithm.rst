@@ -489,6 +489,8 @@ default hyperparameters to be defined:
 - ``learning_rate`` which determines how much to change the model with every update.
 - ``stopping_criterion`` to define how to evaluate the model's performance, and if and when to stop early.
 
+Other optional hyperparameters in the baseclass can be found in the documentation.
+
 We define one additional hyperparameter:
 
 - ``num_components`` which is the dimension of our embeddings for both users and items.

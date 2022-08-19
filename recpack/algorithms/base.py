@@ -15,10 +15,7 @@ from recpack.algorithms.stopping_criterion import (
     EarlyStoppingException,
     StoppingCriterion,
 )
-from recpack.algorithms.util import (
-    get_batches,
-    get_users,
-)
+from recpack.algorithms.util import get_batches, get_users, sample_rows
 from recpack.matrix import InteractionMatrix, to_csr_matrix, Matrix
 from recpack.util import get_top_K_values
 
@@ -423,6 +420,12 @@ class TorchMLAlgorithm(Algorithm):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used.
+        A reasonable sample includes at least 1000 users. Defaults to None.
+    :type validation_sample_size: int, optional
     """
 
     def __init__(
@@ -438,6 +441,7 @@ class TorchMLAlgorithm(Algorithm):
         save_best_to_file: bool = False,
         keep_last: bool = False,
         predict_topK: int = None,
+        validation_sample_size: int = None,
     ):
         # TODO batch_size * torch.cuda.device_count() if cuda else batch_size
         #   -> Multi GPU
@@ -475,6 +479,8 @@ class TorchMLAlgorithm(Algorithm):
 
         self.predict_topK = predict_topK
 
+        self.validation_sample_size = validation_sample_size
+
     def _init_model(self, X: Matrix) -> None:
         """Initialise the torch model that will learn the weights
 
@@ -509,13 +515,17 @@ class TorchMLAlgorithm(Algorithm):
         """
         # Evaluate batched
         val_in = self._transform_predict_input(val_in)
+        val_out = to_csr_matrix(val_out)
+
+        if self.validation_sample_size:
+            val_in, val_out = sample_rows(val_in, val_out, sample_size=self.validation_sample_size)
+
         X_pred_cpu = self._predict(val_in)
         # StoppingCriterion expects csr_matrix as output
-        X_true = to_csr_matrix(val_out)
 
-        better = self.stopping_criterion.update(X_true, X_pred_cpu)
+        better = self.stopping_criterion.update(val_out, X_pred_cpu)
 
-        if better:
+        if better and not self.keep_last:
             logger.info("Model improved. Storing better model.")
             self._save_best()
 
