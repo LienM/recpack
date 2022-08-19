@@ -134,6 +134,11 @@ class Prod2Vec(TorchMLAlgorithm):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
+    :type validation_sample_size: int, optional
     """
 
     def __init__(
@@ -157,6 +162,7 @@ class Prod2Vec(TorchMLAlgorithm):
         keep_last: bool = False,
         distribution="uniform",
         predict_topK: int = None,
+        validation_sample_size: int = None,
     ):
         super().__init__(
             batch_size,
@@ -170,6 +176,7 @@ class Prod2Vec(TorchMLAlgorithm):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             predict_topK=predict_topK,
+            validation_sample_size=validation_sample_size,
         )
 
         self.embedding_size = embedding_size
@@ -196,16 +203,22 @@ class Prod2Vec(TorchMLAlgorithm):
         self.model_ = SkipGram(X.shape[1], self.embedding_size).to(self.device)
         self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
-    def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
-        if self.similarity_matrix_ is None:
-            raise RuntimeError("Expected similarity matrix to be computed before _evaluate")
-        val_in_selection, val_out_selection = sample_rows(val_in, val_out, sample_size=1000)
-        predictions = self._predict(val_in_selection)
-        better = self.stopping_criterion.update(val_out_selection, predictions)
+    # def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
+    #     if self.similarity_matrix_ is None:
+    #         raise RuntimeError("Expected similarity matrix to be computed before _evaluate")
 
-        if better:
-            logger.info("Model improved. Storing better model.")
-            self._save_best()
+    #     val_in = self._transform_predict_input(val_in)
+    #     val_out = to_csr_matrix(val_out)
+
+    #     if self.validation_sample_size:
+    #         val_in, val_out = sample_rows(val_in, val_out, sample_size=self.validation_sample_size)
+
+    #     predictions = self._predict(val_in)
+    #     better = self.stopping_criterion.update(val_out, predictions)
+
+    #     if better:
+    #         logger.info("Model improved. Storing better model.")
+    #         self._save_best()
 
     def _train_epoch(self, X: InteractionMatrix) -> list:
         assert self.model_ is not None

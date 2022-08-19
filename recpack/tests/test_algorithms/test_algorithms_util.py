@@ -66,7 +66,21 @@ def test_sample_rows():
     np.testing.assert_array_almost_equal(s_2[s_2.nonzero()], 0.5)
 
 
-def test_get_batches():
+def test_sample_rows_im(mat):
+    (sample,) = sample_rows(mat, sample_size=2)
+    assert sample.num_active_users == 2
+
+
+def test_sample_rows_im_2(larger_mat):
+    N_RUNS = 10
+    N_ROWS = 50
+    for i in range(N_RUNS):
+        (sample,) = sample_rows(larger_mat, sample_size=N_ROWS)
+
+        assert sample.num_active_users == N_ROWS
+
+
+def test_get_batches_small():
     users = list(range(100))
     batch_size = 12
 

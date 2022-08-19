@@ -132,6 +132,12 @@ class Prod2VecClustered(Prod2Vec):
         Uniform distribution will sample all items equally likely.
         Unigram distribution puts more weight on popular items. Defaults to "uniform"
     :type distribution: str, optional
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
+    :type validation_sample_size: int, optional
+
     """
 
     def __init__(
@@ -154,6 +160,7 @@ class Prod2VecClustered(Prod2Vec):
         replace: bool = False,
         exact: bool = False,
         keep_last: bool = False,
+        validation_sample_size: int = None,
     ):
         super().__init__(
             embedding_size,
@@ -172,6 +179,7 @@ class Prod2VecClustered(Prod2Vec):
             replace=replace,
             exact=exact,
             keep_last=keep_last,
+            validation_sample_size=validation_sample_size,
         )
         self.num_clusters = num_clusters
         self.Kcl = Kcl

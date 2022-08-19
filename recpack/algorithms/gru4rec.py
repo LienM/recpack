@@ -121,6 +121,11 @@ class GRU4Rec(TorchMLAlgorithm):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
+    :type validation_sample_size: int, optional
     """
 
     def __init__(
@@ -145,6 +150,7 @@ class GRU4Rec(TorchMLAlgorithm):
         save_best_to_file: bool = False,
         keep_last: bool = False,
         predict_topK: int = None,
+        validation_sample_size: int = None,
     ):
         super().__init__(
             batch_size,
@@ -158,6 +164,7 @@ class GRU4Rec(TorchMLAlgorithm):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             predict_topK=predict_topK,
+            validation_sample_size=validation_sample_size,
         )
 
         self.num_layers = num_layers
@@ -445,6 +452,11 @@ class GRU4RecCrossEntropy(GRU4Rec):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
+    :type validation_sample_size: int, optional
     """
 
     def __init__(
@@ -468,6 +480,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
         save_best_to_file: bool = False,
         keep_last: bool = False,
         predict_topK: int = None,
+        validation_sample_size: int = None,
     ):
         super().__init__(
             num_layers=num_layers,
@@ -490,6 +503,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             predict_topK=predict_topK,
+            validation_sample_size=validation_sample_size,
         )
 
         self._criterion = nn.CrossEntropyLoss()
@@ -607,6 +621,11 @@ class GRU4RecNegSampling(GRU4Rec):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
+    :type validation_sample_size: int, optional
     """
 
     def __init__(
@@ -632,6 +651,7 @@ class GRU4RecNegSampling(GRU4Rec):
         save_best_to_file: bool = False,
         keep_last: bool = False,
         predict_topK: int = None,
+        validation_sample_size: int = None,
     ):
         super().__init__(
             num_layers=num_layers,
@@ -654,6 +674,7 @@ class GRU4RecNegSampling(GRU4Rec):
             save_best_to_file=save_best_to_file,
             keep_last=keep_last,
             predict_topK=predict_topK,
+            validation_sample_size=validation_sample_size,
         )
 
         self.loss_fn = loss_fn
