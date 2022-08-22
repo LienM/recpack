@@ -96,16 +96,16 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         self.predict_decay = predict_decay
 
         if decay_interval <= 0 or type(decay_interval) == float:
-            raise ValueError("Decay_interval needs to be a positive nonzero integer")
+            raise ValueError("Parameter decay_interval needs to be a positive integer.")
 
         self.decay_interval = decay_interval
 
         if similarity not in self.SUPPORTED_SIMILARITIES:
-            raise ValueError(f"similarity {similarity} is not supported")
+            raise ValueError(f"Similarity {similarity} is not supported.")
         self.similarity = similarity
 
         if decay_function not in self.DECAY_FUNCTIONS:
-            raise ValueError(f"decay function {decay_function} is not supported")
+            raise ValueError(f"Decay function {decay_function} is not supported.")
 
         self.decay_function = decay_function
 
@@ -124,13 +124,13 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         return super()._predict(X)
 
     def _transform_fit_input(self, X: Matrix) -> InteractionMatrix:
-        """Weight each of the interactions by the decay factor of its timestamp."""
+        """Weigh each of the interactions by the decay factor of its timestamp."""
         self._assert_is_interaction_matrix(X)
         self._assert_has_timestamps(X)
         return X
 
     def _transform_predict_input(self, X: Matrix) -> InteractionMatrix:
-        """Weight each of the interactions by the decay factor of its timestamp."""
+        """Weigh each of the interactions by the decay factor of its timestamp."""
         self._assert_is_interaction_matrix(X)
         self._assert_has_timestamps(X)
         return X
@@ -151,12 +151,12 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         self.similarity_matrix_ = item_similarities
 
     def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay: float) -> csr_matrix:
-        """Weight the interaction matrix based on age of the events.
+        """Weigh the interaction matrix based on age of the events.
 
         If decay is 0, it is assumed to be disabled, and so we just return binary matrix.
         :param X: Interaction matrix.
         :type X: InteractionMatrix
-        :param decay: decay parameter, is 1/half_life.
+        :param decay: Decay parameter, is 1/half_life.
         :type decay: float
         :return: Weighted csr matrix.
         :rtype: csr_matrix

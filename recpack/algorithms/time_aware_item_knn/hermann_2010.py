@@ -8,7 +8,6 @@ from recpack.algorithms.util import invert
 from recpack.matrix import InteractionMatrix, Matrix
 from recpack.util import get_top_K_values
 
-# TODO: unify this one with Xia?
 
 EPSILON = 1e-13
 
