@@ -16,9 +16,9 @@ class TARSUserKNNAnelli(Algorithm):
     European Conference on Information Retrieval. Springer, Cham, 2019.
 
     For each user a set of precursor users are computed.
-    These are users that frequently interact with items before the user does.
+    These are users that frequently interact with items before the user interacts with those items.
     These precursor users are assumed to inspire the user,
-    and so the other items they interacted with are what it will recommend.
+    and so the unseen items they interacted with are what will be recommended.
 
     For recommendation an exponential decay :math:`e^{\\lambda \\Delta t}` is applied to give more weight
     to recently active precursors as well as recently visited items by precursors.
@@ -32,6 +32,14 @@ class TARSUserKNNAnelli(Algorithm):
         \\Delta t = |t_0 - 2 t_{u',l} + t_{u',i}|
 
     Users with no precursors get global popularity.
+
+    .. warning::
+
+        In contrast to other algoritms in RecPack, this algorithm uses popularity as fallback.
+        When the model can not give personalised recommendations to the user.
+
+        This can give it an unfair advantage in situations where most algorithms
+        can not personalise for a significant portion of the user base.
 
     :param decay: The scaling factor :math:`\\lambda` in the exponential.
     :type decay: float
