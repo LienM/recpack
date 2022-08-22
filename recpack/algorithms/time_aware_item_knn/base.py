@@ -21,7 +21,6 @@ from recpack.algorithms.time_aware_item_knn.decay_functions import (
     exponential_decay,
     log_decay,
     linear_decay,
-    linear_decay_steeper,
     concave_decay,
     convex_decay,
     inverse_decay,
@@ -76,10 +75,9 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         "exponential": exponential_decay,
         "log": log_decay,
         "linear": linear_decay,
-        "linear_steeper": linear_decay_steeper,
         "concave": concave_decay,
         "convex": convex_decay,
-        "unity": lambda x: x,
+        "identity": lambda x: x,
         "inverse": inverse_decay,
     }
 
