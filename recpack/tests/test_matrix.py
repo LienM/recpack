@@ -87,6 +87,21 @@ def test_init_without_timestamps(df):
 def test_copy(interaction_m):
     im = interaction_m.copy()
 
+    
+def test_init_smaller_shapes(df):
+    with pytest.raises(ValueError) as e:
+        InteractionMatrix(df, ITEM_IX, USER_IX, TIMESTAMP_IX, shape=(1, 4))
+
+    assert e.match("fewer rows than maximal user identifier")
+
+    with pytest.raises(ValueError) as e:
+        InteractionMatrix(df, ITEM_IX, USER_IX, TIMESTAMP_IX, shape=(3, 1))
+
+    assert e.match("fewer columns than maximal item identifier")
+
+
+def test_values_w_dups(interaction_m_w_duplicate):
+
     assert id(im) != id(interaction_m)
 
 
