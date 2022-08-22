@@ -52,9 +52,8 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         e^{- \\alpha \\text{age}/\\text{decay_interval}}
 
-    Where alpha is the decay scaling parameter,
-    and age is the time between the maximal timestamp in the matrix
-    and the timestamp of the event.
+    Where alpha is the decay scaling parameter, and age is the time between "now" and the timestamp of the event.
+    "Now" is considered as the maximal timestamp in the matrix + 1s.
 
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
@@ -171,7 +170,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         timestamp_mat = X.last_timestamps_matrix
         # The maximal timestamp in the matrix is used as 'now',
         # age is encoded as now - t
-        now = timestamp_mat.data.max()
+        now = timestamp_mat.data.max() + 1
         timestamp_mat.data = self.DECAY_FUNCTIONS[self.decay_function](
             (now - timestamp_mat.data) / self.decay_interval, decay
         )

@@ -55,14 +55,15 @@ def test_add_decay_to_interaction_matrix(algorithm, mat):
     result = algorithm._add_decay_to_interaction_matrix(mat, 0.5)
 
     MAX_TS = mat.timestamps.max()
+    NOW = MAX_TS + 1
     expected_result = np.array(
         [
-            [np.exp(-(MAX_TS - 3) / 2), np.exp(-(MAX_TS - 2) / 2), 0, 0, 0],
-            [0, 0, np.exp(-(MAX_TS - 1) / 2), np.exp(-(MAX_TS - 4) / 2), 0],
-            [np.exp(-(MAX_TS - 0) / 2), np.exp(-(MAX_TS - 1) / 2), 0, 0, 0],
-            [0, 0, np.exp(-(MAX_TS - 2) / 2), 0, np.exp(-(MAX_TS - 4) / 2)],
-            [np.exp(-(MAX_TS - 0) / 2), np.exp(-(MAX_TS - 1) / 2), 0, 0, 0],
-            [0, 0, np.exp(-(MAX_TS - 2) / 2), 0, 0],
+            [np.exp(-(NOW - 3) / 2), np.exp(-(NOW - 2) / 2), 0, 0, 0],
+            [0, 0, np.exp(-(NOW - 1) / 2), np.exp(-(NOW - 4) / 2), 0],
+            [np.exp(-(NOW - 0) / 2), np.exp(-(NOW - 1) / 2), 0, 0, 0],
+            [0, 0, np.exp(-(NOW - 2) / 2), 0, np.exp(-(NOW - 4) / 2)],
+            [np.exp(-(NOW - 0) / 2), np.exp(-(NOW - 1) / 2), 0, 0, 0],
+            [0, 0, np.exp(-(NOW - 2) / 2), 0, 0],
         ]
     )
 
