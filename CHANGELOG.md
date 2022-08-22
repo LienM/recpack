@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to TARSItemKNNXia to distinguish it from other time aware item KNN models.
     * Added `time_aware_user_knn` module
         * `TARSUserKNNAnelli` as described in Anelli, Vito Walter, et al. "Local popularity and time in top-n recommendation." European Conference on Information Retrieval. Springer, Cham, 2019.
-    * Added `linear_decay_steeper` function to the decay functions. This decay functions allows a steeper decay, and if the linear line drops below 0, the value is set to 0.
     * Added `TARSItenKNNHermann` as Presented in Hermann, Christoph. "Time-based recommendations for lecture materials." EdMedia+ Innovate Learning. Association for the Advancement of Computing in Education (AACE), 2010.
     * Added `TARSItemKNNVaz` as described in Vaz, Paula Cristina, Ricardo Ribeiro, and David Martins De Matos. "Understanding the Temporal Dynamics of Recommendations across Different Rating Scales." UMAP Workshops. 2013.
     * Added `SequentialRules` as described in Ludewig, Malte, and Dietmar Jannach. "Evaluation of session-based recommendation algorithms." User Modeling and User-Adapted Interaction 28.4 (2018): 331-390.
