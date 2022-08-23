@@ -43,7 +43,7 @@ class TARSItemKNNLee(TARSItemKNN):
         stepsize = 1 / self.W
         return np.array([[i + (j * stepsize) for j in range(1, self.W + 1)] for i in range(self.W)]).T
 
-    def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay=None) -> csr_matrix:
+    def _add_decay_to_fit_matrix(self, X: InteractionMatrix) -> csr_matrix:
         """Add decay to each user, item interaction based on the launch time of the item,
         and the last time the user interacted with the item.
 
@@ -51,8 +51,6 @@ class TARSItemKNNLee(TARSItemKNN):
 
         :param X: InteractionMatrix with events to use to generate a weighted matrix.
         :type X: InteractionMatrix
-        :param decay: Unused decay scaling parameter
-        :type decay: Optional[float]
         :return: Weighted user x item matrix. At position u, i the weight of user u interacting with item i is stored.
         :rtype: csr_matrix
         """

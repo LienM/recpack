@@ -42,7 +42,7 @@ class TARSItemKNNLiu2012(TARSItemKNN):
         super().__init__(K=K, fit_decay=decay, predict_decay=decay, decay_function="log", similarity="cosine")
         self.decay = decay
 
-    def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay: float) -> csr_matrix:
+    def _add_decay_to_interaction_matrix(self, X: InteractionMatrix) -> csr_matrix:
         """Weight the interaction matrix based on age of the events.
 
         :param X: Interaction matrix.
@@ -59,9 +59,15 @@ class TARSItemKNNLiu2012(TARSItemKNN):
         # the input for the decay is (t - t0_u) / tl_u
         # Where t0_u is the users first interaction and tl_u the last
         timestamp_mat.data = liu_decay(
-            (timestamp_mat.data - first_user_interactions.data) / last_user_interactions.data, decay
+            (timestamp_mat.data - first_user_interactions.data) / last_user_interactions.data, self.decay
         )
         return csr_matrix(timestamp_mat)
+
+    def _add_decay_to_fit_matrix(self, X: InteractionMatrix) -> csr_matrix:
+        return self._add_decay_to_interaction_matrix(X)
+
+    def _add_decay_to_predict_matrix(self, X: InteractionMatrix) -> csr_matrix:
+        return self._add_decay_to_interaction_matrix(X)
 
     def _compute_users_first_interaction(self, X: InteractionMatrix) -> np.array:
         """Compute the launch time of each item as the first time it was interacted with.

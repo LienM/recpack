@@ -2,24 +2,25 @@ import numpy as np
 import pytest
 
 from recpack.algorithms.time_aware_item_knn.decay_functions import (
-    exponential_decay,
-    log_decay,
-    linear_decay,
-    convex_decay,
-    concave_decay,
-    inverse_decay,
+    ExponentialDecay,
+    LogDecay,
+    LinearDecay,
+    ConvexDecay,
+    ConcaveDecay,
+    InverseDecay,
 )
 
 
 @pytest.mark.parametrize(
     "decay_function",
     [
-        exponential_decay,
-        linear_decay,
+        ExponentialDecay,
+        LinearDecay,
     ],
 )
 def test_disabled_with_0(decay_function):
-    output = decay_function(np.array([0.5, 1, 2]), 0)
+    df = decay_function(0)
+    output = df(np.array([0.5, 1, 2]))
 
     # With decay = 0, the output should be a binary vector.
     np.testing.assert_array_equal(output, 1)
@@ -27,25 +28,26 @@ def test_disabled_with_0(decay_function):
 
 @pytest.mark.parametrize(
     "decay_function",
-    [convex_decay],
+    [ConvexDecay],
 )
 def test_disabled_with_1(decay_function):
-    output = decay_function(np.array([0.5, 1, 2]), 1)
+    df = decay_function(1)
+    output = df(np.array([0.5, 1, 2]))
 
     # With decay = 0, the output should be a binary vector.
     np.testing.assert_array_equal(output, 1)
 
 
-@pytest.mark.parametrize("decay_function", [exponential_decay, convex_decay, concave_decay, linear_decay])
+@pytest.mark.parametrize("decay_function", [ExponentialDecay, ConvexDecay, ConcaveDecay, LinearDecay])
 def test_order_preservation(decay_function):
     for i in range(100):
         a = np.random.randint(100)
         b = np.random.randint(100)
 
         decay = np.random.rand()
+        df = decay_function(decay)
 
-        output = decay_function(np.array([a, b]), decay)
-        print(a, b, decay)
+        output = df(np.array([a, b]))
         # Older events should get less weight
         assert (output[0] < output[1]) == (a > b)
 
@@ -57,8 +59,7 @@ def test_order_preservation_log_decay():
 
         decay = np.random.randint(2, 10)
 
-        output = log_decay(np.array([a, b]), decay)
-        print(a, b, decay)
+        output = LogDecay(decay)(np.array([a, b]))
         # Older events should get less weight
         assert (output[0] < output[1]) == (a > b)
 
@@ -73,7 +74,7 @@ def test_order_preservation_log_decay():
     ],
 )
 def test_exponential_decay(input, decay, expected_output):
-    result = exponential_decay(input, decay)
+    result = ExponentialDecay(decay)(input)
     np.testing.assert_array_almost_equal(result, expected_output)
 
 
@@ -87,7 +88,7 @@ def test_exponential_decay(input, decay, expected_output):
     ],
 )
 def test_linear_decay(input, decay, expected_output):
-    result = linear_decay(input, decay)
+    result = LinearDecay(decay)(input)
     np.testing.assert_array_almost_equal(result, expected_output)
 
 
@@ -99,7 +100,7 @@ def test_linear_decay(input, decay, expected_output):
     ],
 )
 def test_convex_decay(input, decay, expected_output):
-    result = convex_decay(input, decay)
+    result = ConvexDecay(decay)(input)
     np.testing.assert_array_almost_equal(result, expected_output)
 
 
@@ -111,7 +112,7 @@ def test_convex_decay(input, decay, expected_output):
     ],
 )
 def test_concave_decay(input, decay, expected_output):
-    result = concave_decay(input, decay)
+    result = ConcaveDecay(decay)(input)
     np.testing.assert_array_almost_equal(result, expected_output)
 
 
@@ -123,7 +124,7 @@ def test_concave_decay(input, decay, expected_output):
     ],
 )
 def test_linear_decay_steeper(input, decay, expected_output):
-    result = linear_decay(input, decay)
+    result = LinearDecay(decay)(input)
     np.testing.assert_array_almost_equal(result, expected_output)
 
 
@@ -136,5 +137,44 @@ def test_linear_decay_steeper(input, decay, expected_output):
     ],
 )
 def test_inverse_decay(input, decay, expected_output):
-    result = inverse_decay(input, decay)
+    result = InverseDecay(decay)(input)
     np.testing.assert_array_almost_equal(result, expected_output)
+
+
+@pytest.mark.parametrize(
+    "decay_function, input, decay, max_age, expected_output",
+    [
+        (ExponentialDecay, np.array([1, 2, 3]), 0.5, 6, np.exp(np.array([-0.5, -1, -1.5]))),
+        (ConvexDecay, np.array([1, 2, 3]), 0.5, 6, np.array([0.5 ** 1, 0.5 ** 2, 0.5 ** 3])),
+        (
+            ConcaveDecay,
+            np.array([1, 2, 3]),
+            0.5,
+            6,
+            np.array([1 - 0.5 ** (1 - 1 / 6), 1 - 0.5 ** (1 - 2 / 6), 1 - 0.5 ** (1 - 3 / 6)]),
+        ),
+        (
+            LogDecay,
+            np.array([1, 2, 3]),
+            np.e,
+            6,
+            np.array(
+                [
+                    np.log((np.e - 1) * (1 - 1 / 6) + 1),
+                    np.log((np.e - 1) * (1 - 2 / 6) + 1),
+                    np.log((np.e - 1) * (1 - 3 / 6) + 1),
+                ]
+            ),
+        ),
+        (
+            LinearDecay,
+            np.array([1, 2, 3]),
+            0.5,
+            6,
+            np.array([1 - (1 / 6) * 0.5, 1 - (2 / 6) * 0.5, 1 - (3 / 6) * 0.5]),
+        ),
+    ],
+)
+def test_max_age(decay_function, input, decay, max_age, expected_output):
+    output = decay_function(decay)(input, max_age=max_age)
+    np.testing.assert_array_almost_equal(output, expected_output)

@@ -41,7 +41,7 @@ def test_compute_launch_times(mat):
     np.testing.assert_array_equal(launch_times, expected_launch_times)
 
 
-def test_add_decay_to_interaction_matrix_W3(mat):
+def test_add_decay_to_fit_matrix_W3(mat):
     print(mat.last_timestamps_matrix.toarray())
     algorithm = TARSItemKNNLee_W3()
     expected_matrix = np.array(
@@ -55,12 +55,12 @@ def test_add_decay_to_interaction_matrix_W3(mat):
         ]
     )
 
-    weighted_matrix = algorithm._add_decay_to_interaction_matrix(mat).toarray()
+    weighted_matrix = algorithm._add_decay_to_fit_matrix(mat).toarray()
 
     np.testing.assert_array_equal(weighted_matrix, expected_matrix)
 
 
-def test_add_decay_to_interaction_matrix_W4(mat):
+def test_add_decay_to_fit_matrix_W4(mat):
     print(mat.last_timestamps_matrix.toarray())
     algorithm = TARSItemKNNLee(W=4)
     expected_matrix = np.array(
@@ -74,7 +74,7 @@ def test_add_decay_to_interaction_matrix_W4(mat):
         ]
     )
 
-    weighted_matrix = algorithm._add_decay_to_interaction_matrix(mat).toarray()
+    weighted_matrix = algorithm._add_decay_to_fit_matrix(mat).toarray()
 
     np.testing.assert_array_equal(weighted_matrix, expected_matrix)
 

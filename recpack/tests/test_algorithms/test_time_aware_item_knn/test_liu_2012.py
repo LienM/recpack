@@ -43,7 +43,7 @@ def test_compute_users_first_interaction(mat_no_zero_timestamp):
 def test_add_decay_to_interaction_matrix(mat_no_zero_timestamp):
     algorithm = TARSItemKNNLiu2012()
 
-    weighted_mat = algorithm._add_decay_to_interaction_matrix(mat_no_zero_timestamp, algorithm.fit_decay)
+    weighted_mat = algorithm._add_decay_to_fit_matrix(mat_no_zero_timestamp)
     expected_result = np.array(
         [
             [log(1 / 4 + 1, 2) + 1, log(0 + 1, 2) + 1, 0, 0, 0],

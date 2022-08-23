@@ -2,7 +2,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 
 from recpack.algorithms import Algorithm
-from recpack.algorithms.time_aware_item_knn.decay_functions import exponential_decay
+from recpack.algorithms.time_aware_item_knn.decay_functions import ExponentialDecay
 from recpack.matrix import InteractionMatrix, Matrix
 from recpack.util import get_top_K_values
 
@@ -51,6 +51,7 @@ class TARSUserKNNAnelli(Algorithm):
 
     def __init__(self, decay: float, min_number_of_recommendations: int = 100):
         self.decay = decay
+        self.decay_func = ExponentialDecay(self.decay)
         self.min_number_of_recommendations = min_number_of_recommendations
 
     def _transform_fit_input(self, X: Matrix):
@@ -108,7 +109,7 @@ class TARSUserKNNAnelli(Algorithm):
             (self.history_.binary_values > 0).multiply(now - 2 * user_last.toarray())
             + self.history_.last_timestamps_matrix
         )
-        user_input.data = exponential_decay(user_input.data, self.decay)
+        user_input.data = self.decay_func(user_input.data)
 
         # fallback popularity for active users with no precursors
         predictions = lil_matrix(self.precursors_ @ user_input)

@@ -51,8 +51,27 @@ def test_check_input(algorithm, matrix_sessions):
     assert value_error.match("TARSItemKNN requires timestamp information in the InteractionMatrix.")
 
 
-def test_add_decay_to_interaction_matrix(algorithm, mat):
-    result = algorithm._add_decay_to_interaction_matrix(mat, 0.5)
+def test_add_decay_to_fit_matrix(algorithm, mat):
+    result = algorithm._add_decay_to_fit_matrix(mat)
+
+    MAX_TS = mat.timestamps.max()
+    NOW = MAX_TS + 1
+    expected_result = np.array(
+        [
+            [np.exp(-(NOW - 3) / 2), np.exp(-(NOW - 2) / 2), 0, 0, 0],
+            [0, 0, np.exp(-(NOW - 1) / 2), np.exp(-(NOW - 4) / 2), 0],
+            [np.exp(-(NOW - 0) / 2), np.exp(-(NOW - 1) / 2), 0, 0, 0],
+            [0, 0, np.exp(-(NOW - 2) / 2), 0, np.exp(-(NOW - 4) / 2)],
+            [np.exp(-(NOW - 0) / 2), np.exp(-(NOW - 1) / 2), 0, 0, 0],
+            [0, 0, np.exp(-(NOW - 2) / 2), 0, 0],
+        ]
+    )
+
+    np.testing.assert_array_equal(result.toarray(), expected_result)
+
+
+def test_add_decay_to_predict_matrix(algorithm, mat):
+    result = algorithm._add_decay_to_predict_matrix(mat)
 
     MAX_TS = mat.timestamps.max()
     NOW = MAX_TS + 1

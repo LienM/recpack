@@ -18,12 +18,13 @@ from recpack.algorithms.nearest_neighbour import (
     compute_pearson_similarity,
 )
 from recpack.algorithms.time_aware_item_knn.decay_functions import (
-    exponential_decay,
-    log_decay,
-    linear_decay,
-    concave_decay,
-    convex_decay,
-    inverse_decay,
+    ExponentialDecay,
+    LogDecay,
+    LinearDecay,
+    ConcaveDecay,
+    ConvexDecay,
+    InverseDecay,
+    NoDecay,
 )
 from recpack.data.matrix import InteractionMatrix, Matrix
 from recpack.util import get_top_K_values
@@ -72,13 +73,12 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability", "pearson"]
     DECAY_FUNCTIONS = {
-        "exponential": exponential_decay,
-        "log": log_decay,
-        "linear": linear_decay,
-        "concave": concave_decay,
-        "convex": convex_decay,
-        "identity": lambda x: x,
-        "inverse": inverse_decay,
+        "exponential": ExponentialDecay,
+        "log": LogDecay,
+        "linear": LinearDecay,
+        "concave": ConcaveDecay,
+        "convex": ConvexDecay,
+        "inverse": InverseDecay,
     }
 
     def __init__(
@@ -92,8 +92,6 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     ):
         # Uses other default parameters for ItemKNN
         super().__init__(K=K)
-        self.fit_decay = fit_decay
-        self.predict_decay = predict_decay
 
         if decay_interval <= 0 or type(decay_interval) == float:
             raise ValueError("Parameter decay_interval needs to be a positive integer.")
@@ -107,6 +105,18 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         if decay_function not in self.DECAY_FUNCTIONS:
             raise ValueError(f"Decay function {decay_function} is not supported.")
 
+        if fit_decay == 0:
+            self.fit_decay_func = NoDecay(0)
+        else:
+            self.fit_decay_func = self.DECAY_FUNCTIONS[decay_function](fit_decay)
+
+        if predict_decay == 0:
+            self.predict_decay_func = NoDecay(0)
+        else:
+            self.predict_decay_func = self.DECAY_FUNCTIONS[decay_function](predict_decay)
+
+        self.fit_decay = fit_decay
+        self.predict_decay = predict_decay
         self.decay_function = decay_function
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
@@ -120,7 +130,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         :return: csr_matrix with scores
         :rtype: csr_matrix
         """
-        X = self._add_decay_to_interaction_matrix(X, self.predict_decay)
+        X = self._add_decay_to_predict_matrix(X)
         return super()._predict(X)
 
     def _transform_fit_input(self, X: Matrix) -> InteractionMatrix:
@@ -137,7 +147,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
     def _fit(self, X: csr_matrix) -> None:
         """Fit a cosine similarity matrix from item to item."""
-        X = self._add_decay_to_interaction_matrix(X, self.fit_decay)
+        X = self._add_decay_to_fit_matrix(X)
 
         if self.similarity == "cosine":
             item_similarities = compute_cosine_similarity(X)
@@ -150,28 +160,36 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         self.similarity_matrix_ = item_similarities
 
-    def _add_decay_to_interaction_matrix(self, X: InteractionMatrix, decay: float) -> csr_matrix:
+    def _add_decay_to_fit_matrix(self, X: InteractionMatrix) -> csr_matrix:
         """Weigh the interaction matrix based on age of the events.
 
         If decay is 0, it is assumed to be disabled, and so we just return binary matrix.
         :param X: Interaction matrix.
         :type X: InteractionMatrix
-        :param decay: Decay parameter, is 1/half_life.
-        :type decay: float
         :return: Weighted csr matrix.
         :rtype: csr_matrix
         """
-
-        if decay == 0:
-            return X.binary_values
-
         timestamp_mat = X.last_timestamps_matrix
         # The maximal timestamp in the matrix is used as 'now',
         # age is encoded as now - t
         now = timestamp_mat.data.max() + 1
-        timestamp_mat.data = self.DECAY_FUNCTIONS[self.decay_function](
-            (now - timestamp_mat.data) / self.decay_interval, decay
-        )
+        timestamp_mat.data = self.fit_decay_func((now - timestamp_mat.data) / self.decay_interval)
+        return csr_matrix(timestamp_mat)
+
+    def _add_decay_to_predict_matrix(self, X: InteractionMatrix) -> csr_matrix:
+        """Weigh the interaction matrix based on age of the events.
+
+        If decay is 0, it is assumed to be disabled, and so we just return binary matrix.
+        :param X: Interaction matrix.
+        :type X: InteractionMatrix
+        :return: Weighted csr matrix.
+        :rtype: csr_matrix
+        """
+        timestamp_mat = X.last_timestamps_matrix
+        # The maximal timestamp in the matrix is used as 'now',
+        # age is encoded as now - t
+        now = timestamp_mat.data.max() + 1
+        timestamp_mat.data = self.predict_decay_func((now - timestamp_mat.data) / self.decay_interval)
         return csr_matrix(timestamp_mat)
 
 
@@ -228,9 +246,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
                 distance = distance + (distance > 0).multiply(self.event_age_weight * min_age)
 
             # Decay the distances
-            distance.data = self.DECAY_FUNCTIONS[self.decay_function](
-                distance.data, self.fit_decay, max_age=max_age_possible
-            )
+            distance.data = self.fit_decay_func(distance.data, max_age=max_age_possible)
 
             similarities = csr_matrix(distance.sum(axis=0))
             # Normalisation options.
