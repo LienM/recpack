@@ -4,7 +4,7 @@ from scipy.sparse import csr_matrix, lil_matrix
 from recpack.algorithms import Algorithm
 from recpack.algorithms.time_aware_item_knn.decay_functions import ExponentialDecay
 from recpack.matrix import InteractionMatrix, Matrix
-from recpack.util import get_top_K_values
+from recpack.util import get_top_K_values, to_binary
 
 # TODO: make memory efficient (if at all possible)
 
@@ -81,24 +81,16 @@ class TARSUserKNNAnelli(Algorithm):
         last_t = X.last_timestamps_matrix
 
         candidate_precursor_counts = lil_matrix((X.shape[0], X.shape[0]))
-        for user, hist in X.sorted_item_history:
-            for item in hist:
-                ti = last_t[user, item]
-                # All users with an event on the item before this user did
-                # The .multiply acts as an and operator on the two boolean matrices
-                candidate_precursors = (last_t[:, item] != 0).multiply((last_t[:, item] < ti)).nonzero()[0]
-
-                # Increment their cooc counts
-                candidate_precursor_counts[user, candidate_precursors] = (
-                    candidate_precursor_counts[user, candidate_precursors].toarray() + 1
-                )
+        for user in X.active_users:
+            ts_cooc = last_t.multiply(to_binary(last_t[user, :]))
+            ts_user = to_binary(ts_cooc).multiply(last_t[user, :])
+            candidate_precursor_counts[user] = (ts_cooc < ts_user).sum(axis=1)
 
         # precursors are all candidate precursors whose number of cooc are bigger than the avg per user
         avg_cooc_per_user = candidate_precursor_counts.mean(axis=1)
         self.precursors_ = csr_matrix(candidate_precursor_counts > avg_cooc_per_user, dtype=int)
 
     def _predict(self, X: InteractionMatrix) -> csr_matrix:
-        # TODO: in base tarsItemKNN I use now = max() does that make sense?
         now = X.timestamps.max() + 1  # 1 second past the last timestamp in the history matrix.
 
         user_last = X.last_timestamps_matrix.max(axis=1)
