@@ -12,6 +12,9 @@ from hyperopt import hp
 import numpy as np
 import pytest
 
+from hyperopt import hp
+import numpy as np
+
 from recpack.postprocessing.filters import PostFilter
 from recpack.pipelines import GridSearchInfo, HyperoptInfo
 from recpack.pipelines.pipeline_builder import AlgorithmEntry
