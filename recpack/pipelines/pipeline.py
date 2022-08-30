@@ -268,8 +268,8 @@ class Pipeline(object):
 
         df = self.get_metrics()
         df.to_json(f"{self.results_directory}/results.json")
-
-        self.optimisation_results.to_json(f"{self.results_directory}/optimisation_results.json")
+        if self.optimisation_results is not None:
+            self.optimisation_results.to_json(f"{self.results_directory}/optimisation_results.json")
 
     def get_num_users(self) -> int:
         """Get the amount of users used in the evaluation.

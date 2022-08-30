@@ -59,7 +59,6 @@ def test_pipeline_builder_add_algos_correct(mat):
         "Prod2Vec", optimisation_info=GridSearchInfo({"num_components": [10, 20]}), params={"learning_rate": 0.1}
     )
     assert len(pb.algorithm_entries) == 3
-
     assert pb.algorithm_entries[0].optimisation_info is None
     assert pb.algorithm_entries[0].params == {"K": 20}
 
