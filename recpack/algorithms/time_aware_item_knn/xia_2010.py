@@ -96,14 +96,14 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
     :typ decay_interval: int, optional
     """
 
-    SUPPORTED_DECAY_FUNCTIONS = ["concave", "exponential", "linear"]
+    SUPPORTED_DECAY_FUNCTIONS = ["concave", "convex", "linear"]
     """The supported Decay function options."""
 
     def __init__(
         self,
         K: int = 200,
         fit_decay: float = 0.5,
-        decay_function: str = "exponential",
+        decay_function: str = "convex",
         decay_interval: int = 24 * 3600,
     ):
         if decay_function not in self.SUPPORTED_DECAY_FUNCTIONS:

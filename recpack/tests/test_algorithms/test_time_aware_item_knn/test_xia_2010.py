@@ -137,12 +137,10 @@ def test_time_decay_knn_empty(mat_no_timestamps, decay_function, fit_decay):
 @pytest.mark.parametrize(
     "decay_function, fit_decay",
     [
-        ("linear", 1.1),
         ("linear", -0.1),
         ("concave", 1.1),
         ("concave", -0.1),
-        ("convex", 1),
-        ("convex", 0),
+        ("convex", 2),
     ],
 )
 def test_time_decay_knn_coeff_validation(decay_function, fit_decay):
