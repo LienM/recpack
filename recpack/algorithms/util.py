@@ -86,7 +86,6 @@ def sample_rows(*args: Matrix, sample_size: int = 1000) -> List[Matrix]:
     :rtype: List[Matrix]
     """
     nonzero_users = list(set(args[0].nonzero()[0]))
-    print(len(nonzero_users))
     users = np.random.choice(nonzero_users, size=min(sample_size, len(nonzero_users)), replace=False)
     sampled_matrices = []
 

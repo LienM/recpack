@@ -187,7 +187,6 @@ class LinearDecay(DecayFunction):
 
         max_age = max_age if max_age is not None else age_arr.max()
         results = 1 - (age_arr / max_age) * self.decay
-        print(results)
         results[results < 0] = 0
         return results
 

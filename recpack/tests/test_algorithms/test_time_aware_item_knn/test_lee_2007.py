@@ -42,7 +42,6 @@ def test_compute_launch_times(mat):
 
 
 def test_add_decay_to_fit_matrix_W3(mat):
-    print(mat.last_timestamps_matrix.toarray())
     algorithm = TARSItemKNNLee_W3()
     expected_matrix = np.array(
         [
@@ -61,7 +60,6 @@ def test_add_decay_to_fit_matrix_W3(mat):
 
 
 def test_add_decay_to_fit_matrix_W4(mat):
-    print(mat.last_timestamps_matrix.toarray())
     algorithm = TARSItemKNNLee(W=4)
     expected_matrix = np.array(
         [

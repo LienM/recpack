@@ -294,7 +294,6 @@ def test_compute_pearson_similarity():
     # fmt: on
     corr = compute_pearson_similarity(data)
 
-    print(corr.toarray())
     assert corr[0, 0] == 0  # no self similarity
     assert corr[0, 1] == 0
     expected_sim_0_2 = ((-1.333 * -0.5) + (-0.333 * 0.5)) / (

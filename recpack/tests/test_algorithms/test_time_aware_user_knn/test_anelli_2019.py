@@ -16,7 +16,6 @@ def algorithm_at_least_4_recos():
 
 
 def test_fit(algorithm, mat_no_zero_timestamp):
-    print(mat_no_zero_timestamp.last_timestamps_matrix.toarray())
     algorithm.fit(mat_no_zero_timestamp)
     assert algorithm.precursors_.shape == (mat_no_zero_timestamp.shape[0], mat_no_zero_timestamp.shape[0])
 
@@ -58,7 +57,6 @@ def test_predict_w_fallback(algorithm_at_least_4_recos, mat_no_zero_timestamp):
     algorithm_at_least_4_recos.fit(mat_no_zero_timestamp)
 
     pred = algorithm_at_least_4_recos.predict(mat_no_zero_timestamp)
-    print(pred.toarray())
     # Because of the way get_top_K_values works, ties are broken in reverse index order
     expected_prediction = np.array(
         [
