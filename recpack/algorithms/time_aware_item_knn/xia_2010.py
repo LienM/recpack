@@ -14,8 +14,6 @@ from recpack.matrix import InteractionMatrix
 from recpack.util import get_top_K_values
 
 
-
-
 class TARSItemKNNXia(TARSItemKNNCoocDistance):
     """Time Decaying Nearest Neighbours model.
 
@@ -98,25 +96,18 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
     :typ decay_interval: int, optional
     """
 
-    SUPPORTED_COEFF_RANGES = {
-        "concave": lambda x: 0 <= x <= 1,
-        "convex": lambda x: 0 < x < 1,
-        "linear": lambda x: 0 <= x <= 1,
-    }
-
+    SUPPORTED_DECAY_FUNCTIONS = ["concave", "exponential", "linear"]
     """The supported Decay function options."""
 
     def __init__(
         self,
         K: int = 200,
         fit_decay: float = 0.5,
-        decay_function: str = "concave",
+        decay_function: str = "exponential",
         decay_interval: int = 24 * 3600,
     ):
-        if decay_function not in self.SUPPORTED_COEFF_RANGES.keys():
+        if decay_function not in self.SUPPORTED_DECAY_FUNCTIONS:
             raise ValueError(f"decay_function {decay_function} not supported")
-        if not self.SUPPORTED_COEFF_RANGES[decay_function](fit_decay):
-            raise ValueError(f"fit_decay {fit_decay} is not in the supported range")
 
         super().__init__(
             K=K,
