@@ -1,3 +1,5 @@
+import numpy as np
+
 from recpack.matrix import InteractionMatrix
 from recpack.scenarios import Scenario
 from recpack.scenarios.splitters import MostRecentSplitter
@@ -18,19 +20,19 @@ class LastItemPrediction(Scenario):
 
     - :attr:`full_training_data` contains all but the most recent
       interaction for each of the users.
-    - :attr:`test_data_in`: contains the ``n_most_recent`` interactions before
-      the last interaction of all users.
+    - :attr:`test_data_in`: contains the ``n_most_recent_in`` interactions before
+      the last interaction of each user.
     - :attr:`test_data_out` contains the last interaction of all users.
     - :attr:`validation_training_data` contains all but the most recent interaction of
       each user in the full training dataset.
-    - :attr:`validation_data_in` contains the ``n_most_recent`` interactions before
+    - :attr:`validation_data_in` contains the ``n_most_recent_in`` interactions before
       the last interaction of each user in the full training dataset.
     - :attr:`validation_data_out` contains the most recent interaction
       of each user in the full training dataset
 
     **Example**
 
-    As an example, we split this data with ``validation = True`` and ``n_most_recent = 1``::
+    As an example, we split this data with ``validation = True`` and ``n_most_recent_in = 1``::
 
         time    0   1   2   3   4   5
         Alice   X   X   X
@@ -80,16 +82,20 @@ class LastItemPrediction(Scenario):
         This scenario is deterministic, so changing seed does not matter.
         Defaults to None, so random seed will be generated.
     :type seed: int, optional
-    :param n_most_recent: How much of the historic events to use as input history.
-        Defaults to 1
-    :type n_most_recent: int, optional
+    :param n_most_recent_in: How much of the historic events to use as input history.
+        Defaults to the maximal integer value.
+    :type n_most_recent_in: int, optional
     """
 
-    def __init__(self, validation=False, seed=None, n_most_recent=1):
+    def __init__(self, validation=False, seed=None, n_most_recent_in=np.iinfo(np.int32).max):
         super().__init__(validation=validation, seed=seed)
         self.most_recent_splitter = MostRecentSplitter(1)
-        self.n_most_recent = n_most_recent
-        self.history_splitter = MostRecentSplitter(n_most_recent)
+        self.n_most_recent_in = n_most_recent_in
+
+        if n_most_recent_in == 0:
+            raise ValueError("Using n_most_recent_in = 0 is not supported.")
+
+        self.history_splitter = MostRecentSplitter(n_most_recent_in)
 
     def _split(self, data: InteractionMatrix):
         """Splits data so that a user's second to last interaction is used to predict their last interaction.
@@ -102,7 +108,7 @@ class LastItemPrediction(Scenario):
             self._full_train_X,
             self._test_data_out,
         ) = self.most_recent_splitter.split(data)
-        # Select n most recent as test_in
+        # Retain only the n_most_recent_in last interactions of a user as history
         _, self._test_data_in = self.history_splitter.split(self._full_train_X)
 
         if self.validation:
@@ -112,5 +118,5 @@ class LastItemPrediction(Scenario):
                 self._validation_data_out,
             ) = self.most_recent_splitter.split(self._full_train_X)
 
-            # Select n items to use as val_in per user
+            # Retain only the n_most_recent_in last interactions ofo a user as history.
             _, self._validation_data_in = self.history_splitter.split(self._validation_train_X)
