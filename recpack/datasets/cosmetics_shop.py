@@ -33,8 +33,8 @@ class CosmeticsShop(Dataset):
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: str, optional
-    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
-    :type preprocess_default: bool, optional
+    :param use_default_filters: Should a default set of filters be initialised? Defaults to True
+    :type use_default_filters: bool, optional
     :param extra_cols: Extra columns to load during dataframe creation
     :type extra_cols: List[str], optional
     :param event_types: The dataset contains view, cart, remove_from_cart, purchase events.
@@ -64,11 +64,11 @@ class CosmeticsShop(Dataset):
         self,
         path: str = "data",
         filename: str = None,
-        preprocess_default=True,
+        use_default_filters=True,
         extra_cols: Optional[List[str]] = None,
         event_types: Union[List[str], Tuple[str]] = ("view",),
     ):
-        super().__init__(path, filename, preprocess_default)
+        super().__init__(path, filename, use_default_filters)
         self.extra_cols = extra_cols if extra_cols is not None else []
 
         for event_type in event_types:
@@ -108,7 +108,7 @@ class CosmeticsShop(Dataset):
 
         return columns
 
-    def load_dataframe(self) -> pd.DataFrame:
+    def _load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
 
         .. warning::

@@ -42,8 +42,8 @@ class Dataset:
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: str, optional
-    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
-    :type preprocess_default: bool, optional
+    :param use_default_filters: Should a default set of filters be initialised? Defaults to True
+    :type use_default_filters: bool, optional
     """
 
     USER_IX = "user_id"
@@ -56,7 +56,7 @@ class Dataset:
     DEFAULT_FILENAME = None
     """Default filename that will be used if it is not specified by the user."""
 
-    def __init__(self, path: str = "data", filename: str = None, preprocess_default=True):
+    def __init__(self, path: str = "data", filename: str = None, use_default_filters=True):
         self.filename = filename
         if not self.filename:
             if self.DEFAULT_FILENAME:
@@ -66,7 +66,7 @@ class Dataset:
 
         self.path = path
         self.preprocessor = DataFramePreprocessor(self.ITEM_IX, self.USER_IX, self.TIMESTAMP_IX)
-        if preprocess_default:
+        if use_default_filters:
             for f in self._default_filters:
                 self.add_filter(f)
 
@@ -124,7 +124,7 @@ class Dataset:
     def _download_dataset(self):
         raise NotImplementedError("Should still be implemented")
 
-    def load_dataframe(self) -> pd.DataFrame:
+    def _load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
 
         .. warning::
@@ -139,13 +139,13 @@ class Dataset:
     def load(self) -> InteractionMatrix:
         """Loads data into an InteractionMatrix object.
 
-        Data is loaded into a DataFrame using the `load_dataframe` function.
+        Data is loaded into a DataFrame using the `_load_dataframe` function.
         Resulting DataFrame is parsed into an `InteractionMatrix` object.
         During parsing the filters are applied in order.
 
         :return: The resulting InteractionMatrix
         :rtype: InteractionMatrix
         """
-        df = self.load_dataframe()
+        df = self._load_dataframe()
 
         return self.preprocessor.process(df)

@@ -33,7 +33,7 @@ class MovieLens25M(Dataset):
 
         from recpack.preprocessing.filters import MinRating, MinItemsPerUser, MinUsersPerItem
         from recpack.datasets import MovieLens25M
-        d = MovieLens25M('path/to/file', preprocess_default=False)
+        d = MovieLens25M('path/to/file', use_default_filters=False)
         d.add_filter(MinRating(3, d.RATING_IX, 3))
         d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
         d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
@@ -44,8 +44,8 @@ class MovieLens25M(Dataset):
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: str, optional
-    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
-    :type preprocess_default: bool, optional
+    :param use_default_filters: Should a default set of filters be initialised? Defaults to True
+    :type use_default_filters: bool, optional
 
     """
 
@@ -94,7 +94,7 @@ class MovieLens25M(Dataset):
         # Rename the ratings file to the specified filename
         os.rename(os.path.join(self.path, "ml-25m/ratings.csv"), self.file_path)
 
-    def load_dataframe(self) -> pd.DataFrame:
+    def _load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
 
         .. warning::

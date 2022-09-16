@@ -25,8 +25,8 @@ def dataset(dataset_path):
         os.remove(res.file_path)
 
 
-def test_load_dataframe(dataset):
-    df = dataset.load_dataframe()
+def test__load_dataframe(dataset):
+    df = dataset._load_dataframe()
     assert (df.columns == [dataset.USER_IX, dataset.ITEM_IX, dataset.TIMESTAMP_IX, dataset.RATING_IX]).all()
 
     # We added 21 events total to the dummy files & have 4 columns
