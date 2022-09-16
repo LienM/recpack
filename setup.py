@@ -8,7 +8,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="recpack",
-    version="0.3.1",
+    version="0.3.2",
     python_requires=">=3.8",
     packages=find_packages(),
     install_requires=[
