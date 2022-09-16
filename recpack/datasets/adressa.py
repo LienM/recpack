@@ -1,7 +1,9 @@
+import json
 import numpy as np
 import os
 import pandas as pd
 import tarfile
+from tqdm.auto import tqdm
 from typing import List
 
 from recpack.datasets.base import Dataset, _fetch_remote
@@ -89,12 +91,19 @@ class AdressaOneWeek(Dataset):
         tar = tarfile.open(zipfile_full_path)
         dfs = []
         # For each file in the directory:
-        for f in fs:
+        for ix, f in enumerate(fs):
             # open the file from the tarfile.
             g = tar.extractfile(f"one_week/{f}")
-            df = pd.read_json(g, lines=True)
-            if self.ITEM_IX in df and self.TIMESTAMP_IX in df and self.USER_IX in df:
-                dfs.append(df[[self.USER_IX, self.ITEM_IX, self.TIMESTAMP_IX]])
+            dfs.append(pd.DataFrame.from_records([
+                {
+                    self.USER_IX: x[self.USER_IX],
+                    self.ITEM_IX: x[self.ITEM_IX],
+                    self.TIMESTAMP_IX: x[self.TIMESTAMP_IX]
+                }
+                for x in [json.loads(line)for line in tqdm(g.readlines(), desc=f"loading {f} file {ix+1}/{len(fs)}")]
+                if self.USER_IX in x and self.ITEM_IX in x and self.TIMESTAMP_IX in x
+            ]))
+
         df = pd.concat(dfs)
 
         df.dropna(inplace=True)
