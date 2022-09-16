@@ -66,7 +66,8 @@ class WeakGeneralization(Scenario):
 
     :param frac_data_in: Fraction of interactions per user used for
         training. The interactions are randomly chosen.
-    :type frac_data_in: float
+        Defaults to 0.8.
+    :type frac_data_in: float, optional
     :param validation: Assign a portion of the training dataset to validation data
         if True,
         else split without validation data into only a training and test dataset.
@@ -78,9 +79,9 @@ class WeakGeneralization(Scenario):
 
     def __init__(
         self,
-        frac_data_in: float,
-        validation=False,
-        seed=None,
+        frac_data_in: float = 0.8,
+        validation: bool = False,
+        seed: int = None,
     ):
         super().__init__(validation=validation, seed=seed)
 

@@ -6,7 +6,7 @@ from recpack.scenarios import LastItemPrediction
 
 def test_next_item_prediction_split(data_m_small):
     im = data_m_small
-    scenario = LastItemPrediction(validation=False)
+    scenario = LastItemPrediction(validation=False, n_most_recent_in=1)
     scenario._split(im)
 
     train = scenario.full_training_data
@@ -35,7 +35,7 @@ def test_next_item_prediction_split(data_m_small):
 
 def test_next_item_prediction_split_w_validation(data_m_small):
     im = data_m_small
-    scenario = LastItemPrediction(validation=True)
+    scenario = LastItemPrediction(validation=True, n_most_recent_in=1)
     scenario._split(im)
 
     validation_training_data = scenario.validation_training_data
@@ -86,10 +86,10 @@ def test_next_item_prediction_split_w_validation(data_m_small):
         assert full_training_data.values[u].sum() == len(sorted_item_history) - 1  #  All except test event
 
 
-@pytest.mark.parametrize("n_most_recent", [1, 2, 3])
-def test_next_item_prediction_split_w_n_most_recent(data_m_small, n_most_recent):
+@pytest.mark.parametrize("n_most_recent_in", [1, 2, 3])
+def test_next_item_prediction_split_w_n_most_recent_in(data_m_small, n_most_recent_in):
     im = data_m_small
-    scenario = LastItemPrediction(validation=False, n_most_recent=n_most_recent)
+    scenario = LastItemPrediction(validation=False, n_most_recent_in=n_most_recent_in)
     scenario._split(im)
 
     train = scenario.full_training_data
@@ -105,22 +105,22 @@ def test_next_item_prediction_split_w_n_most_recent(data_m_small, n_most_recent)
     assert test_data_out.shape[0] == im._df["uid"].nunique()
     assert test_data_in.shape[0] == im._df["uid"].nunique()
 
-    np.testing.assert_array_almost_equal(test_data_in.values.sum(axis=1) <= n_most_recent, True)
+    np.testing.assert_array_almost_equal(test_data_in.values.sum(axis=1) <= n_most_recent_in, True)
     np.testing.assert_array_almost_equal(test_data_out.values.sum(axis=1), 1)
 
     # Check that the right item has been selected.
     for u, sorted_item_history in im.sorted_item_history:
         assert test_data_out.values[u, sorted_item_history[-1]] == 1
         assert test_data_in.values[u, sorted_item_history[-2]] == 1
-        assert test_data_in.values[u].sum() == min(len(sorted_item_history) - 1, n_most_recent)
+        assert test_data_in.values[u].sum() == min(len(sorted_item_history) - 1, n_most_recent_in)
 
         assert train.values[u].sum() == len(sorted_item_history) - 1  # all except the last item
 
 
-@pytest.mark.parametrize("n_most_recent", [1, 2, 3])
-def test_next_item_prediction_split_w_validation_w_n_most_recent(data_m_small, n_most_recent):
+@pytest.mark.parametrize("n_most_recent_in", [1, 2, 3])
+def test_next_item_prediction_split_w_validation_w_n_most_recent_in(data_m_small, n_most_recent_in):
     im = data_m_small
-    scenario = LastItemPrediction(validation=True, n_most_recent=n_most_recent)
+    scenario = LastItemPrediction(validation=True, n_most_recent_in=n_most_recent_in)
     scenario._split(im)
 
     full_training_data = scenario.full_training_data
@@ -152,9 +152,9 @@ def test_next_item_prediction_split_w_validation_w_n_most_recent(data_m_small, n
     assert val_data_out.shape[0] == im._df["uid"].nunique()
     assert val_data_in.shape[0] == im._df["uid"].nunique()
 
-    np.testing.assert_array_almost_equal(test_data_in.values.sum(axis=1) <= n_most_recent, True)
+    np.testing.assert_array_almost_equal(test_data_in.values.sum(axis=1) <= n_most_recent_in, True)
     np.testing.assert_array_almost_equal(test_data_out.values.sum(axis=1), 1)
-    np.testing.assert_array_almost_equal(val_data_in.values.sum(axis=1) <= n_most_recent, True)
+    np.testing.assert_array_almost_equal(val_data_in.values.sum(axis=1) <= n_most_recent_in, True)
     np.testing.assert_array_almost_equal(val_data_out.values.sum(axis=1), 1)
 
     # Check that the right item has been selected.
@@ -163,9 +163,9 @@ def test_next_item_prediction_split_w_validation_w_n_most_recent(data_m_small, n
         assert test_data_in.values[u, sorted_item_history[-2]] == 1
         assert val_data_out.values[u, sorted_item_history[-2]] == 1
 
-        assert test_data_in.values[u].sum() == min(len(sorted_item_history) - 1, n_most_recent)
+        assert test_data_in.values[u].sum() == min(len(sorted_item_history) - 1, n_most_recent_in)
 
-        assert val_data_in.values[u].sum() == min(len(sorted_item_history) - 2, n_most_recent)
+        assert val_data_in.values[u].sum() == min(len(sorted_item_history) - 2, n_most_recent_in)
 
         assert (
             validation_training_data.values[u].sum() == len(sorted_item_history) - 2
@@ -173,3 +173,14 @@ def test_next_item_prediction_split_w_validation_w_n_most_recent(data_m_small, n
         assert (
             full_training_data.values[u].sum() == len(sorted_item_history) - 1
         )  #  All except validation and test event
+
+
+def test_next_item_prediction_split_all_history(data_m_small):
+    im = data_m_small
+    scenario = LastItemPrediction(validation=False)
+    scenario._split(im)
+
+    test_data_in = scenario.test_data_in
+    test_data_out = scenario.test_data_out
+
+    assert im.num_interactions == test_data_in.num_interactions + test_data_out.num_interactions

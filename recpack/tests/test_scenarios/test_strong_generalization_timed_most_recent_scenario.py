@@ -9,9 +9,9 @@ ITEM_IX = InteractionMatrix.ITEM_IX
 TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 
-@pytest.mark.parametrize("t, n", [(4, 1), (4, -2), (5, 1), (5, -2)])
+@pytest.mark.parametrize("t, n", [(4, 1), (5, 1)])
 def test_strong_generalization_timed_most_recent_split(data_m_sessions, t, n):
-    scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, n=n)
+    scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, n_most_recent_out=n)
     scenario.split(data_m_sessions)
     tr = scenario.full_training_data
     te_data_in, te_data_out = scenario.test_data
@@ -56,9 +56,9 @@ def test_strong_generalization_timed_most_recent_split(data_m_sessions, t, n):
         assert (actions_per_user_test - actions_per_user_te_out == -n).all()
 
 
-@pytest.mark.parametrize("t, t_val, n", [(5, 4, 1), (5, 4, -2)])
+@pytest.mark.parametrize("t, t_val, n", [(5, 4, 1)])
 def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val, n):
-    scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, t_validation=t_val, n=n, validation=True)
+    scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, t_validation=t_val, n_most_recent_out=n, validation=True)
     scenario.split(data_m_sessions)
     val_tr = scenario.validation_training_data
     full_tr = scenario.full_training_data
@@ -133,9 +133,17 @@ def test_strong_generalization_timed_most_recent_w_val(data_m_sessions, t, t_val
         assert (actions_per_user_test - actions_per_user_te_out == -n).all()
 
 
-@pytest.mark.parametrize("t, n", [(4, 3), (4, 5), (4, -5)])
+@pytest.mark.parametrize("n", [0, -1, -4])
+def incorrect_n_most_recent_out(n):
+    with pytest.raises(ValueError) as e:
+        scenarios.StrongGeneralizationTimedMostRecent(42, n_most_recent_out=n)
+
+    assert e.match("strictly positive integer")
+
+
+@pytest.mark.parametrize("t, n", [(4, 3), (4, 5)])
 def test_strong_generalization_timed_most_recent_too_few_actions(data_m_sessions, t, n):
-    scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, n=n)
+    scenario = scenarios.StrongGeneralizationTimedMostRecent(t=t, n_most_recent_out=n)
 
     # Splitting should warn user that one of the sets is empty
     with warnings.catch_warnings(record=True) as w:

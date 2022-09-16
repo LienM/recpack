@@ -11,7 +11,7 @@ class StrongGeneralizationTimedMostRecent(Scenario):
 
     Test data contains all users whose most recent interactions was after ``t``:
 
-    - :attr:`test_data_out` contains the ``n`` most recent interactions of
+    - :attr:`test_data_out` contains the ``n_most_recent_out`` most recent interactions of
       a user whose most recent interactions was after ``t``.
     - :attr:`test_data_in` contains all earlier interactions of the test users.
 
@@ -21,7 +21,7 @@ class StrongGeneralizationTimedMostRecent(Scenario):
     - :attr:`validation_training_data` contains users whose most
       recent interaction happened before ``t_validation``.
 
-    - :attr:`validation_data_out` contains the ``n`` most recent interactions of
+    - :attr:`validation_data_out` contains the ``n_most_recent_out`` most recent interactions of
       a user whose most recent interactions was in the interval ``[t_validation, t[``.
     - :attr:`validaton_data_in` contains all earlier interactions of the
       validation_evaluation users.
@@ -32,8 +32,8 @@ class StrongGeneralizationTimedMostRecent(Scenario):
 
     **Example**
 
-    As an example, splitting following data with ``t = 4``, ``t_validation=2``,
-    ``n = 1`` and ``validation=True``::
+    As an example, splitting following data with ``t = 4``, ``t_validation = 2``,
+    ``n_most_recent_out = 1`` and ``validation = True``::
 
         time    0   1   2   3   4   5
         Alice   X   X
@@ -78,8 +78,8 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         ``time < t`` are put in the validation set. Users whose
         last action has ``time < t_validation`` are put in train.
         Only required if validation is True.
-    :param n: The n most recent user actions to consider as target. If a negative number,
-        split off all but the ``n`` earliest actions.
+    :param n_most_recent_out: The number of user actions to consider as target.
+        Defaults to 1.
     :param validation: Assign a portion of the full training dataset
         to validation data if True,
         else split without validation data into only a training and test dataset.
@@ -95,14 +95,18 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         self,
         t: float,
         t_validation: float = None,
-        n: int = 1,
+        n_most_recent_out: int = 1,
         validation: bool = False,
         seed=None,
     ):
         super().__init__(validation=validation, seed=seed)
         self.t = t
         self.t_validation = t_validation
-        self.n = n
+        self.n_most_recent_out = n_most_recent_out
+
+        if self.n_most_recent_out <= 0:
+            raise ValueError("n_most_recent_out should be a strictly positive integer.")
+
         if self.validation and not self.t_validation:
             raise Exception("t_validation should be provided when using validation split.")
 
@@ -110,7 +114,7 @@ class StrongGeneralizationTimedMostRecent(Scenario):
         if self.validation:
             assert self.t_validation < self.t
             self.user_splitter_val = UserInteractionTimeSplitter(t_validation)
-        self.most_recent_splitter = MostRecentSplitter(n)
+        self.most_recent_splitter = MostRecentSplitter(self.n_most_recent_out)
 
     def _split(self, data: InteractionMatrix):
         """Splits users into non-overlapping training,

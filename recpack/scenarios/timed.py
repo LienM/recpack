@@ -1,3 +1,5 @@
+import numpy as np
+
 from recpack.matrix import InteractionMatrix
 from recpack.scenarios import Scenario
 from recpack.scenarios.splitters import TimestampSplitter
@@ -80,14 +82,14 @@ class Timed(Scenario):
         both :attr:`validation_data_out` and :attr:`test_data_out`.
         Both sets will contain interactions that occurred within ``delta_out`` seconds
         after the splitting timestamp.
-        Defaults to None (acting as infinity).
+        Defaults to maximal integer value (acting as infinity).
     :type delta_out: int, optional
     :param delta_in: Size of interval in seconds for
         :attr:`full_training_data`, :attr:`validation_training_data`,
         :attr:`validation_data_in` and :attr:`test_data_in`.
         All sets will contain interactions that occurred within ``delta_out`` seconds
         before the splitting timestamp.
-        Defaults to None (acting as infinity).
+        Defaults to maximal integer value (acting as infinity).
     :type delta_in: int, optional
     :param validation: Assign a portion of the full training dataset to validation data
         if True, else split without validation data
@@ -103,11 +105,11 @@ class Timed(Scenario):
     def __init__(
         self,
         t,
-        t_validation=None,
-        delta_out=None,
-        delta_in=None,
-        validation=False,
-        seed=None,
+        t_validation: int = None,
+        delta_out: int = np.iinfo(np.int32).max,
+        delta_in: int = np.iinfo(np.int32).max,
+        validation: bool = False,
+        seed: int = None,
     ):
         super().__init__(validation=validation, seed=seed)
         self.t = t

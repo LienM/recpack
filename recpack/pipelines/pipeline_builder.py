@@ -29,7 +29,7 @@ class PipelineBuilder(object):
     The builder contains functions to set specific values for the pipeline.
     Save and Load make it possible to easily recreate pipelines.
 
-    To disable history filtering in the pipeline, set the `remove_history` attribute to False.::
+    To disable history filtering in the pipeline, set the :attr:`remove_history` attribute to False.::
 
         pipeline_builder.remove_history = False
 
@@ -76,7 +76,7 @@ class PipelineBuilder(object):
             If it is a list, for each value a metric is added.
         :type K: Union[List, int]
         :raises ValueError: If metric can't be resolved to a key
-            in the `METRIC_REGISTRY`.
+            in the ``METRIC_REGISTRY``.
         """
 
         # Make it so it's possible to add metrics by their class as well.
@@ -106,7 +106,7 @@ class PipelineBuilder(object):
         """Add an algorithm to use in the pipeline.
 
         If the algorithm is not implemented by default in recpack,
-        you should register it in the `ALGORITHM_REGISTRY`
+        you should register it in the ``ALGORITHM_REGISTRY``
 
         :param algorithm: Algorithm class name or type of the algorithm to add.
         :type algorithm: Union[str, type]
@@ -117,7 +117,7 @@ class PipelineBuilder(object):
             Defaults to None
         :type params: Dict[str, Any], optional
         :raises ValueError: If the passed algorithm can't be resolved to a key
-            in the `ALGORITHM_REGISTRY`.
+            in the ``ALGORITHM_REGISTRY``.
         """
         algorithm = self._arg_to_str(algorithm)
 
@@ -139,7 +139,7 @@ class PipelineBuilder(object):
         """Set the metric for optimisation of parameters in algorithms.
 
         If the metric is not implemented by default in recpack,
-        you should register it in the `METRIC_REGISTRY`
+        you should register it in the ``METRIC_REGISTRY``
 
         :param metric: metric name or metric type
         :type metric: Union[str, type]
@@ -148,7 +148,7 @@ class PipelineBuilder(object):
         :param minimise: If True minimal value for metric is better, defaults to False
         :type minimise: bool, optional
         :raises ValueError: If metric can't be resolved to a key
-            in the `METRIC_REGISTRY`.
+            in the ``METRIC_REGISTRY``.
         """
         metric = self._arg_to_str(metric)
 
@@ -218,12 +218,15 @@ class PipelineBuilder(object):
 
     @property
     def remove_history(self):
+        """``True`` to enable removal of a user's previous interactions,
+        ```False``` to disable. Defaults to ``True``.
+        """
         return self._remove_history
 
     @remove_history.setter
     def remove_history(self, value):
-        """Pass `True' to enable removal of a user's history,
-        False to disable. Defaults to True.
+        """Pass ``True`` to enable removal of a user's previous interactions,
+        ```False``` to disable. Defaults to ``True``.
         """
         self._remove_history = value
 

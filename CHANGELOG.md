@@ -10,13 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [UNRELEASED]
 
 ### Breaking Changes
+* __scenarios__
+    * `n_most_recent` parameter for LastItemPrediction is changed to `n_most_recent_in` and default value changed to infinity such that it is inline with the TimedLastItemPrediction scenario.
+    * `n` parameter for `StrongGeneralizationTimedMostRecent`scenario has been renamed to `n_most_recent_out`, and behaviour for a negative value has been removed.
 
 * __datasets__
     * renamed `load_dataframe` to `_load_dataframe`, it is now a private member, which should not be called directly.
     * renamed `preprocessing_default` parameter to `use_default_filters` for clarity.
 
-### Optimisations
+### Additions
+* __scenarios__
+    * Added default values for parameters of WeakGeneralization and StrongGeneralization.
 
+### Optimisations
 * __datasets__
     * Improved performance of load functionality for AdressaOneWeek.
 

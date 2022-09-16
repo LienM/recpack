@@ -73,11 +73,12 @@ class StrongGeneralization(Scenario):
         Bob             X
 
     :param frac_users_train: Fraction of users assigned to the full training dataset.
-        Between 0 and 1.
-    :type frac_users_train: float
+        Between 0 and 1. Defaults to 0.8.
+    :type frac_users_train: float, optional
     :param frac_interactions_in: Fraction of the users'
         interactions to be used as fold-in set (user history). Between 0 and 1.
-    :type frac_interactions_in: float
+        Defaults to 0.8.
+    :type frac_interactions_in: float, optional
     :param validation: Assign a portion of the full training dataset
         to validation datasets if True,
         else split without validation data into only a training and test dataset.
@@ -89,10 +90,10 @@ class StrongGeneralization(Scenario):
 
     def __init__(
         self,
-        frac_users_train: float,
-        frac_interactions_in: float,
-        validation=False,
-        seed=None,
+        frac_users_train: float = 0.8,
+        frac_interactions_in: float = 0.8,
+        validation: bool = False,
+        seed: int = None,
     ):
         super().__init__(validation=validation, seed=seed)
         self.frac_users_train = frac_users_train
