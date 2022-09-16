@@ -13,7 +13,6 @@ import torch.optim as optim
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.samplers import PositiveNegativeSampler
 from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
-from recpack.algorithms.util import sample_rows
 from recpack.matrix import InteractionMatrix, Matrix, to_csr_matrix
 from recpack.util import get_top_K_values
 
@@ -36,43 +35,10 @@ class Prod2Vec(TorchMLAlgorithm):
 
     Where possible, defaults were taken from the paper.
 
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import Prod2Vec
-
-        # Since Prod2Vec uses iterative optimisation, it needs validation data
-        # To decide which of the iterations yielded the best model
-        # This validation data should be split into an input and output matrix.
-        # In this example the data has been split in a strong generalization fashion
-        X = csr_matrix(np.array(
-            [[1, 0, 1], [1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
-        )
-        x_val_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
-        )
-        x_val_out = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
-        )
-        x_test_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
-        )
-
-        algo = Prod2Vec(embedding_size=10, num_neg_samples=10, max_epochs=4)
-        # Fit algorithm
-        algo.fit(X, (x_val_in, x_val_out))
-
-        # Recommend for the test input data,
-        predictions = algo.predict(x_test_in)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-    :param embedding_size: The size of the embedding vectors for both input and output embeddings, defaults to 300
-    :type embedding_size: int, optional
-    :param num_neg_samples: Number of negative samples for every positive sample, defaults to 10
-    :type num_neg_samples: int, optional
+    :param num_components: The size of the embedding vectors for both input and output embeddings, defaults to 300
+    :type num_components: int, optional
+    :param num_negatives: Number of negative samples for every positive sample, defaults to 10
+    :type num_negatives: int, optional
     :param window_size: Size of the context window to the left and to the right of the target item
          used in skipgram negative sampling, defaults to 2
     :type window_size: int, optional
@@ -117,7 +83,8 @@ class Prod2Vec(TorchMLAlgorithm):
     :param save_best_to_file: If true, the best model will be saved after training.
         Defaults to False
     :type save_best_to_file: bool, optional
-    :param replace: Sample with or without replacement (see :class:`recpack.algorithms.samplers.PositiveNegativeSampler` ), defaults to False
+    :param replace: Sample with or without replacement
+        (see :class:`recpack.algorithms.samplers.PositiveNegativeSampler` ), defaults to False
     :type replace: bool, optional
     :param exact: If False (default) negatives are checked against the corresponding positive sample only,
         allowing for (rare) collisions. If collisions should be avoided at all costs,
@@ -143,8 +110,8 @@ class Prod2Vec(TorchMLAlgorithm):
 
     def __init__(
         self,
-        embedding_size: int = 300,
-        num_neg_samples: int = 10,
+        num_components: int = 300,
+        num_negatives: int = 10,
         window_size: int = 2,
         stopping_criterion: str = "precision",
         K: int = 200,
@@ -179,8 +146,8 @@ class Prod2Vec(TorchMLAlgorithm):
             validation_sample_size=validation_sample_size,
         )
 
-        self.embedding_size = embedding_size
-        self.num_neg_samples = num_neg_samples
+        self.num_components = num_components
+        self.num_negatives = num_negatives
         self.window_size = window_size
         self.similarity_matrix_ = None
         self.K = K
@@ -192,7 +159,7 @@ class Prod2Vec(TorchMLAlgorithm):
 
         # Initialise sampler
         self.sampler = PositiveNegativeSampler(
-            U=self.num_neg_samples,
+            num_negatives=self.num_negatives,
             batch_size=self.batch_size,
             replace=self.replace,
             exact=self.exact,
@@ -200,7 +167,7 @@ class Prod2Vec(TorchMLAlgorithm):
         )
 
     def _init_model(self, X: Matrix) -> None:
-        self.model_ = SkipGram(X.shape[1], self.embedding_size).to(self.device)
+        self.model_ = SkipGram(X.shape[1], self.num_components).to(self.device)
         self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
 
     # def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
@@ -341,14 +308,14 @@ class Prod2Vec(TorchMLAlgorithm):
 
 
 class SkipGram(nn.Module):
-    def __init__(self, vocab_size: int, embedding_size: int):
+    def __init__(self, vocab_size: int, num_components: int):
         super().__init__()
         self.vocab_size = vocab_size
-        self.embedding_size = embedding_size
-        self.input_embeddings = nn.Embedding(vocab_size, embedding_size)
-        self.output_embeddings = nn.Embedding(vocab_size, embedding_size)
+        self.num_components = num_components
+        self.input_embeddings = nn.Embedding(vocab_size, num_components)
+        self.output_embeddings = nn.Embedding(vocab_size, num_components)
 
-        self.std = 1 / embedding_size ** 0.5
+        self.std = 1 / num_components ** 0.5
         # Initialise embeddings to a random start
         nn.init.normal_(self.input_embeddings.weight, std=self.std)
         nn.init.normal_(self.output_embeddings.weight, std=self.std)

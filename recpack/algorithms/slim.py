@@ -20,25 +20,6 @@ class SLIM(ItemSimilarityMatrixAlgorithm):
 
     Code loosely based on https://github.com/Mendeley/mrec
 
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import SLIM
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        algo = SLIM()
-        # Fit algorithm
-        algo.fit(X)
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-
     :param l1_reg: l1 regularization coefficient, defaults to 0.0005
     :type l1_reg: float, optional
     :param l2_reg: l2 regularization coefficient, defaults to 0.00005

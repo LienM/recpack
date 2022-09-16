@@ -17,8 +17,8 @@ from recpack.tests.test_algorithms.util import assert_changed
 @pytest.fixture(scope="function")
 def prod2vec(p2v_embedding, mat):
     prod = Prod2VecClustered(
-        embedding_size=50,
-        num_neg_samples=2,
+        num_components=50,
+        num_negatives=2,
         window_size=2,
         stopping_criterion="precision",
         K=5,
@@ -55,8 +55,8 @@ def test__predict(prod2vec, larger_mat):
 
 def test_cluster_similarity_computation():
     alg = Prod2VecClustered(
-        embedding_size=2,
-        num_neg_samples=2,
+        num_components=2,
+        num_negatives=2,
         window_size=2,
         stopping_criterion="precision",
         K=5,

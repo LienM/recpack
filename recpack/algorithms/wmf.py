@@ -33,23 +33,6 @@ class WeightedMatrixFactorization(Algorithm):
     this confidence will be the same for all interactions,
     and as such leaving the HP to the defaults works well enough.
 
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import WMF
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        algo = WMF()
-        # Fit algorithm
-        algo.fit(X)
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
 
     :param confidence_scheme: Which confidence scheme should be used
         to calculate the confidence matrix.
@@ -198,7 +181,8 @@ class WeightedMatrixFactorization(Algorithm):
         return X[nonzero_users, :]
 
     def _least_squares(self, C: csr_matrix, Y: torch.Tensor, other_factor_dim: Tuple[int, int]) -> torch.Tensor:
-        """Calculate the one factor matrix based on the confidence matrix and the other factor matrix with the least squares algorithm.
+        """Calculate the one factor matrix based on the confidence matrix and
+        the other factor matrix with the least squares algorithm.
 
         :param C: (Transposed) Confidence matrix.
         :type C: csr_matrix

@@ -14,9 +14,9 @@ def session_rnn():
     rnn = GRU4RecNegSampling(
         seed=42,
         batch_size=3,
-        embedding_size=5,
+        num_components=5,
         hidden_size=10,
-        U=25,
+        num_negatives=25,
         bptt=2,
         learning_rate=0.1,
         loss_fn="bpr",
@@ -30,9 +30,9 @@ def session_rnn_topK():
     rnn = GRU4RecNegSampling(
         seed=42,
         batch_size=3,
-        embedding_size=5,
+        num_components=5,
         hidden_size=10,
-        U=25,
+        num_negatives=25,
         bptt=2,
         learning_rate=0.1,
         loss_fn="bpr",
@@ -54,17 +54,11 @@ def test_session_rnn_compute_loss(session_rnn):
 
     targets_chunk = torch.LongTensor([[2, 1], [2, 1], [2, 4]])
 
-    negatives_chunk = torch.LongTensor(
-        [[[1, 3], [2, 2]], [[1, 3], [2, 3]], [[3, 0], [3, 3]]]
-    )
+    negatives_chunk = torch.LongTensor([[[1, 3], [2, 2]], [[1, 3], [2, 3]], [[3, 0], [3, 3]]])
 
-    true_input_mask = torch.BoolTensor(
-        [[True, True], [True, True], [True, True]]
-    )
+    true_input_mask = torch.BoolTensor([[True, True], [True, True], [True, True]])
 
-    loss = session_rnn._compute_loss(
-        output, targets_chunk, negatives_chunk, true_input_mask
-    )
+    loss = session_rnn._compute_loss(output, targets_chunk, negatives_chunk, true_input_mask)
 
     expected_loss = (
         -(
@@ -86,12 +80,8 @@ def test_session_rnn_compute_loss(session_rnn):
     np.testing.assert_almost_equal(loss, expected_loss)
 
     # Block out the middle element
-    true_input_mask = torch.BoolTensor(
-        [[True, True], [False, False], [True, True]]
-    )
-    loss = session_rnn._compute_loss(
-        output, targets_chunk, negatives_chunk, true_input_mask
-    )
+    true_input_mask = torch.BoolTensor([[True, True], [False, False], [True, True]])
+    loss = session_rnn._compute_loss(output, targets_chunk, negatives_chunk, true_input_mask)
 
     expected_loss = (
         -(
@@ -118,11 +108,7 @@ def test_session_rnn_training_epoch(session_rnn, matrix_sessions):
 
     # Each training epoch should update the parameters
     for _ in range(5):
-        params = [
-            np
-            for np in session_rnn.model_.named_parameters()
-            if np[1].requires_grad
-        ]
+        params = [np for np in session_rnn.model_.named_parameters() if np[1].requires_grad]
         params_before = [(name, p.clone()) for (name, p) in params]
 
         session_rnn._train_epoch(matrix_sessions)
@@ -136,11 +122,7 @@ def test_session_rnn_evaluation_epoch(session_rnn, matrix_sessions):
 
     # Model evaluation should have no effect on parameters
     for _ in range(5):
-        params = [
-            np
-            for np in session_rnn.model_.named_parameters()
-            if np[1].requires_grad
-        ]
+        params = [np for np in session_rnn.model_.named_parameters() if np[1].requires_grad]
         params_before = [(name, p.clone()) for (name, p) in params]
 
         session_rnn._evaluate(matrix_sessions, matrix_sessions)
@@ -189,9 +171,7 @@ def test_session_rnn_predict_topK(session_rnn_topK, matrix_sessions):
     assert set(matrix_sessions.values.nonzero()[0]) == set(X_pred.nonzero()[0])
 
     # Each user should receive only a single recommendation
-    assert X_pred.nonzero()[1].shape[0] == len(
-        set(matrix_sessions.nonzero()[0])
-    )
+    assert X_pred.nonzero()[1].shape[0] == len(set(matrix_sessions.nonzero()[0]))
 
     # Rnn should be able to learn simple repeating patterns
     assert top_item[0] == 1

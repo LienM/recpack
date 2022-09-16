@@ -34,43 +34,10 @@ class Prod2VecClustered(Prod2Vec):
 
     Where possible, defaults were taken from the paper.
 
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import Prod2VecClustered
-
-        # Since Prod2VecClustered uses iterative optimisation, it needs validation data
-        # To decide which of the iterations yielded the best model
-        # This validation data should be split into an input and output matrix.
-        # In this example the data has been split in a strong generalization fashion
-        X = csr_matrix(np.array(
-            [[1, 0, 1], [1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
-        )
-        x_val_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
-        )
-        x_val_out = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
-        )
-        x_test_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
-        )
-
-        algo = Prod2VecClustered(embedding_size=10, num_neg_samples=10, max_epochs=4)
-        # Fit algorithm
-        algo.fit(X, (x_val_in, x_val_out))
-
-        # Recommend for the test input data,
-        predictions = algo.predict(x_test_in)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-    :param embedding_size: The size of the embedding vectors for both input and output embeddings, defaults to 300
-    :type embedding_size: int, optional
-    :param num_neg_samples: Number of negative samples for every positive sample, defaults to 10
-    :type num_neg_samples: int, optional
+    :param num_components: The size of the embedding vectors for both input and output embeddings, defaults to 300
+    :type num_components: int, optional
+    :param num_negatives: Number of negative samples for every positive sample, defaults to 10
+    :type num_negatives: int, optional
     :param window_size: Size of the context window to the left and to the right of the target item
          used in skipgram negative sampling, defaults to 2
     :type window_size: int, optional
@@ -119,7 +86,8 @@ class Prod2VecClustered(Prod2Vec):
     :param save_best_to_file: If true, the best model will be saved after training.
         Defaults to False
     :type save_best_to_file: bool, optional
-    :param replace: Sample with or without replacement (see :class:`recpack.algorithms.samplers.PositiveNegativeSampler` ), defaults to False
+    :param replace: Sample with or without replacement
+        (see :class:`recpack.algorithms.samplers.PositiveNegativeSampler` ), defaults to False
     :type replace: bool, optional
     :param exact: If False (default) negatives are checked against the corresponding positive sample only,
         allowing for (rare) collisions. If collisions should be avoided at all costs,
@@ -142,8 +110,8 @@ class Prod2VecClustered(Prod2Vec):
 
     def __init__(
         self,
-        embedding_size: int = 300,
-        num_neg_samples: int = 10,
+        num_components: int = 300,
+        num_negatives: int = 10,
         window_size: int = 2,
         stopping_criterion: str = "precision",
         K: int = 200,
@@ -163,8 +131,8 @@ class Prod2VecClustered(Prod2Vec):
         validation_sample_size: int = None,
     ):
         super().__init__(
-            embedding_size,
-            num_neg_samples,
+            num_components,
+            num_negatives,
             window_size,
             stopping_criterion,
             K=K,

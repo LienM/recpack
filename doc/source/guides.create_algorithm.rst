@@ -27,9 +27,15 @@ Randomized Softmax Popularity Algorithm
 Description
 ^^^^^^^^^^^
 
-The Softmax Popularity Algorithm samples recommended items relative to their item popularity.
-It does so by computing the temperature-weighted softmax of the natural logarithm of the 
-item's frequency in the training data. 
+The Softmax Popularity Algorithm samples recommended items relative to a "temperature weighted item popularity".
+
+.. math:: 
+
+    P(i) = \frac{exp(q(i)/\tau)}{\sum\limits_{j \in I} exp(q(i)/\tau)}
+
+Where :math:`q(i)` is the popularity score of item i, computed as the log of the amount of times the item is visited
+and :math:`\tau` is the temperature parameter.
+
 With a temperature of 1, we end up with the standard softmax function. 
 For a temperature of 0 we always choose the best action, whereas high values of 
 temperature starts to resemble uniformly random sampling. 
@@ -75,8 +81,8 @@ implement the ``__init__`` function.
 
 Our algorithm has two hyper parameters:
 
-- K: The number of items that can be considered for recommendations.
-- Tau: The temperature parameter. 
+- ``K``: The number of items that can be considered for recommendations.
+- ``tau``: The temperature parameter. 
 
 ::
 
@@ -112,7 +118,7 @@ with the item, then take the softmax of the K most popular items.
 
     def _fit(self, X: csr_matrix):
         # compute pop by taking logarithm of the raw counts
-        #.A1 puts it into a 1d array, making all subsequent operations easy
+        # A1 puts it into a 1d array, making all subsequent operations easy
         pop = np.log(np.sum(X, axis=0)).A1
         
         max_pop = np.max(pop)
@@ -142,7 +148,7 @@ _predict
 Finally we implement ``_predict``.
 Here we sample recommendations for each user with at least one interaction
 in the matrix of interactions. 
-Sampling probabilities were stored in ``softmax_scores_`` during fitting.
+Remember that sampling probabilities were stored in ``softmax_scores_`` during fitting.
 
 ::
 
@@ -279,11 +285,11 @@ Description
 
 Let's now implement SVD, a well-known matrix factorization algorithm.
 Singular Value Decomposition decomposes a matrix of interactions into three matrices which
-when multiplied together approximately reconstructs the original matrix , ``X = U x Sigma X V``.
-If matrix ``X`` is of shape ``(|users| x |items|)``,
-then ``U`` is of shape ``(|users| x num_components)``,
-``Sigma`` is a ``(num_components x num_components)`` matrix,
-and finally ``V`` is a ``(num_components x |items|)`` matrix.
+when multiplied together approximately reconstruct the original matrix , :math:`X = U \times \Sigma \times V`.
+If matrix :math:`X` is of shape ``(|users| x |items|)``,
+then :math:`U` is of shape ``(|users| x num_components)``,
+:math:`\Sigma` is a ``(num_components x num_components)`` matrix,
+and finally :math:`V` is a ``(num_components x |items|)`` matrix.
 
 Implementation
 ^^^^^^^^^^^^^^^
@@ -350,9 +356,9 @@ All other hyperparameter are left at their default values.
 SVD decomposes the matrix into three matrices, while the 
 :class:`recpack.algorithms.base.FactorizationAlgorithm` class expects only two: 
 a user and item embedding.
-Therefore we take the item embedding to be the product of ``Sigma`` and ``V``. 
-Since ``Sigma`` is a square matrix this does not change the matrix dimension:
-``Sigma x V`` is still a ``(num_components x |items|)`` matrix. 
+Therefore we take the item embedding to be the product of :math:`\Sigma` and :math:`V`. 
+Since :math:`\Sigma` is a square matrix this does not change the matrix dimension:
+:math:`\Sigma \times V` is still a ``(num_components x |items|)`` matrix. 
 
 ::
 
@@ -386,8 +392,8 @@ In this example we implement a very silly, iterative matrix factorization algori
 It is by no means sophisticated or even guaranteed to converge, 
 but serves well for our illustration purposes.
 
-The model learns the weights of a matrix factorization of the initial matrix X as 
-``X = U x V^T``.
+The model learns the weights of a matrix factorization of the initial matrix :math:`X` as 
+:math:`X = U \times V^T`.
 
 Implementation
 ^^^^^^^^^^^^^^^
@@ -400,19 +406,19 @@ This base class comes with quite a bit more plumbing that the others:
 - ``_check_fit_complete`` performs an additional check of the dimensions of the embeddings.
 - ``_check_prediction`` makes sure predictions were made for all nonzero users.
 - ``fit(X, validation_data)`` performs a number of training epochs, each followed by an evaluation step on the full dataset. 
-    Unlike the other base classes, it now takes an additional ``validation_data`` argument to perform this evaluation step.
+  Unlike the other base classes, it now takes an additional ``validation_data`` argument to perform this evaluation step.
 - ``save`` saves the current PyTorch model to disk.
 - ``load`` loads a PyTorch model from file.
 - ``filename`` generates a unique filename for the current best model.
 - ``_transform_predict_input`` transforms the input matrix to a ``csr_matrix`` by default.
 - ``_transform_fit_input`` transforms the input matrices to a ``csr_matrix`` by default.
--  ``_evaluate`` performs one evaluation step, which consists of making predictions .
-    for the validation data and subsequently updating the stopping criterion.
--  ``_load_best`` loads the best model encountered during training as the final model used to make predictions. 
--  ``_save_best`` saves the best model encountered during training to a temporary file.
+- ``_evaluate`` performs one evaluation step, which consists of making predictions.
+  for the validation data and subsequently updating the stopping criterion.
+- ``_load_best`` loads the best model encountered during training as the final model used to make predictions. 
+- ``_save_best`` saves the best model encountered during training to a temporary file.
 
 Which leaves ``__init__``, ``_init_model``, ``_train_epoch``, ``my_loss`` and ``_batch_predict``
-for you to implement, as well as the actual PyTorch nn.Module that is your PyTorch model.
+to be implemented, as well as the actual PyTorch ``nn.Module`` that is the PyTorch model.
 
 MFModule
 """"""""
@@ -498,7 +504,7 @@ We define one additional hyperparameter:
 For the sake of example we use a fixed random seed. 
 The random seed is set to guarantee reproducibility of results. 
 
-As :class:`recpack.algorithms.stopping_criterion.StoppingCriterion` we use Recall@10.
+As :class:`recpack.algorithms.stopping_criterion.StoppingCriterion` we use `Recall`, by default computed on the top 50 recommendations.
 By default, early stopping is disabled.
 
 ::
@@ -506,10 +512,10 @@ By default, early stopping is disabled.
     class SillyMF(TorchMLAlgorithm):
         def __init__(self, batch_size, max_epochs, learning_rate, num_components=100):
             super().__init__(
-                batch_size, 
-                max_epochs,
-                learning_rate,
-                "recall",
+                batch_size=batch_size, 
+                max_epochs=max_epochs,
+                learning_rate=learning_rate,
+                stopping_criterion="recall",
                 seed=42
             )
             self.num_components = num_components
@@ -542,9 +548,9 @@ _train_epoch
 Next we implement training.
 First, we need to define a loss function to indicate how well our 
 current embeddings are able to perform at the task we set.
-As mentioned in the description, this task is to reconstruct the matrix ``X``.
-Our loss function computes the average of the absolute error between ``U x V`` 
-and the original matrix ``X`` per user.
+As mentioned in the description, this task is to reconstruct the matrix :math:`X`.
+Our loss function computes the average of the absolute error between :math:`U \times V` 
+and the original matrix :math:`X` per user.
 
 .. note::
     For an overview of commonly used loss functions, 
@@ -633,8 +639,8 @@ Recpack provides pipeline functionality, which simplifies running experiments as
 
 Because we want you to use your own algorithms with the recpack pipelines, we have made it easy to set up a pipeline with your own algorithm.
 
-The first (and only) step to using a new algorithm is to make sure it is registered in the `recpack.pipelines.ALGORITHM_REGISTRY`.
-Registering a new algorithm is done using the `register` function. This function takes two arguments: the name of the algorithm to register and the class.
+The first (and only) step to using a new algorithm is to make sure it is registered in the :class:`recpack.pipelines.ALGORITHM_REGISTRY`.
+Registering a new algorithm is done using the :attr:`register` function. This function takes two arguments: the name of the algorithm to register and the class.
 
 ::
 
@@ -652,11 +658,11 @@ As an example we will compare the SillyMF algorithm to an ItemKNN algorithm, and
     from recpack.splitters.scenarios import StrongGeneralization
     from recpack.pipelines import ALGORITHM_REGISTRY
 
-    ALGORITHM_REGISTRY.register(SillyMF.__name__, SillyMF)
+    ALGORITHM_REGISTRY.register(SillyMF.__name__, SillyMF) 
 
     # Get data to test on
     dataset = MovieLens25M("data/ml25.csv", use_default_filters=False)
-    # This will apply default preprocessing
+    # This will apply default preprocessing
     im = dataset.load_interaction_matrix()
 
     # Data splitting scenario
@@ -675,7 +681,7 @@ As an example we will compare the SillyMF algorithm to an ItemKNN algorithm, and
     pipeline_builder.add_algorithm('EASE', grid={'l2': [10, 100, 1000], 'alpha': [0, 0.1, 0.5]})
 
     # Add our new algorithm
-    # Optimising learning rate and num_components
+    # Optimising learning rate and num_components
     # setting fixed values for max_epochs and batch_size
     pipeline_builder.add_algorithm(
         'SillyMF',

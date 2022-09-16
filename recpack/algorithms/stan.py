@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
-import time
 
 from recpack.algorithms import Algorithm
 from recpack.algorithms.util import get_batches
@@ -9,7 +8,7 @@ from recpack.util import get_top_K_ranks, get_top_K_values
 
 
 class STAN(Algorithm):
-    """Sequence and Time Aware Neighbourhoods.
+    """Sequence and Time Aware Neighbourhoods algorithm.
 
     Algorithm presented by Garg, Diksha, et al.
     "Sequence and time aware neighborhood for session-based recommendations: Stan."
@@ -47,6 +46,7 @@ class STAN(Algorithm):
     Where lambda_3 is the `distance_from_match_decay` parameter.
 
     ..note::
+
         We modified the decay computations from the paper,
         by using a multiplicative weight, rather than a division.
         This allows us to easily disable a weight.

@@ -7,6 +7,26 @@ such as commonly used loss functions and sampling methods.
 
 .. currentmodule:: recpack.algorithms
 
+**Example of use**::
+
+    from scipy.sparse import csr_matrix
+    from recpack.algorithms import Random
+
+    X = csr_matrix(np.array([[1, 0, 1], [1, 1, 0], [1, 1, 0]]))
+
+    # Set hyper-parameter values
+    algo = Random(K=3)
+
+    # Fit algorithm
+    algo.fit(X)
+
+    # Get random recos for each nonzero user
+    predictions = algo.predict(X)
+
+    # Predictions is a csr matrix, inspecting the scores with
+    predictions.toarray()
+
+
 Baselines
 ------------------
 

@@ -62,15 +62,6 @@ def test_item_knn(data):
     np.testing.assert_almost_equal(result.toarray(), expected_out)
 
 
-def test_item_knn_normalize(data):
-    # Should perform sim_normalize.
-    algo = ItemKNN(K=2, normalize=True)
-
-    algo.fit(data)
-
-    np.testing.assert_array_almost_equal(algo.similarity_matrix_.sum(axis=1), 1)
-
-
 def test_item_knn_normalize_X(data):
 
     algo = ItemKNN(K=2, similarity="cosine", normalize_X=True)

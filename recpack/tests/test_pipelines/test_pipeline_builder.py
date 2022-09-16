@@ -30,12 +30,12 @@ def test_pipeline_builder(mat):
     # Add algorithms
     pb.add_algorithm("ItemKNN", params={"K": 20})
     pb.add_algorithm("ItemKNN", grid={"K": [10, 20, 50, 100]})
-    pb.add_algorithm("Prod2Vec", grid={"embedding_size": [10, 20]}, params={"learning_rate": 0.1})
+    pb.add_algorithm("Prod2Vec", grid={"num_components": [10, 20]}, params={"learning_rate": 0.1})
     assert len(pb.algorithm_entries) == 3
     assert pb.algorithm_entries[0].grid == {}
     assert pb.algorithm_entries[0].params == {"K": 20}
     assert pb.algorithm_entries[1].params == {}
-    assert pb.algorithm_entries[2].grid == {"embedding_size": [10, 20]}
+    assert pb.algorithm_entries[2].grid == {"num_components": [10, 20]}
     assert pb.algorithm_entries[2].params == {"learning_rate": 0.1}
 
     # Build pipeline that needs to be optimized without optimization metric

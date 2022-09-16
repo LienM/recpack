@@ -17,7 +17,7 @@ def session_rnn():
     rnn = GRU4RecCrossEntropy(
         seed=42,
         batch_size=3,
-        embedding_size=5,
+        num_components=5,
         hidden_size=10,
         bptt=2,
         learning_rate=0.1,
@@ -31,7 +31,7 @@ def session_rnn_topK():
     rnn = GRU4RecCrossEntropy(
         seed=42,
         batch_size=3,
-        embedding_size=5,
+        num_components=5,
         hidden_size=10,
         bptt=2,
         learning_rate=0.1,

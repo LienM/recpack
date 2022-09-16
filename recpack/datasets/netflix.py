@@ -29,7 +29,7 @@ class Netflix(Dataset):
         Defaults to `data`
     :type path: str, optional
     :param filename: Name of the csv ratings file.
-        If None, the :member:`DEFAULT_FILENAME` will be used.
+        If None, the :attr:`DEFAULT_FILENAME` will be used.
     :type filename: str, optional
     :param use_default_filters: Should a default set of filters be initialised?
         Defaults to True
