@@ -22,9 +22,6 @@ class Sampler:
     pass
 
 
-# TODO Rename to TripletSampler?
-
-
 class PositiveNegativeSampler(Sampler):
     """Samples linked positive and negative interactions for users.
 
@@ -42,8 +39,8 @@ class PositiveNegativeSampler(Sampler):
 
         P(w_i) = \\frac{  {f(w_i)}^{3/4}  }{\\sum_{j=0}^{n}\\left(  {f(w_j)}^{3/4} \\right) }
 
-    :param U: Number of negative samples for each positive, defaults to 1
-    :type U: int, optional
+    :param num_negatives: Number of negative samples for each positive, defaults to 1
+    :type num_negatives: int, optional
     :param batch_size: The number of samples returned per batch, defaults to 100
     :type batch_size: int, optional
     :param replace: Sample positives with or without replacement. Defaults to True
@@ -62,14 +59,14 @@ class PositiveNegativeSampler(Sampler):
 
     def __init__(
         self,
-        U=1,
+        num_negatives=1,
         batch_size=100,
         replace=True,
         exact=False,
         distribution="uniform",
     ):
 
-        self.U = U
+        self.num_negatives = num_negatives
         self.batch_size = batch_size
         self.replace = replace
         self.exact = exact
@@ -95,7 +92,7 @@ class PositiveNegativeSampler(Sampler):
     def sample(
         self, X: csr_matrix, sample_size=None, positives=None
     ) -> Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]:
-        """Sample U negatives for each sampled user-item-pair (positive).
+        """Sample num_negatives negatives for each sampled user-item-pair (positive).
 
         When sampling without replacement,
         ``sample_size`` cannot exceed the number of positives in X.
@@ -150,7 +147,7 @@ class PositiveNegativeSampler(Sampler):
             if not self.exact:
                 negatives_batch = self._sample_negatives(
                     X,
-                    size=(true_batch_size, self.U),
+                    size=(true_batch_size, self.num_negatives),
                     probabilities=negative_sample_probabilities,
                 )
                 while True:
@@ -172,11 +169,11 @@ class PositiveNegativeSampler(Sampler):
                         break
             else:
                 num_nonzeros = X.shape[1] - X.sum(axis=1)
-                if (num_nonzeros < self.U).any():
+                if (num_nonzeros < self.num_negatives).any():
                     raise ValueError("Cannot request more negative samples than are possible.")
 
-                negatives_batch = np.zeros((true_batch_size, self.U))
-                for i in range(0, self.U):
+                negatives_batch = np.zeros((true_batch_size, self.num_negatives))
+                for i in range(0, self.num_negatives):
                     # Construct column i in the negatives matrix
 
                     # 1st try true random
@@ -222,8 +219,8 @@ class BootstrapSampler(PositiveNegativeSampler):
     This approach allows to learn multiple times from the same positive interactions.
     For more information on implementation see :class:`PositiveNegativeSampler`
 
-    :param U: Number of negative samples for each positive, defaults to 1
-    :type U: int, optional
+    :param num_negatives: Number of negative samples for each positive, defaults to 1
+    :type num_negatives: int, optional
     :param batch_size: The number of samples returned per batch, defaults to 100
     :type batch_size: int, optional
     :param exact: If False (default) negatives are checked agains the corresponding
@@ -233,19 +230,19 @@ class BootstrapSampler(PositiveNegativeSampler):
     :type exact: bool, optional
     """
 
-    def __init__(self, U=1, batch_size=100, exact=False):
+    def __init__(self, num_negatives=1, batch_size=100, exact=False):
         #  Bootstrap sampling is samping with replacement.
-        super().__init__(U=U, batch_size=batch_size, replace=True, exact=exact)
+        super().__init__(num_negatives=num_negatives, batch_size=batch_size, replace=True, exact=exact)
 
 
 class WarpSampler(PositiveNegativeSampler):
-    """Samples `U` negatives for each positive.
+    """Samples `num_negatives` negatives for each positive.
 
     This approach allows to learn multiple times from the same positive interactions.
     For more information on implementation see :class:`PositiveNegativeSampler`
 
-    :param U: Number of negative samples for each positive, defaults to 1
-    :type U: int, optional
+    :param num_negatives: Number of negative samples for each positive, defaults to 1
+    :type num_negatives: int, optional
     :param batch_size: The number of samples returned per batch, defaults to 100
     :type batch_size: int, optional
     :param exact: If False (default) negatives are checked agains the corresponding
@@ -255,8 +252,8 @@ class WarpSampler(PositiveNegativeSampler):
     :type exact: bool, optional
     """
 
-    def __init__(self, U=10, batch_size=100, exact=False) -> None:
-        super().__init__(U=U, batch_size=batch_size, replace=False, exact=exact)
+    def __init__(self, num_negatives=10, batch_size=100, exact=False) -> None:
+        super().__init__(num_negatives=num_negatives, batch_size=batch_size, replace=False, exact=exact)
 
 
 class SequenceMiniBatchSampler(Sampler):
@@ -283,7 +280,8 @@ class SequenceMiniBatchSampler(Sampler):
 
         # Generate batches of users. Take maximum len of history in batch
         for batch in get_batches(X.sorted_item_history, self.batch_size):
-            # Because they were sorted in reverse order the first element contains the max len in this batch, the last the min len.
+            # Because they were sorted in reverse order the first element contains the max len in this batch,
+            # the last the min len.
             batch.sort(key=lambda x: len(x[1]), reverse=True)
             max_hist_len = len(batch[0][1])
             batch_size = len(batch)
@@ -303,7 +301,7 @@ class SequenceMiniBatchSampler(Sampler):
 
 
 class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler):
-    """Samples `U` negatives for every positive in a sequence.
+    """Samples `num_negatives` negatives for every positive in a sequence.
 
     This approach allows to learn multiple times from the same positive interactions.
     Because the sequence-aspect is important here, we only eliminate collisions
@@ -313,8 +311,8 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
 
     Handles sequences of unequal length by padding them with `pad_token`.
 
-    :param U: Number of negative samples for each positive
-    :type U: int
+    :param num_negatives: Number of negative samples for each positive
+    :type num_negatives: int
     :param pad_token: Token used to indicate that this location in the sequence
         contains a padding element.
     :type pad_token: int
@@ -322,9 +320,9 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
     :type batch_size: int, optional
     """
 
-    def __init__(self, U: int, pad_token: int, batch_size: int = 100) -> None:
+    def __init__(self, num_negatives: int, pad_token: int, batch_size: int = 100) -> None:
         super().__init__(pad_token, batch_size)
-        self.U = U
+        self.num_negatives = num_negatives
 
     def sample(
         self, X: InteractionMatrix
@@ -346,8 +344,9 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
           since there is no knowledge of the next item at the end of the sequence.
           Shape = (batch size, max_hist_len(batch))
         - negatives: 3D tensor, with negative examples for each positive.
-          For each positive self.U negatives are sampled, these negatives are checked against only the target item.
-          Shape = (batch_size, max_hist_len(batch), self.U)
+          For each positive self.num_negatives negatives are sampled,
+          these negatives are checked against only the target item.
+          Shape = (batch_size, max_hist_len(batch), self.num_negatives)
 
 
         :param X: Interaction matrix to generate samples from.
@@ -360,7 +359,7 @@ class SequenceMiniBatchPositivesTargetsNegativesSampler(SequenceMiniBatchSampler
 
         # Generate batches of users. Take maximum len of history in batch
         for uid_batch, positives_batch in super().sample(X):
-            negatives_batch = np.random.randint(0, num_items, (*positives_batch.shape, self.U))
+            negatives_batch = np.random.randint(0, num_items, (*positives_batch.shape, self.num_negatives))
 
             targets_batch = np.roll(positives_batch, -1, axis=1)
             # set last item to padding, otherwise 1st item is rolled till here

@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [UNRELEASED]
 
 ### Breaking Changes
+* __algorithms__
+    * Renamed hyperparameters for clarity
+        * Renamed `embedding_size` to `num_components` to follow sklearn parameter names.
+        * Renamed `U` parameter to `num_negatives`
+        * Renamed `num_neg_samples` to `num_negatives` for consistency.
+        * Renamed `J` for warp loss to `num_items`
+    * Deprecated parameter `normalize` of ItemKNN has been removed.
+
 * __scenarios__
     * `n_most_recent` parameter for LastItemPrediction is changed to `n_most_recent_in` and default value changed to infinity such that it is inline with the TimedLastItemPrediction scenario.
     * `n` parameter for `StrongGeneralizationTimedMostRecent`scenario has been renamed to `n_most_recent_out`, and behaviour for a negative value has been removed.

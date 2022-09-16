@@ -3,7 +3,6 @@ from math import ceil
 import time
 from typing import Tuple, List, Iterator, Optional
 
-import numpy as np
 from scipy.sparse import csr_matrix, lil_matrix
 
 import torch
@@ -61,8 +60,8 @@ class GRU4Rec(TorchMLAlgorithm):
     :type num_layers: int, optional
     :param hidden_size: Number of neurons in the hidden layer(s). Defaults to 100
     :type hidden_size: int, optional
-    :param embedding_size: Size of item embeddings. Defaults to 250
-    :type embedding_size: int, optional
+    :param num_components: Size of item embeddings. Defaults to 250
+    :type num_components: int, optional
     :param dropout: Dropout applied to embeddings and hidden layer(s).
         Defauls to 0 (no dropout)
     :type dropout: float
@@ -78,9 +77,9 @@ class GRU4Rec(TorchMLAlgorithm):
     :param bptt: Number of backpropagation through time steps.
         Defaults to 1
     :type bptt: int, optional
-    :param U: Number of negatives to sample for every positive.
+    :param num_negatives: Number of negatives to sample for every positive.
         Defaults to 0
-    :type U: int, optional
+    :type num_negatives: int, optional
     :param batch_size: Number of examples in a mini-batch.
         Defaults to 512.
     :type batch_size: int, optional
@@ -92,8 +91,8 @@ class GRU4Rec(TorchMLAlgorithm):
     :type learning_rate: float, optional
     :param stopping_criterion: Name of the stopping criterion to use for training.
         For available values,
-        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
-    :type stopping_criterion: str
+        check :attr:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str, optional
     :param stop_early: If True, early stopping is enabled,
         and after ``max_iter_no_change`` iterations where improvement of loss function
         is below ``min_improvement`` the optimisation is stopped,
@@ -132,13 +131,13 @@ class GRU4Rec(TorchMLAlgorithm):
         self,
         num_layers: int = 1,
         hidden_size: int = 100,
-        embedding_size: int = 250,
+        num_components: int = 250,
         dropout: float = 0.0,
         optimization_algorithm: str = "adagrad",
         momentum: float = 0.0,
         clipnorm: float = 1.0,
         bptt: int = 1,
-        U: int = 0,
+        num_negatives: int = 0,
         batch_size: int = 512,
         max_epochs: int = 5,
         learning_rate: float = 0.03,
@@ -169,13 +168,13 @@ class GRU4Rec(TorchMLAlgorithm):
 
         self.num_layers = num_layers
         self.hidden_size = hidden_size
-        self.embedding_size = embedding_size
+        self.num_components = num_components
         self.dropout = dropout
         self.optimization_algorithm = optimization_algorithm
         self.momentum = momentum
         self.clipnorm = clipnorm
         self.bptt = bptt
-        self.U = U
+        self.num_negatives = num_negatives
 
     def _init_model(self, X: InteractionMatrix) -> None:
         # Invalid item ID. Used to mask inputs to the RNN
@@ -185,7 +184,7 @@ class GRU4Rec(TorchMLAlgorithm):
         self.model_ = GRU4RecTorch(
             self.num_items,
             self.hidden_size,
-            self.embedding_size,
+            self.num_components,
             self.pad_token,
             num_layers=self.num_layers,
             dropout=self.dropout,
@@ -199,7 +198,7 @@ class GRU4Rec(TorchMLAlgorithm):
         self.predict_sampler = SequenceMiniBatchSampler(self.pad_token, batch_size=self.batch_size)
 
         self.fit_sampler = SequenceMiniBatchPositivesTargetsNegativesSampler(
-            self.U, self.pad_token, batch_size=self.batch_size
+            self.num_negatives, self.pad_token, batch_size=self.batch_size
         )
 
     def _transform_fit_input(
@@ -239,7 +238,7 @@ class GRU4Rec(TorchMLAlgorithm):
             st = time.time()
             # positives shape = (batch_size x |max_hist_length|)
             # targets shape = (batch_size x |max_hist_length|)
-            # negatives shape = (batch_size x |max_hist_length| x self.U)
+            # negatives shape = (batch_size x |max_hist_length| x self.num_negatives)
             positives_batch = positives_batch.to(self.device)
             targets_batch = targets_batch.to(self.device)
             negatives_batch = negatives_batch.to(self.device)
@@ -396,8 +395,8 @@ class GRU4RecCrossEntropy(GRU4Rec):
     :type num_layers: int, optional
     :param hidden_size: Number of neurons in the hidden layer(s). Defaults to 100
     :type hidden_size: int, optional
-    :param embedding_size: Size of item embeddings. Defaults to 250
-    :type embedding_size: int, optional
+    :param num_components: Size of item embeddings. Defaults to 250
+    :type num_components: int, optional
     :param dropout: Dropout applied to embeddings and hidden layer(s), 0 for no dropout
     :type dropout: float
     :param optimization_algorithm: Gradient descent optimizer, one of "sgd", "adagrad".
@@ -423,8 +422,8 @@ class GRU4RecCrossEntropy(GRU4Rec):
     :type learning_rate: float, optional
     :param stopping_criterion: Name of the stopping criterion to use for training.
         For available values,
-        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
-    :type stopping_criterion: str
+        check :attr:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str, optional
     :param stop_early: If True, early stopping is enabled,
         and after ``max_iter_no_change`` iterations where improvement of loss function
         is below ``min_improvement`` the optimisation is stopped,
@@ -463,7 +462,7 @@ class GRU4RecCrossEntropy(GRU4Rec):
         self,
         num_layers: int = 1,
         hidden_size: int = 100,
-        embedding_size: int = 250,
+        num_components: int = 250,
         dropout: float = 0.0,
         optimization_algorithm: str = "adagrad",
         momentum: float = 0.0,
@@ -485,13 +484,13 @@ class GRU4RecCrossEntropy(GRU4Rec):
         super().__init__(
             num_layers=num_layers,
             hidden_size=hidden_size,
-            embedding_size=embedding_size,
+            num_components=num_components,
             dropout=dropout,
             optimization_algorithm=optimization_algorithm,
             momentum=momentum,
             clipnorm=clipnorm,
             bptt=bptt,
-            U=0,
+            num_negatives=0,
             batch_size=batch_size,
             max_epochs=max_epochs,
             learning_rate=learning_rate,
@@ -558,8 +557,8 @@ class GRU4RecNegSampling(GRU4Rec):
     :type num_layers: int, optional
     :param hidden_size: Number of neurons in the hidden layer(s). Defaults to 100
     :type hidden_size: int, optional
-    :param embedding_size: Size of item embeddings. Defaults to 250
-    :type embedding_size: int, optional
+    :param num_components: Size of item embeddings. Defaults to 250
+    :type num_components: int, optional
     :param dropout: Dropout applied to embeddings and hidden layer(s).
         Defauls to 0 (no dropout)
     :type dropout: float
@@ -578,9 +577,9 @@ class GRU4RecNegSampling(GRU4Rec):
     :param bptt: Number of backpropagation through time steps.
         Defaults to 1
     :type bptt: int, optional
-    :param U: Number of negatives to sample for every positive.
+    :param num_negatives: Number of negatives to sample for every positive.
         Defaults to 50
-    :type U: int, optional
+    :type num_negatives: int, optional
     :param batch_size: Number of examples in a mini-batch.
         Defaults to 512.
     :type batch_size: int, optional
@@ -592,8 +591,8 @@ class GRU4RecNegSampling(GRU4Rec):
     :type learning_rate: float, optional
     :param stopping_criterion: Name of the stopping criterion to use for training.
         For available values,
-        check :meth:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
-    :type stopping_criterion: str
+        check :attr:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`
+    :type stopping_criterion: str, optional
     :param stop_early: If True, early stopping is enabled,
         and after ``max_iter_no_change`` iterations where improvement of loss function
         is below ``min_improvement`` the optimisation is stopped,
@@ -632,14 +631,14 @@ class GRU4RecNegSampling(GRU4Rec):
         self,
         num_layers: int = 1,
         hidden_size: int = 100,
-        embedding_size: int = 250,
+        num_components: int = 250,
         dropout: float = 0.0,
         loss_fn: str = "bpr",
         optimization_algorithm: str = "adagrad",
         momentum: float = 0.0,
         clipnorm: float = 1.0,
         bptt: int = 1,
-        U: int = 50,
+        num_negatives: int = 50,
         batch_size: int = 512,
         max_epochs: int = 5,
         learning_rate: float = 0.03,
@@ -656,13 +655,13 @@ class GRU4RecNegSampling(GRU4Rec):
         super().__init__(
             num_layers=num_layers,
             hidden_size=hidden_size,
-            embedding_size=embedding_size,
+            num_components=num_components,
             dropout=dropout,
             optimization_algorithm=optimization_algorithm,
             momentum=momentum,
             clipnorm=clipnorm,
             bptt=bptt,
-            U=U,
+            num_negatives=num_negatives,
             batch_size=batch_size,
             max_epochs=max_epochs,
             learning_rate=learning_rate,
@@ -725,8 +724,8 @@ class GRU4RecTorch(nn.Module):
     :type num_items: int
     :param hidden_size: Number of neurons in the hidden layer(s)
     :type hidden_size: int
-    :param embedding_size: Size of the item embeddings, None for no embeddings
-    :type embedding_size: int
+    :param num_components: Size of the item embeddings, None for no embeddings
+    :type num_components: int
     :param pad_token: Index of the padding_token
     :type pad_token: int
     :param num_layers: Number of hidden layers, defaults to 1
@@ -739,23 +738,23 @@ class GRU4RecTorch(nn.Module):
         self,
         num_items: int,
         hidden_size: int,
-        embedding_size: int,
+        num_components: int,
         pad_token: int,
         num_layers: int = 1,
         dropout: float = 0,
     ):
         super().__init__()
         self.num_items = num_items
-        self.embedding_size = embedding_size
+        self.num_components = num_components
         self.hidden_size = hidden_size
         self.output_size = num_items
         self.pad_token = pad_token
         self.drop = nn.Dropout(dropout, inplace=True)
 
         # Passing pad_token will make sure these embeddings are always zero-valued.
-        self.emb = nn.Embedding(num_items + 1, embedding_size, padding_idx=pad_token)
+        self.emb = nn.Embedding(num_items + 1, num_components, padding_idx=pad_token)
         self.rnn = nn.GRU(
-            embedding_size,
+            num_components,
             hidden_size,
             num_layers=num_layers,
             dropout=(dropout if num_layers > 1 else 0),

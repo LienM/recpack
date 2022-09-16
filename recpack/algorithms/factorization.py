@@ -12,31 +12,9 @@ class NMF(FactorizationAlgorithm):
 
     Matrix is decomposed into a user embedding and an item embedding of the same size.
     Decomposition happens using the NMF implementation from sklearn.
-    Uses default parameters from NMF.
 
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import NMF
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        algo = NMF(num_components=2)
-        # Fit algorithm
-        algo.fit(X)
-
-        # After fitting user and item embeddings are available
-        print(algo.user_embedding_.shape)
-        # (3, 2)
-        print(algo.item_embedding_)
-        # (3, 2)
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
+    Uses the NMF implementation from
+    `sklearn <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html>`_.
 
     :param num_components: The size of the latent dimension
     :type num_components: int
@@ -84,38 +62,17 @@ class NMF(FactorizationAlgorithm):
 
 
 class SVD(FactorizationAlgorithm):
-    """Singular Value Decomposition as dimension reduction recommendation algorithm.
+    """Singular Value Decomposition used as a matrix factorization algorithm.
 
-    SVD computed using the TruncatedSVD implementation from sklearn.
-    U x Sigma x V = X
-    U are the user features, and the item features are computed as Sigma x V.
+    The SVD is computed using
+    `TruncatedSVD <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.TruncatedSVD.html>`_
+    from sklearn.
+    This computes three matrices :math:`U, \\Sigma, V` such that
+    :math:`U \\times \\Sigma \\times V = X`.
 
-    **Example of use**::
+    Matrix :math:`U` is used as the user embedding and the item embeddings are computed as :math:`\\Sigma \\times V`.
 
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import SVD
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        algo = SVD(num_components=2)
-        # Fit algorithm
-        algo.fit(X)
-
-        # After fitting user and item embeddings are available
-        print(algo.user_embedding_.shape)
-        # (3, 2)
-        print(algo.item_embedding_)
-        # (3, 2)
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-
-    :param num_components: The size of the latent dimension
+    :param num_components: The size of the embeddings.
     :type num_components: int
     :param seed: The seed for the random state to allow for comparison, defaults to None
     :type seed: int, optional

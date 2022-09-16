@@ -1,5 +1,3 @@
-from typing import Callable
-
 import numpy as np
 from scipy.sparse import csr_matrix
 import torch
@@ -71,8 +69,7 @@ def vae_loss(reconstructed_X, mu, logvar, X, anneal=1.0):
     """
 
     BCE = -torch.mean(torch.sum(F.log_softmax(reconstructed_X, 1) * X, -1))
-    KLD = -0.5 * torch.mean(torch.sum(1 + logvar -
-                                      mu.pow(2) - logvar.exp(), dim=1))
+    KLD = -0.5 * torch.mean(torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1))
 
     return BCE + anneal * KLD
 
@@ -81,10 +78,10 @@ def warp_loss(
     dist_pos_interaction: torch.Tensor,
     dist_neg_interaction: torch.Tensor,
     margin: float,
-    J: int,
-    U: int,
+    num_items: int,
+    num_negatives: int,
 ) -> torch.Tensor:
-    """WARP loss 
+    """WARP loss
 
     WARP loss as described in
     Cheng-Kang Hsieh et al., Collaborative Metric Learning. WWW2017
@@ -108,10 +105,10 @@ def warp_loss(
     :type dist_neg_interaction: torch.Tensor
     :param margin: Required margin between positive and negative sample.
     :type margin: float
-    :param J: Total number of items in the dataset.
-    :type J: int
-    :param U: Number of negative samples used for every positive sample.
-    :type U: int
+    :param num_items: Total number of items in the dataset. (J in the paper)
+    :type num_items: int
+    :param num_items: Number of negative samples used for every positive sample. (U in the paper)
+    :type num_items: int
     :return: 0-D Tensor containing WARP loss.
     :rtype: torch.Tensor
     """
@@ -125,17 +122,15 @@ def warp_loss(
     most_wrong_neg_interaction[most_wrong_neg_interaction < 0] = 0
 
     M = (dist_diff_pos_neg_margin > 0).sum(axis=-1).float()
-    # M * J / U =~ rank(pos_i)
-    w = torch.log((M * J / U) + 1)
+    # M * num_items / num_negatives =~ rank(pos_i)
+    w = torch.log((M * num_items / num_negatives) + 1)
 
     loss = (most_wrong_neg_interaction * w).mean()
 
     return loss
 
 
-def skipgram_negative_sampling_loss(
-    positive_sim: torch.Tensor, negative_sim: torch.Tensor
-) -> torch.Tensor:
+def skipgram_negative_sampling_loss(positive_sim: torch.Tensor, negative_sim: torch.Tensor) -> torch.Tensor:
     """Skipgram Sampling Loss.
 
     :param positive_sim: Similarity scores between focus and context item.
@@ -219,11 +214,9 @@ def bpr_loss_wrapper(
 
     losses = []
 
-    sampler = BootstrapSampler(U=1, batch_size=batch_size, exact=exact)
+    sampler = BootstrapSampler(num_negatives=1, batch_size=batch_size, exact=exact)
 
-    for users, target_items, negative_items in sampler.sample(
-        X_true, sample_size=sample_size
-    ):
+    for users, target_items, negative_items in sampler.sample(X_true, sample_size=sample_size):
         # Needed to do copy, to use as index in the predidction matrix
         users = users.numpy().copy()
         target_items = target_items.numpy().copy()
@@ -242,7 +235,7 @@ def warp_loss_wrapper(
     X_true: csr_matrix,
     X_pred: csr_matrix,
     batch_size: int = 1000,
-    U: int = 20,
+    num_negatives: int = 20,
     margin: float = 1.9,
     sample_size=None,
     exact=False,
@@ -259,8 +252,8 @@ def warp_loss_wrapper(
     :type X_pred: csr_matrix
     :param batch_size: Size of the sample batches, defaults to 1000
     :type batch_size: int, optional
-    :param U: How many negatives to sample for each positive item, defaults to 20
-    :type U: int, optional
+    :param num_negatives: How many negatives to sample for each positive item, defaults to 20
+    :type num_negatives: int, optional
     :param margin: required margin between positives and negatives, defaults to 1.9
     :type margin: float, optional
     :param sample_size: How many samples to construct
@@ -274,37 +267,26 @@ def warp_loss_wrapper(
     :rtype: float
     """
     losses = []
-    J = X_true.shape[1]
+    num_items = X_true.shape[1]
 
-    sampler = WarpSampler(U=U, batch_size=batch_size, exact=exact)
+    sampler = WarpSampler(num_negatives=num_negatives, batch_size=batch_size, exact=exact)
 
-    for users, positives_batch, negatives_batch in tqdm(
-        sampler.sample(X_true, sample_size=sample_size)
-    ):
+    for users, positives_batch, negatives_batch in tqdm(sampler.sample(X_true, sample_size=sample_size)):
 
         current_batch_size = users.shape[0]
 
-        dist_pos_interaction = X_pred[
-            users.numpy().tolist(), positives_batch.numpy().tolist()
-        ]
+        dist_pos_interaction = X_pred[users.numpy().tolist(), positives_batch.numpy().tolist()]
 
         dist_neg_interaction = X_pred[
-            users.repeat_interleave(U).numpy().tolist(),
-            negatives_batch.reshape(current_batch_size * U, 1)
-            .squeeze(-1)
-            .numpy()
-            .tolist(),
+            users.repeat_interleave(num_negatives).numpy().tolist(),
+            negatives_batch.reshape(current_batch_size * num_negatives, 1).squeeze(-1).numpy().tolist(),
         ]
 
-        dist_pos_interaction = torch.tensor(
-            dist_pos_interaction.A[0]).unsqueeze(-1)
+        dist_pos_interaction = torch.tensor(dist_pos_interaction.A[0]).unsqueeze(-1)
         dist_neg_interaction_flat = torch.tensor(dist_neg_interaction.A[0])
-        dist_neg_interaction = dist_neg_interaction_flat.reshape(
-            current_batch_size, -1)
+        dist_neg_interaction = dist_neg_interaction_flat.reshape(current_batch_size, -1)
 
-        losses.append(
-            warp_loss(dist_pos_interaction, dist_neg_interaction, margin, J, U)
-        )
+        losses.append(warp_loss(dist_pos_interaction, dist_neg_interaction, margin, num_items, num_negatives))
 
     return np.mean(losses)
 
@@ -355,9 +337,7 @@ def bpr_max_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor, r
     score_diff = weights * torch.sigmoid(positive_scores - negative_scores)
     norm_penalty = weights * negative_scores ** 2
 
-    return (
-        -torch.log(score_diff.sum(dim=1)) + reg * norm_penalty.sum(dim=1)
-    ).mean()
+    return (-torch.log(score_diff.sum(dim=1)) + reg * norm_penalty.sum(dim=1)).mean()
 
 
 def top1_loss(positive_scores: torch.Tensor, negative_scores: torch.Tensor) -> torch.Tensor:

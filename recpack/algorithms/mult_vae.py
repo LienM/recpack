@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import List, Tuple
 from scipy.sparse.lil import lil_matrix
 
@@ -23,40 +22,14 @@ class MultVAE(TorchMLAlgorithm):
     'Variational Autoencoders for Collaborative Filtering',
     D. Liang et al. @ KDD2018.
 
-    Default values were taken from the paper.
+    An Auto Encoder neural network's goal is to reconstruct the original matrix after
+    being passed through a bottleneck layer and several hidden layers.
+    This method assumes a Multinomial likelihood for the data distribution.
+    This rewards the model for putting probability mass on the non-zero entries in x_u.
+    But the model has a limited budget of probability mass since π(z_u) must sum to 1;
+    the items must compete for a limited budget.
 
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import MultVAE
-
-        # Since MultVAE uses iterative optimisation, it needs validation data
-        # To decide which of the iterations yielded the best model
-        # This validation data should be split into an input and output matrix.
-        # In this example the data has been split in a strong generalization fashion
-        X = csr_matrix(np.array(
-            [[1, 0, 1], [1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
-        )
-        x_val_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
-        )
-        x_val_out = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
-        )
-        x_test_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
-        )
-
-        algo = MultVAE(num_components=2, batch_size=3, max_epochs=4)
-        # Fit algorithm
-        algo.fit(X, (x_val_in, x_val_out))
-
-        # Recommend for the test input data,
-        predictions = algo.predict(x_test_in)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
+    Default values for parameters were taken from the paper.
 
     :param batch_size: Batch size for SGD,
                         defaults to 500

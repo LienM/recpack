@@ -18,8 +18,8 @@ from recpack.tests.test_algorithms.util import assert_changed, assert_same
 @pytest.fixture(scope="function")
 def prod2vec(p2v_embedding, mat):
     prod = Prod2Vec(
-        embedding_size=50,
-        num_neg_samples=2,
+        num_components=50,
+        num_negatives=2,
         window_size=2,
         stopping_criterion="precision",
         K=5,
@@ -156,7 +156,7 @@ def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
 
     prod2vec._init_model(larger_mat)
 
-    U = prod2vec.num_neg_samples
+    U = prod2vec.num_negatives
 
     for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(larger_mat):
 

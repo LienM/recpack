@@ -21,10 +21,14 @@ RecPack provides a dedicated module to support each step. For the detailed docum
 
 .. image:: ./img/diagram.png
 
+To get started using RecPack, checkout our :ref:`guides-quickstart` guide.
+
+-------------
 
 .. toctree::
    :maxdepth: 2
 
+   guides
    recpack.datasets
    recpack.preprocessing
    recpack.matrix
@@ -33,7 +37,6 @@ RecPack provides a dedicated module to support each step. For the detailed docum
    recpack.postprocessing
    recpack.metrics
    recpack.pipelines
-   guides
 
 Indices and tables
 ==================

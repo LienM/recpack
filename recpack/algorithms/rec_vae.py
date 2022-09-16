@@ -27,55 +27,26 @@ class RecVAE(TorchMLAlgorithm):
     Top-NRecommendations with Implicit Feedback',
     I. Shenbin et al. @ WSDM2020.
 
-    Default values were taken from the paper.
+    The RecVAE model is an extension of :class:`recpack.algorithms.MultVAE`.
+    With the biggest changes being: alternating updates to decoder and encoder during training
+    and a novel composite prior distribution.
 
-    **Example of use**::
 
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import RecVAE
-
-        # Since RecVAE uses iterative optimisation, it needs validation data
-        # To decide which of the iterations yielded the best model
-        # This validation data should be split into an input and output matrix.
-        # In this example the data has been split in a strong generalization fashion
-        X = csr_matrix(np.array(
-            [[1, 0, 1], [1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
-        )
-        x_val_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 0, 0], [0, 0, 1]])
-        )
-        x_val_out = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 1], [0, 1, 0]])
-        )
-        x_test_in = csr_matrix(np.array(
-            [[0, 0, 0], [0, 0, 0], [1, 1, 0], [0, 0, 0], [0, 0, 0]])
-        )
-
-        algo = RecVAE(num_components=2, batch_size=3, max_epochs=4)
-        # Fit algorithm
-        algo.fit(X, (x_val_in, x_val_out))
-
-        # Recommend for the test input data,
-        predictions = algo.predict(x_test_in)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
+    Default values for parameters were taken from the paper.
     :param batch_size: Batch size for SGD, defaults to 500
     :type batch_size: int, optional
     :param max_epochs: Maximum number of epochs (iterations),
-                        defaults to 200
+        defaults to 200
     :type max_epochs: int, optional
     :param n_enc_epochs: The training happens alternating,
-                            in every epoch this amount of optimizations happen
-                            for the encoder network
+        in every epoch this amount of optimizations happen
+        for the encoder network
     :type n_enc_epochs: int
     :param n_dec_epochs: The number of times to optimize
-                            the decoder network each epoch.
+        the decoder network each epoch.
     :type n_dec_epochs: int
     :param seed: Random seed for Torch, provided for reproducibility,
-                    defaults to None.
+        defaults to None.
     :type seed: int, optional
     :param learning_rate: Learning rate, defaults to 1e-4
     :type learning_rate: float, optional
@@ -85,17 +56,18 @@ class RecVAE(TorchMLAlgorithm):
     :param dim_hidden_layer: Dimension of the hidden layer, defaults to 600
     :type dim_hidden_layer: int, optional
     :param gamma: Parameter defining regularization of the KL loss
-                    together with the norm of the output,
-                    defaults to 1
-    :type gamm: float, optional
+        together with the norm of the output,
+        defaults to 1
+    :type gamma: float, optional
     :param beta: Regularization parameter of the KL loss,
-                    only used if gamma = None, defaults to None
+        only used if gamma = None, defaults to None
     :type beta: float, optional
     :param dropout: Dropout rate to apply at the inputs, defaults to 0.5
     :type dropout: float, optional
     :param stopping_criterion: Used to identify the best model computed thus far.
         The string indicates the name of the stopping criterion.
-        Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+        Which criterions are available can be found at
+        :attr:`recpack.algorithms.stopping_criterion.StoppingCriterion.FUNCTIONS`.
         Defaults to 'ndcg'
     :type stopping_criterion: str, optional
     :param stop_early: If True, early stopping is enabled,

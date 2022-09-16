@@ -22,7 +22,7 @@ def compute_conditional_probability(X: csr_matrix, pop_discount: float = 0) -> c
     .. math ::
         sim(i,j) = \\frac{\\sum\\limits_{u \\in U} \\mathbb{I}_{u,i} X_{u,j}}{Freq(i) \\times Freq(j)^{\\alpha}}
 
-    Where I_ui is 1 if the user u has visited item i, and 0 otherwise.
+    Where :math:`\\mathbb{I}_{ui}` is 1 if the user u has visited item i, and 0 otherwise.
     And alpha is the pop_discount parameter.
     Note that this is a non-symmetric similarity measure.
     Given that X is a binary matrix, and alpha is set to 0,
@@ -109,60 +109,6 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
     If sim_normalize is True, the scores are normalized per predictive item,
     making sure the sum of each row in the similarity matrix is 1.
 
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import ItemKNN
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        # We'll only keep the closest neighbour for each item.
-        # Default uses cosine similarity
-        algo = ItemKNN(K=1)
-        # Fit algorithm
-        algo.fit(X)
-
-        # We can inspect the fitted model
-        print(algo.similarity_matrix_.nnz)
-        # 3
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-    **Example with Conditional Probability**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import ItemKNN
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        # We'll only keep the closest neighbour for each item.
-        # we set the similarity measure to conditional probability
-        # And enable normalization
-        algo = ItemKNN(K=2, similarity='conditional_probability', sim_normalize=True)
-        # Fit algorithm
-        algo.fit(X)
-
-        # We can inspect the fitted model
-        print(algo.similarity_matrix_.nnz)
-        # 6
-
-        # Similarities were normalized, so each row in the similarity matrix
-        # sums to 1
-        print(algo.similarity_matrix_.sum(axis=1))
-        # [[1], [1], [1]]
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
     :param K: How many neigbours to use per item,
         make sure to pick a value below the number of columns of the matrix to fit on.
         Defaults to 200
@@ -183,9 +129,6 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         counteract artificially large similarity scores when the predictive item is
         rare, defaults to False.
     :type normalize_sim: bool, optional
-    :param normalize: DEPRECATED. Use normalize_sim instead.
-        Defaults to False
-    :type normalize: bool, optional
     :raises ValueError: If an unsupported similarity measure is passed.
     """
 
@@ -199,7 +142,6 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         pop_discount: Optional[float] = None,
         normalize_X: bool = False,
         normalize_sim: bool = False,
-        normalize: bool = False,
     ):
         super().__init__(K)
 
@@ -221,17 +163,9 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         self.pop_discount = pop_discount
 
-        if normalize:
-            warnings.warn(
-                "Use of argument normalize is deprecated. Use normalize_sim instead.",
-                DeprecationWarning,
-            )
-
         self.normalize_X = normalize_X
         # Sim_normalize takes precedence.
-        self.normalize_sim = normalize_sim if normalize_sim else normalize
-
-        self.normalize = normalize
+        self.normalize_sim = normalize_sim
 
     def _fit(self, X: csr_matrix) -> None:
         """Fit a cosine similarity matrix from item to item"""
@@ -279,62 +213,6 @@ class ItemPNN(ItemKNN):
 
     If sim_normalize is True, the scores are normalized per predictive item,
     making sure the sum of each row in the similarity matrix is 1.
-
-    **Example of use**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import ItemKNN
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        # We'll only keep the closest neighbour for each item.
-        # Default uses cosine similarity
-        algo = ItemPNN(K=1, pdf="uniform")
-        # Fit algorithm
-        algo.fit(X)
-
-        # We can inspect the fitted model
-        print(algo.similarity_matrix_.nnz)
-        # 3
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-    **Example with Conditional Probability**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import ItemKNN
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        # We'll only keep the closest neighbour for each item.
-        # we set the similarity measure to conditional probability
-        # And enable normalization
-        algo = ItemPNN(
-            K=2, similarity='conditional_probability', sim_normalize=True, pdf='uniform'
-        )
-        # Fit algorithm
-        algo.fit(X)
-
-        # We can inspect the fitted model
-        print(algo.similarity_matrix_.nnz)
-        # 6
-
-        # Similarities were normalized, so each row in the similarity matrix
-        # sums to 1
-        print(algo.similarity_matrix_.sum(axis=1))
-        # [[1], [1], [1]]
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
 
     :param K: How many neigbours to use per item,
         make sure to pick a value below the number of columns of the matrix to fit on.

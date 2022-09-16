@@ -16,68 +16,32 @@ class EASE(ItemSimilarityMatrixAlgorithm):
     Steck, Harald. "Embarrassingly shallow autoencoders for sparse data."
     The World Wide Web Conference. 2019.
 
-    EASEr computes a dense item similarity matrix.
-    Training aims to optimise the weights such that it can reconstruct the input matrix.
+    The algorithm essentially computes a high-dimensional linear autoencoder.
+    Constructs a similarity matrix :math:`B` with 0 diagonal which minimises:
 
-    Thanks to the closed form solution this algorithm has a significant speed up
+    .. math::
+
+        ||X \\cdot \\text{diagMat}(w) - X \\cdot B||_F^2 + \\lambda \\cdot ||B||_F^2
+
+    where :math:`w` is an array with importance weights per item: :math:`w_i = \\frac{1}{pop(i)^\\alpha}`
+
+    Thanks to a closed form solution this algorithm has a significant speed up
     compared to the SLIM algorithm on which it is based.
-    Memory consumption scales worse than quadratically in the amount of items.
-    So check the size of the input matrix before using this algorithm.
 
-    **Example of use**::
+    .. warning::
 
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import EASE
+        Memory consumption scales worse than quadratically in the amount of items.
+        So check the size of the input matrix before using this algorithm.
 
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        algo = EASE()
-        # Fit algorithm
-        algo.fit(X)
-
-        # This is a dense model
-        print(algo.similarity_matrix_.nnz)
-        # 6
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-    **Example of density**::
-
-        import numpy as np
-        from scipy.sparse import csr_matrix
-        from recpack.algorithms import EASE
-
-        X = csr_matrix(np.array([[1, 0, 1], [1, 0, 1], [1, 1, 1]]))
-
-        algo = EASE(density=0.3334)
-        # Fit algorithm
-        algo.fit(X)
-
-        # Density of fitted model to one third of the full density
-        print(algo.similarity_matrix_.nnz)
-        # 3
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
-
-    :param l2: Regularization parameter to avoid overfitting, defaults to 1e3
+    :param l2: Regularization parameter to avoid overfitting, defaults to `1e3`.
     :type l2: float, optional
     :param alpha: Parameter to punish popular items.
         Each similarity score between items i and j is divided by count(j)**alpha.
         Defaults to 0
     :type alpha: int, optional
     :param density: Parameter to reduce density of the output matrix,
-        significantly speeds up and reduces memory footprint of prediction with a
-        little loss of accuracy.
+        significantly speeds up and reduces memory footprint of prediction with only a
+        small loss of accuracy.
         Does not impact memory consumption of training.
         Defaults to None
     :type density: float, optional
@@ -98,7 +62,7 @@ class EASE(ItemSimilarityMatrixAlgorithm):
         https://arxiv.org/pdf/1905.03375.pdf
         Dense version in Steck et al. @ WSDM 2020
         http://www.cs.columbia.edu/~jebara/papers/wsdm20_ADMM.pdf
-        Eq. 21: B = I − P · diagMat(1 ⊘ diag(P)
+        Eq. 21: B = I - P · diagMat(1 ⊘ diag(P)
         More info on the solution for rescaling targets in section 4.2 of
         Collaborative Filtering via High-Dimensional Regression from Steck
         https://arxiv.org/pdf/1904.13033.pdf

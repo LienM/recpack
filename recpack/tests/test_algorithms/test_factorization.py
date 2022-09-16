@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import sklearn
 from recpack.algorithms import NMF, SVD

@@ -15,8 +15,9 @@ logger = logging.getLogger("recpack")
 
 
 class KUNN(Algorithm):
-    """KUNN Algorithm
-    as described in 'Unifying Nearest Neighbors Collaborative Filtering'
+    """Unified Nearest Neighbour algorithm combining user and item neighbourhood methods.
+
+    KUNN Algorithm as described in 'Unifying Nearest Neighbors Collaborative Filtering'
     Verstrepen et al. (10.1145/2645710.2645731)
 
     Computes the item KNN model and stores training interactions at fitting time.
@@ -100,8 +101,7 @@ class KUNN(Algorithm):
 
         # Combine the memoized training interactions with the predict interactions
         # We will only use this combination for the user we are trying to predict for!
-        combined_interactions = union_csr_matrices(
-            self.training_interactions_, X)
+        combined_interactions = union_csr_matrices(self.training_interactions_, X)
 
         # Compute user similarity,
         # Formula (10) in paper.
@@ -119,10 +119,7 @@ class KUNN(Algorithm):
         # and 1 / sqrt(count(i))
         item_counts = self.training_interactions_.sum(axis=0)
 
-        user_similarity = csr_matrix(
-            knn_u @ self.training_interactions_.multiply(
-                invert(np.sqrt(item_counts)))
-        )
+        user_similarity = csr_matrix(knn_u @ self.training_interactions_.multiply(invert(np.sqrt(item_counts))))
 
         # Compute item similarities
         # Similar trick, 1/sqrt(c(i)) is already included in the item KNN computation.
@@ -131,10 +128,7 @@ class KUNN(Algorithm):
         # Item KNN scores
         # And dividing by sqrt(c(u)), the square root of the user's interactions.
         user_counts = combined_interactions.sum(axis=1)
-        item_similarity = csr_matrix(
-            combined_interactions.multiply(
-                invert(np.sqrt(user_counts))) @ self.knn_i_
-        )
+        item_similarity = csr_matrix(combined_interactions.multiply(invert(np.sqrt(user_counts))) @ self.knn_i_)
 
         similarity = item_similarity + user_similarity
 
@@ -176,8 +170,7 @@ class KUNN(Algorithm):
         users_to_predict = get_users(X)
 
         # Combine the memoized training interactions with the predict interactions
-        combined_interactions = union_csr_matrices(
-            self.training_interactions_, X)
+        combined_interactions = union_csr_matrices(self.training_interactions_, X)
 
         # Cut combined interactions to only nonzero users in prediction matrix.
         mask = np.zeros(combined_interactions.shape[0])
@@ -185,20 +178,16 @@ class KUNN(Algorithm):
         # Turn mask into a column vector
         mask = mask.reshape(mask.shape[0], 1)
         # Select the interactions for nonzero users in mask
-        combined_interactions_selected_users = csr_matrix(
-            combined_interactions.multiply(mask)
-        )
+        combined_interactions_selected_users = csr_matrix(combined_interactions.multiply(mask))
 
         # Compute the interactions that are only in the prediction matrix.
         combined_interactions_only_predict = (
-            combined_interactions_selected_users
-            - self.training_interactions_.multiply(mask)
+            combined_interactions_selected_users - self.training_interactions_.multiply(mask)
         )
 
         # Count the number of interactions per user for which we need to predict
         # This count is based on the union of train and predict data
-        pred_user_interaction_counts = combined_interactions_selected_users.sum(
-            axis=1)
+        pred_user_interaction_counts = combined_interactions_selected_users.sum(axis=1)
 
         # Counts based on only training data
         train_user_counts = self.training_interactions_.sum(axis=1)
@@ -219,8 +208,7 @@ class KUNN(Algorithm):
         # taking into account training data, and only their own history
         # from the prediction dataset.
         item_counts_per_user = (
-            np.vstack([train_item_counts for _ in range(X.shape[0])])
-            + combined_interactions_only_predict
+            np.vstack([train_item_counts for _ in range(X.shape[0])]) + combined_interactions_only_predict
         )
 
         # Similarities are computed by matrix multiplication of two interaction matrices
