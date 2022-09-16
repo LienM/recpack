@@ -9,9 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking Changes
+
 * __datasets__
     * renamed `load_dataframe` to `_load_dataframe`, it is now a private member, which should not be called directly.
     * renamed `preprocessing_default` parameter to `use_default_filters` for clarity.
+
+### Optimisations
+
+* __datasets__
+    * Improved performance of load functionality for AdressaOneWeek.
+
 
 ## [0.3.1] - ![]([htt](https://img.shields.io/date/1662375599.svg?label=2022-09-05))
 ### Additions
