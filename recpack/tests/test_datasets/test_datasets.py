@@ -42,7 +42,7 @@ def test_fetch_dataset(demo_data):
         assert os.path.exists(f.name)
 
         # This should load the full DataFrame.
-        df = d.load_dataframe()
+        df = d._load_dataframe()
         assert df.shape == (6, 2)
 
         # We'll overwrite the file with some other content in the same format
@@ -51,14 +51,14 @@ def test_fetch_dataset(demo_data):
             fw.write("1 2")
 
         # Dataframe gets reloaded from file
-        df2 = d.load_dataframe()
+        df2 = d._load_dataframe()
         assert df2.shape == (3, 2)
 
         # Fetching with the file already existing does not overwrite the file
         d.fetch_dataset()
 
         # No changes in DataFrame, since file was not changed
-        df2_bis = d.load_dataframe()
+        df2_bis = d._load_dataframe()
         assert df2_bis.shape == df2.shape
 
         # With the force=True parameter the dataset will be downloaded,
@@ -66,7 +66,7 @@ def test_fetch_dataset(demo_data):
         d.fetch_dataset(force=True)
 
         # Dataframe should be the same as the first download
-        df_bis = d.load_dataframe()
+        df_bis = d._load_dataframe()
         assert df_bis.shape == df.shape
 
 
@@ -112,7 +112,7 @@ def test_citeulike(dataset_path):
 
     d = datasets.CiteULike(path=dataset_path, filename=filename)
 
-    df = d.load_dataframe()
+    df = d._load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX]).all()
 
     assert df.shape == (36872, 2)
@@ -130,7 +130,7 @@ def test_movielens25m(dataset_path):
 
     d = datasets.MovieLens25M(path=dataset_path, filename=filename)
 
-    df = d.load_dataframe()
+    df = d._load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()
 
     assert df.shape == (9999, 4)
@@ -146,12 +146,12 @@ def test_movielens25m_no_rating_filters(dataset_path):
     # To get sample we used head -10000 ratings.csv
     filename = "ml-25m_sample.csv"
 
-    d = datasets.MovieLens25M(path=dataset_path, filename=filename, preprocess_default=False)
+    d = datasets.MovieLens25M(path=dataset_path, filename=filename, use_default_filters=False)
     d.add_filter(MinRating(1, d.RATING_IX))
     d.add_filter(MinItemsPerUser(3, d.ITEM_IX, d.USER_IX))
     d.add_filter(MinUsersPerItem(5, d.ITEM_IX, d.USER_IX))
 
-    df = d.load_dataframe()
+    df = d._load_dataframe()
     assert (df.columns == [d.USER_IX, d.ITEM_IX, d.RATING_IX, d.TIMESTAMP_IX]).all()
 
     assert df.shape == (9999, 4)
@@ -167,7 +167,7 @@ def test_recsys_challenge_2015(dataset_path):
     # To get sample we used head -1000 ratings.csv
     d = datasets.RecsysChallenge2015(path=dataset_path)
 
-    df = d.load_dataframe()
+    df = d._load_dataframe()
     assert (df.columns == [d.USER_IX, d.TIMESTAMP_IX, d.ITEM_IX]).all()
     assert df.shape == (1000, 3)
     assert df[d.USER_IX].nunique() == 272
@@ -220,19 +220,19 @@ def test_cosmeticsshop(
         d = datasets.CosmeticsShop(
             path=dataset_path,
             filename="cosmeticsshop-sample.csv",
-            preprocess_default=False,
+            use_default_filters=False,
             extra_cols=extra_cols,
         )
     else:
         d = datasets.CosmeticsShop(
             path=dataset_path,
             filename="cosmeticsshop-sample.csv",
-            preprocess_default=False,
+            use_default_filters=False,
             extra_cols=extra_cols,
             event_types=event_types,
         )
 
-    df = d.load_dataframe()
+    df = d._load_dataframe()
     assert (df.columns == d._columns).all()
     assert df.shape == (num_events, len(d._columns))
 
@@ -251,7 +251,7 @@ def test_cosmeticsshop_bad_event_type(dataset_path):
         _ = datasets.CosmeticsShop(
             path=dataset_path,
             filename="cosmeticsshop-sample.csv",
-            preprocess_default=False,
+            use_default_filters=False,
             event_types=["hello"],
         )
 
@@ -283,17 +283,17 @@ def test_retail_rocket(
         d = datasets.RetailRocket(
             path=dataset_path,
             filename="retailrocket-sample.csv",
-            preprocess_default=False,
+            use_default_filters=False,
         )
     else:
         d = datasets.RetailRocket(
             path=dataset_path,
             filename="retailrocket-sample.csv",
-            preprocess_default=False,
+            use_default_filters=False,
             event_types=event_types,
         )
 
-    df = d.load_dataframe()
+    df = d._load_dataframe()
     assert (df.columns == d._columns).all()
     assert df.shape == (num_events, len(d._columns))
 
@@ -312,7 +312,7 @@ def test_retail_rocket_bad_event_type(dataset_path):
         _ = datasets.CosmeticsShop(
             path=dataset_path,
             filename="retailrocket-sample.csv",
-            preprocess_default=False,
+            use_default_filters=False,
             event_types=["hello"],
         )
 
@@ -323,8 +323,8 @@ def test_dummy_dataset():
     # This should do nothing, also not raise an error
     d._download_dataset()
 
-    df = d.load_dataframe()
-    df2 = d.load_dataframe()
+    df = d._load_dataframe()
+    df2 = d._load_dataframe()
 
     # Loading twice gives the same reproducible results
     assert (df[d.USER_IX] == df2[d.USER_IX]).all()

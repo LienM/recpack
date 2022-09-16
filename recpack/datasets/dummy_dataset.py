@@ -22,8 +22,8 @@ class DummyDataset(Dataset):
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         UNUSED because dataset is generated and not read from file.
     :type filename: str, optional
-    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
-    :type preprocess_default: bool, optional
+    :param use_default_filters: Should a default set of filters be initialised? Defaults to True
+    :type use_default_filters: bool, optional
     :param seed: Seed for the random data generation. Defaults to None.
     :type seed: int, optional
     :param num_users: The amount of users to use when generating data, defaults to 100
@@ -51,7 +51,7 @@ class DummyDataset(Dataset):
         self,
         path: str = "data",
         filename: str = None,
-        preprocess_default=True,
+        use_default_filters=True,
         seed=None,
         num_users=100,
         num_items=20,
@@ -59,7 +59,7 @@ class DummyDataset(Dataset):
         min_t=0,
         max_t=500,
     ):
-        super().__init__(path, filename, preprocess_default)
+        super().__init__(path, filename, use_default_filters)
 
         self.seed = seed
         if self.seed is None:
@@ -90,7 +90,7 @@ class DummyDataset(Dataset):
         # There is no downloading necessary.
         pass
 
-    def load_dataframe(self) -> pd.DataFrame:
+    def _load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
 
         .. warning::

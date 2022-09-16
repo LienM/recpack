@@ -31,9 +31,9 @@ class Netflix(Dataset):
     :param filename: Name of the csv ratings file.
         If None, the :member:`DEFAULT_FILENAME` will be used.
     :type filename: str, optional
-    :param preprocess_default: Should a default set of filters be initialised?
+    :param use_default_filters: Should a default set of filters be initialised?
         Defaults to True
-    :type preprocess_default: bool, optional
+    :type use_default_filters: bool, optional
 
     """
 
@@ -109,7 +109,7 @@ class Netflix(Dataset):
         # delete the zipfile
         os.remove(zipfile_full_path)
 
-    def load_dataframe(self) -> pd.DataFrame:
+    def _load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
 
         .. warning::

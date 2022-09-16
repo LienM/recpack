@@ -31,7 +31,7 @@ def dataset(dataset_path):
     """
     filename = "adressa_views.csv"
     with patch("recpack.datasets.adressa._fetch_remote", partial(mock_download, dataset_path)):
-        ds = AdressaOneWeek(dataset_path, filename, preprocess_default=False)
+        ds = AdressaOneWeek(dataset_path, filename, use_default_filters=False)
         ds.add_filter(MinUsersPerItem(2, ds.ITEM_IX, ds.USER_IX))
 
         ds.fetch_dataset(force=True)
@@ -42,10 +42,10 @@ def dataset(dataset_path):
     os.remove(ds.file_path)
 
 
-def test_load_dataframe(dataset):
+def test__load_dataframe(dataset):
     """Check if loading adressa works properly"""
 
-    df = dataset.load_dataframe()
+    df = dataset._load_dataframe()
     assert (df.columns == [dataset.USER_IX, dataset.ITEM_IX, dataset.TIMESTAMP_IX]).all()
 
     assert df.shape == (20, 3)

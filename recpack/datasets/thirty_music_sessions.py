@@ -12,7 +12,25 @@ from recpack.preprocessing.filters import (
 
 
 class ThirtyMusicSessions(Dataset):
-    # TODO Write documentation
+    """A collection of listening and playlists data retrieved from Internet radio stations through Last.fm API.
+
+    Dataset presented in Turrin, Roberto, et al. "30Music Listening and Playlists Dataset." RecSys Posters. 2015.
+    For info and download link see https://recsys.deib.polimi.it/datasets/.
+
+    .. warning::
+
+        RecPack currently does not support downloading and parsing the raw files of the dataset.
+        We expect a CSV file with the user-item-timestamp information instead.
+
+    :param path: The path to the data directory.
+        Defaults to `data`
+    :type path: str, optional
+    :param filename: Name of the file, if no name is provided the dataset default will be used if known.
+        If the dataset does not have a default filename, a ValueError will be raised.
+    :type filename: str, optional
+    :param use_default_filters: Should a default set of filters be initialised? Defaults to True
+    :type use_default_filters: bool, optional
+    """
 
     USER_IX = "sid"
     """Name of the column in the DataFrame that contains user identifiers."""
@@ -40,7 +58,7 @@ class ThirtyMusicSessions(Dataset):
         # TODO parse idomaar files?
         pass
 
-    def load_dataframe(self) -> pd.DataFrame:
+    def _load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
 
         .. warning::

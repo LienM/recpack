@@ -655,7 +655,7 @@ As an example we will compare the SillyMF algorithm to an ItemKNN algorithm, and
     ALGORITHM_REGISTRY.register(SillyMF.__name__, SillyMF)
 
     # Get data to test on
-    dataset = MovieLens25M("data/ml25.csv", preprocess_default=False)
+    dataset = MovieLens25M("data/ml25.csv", use_default_filters=False)
     # This will apply default preprocessing
     im = dataset.load_interaction_matrix()
 

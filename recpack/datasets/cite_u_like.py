@@ -29,8 +29,8 @@ class CiteULike(Dataset):
     :param filename: Name of the file, if no name is provided the dataset default will be used if known.
         If the dataset does not have a default filename, a ValueError will be raised.
     :type filename: str, optional
-    :param preprocess_default: Should a default set of filters be initialised? Defaults to True
-    :type preprocess_default: bool, optional
+    :param use_default_filters: Should a default set of filters be initialised? Defaults to True
+    :type use_default_filters: bool, optional
     """
 
     TIMESTAMP_IX = None
@@ -60,7 +60,7 @@ class CiteULike(Dataset):
         DATASETURL = "https://raw.githubusercontent.com/js05212/citeulike-a/master/users.dat"
         _fetch_remote(DATASETURL, self.file_path)
 
-    def load_dataframe(self) -> pd.DataFrame:
+    def _load_dataframe(self) -> pd.DataFrame:
         """Load the raw dataset from file, and return it as a pandas DataFrame.
 
         .. warning::

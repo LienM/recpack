@@ -37,7 +37,7 @@ To use custom preprocessing a couple more lines should be added to the example. 
     from recpack.datasets import MovieLens25M
     from recpack.preprocessing.filters import MinRating, MinUsersPerItem, MinItemsPerUser
 
-    ml_loader = MovieLens25M(path='datasets/', filename='ml-25m.csv', preprocess_default=False)
+    ml_loader = MovieLens25M(path='datasets/', filename='ml-25m.csv', use_default_filters=False)
     # Consider ratings 2 or higher as interactions
     ml_loader.add_filter(MinRating(
         2,

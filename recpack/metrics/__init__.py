@@ -46,7 +46,6 @@ To obtain a global metric value, these per-user scores are averaged.
     RecallK
     CalibratedRecallK
     PrecisionK
-    IntraListDiversityK
     ReciprocalRankK
 
 Elementwise Metric
@@ -59,7 +58,6 @@ To obtain a global metric value, these scores are summed per user, then averaged
     :toctree: generated/
 
     HitK
-    IPSHitRateK
     DiscountedGainK
 """
 
