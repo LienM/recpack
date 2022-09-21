@@ -55,6 +55,7 @@ Choosing the right scenario is crucial in getting representative experimental re
 
     from recpack.scenarios import WeakGeneralization
     scenario = WeakGeneralization(0.75, validation=True)
+    scenario.split(interaction_matrix)
 
 Here we use :class:`WeakGeneralization` as it is a frequently used scenario for MovieLens25M.
 We set ``frac_data_in`` to 0.75. As a result, 25% of each user's interactions are used as test target data and the remaining 75% are used as both history and full training data.
