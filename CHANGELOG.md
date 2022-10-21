@@ -7,7 +7,17 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.2] - ![]([htt](https://img.shields.io/date/1663337481.svg?label=2022-09-16))
+## [0.3.3] - ![](https://img.shields.io/date/1666253209.svg?label=2022-10-20)
+
+### Bugfixes
+* __algorithms__
+    * `NMF`: updated to sklearn `alpha_W` and `alpha_H` parameters, but keeping our single `alpha` parameter.
+
+* Removed the `dataclasses` package dependency, this is included by default in python already.
+* Added a step to run example notebooks during testing to make sure these do not break.
+* Uses DummyDataset for all demo notebooks to avoid long download and runtimes in the example notebooks.
+
+## [0.3.2] - ![](https://img.shields.io/date/1663337481.svg?label=2022-09-16)
 
 ### Breaking Changes
 * __algorithms__
@@ -35,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Improved performance of load functionality for AdressaOneWeek.
 
 
-## [0.3.1] - ![]([htt](https://img.shields.io/date/1662375599.svg?label=2022-09-05))
+## [0.3.1] - ![](https://img.shields.io/date/1662375599.svg?label=2022-09-05)
 ### Additions
 
 * __datasets__
