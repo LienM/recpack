@@ -47,7 +47,8 @@ class NMF(FactorizationAlgorithm):
             n_components=self.num_components,
             init="random",
             random_state=self.seed,
-            alpha=self.alpha,
+            alpha_H=self.alpha,
+            alpha_W=self.alpha,
             l1_ratio=self.l1_ratio,
         )
 
