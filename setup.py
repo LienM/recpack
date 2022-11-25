@@ -19,12 +19,7 @@ setup(
         "PyYAML>=5.4.1, ==5.*",
         "torch>=1.9.0, ==1.*",
         "tqdm>=4.46.0, ==4.*",
-<<<<<<< HEAD
         "hyperopt>=0.2.7, ==0.2.*",
-=======
-        "dataclasses==0.6",
-        "hyperopt==0.2.7",
->>>>>>> 00b8ed8 (Added support for hyperopt to the recpack pipelines)
     ],
     extras_require={
         "doc": ["sphinx==4.*", "sphinx-rtd-theme==1.*"],
