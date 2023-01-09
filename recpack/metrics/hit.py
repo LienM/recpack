@@ -30,7 +30,7 @@ class HitK(ElementwiseMetricK):
         scores = scipy.sparse.lil_matrix(y_pred_top_K.shape)
 
         # Elementwise multiplication of top K predicts and true interactions
-        scores[y_pred_top_K.multiply(y_true).astype(np.bool)] = 1
+        scores[y_pred_top_K.multiply(y_true).astype(bool)] = 1
 
         scores = scores.tocsr()
 

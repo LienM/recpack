@@ -59,7 +59,7 @@ def get_predictions(X, M, p, agg):
         # Items this user has interacted with [0, 1, 0] -> indices = 2
         indices = X[u].toarray()[0]
         # [[0 1], [1 0]] (sim) * [0 2] (u)
-        similarities = M[indices.astype(np.bool_), :].toarray()
+        similarities = M[indices.astype(bool), :].toarray()
         predictions[u] = get_prediction_u(similarities, p, agg)
 
     return predictions
