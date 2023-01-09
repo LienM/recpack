@@ -7,6 +7,14 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4]
+
+### Bugfixes
+* __algorithms__
+    * `BPRMF`: 
+        * Changed optimizer to Adagrad instead of SGD. 
+        * Set maximum on std of embedding initialisation to make sure the initial embedding does not contain too large values.
+
 ## [0.3.3] - ![](https://img.shields.io/date/1666253209.svg?label=2022-10-20)
 
 ### Bugfixes
