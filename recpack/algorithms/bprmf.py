@@ -140,7 +140,7 @@ class BPRMF(TorchMLAlgorithm):
         num_users, num_items = X.shape
         self.model_ = MFModule(num_users, num_items, num_components=self.num_components).to(self.device)
 
-        self.optimizer = optim.SGD(self.model_.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adagrad(self.model_.parameters(), lr=self.learning_rate)
 
     def _batch_predict(self, X: csr_matrix, users: List[int]) -> csr_matrix:
         """Predict scores for matrix X, given the selected users in this batch
@@ -236,7 +236,8 @@ class MFModule(nn.Module):
         self.user_embedding_ = nn.Embedding(num_users, num_components)  # User embedding
         self.item_embedding_ = nn.Embedding(num_items, num_components)  # Item embedding
 
-        self.std = 1 / num_components ** 0.5
+        # Keep variance low enough, to alow learning
+        self.std = min(1 / num_components ** 0.5, 0.05)
         # Initialise embeddings to a random start
         nn.init.normal_(self.user_embedding_.weight, std=self.std)
         nn.init.normal_(self.item_embedding_.weight, std=self.std)
