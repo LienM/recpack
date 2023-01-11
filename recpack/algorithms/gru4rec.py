@@ -254,7 +254,7 @@ class GRU4Rec(TorchMLAlgorithm):
             for input_chunk, target_chunk, neg_chunk in self._chunk(
                 self.bptt, positives_batch, targets_batch, negatives_batch
             ):
-                input_mask = input_chunk != self.pad_token
+                input_mask = target_chunk != self.pad_token
                 # Remove rows with only pad tokens from chunk and from hidden.
                 # We can do this because the array is sorted.
                 true_rows = input_mask.any(axis=1)
@@ -264,8 +264,8 @@ class GRU4Rec(TorchMLAlgorithm):
                 true_hidden = hidden[:, true_rows, :]
                 true_input_mask = input_mask[true_rows]
 
-                # If there are any values remaining
-                if true_input_chunk.any():
+                if true_input_chunk.shape[0] != 0:
+
                     self.optimizer.zero_grad()
                     output, hidden[:, true_rows, :] = self.model_(true_input_chunk, true_hidden)
 
@@ -276,10 +276,10 @@ class GRU4Rec(TorchMLAlgorithm):
 
                     if self.clipnorm:
                         nn.utils.clip_grad_norm_(self.model_.parameters(), self.clipnorm)
-
+                    
                     self.optimizer.step()
-
-                hidden = hidden.detach()
+                    
+                    hidden = hidden.detach()
             logger.debug(f"Takes {time.time() - st} seconds to process batch")
             losses.append(batch_loss)
 
@@ -330,10 +330,9 @@ class GRU4Rec(TorchMLAlgorithm):
                     true_input_chunk = input_chunk[true_rows]
                     true_hidden = hidden[:, true_rows, :]
 
-                    # If there are any values remaining
-                    if true_input_chunk.any():
+                    if true_input_chunk.shape[0] != 0:
                         output_chunk, hidden[:, true_rows, :] = self.model_(true_input_chunk, true_hidden)
-                        # Use only the prediction for the final iten, i.e. last non-padding ID.
+                        # Use only the prediction for the final item, i.e. last non-padding ID.
                         last_item_ix_in_chunk = (input_chunk != self.pad_token).sum(axis=1) - 1
 
                         is_last_item_in_chunk = last_item_ix_in_chunk >= 0
@@ -763,6 +762,10 @@ class GRU4RecTorch(nn.Module):
         # Also return the padding token
         self.lin = nn.Linear(hidden_size, num_items + 1)
         self.init_weights()
+
+        # set the embedding for the padding token to 0
+        with torch.no_grad():
+            self.emb.weight[pad_token] = torch.zeros(num_components)
 
     def forward(self, x: torch.LongTensor, hidden: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """

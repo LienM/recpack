@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bugfixes
 * Replaced remaining usage of `np.bool` with `bool` to be compatible with numpy `1.24.1`
+* `GRU4Rec` fixed bug in training, where it still tried to learn padding tokens.
 
 ## [0.3.4]
 
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * `BPRMF`: 
         * Changed optimizer to Adagrad instead of SGD. 
         * Set maximum on std of embedding initialisation to make sure the initial embedding does not contain too large values.
+
 
 ## [0.3.3] - ![](https://img.shields.io/date/1666253209.svg?label=2022-10-20)
 
