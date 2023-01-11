@@ -235,3 +235,20 @@ def test_set_data_from_scenario(mat):
     assert len(pb.validation_data) == 2
     assert pb.full_training_data.shape == mat.shape
     assert pb.validation_training_data.shape == mat.shape
+
+
+def test_pipelinebuilder_no_k(mat):
+    pb = PipelineBuilder()
+    pb.add_metric("PercentileRanking")
+
+    pb.add_algorithm("ItemKNN", params={"K": 2})
+    scenario = Timed(t=3, t_validation=2, validation=False)
+    scenario.split(mat)
+    pb.set_data_from_scenario(scenario)
+
+    p = pb.build()
+    p.run()
+
+    metrics = p.get_metrics()
+
+    assert metrics.columns == ["percentileranking"]
