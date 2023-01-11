@@ -41,6 +41,8 @@ class HyperoptInfo(OptimisationInfo):
     max amount of seconds to run optimisation for `timeout`.
     If both are specified, the first condition met will cause the optimisation to stop.
 
+    For a detailed tutorial on using hyperopt see :ref:`guides-hyperopt`
+
     :param space: hyperopt parameter space, should be a dict from hyper_parameter to the hp definition of its value
         (eg. hp.uniformint)
     :type space: Dict[str, Any]

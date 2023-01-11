@@ -76,6 +76,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Helper function `yield_batches` and class `FoldIterator` were removed, as they were unused in samples.
       Alternative function `get_batches` from `algorithms.util` should be used instead.
 
+### Additions
+
+* __pipelines__
+    * Added option to use hyperopt to optimise parameters
+        * `grid` parameter has been superseded by the `optimisation_info` parameter, which takes an `OptimisationInfo` object. Two relevant subclasses have been defined: `GridSearchInfo` contains a grid with parameters to support grid search, `HyperoptInfo` allows users to specify a hyperopt space, with timeout and or maximum number of evaluations.
+    * Extended output of optimisation output, to now also include an `Algorithm` column for easier analysis.
+
+* Added getting started guide for using Hyperopt optimisation
+
 ## [0.3.4]
 
 ### Bugfixes
@@ -126,11 +135,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __datasets__
     * Changed behaviour of `force=True` on the Adressa dataset, it is now guaranteed to redownload the tar file, and will no longer look for a local tar file. The tar file will also be deleted at the end of the download method.
     * Added `Netflix` dataset to use the Netflix Prize dataset.
-
-* __pipelines__
-    * Added option to use hyperopt to optimise parameters
-        * `grid` parameter has been superseded by the `optimisation_info` parameter, which takes an `OptimisationInfo` object. Several relevant subclasses have been defined: `GridSearchInfo` contains a grid with parameters to support grid search, `HyperoptInfoTimeout` allows users to specify a hyperopt space, and a timeout finally `HyperoptInfoMaxEvals` allows users to specify a number of iterations to run for.
-    * Extended output of optimisation output, to now also include an `Algorithm` column for easier analysis.
 
 * __scenarios__
     * Added `TimedLastItemPrediction` scenario, which is different from LastItemPrediction, in that it only trains its model on data before a certain timestamp, and evaluates only on data after that timestamp, thus avoiding leakage.
