@@ -143,7 +143,11 @@ class Pipeline(object):
             X_pred = self._predict_and_postprocess(algorithm, self.test_data_in)
 
             for metric_entry in self.metric_entries:
-                metric = METRIC_REGISTRY.get(metric_entry.name)(K=metric_entry.K)
+                metric_cls = METRIC_REGISTRY.get(metric_entry.name)
+                if metric_entry.K is not None:
+                    metric = metric_cls(K=metric_entry.K)
+                else:
+                    metric = metric_cls()
                 metric.calculate(self.test_data_out.binary_values, X_pred)
                 self._metric_acc.add(metric, algorithm.identifier, metric.name)
 

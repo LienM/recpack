@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bugfixes
 * Replaced remaining usage of `np.bool` with `bool` to be compatible with numpy `1.24.1`
 * `GRU4Rec` fixed bug in training, where it still tried to learn padding tokens.
-
+* __pipelines__
+    * Make `PipelineBuilder` work with `Metric` (without K). Currently only `PercentileRanking`
 
 ### Additions
 * __datasets__
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changes
 * __tests.test_datasets__
   * Split dataset tests into different files for ease of reading.
+
 
 ## [0.3.4]
 
