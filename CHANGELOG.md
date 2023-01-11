@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Replaced remaining usage of `np.bool` with `bool` to be compatible with numpy `1.24.1`
 * `GRU4Rec` fixed bug in training, where it still tried to learn padding tokens.
 
+
+### Additions
+* __datasets__
+  * Added MovieLens100K, MovieLens1M, MovieLens10M and MillionSongDataset (aka TasteProfileDataset).
+
+### Changes
+* __tests.test_datasets__
+  * Split dataset tests into different files for ease of reading.
+
 ## [0.3.4]
 
 ### Bugfixes
@@ -191,7 +200,7 @@ In addition to interface changes and additions we also made a big effort to incr
     * `filename` parameter now has a default value for almost all datasets.
     * After initializing a dataset, the code will make sure the specified path exists, and create directories if they were missing.
 
-### Breaking changes:
+### Breaking changes
 
 * __Datasets__:
     * The filename parameter behaviour has changed.
@@ -208,7 +217,7 @@ In addition to interface changes and additions we also made a big effort to incr
 * Added Gru4Rec algorithms
     * GRU4RecNegSampling
     * GRU4RecCrossEntropy
-* added new loss functions:
+* Added new loss functions:
     * bpr_max_loss
     * top_1_loss
     * top_1_max_loss
@@ -223,7 +232,7 @@ In addition to interface changes and additions we also made a big effort to incr
 ## [0.1.0] - ![](https://img.shields.io/date/1626354902.svg?label=2021-07-15))
 
 * Very first release of Recpack
-* Contains Tested and documented code for:
+* Contains tested and documented code for:
     * Preprocessing
     * Scenarios
     * Algorithms
