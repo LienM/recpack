@@ -6,9 +6,9 @@ from sklearn.model_selection import ParameterGrid
 class OptimisationInfo:
     """Base class for Optimisation Info."""
 
-    def should_optimise(self):
-        """True when there is a need for optimisation given the parameters of the OptimisationInfo object."""
-        return False
+    # def should_optimise(self):
+    #     """True when there is a need for optimisation given the parameters of the OptimisationInfo object."""
+    #     return False
 
     @property
     def uses_hyperopt(self):
@@ -30,8 +30,8 @@ class GridSearchInfo(OptimisationInfo):
     def grid(self) -> ParameterGrid:
         return ParameterGrid(self._grid)
 
-    def should_optimise(self) -> bool:
-        return len(self._grid) > 0
+    # def should_optimise(self) -> bool:
+    #     return len(self._grid) > 0
 
 
 class HyperoptInfo(OptimisationInfo):
@@ -67,5 +67,5 @@ class HyperoptInfo(OptimisationInfo):
     def uses_hyperopt(self):
         return True
 
-    def should_optimise(self):
-        return True
+    # def should_optimise(self):
+    #     return True
