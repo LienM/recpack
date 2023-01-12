@@ -266,8 +266,16 @@ class Pipeline(object):
 
         The file will be saved in the experiment directory.
         """
+        if not os.path.exists(self.results_directory):
+            os.mkdir(self.results_directory)
+
         df = self.get_metrics()
         df.to_json(f"{self.results_directory}/results.json")
+
+        try:
+            self.optimisation_results.to_json(f"{self.results_directory}/optimisation_results.json")
+        except AttributeError:
+            pass
 
     def get_num_users(self) -> int:
         """Get the amount of users used in the evaluation.
