@@ -9,7 +9,7 @@ class DecayFunction:
     def __init__(self, decay: float):
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -25,7 +25,7 @@ class DecayFunction:
 class ExponentialDecay(DecayFunction):
     """Applies a exponential based decay function.
 
-    For each value x in the ``age_arr`` the decayed value is computed as
+    For each value x in the ``age_array`` the decayed value is computed as
 
     .. math::
 
@@ -41,7 +41,7 @@ class ExponentialDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, 1].")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -52,13 +52,13 @@ class ExponentialDecay(DecayFunction):
         :rtype: np.array
         """
 
-        return np.exp(-self.decay * age_arr)
+        return np.exp(-self.decay * age_array)
 
 
 class ConvexDecay(DecayFunction):
     """Applies a convex decay function.
 
-    For each value x in the ``age_arr`` the decayed value is computed as
+    For each value x in the ``age_array`` the decayed value is computed as
 
     .. math::
 
@@ -74,7 +74,7 @@ class ConvexDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: ]0, 1].")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -85,13 +85,13 @@ class ConvexDecay(DecayFunction):
         :rtype: np.array
         """
 
-        return np.power(self.decay, age_arr)
+        return np.power(self.decay, age_array)
 
 
 class ConcaveDecay(DecayFunction):
     """Applies a concave decay function.
 
-    For each value x in the ``age_arr`` the decayed value is computed as
+    For each value x in the ``age_array`` the decayed value is computed as
 
     .. math::
 
@@ -107,7 +107,7 @@ class ConcaveDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, 1[.")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -118,14 +118,14 @@ class ConcaveDecay(DecayFunction):
         :rtype: np.array
         """
 
-        max_age = max_age if max_age is not None else age_arr.max()
-        return 1 - np.power(self.decay, 1 - (age_arr / max_age))
+        max_age = max_age if max_age is not None else age_array.max()
+        return 1 - np.power(self.decay, 1 - (age_array / max_age))
 
 
 class LogDecay(DecayFunction):
     """Applies a logarithmic decay function.
 
-    For each value x in the ``age_arr`` the decayed value is computed as
+    For each value x in the ``age_array`` the decayed value is computed as
 
     .. math::
 
@@ -141,7 +141,7 @@ class LogDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: ]1, inf[.")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -152,14 +152,14 @@ class LogDecay(DecayFunction):
         :rtype: np.array
         """
 
-        max_age = max_age if max_age is not None else age_arr.max()
-        return np.log(((self.decay - 1) * (1 - age_arr / max_age)) + 1) / np.log(self.decay)
+        max_age = max_age if max_age is not None else age_array.max()
+        return np.log(((self.decay - 1) * (1 - age_array / max_age)) + 1) / np.log(self.decay)
 
 
 class LinearDecay(DecayFunction):
     """Applies a linear decay function.
 
-    For each value x in the ``age_arr`` the decayed value is computed as
+    For each value x in the ``age_array`` the decayed value is computed as
 
     .. math::
 
@@ -176,7 +176,7 @@ class LinearDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, +inf[.")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -187,8 +187,8 @@ class LinearDecay(DecayFunction):
         :rtype: np.array
         """
 
-        max_age = max_age if max_age is not None else age_arr.max()
-        results = 1 - (age_arr / max_age) * self.decay
+        max_age = max_age if max_age is not None else age_array.max()
+        results = 1 - (age_array / max_age) * self.decay
         results[results < 0] = 0
         return results
 
@@ -209,7 +209,7 @@ class InverseDecay(DecayFunction):
     def __init__(self, decay: float):
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -220,7 +220,7 @@ class InverseDecay(DecayFunction):
         :rtype: np.array
         """
 
-        results = age_arr.astype(float).copy()
+        results = age_array.astype(float).copy()
         results[results > 0] = 1 / results[results > 0]
         results[results == 0] = 1
         return results
@@ -232,7 +232,7 @@ class NoDecay(DecayFunction):
     def __init__(self, decay: float):
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -242,4 +242,4 @@ class NoDecay(DecayFunction):
         :returns: The decayed input time array. Larger values in the original array will have lower values.
         :rtype: np.array
         """
-        return to_binary(age_arr)
+        return to_binary(age_array)
