@@ -16,8 +16,6 @@ from hyperopt import hp
 import numpy as np
 
 from recpack.postprocessing.filters import PostFilter
-from recpack.pipelines import GridSearchInfo, HyperoptInfo
-from recpack.pipelines.pipeline_builder import AlgorithmEntry
 
 
 class MockFilter(PostFilter):
@@ -91,36 +89,6 @@ def test_pipeline_optimisation_gridsearch(
     assert metrics.shape[0] == len(pipeline.algorithm_entries)
     assert metrics.shape[1] == len(pipeline.metric_entries)
     assert pipeline.optimisation_results.shape[0] == gridsize
-
-
-def test_pipeline_optimise_with_hyperopt(pipeline_builder_optimisation):
-    pipeline = pipeline_builder_optimisation.build()
-
-    optimal_params = pipeline._optimise_w_hyperopt(
-        AlgorithmEntry(
-            "ItemKNN",
-            optimisation_info=HyperoptInfo(space={"K": hp.uniformint("K", 50, 1000)}, max_evals=3),
-            params={"similarity": "conditional_probability"},
-        )
-    )
-
-    assert "similarity" in optimal_params
-    assert "K" in optimal_params
-
-
-def test_pipeline_optimise_with_grid(pipeline_builder_optimisation):
-    pipeline = pipeline_builder_optimisation.build()
-
-    optimal_params = pipeline._optimise_w_grid(
-        AlgorithmEntry(
-            "ItemKNN",
-            optimisation_info=GridSearchInfo({"K": [1, 3, 5]}),
-            params={"similarity": "conditional_probability"},
-        )
-    )
-
-    assert "similarity" in optimal_params
-    assert "K" in optimal_params
 
 
 def test_pipeline_with_filters_applied(pipeline_builder):

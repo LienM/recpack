@@ -13,6 +13,7 @@ from typing import Tuple, Union, Dict, List, Any, Optional, Callable
 from hyperopt import Trials, fmin, tpe, space_eval, STATUS_OK
 import pandas as pd
 from scipy.sparse import csr_matrix
+from sklearn.model_selection import ParameterGrid
 from tqdm.auto import tqdm
 
 from recpack.algorithms.base import Algorithm, TorchMLAlgorithm
@@ -203,10 +204,12 @@ class Pipeline(object):
                 optimisation_metric.name: optimisation_metric.value,
             }
 
-            # Hyperopt always minimises, so to maximize a metric we just turn it negative.
-            if not self.optimisation_metric_entry.minimise:
-                result["loss"] *= -1
-            return result
+        # Sort by metric value
+        optimal_params = sorted(
+            results,
+            key=lambda x: x[optimisation_metric.name],
+            reverse=not self.optimisation_metric_entry.minimise,
+        )[0]["params"]
 
         if isinstance(algorithm_entry.optimisation_info, HyperoptInfo):
             results = self._optimise_w_hyperopt(optimise, algorithm_entry.optimisation_info)
@@ -263,13 +266,8 @@ class Pipeline(object):
 
         The file will be saved in the experiment directory.
         """
-        if not os.path.exists(self.results_directory):
-            os.mkdir(self.results_directory)
-
         df = self.get_metrics()
         df.to_json(f"{self.results_directory}/results.json")
-        if self.optimisation_results is not None:
-            self.optimisation_results.to_json(f"{self.results_directory}/optimisation_results.json")
 
     def get_num_users(self) -> int:
         """Get the amount of users used in the evaluation.
