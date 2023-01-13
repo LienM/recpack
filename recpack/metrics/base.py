@@ -28,7 +28,7 @@ class Metric:
     @property
     def name(self):
         """Name of the metric."""
-        return self.__class__.__name__.lower()
+        return self.__class__.__name__
 
     def _calculate(self, y_true, y_pred) -> None:
         raise NotImplementedError()

@@ -19,6 +19,7 @@ from recpack.algorithms.util import get_batches, get_users, sample_rows
 from recpack.matrix import InteractionMatrix, to_csr_matrix, Matrix
 from recpack.util import get_top_K_values
 
+
 logger = logging.getLogger("recpack")
 
 

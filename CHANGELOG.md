@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __tests.test_datasets__
   * Split dataset tests into different files for ease of reading.
 
+### Breaking Changes
+* __metrics__:
+    * `.name` property of a metric now returns camelcase name instead of lowercase name used before.
+### Additions
+
+* __pipelines__
+    * Added option to use hyperopt to optimise parameters
+        * `grid` parameter has been superseded by the `optimisation_info` parameter, which takes an `OptimisationInfo` object. Two relevant subclasses have been defined: `GridSearchInfo` contains a grid with parameters to support grid search, `HyperoptInfo` allows users to specify a hyperopt space, with timeout and or maximum number of evaluations.
+    * Extended output of optimisation output, to now also include an `Algorithm` column for easier analysis.
+
+* Added getting started guide for using Hyperopt optimisation
 
 ## [0.3.4]
 
@@ -80,6 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * __scenarios__
     * Added `TimedLastItemPrediction` scenario, which is different from LastItemPrediction, in that it only trains its model on data before a certain timestamp, and evaluates only on data after that timestamp, thus avoiding leakage.
+
 * Configured optional extra installs:
     * `pip install recpack[doc]` will install the dependencies to generate documentation
     * `pip install recpack[test]` will install the dependencies to run tests.

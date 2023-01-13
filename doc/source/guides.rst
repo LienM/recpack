@@ -6,4 +6,4 @@ Getting Started Guides
 
     guides.quickstart    
     guides.create_algorithm
-
+    guides.howto_hyperopt
