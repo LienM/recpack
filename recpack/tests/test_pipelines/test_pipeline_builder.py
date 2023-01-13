@@ -407,7 +407,7 @@ def test_set_data_from_scenario(mat):
                     ]
                 ),
                 max_evals=10,
-            )
+            ),
             None,
             10,
         ),
