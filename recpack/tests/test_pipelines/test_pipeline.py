@@ -14,6 +14,7 @@ import pytest
 
 from hyperopt import hp
 import numpy as np
+import pytest
 
 from recpack.postprocessing.filters import PostFilter
 

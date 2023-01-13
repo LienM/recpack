@@ -17,6 +17,7 @@ from recpack.pipelines.hyperparameter_optimisation import GridSearchInfo, Hypero
 from recpack.postprocessing.filters import ExcludeItems
 from recpack.scenarios import Timed
 
+# TODO Re-add the big integration tests?
 
 
 def test_pipeline_builder_empty(mat):
@@ -59,6 +60,7 @@ def test_pipeline_builder_add_algos_correct(mat):
         "Prod2Vec", optimisation_info=GridSearchInfo({"num_components": [10, 20]}), params={"learning_rate": 0.1}
     )
     assert len(pb.algorithm_entries) == 3
+
     assert pb.algorithm_entries[0].optimisation_info is None
     assert pb.algorithm_entries[0].params == {"K": 20}
 
@@ -275,6 +277,7 @@ def test_pipeline_builder_full_success(mat, algo_name, optimisation_info, params
 
 
 def test_pipeline_duplicate_metric(mat):
+    # TODO Is this what we want to happen? Shouldn't we throw an error or something?
     pb = PipelineBuilder()
     pb.add_metric("CalibratedRecallK", 20)
     pb.add_metric("CalibratedRecallK", 20)
