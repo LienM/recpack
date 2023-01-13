@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 from recpack.algorithms.util import to_binary
@@ -7,7 +9,7 @@ class DecayFunction:
     def __init__(self, decay: float):
         self.decay = decay
 
-    def __call__(age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -39,7 +41,7 @@ class ExponentialDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, 1].")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -72,7 +74,7 @@ class ConvexDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: ]0, 1].")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -105,7 +107,7 @@ class ConcaveDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, 1[.")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -139,7 +141,7 @@ class LogDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: ]1, inf[.")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -174,7 +176,7 @@ class LinearDecay(DecayFunction):
             raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, +inf[.")
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -207,7 +209,7 @@ class InverseDecay(DecayFunction):
     def __init__(self, decay: float):
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -230,7 +232,7 @@ class NoDecay(DecayFunction):
     def __init__(self, decay: float):
         self.decay = decay
 
-    def __call__(self, age_arr: np.array, max_age: float = None):
+    def __call__(self, age_arr: np.array, max_age: Optional[float] = None):
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
