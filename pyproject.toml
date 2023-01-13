@@ -21,3 +21,6 @@ exclude = '''
                      # the root of the project
 )
 '''
+
+[tool.autoDocstring]
+docstringFormat = "sphinx"

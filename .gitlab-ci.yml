@@ -42,6 +42,7 @@ test-demo-notebooks:
     - ipython examples/Demo.ipynb
     - ipython examples/Implement_NeuMF.ipynb
     - ipython examples/Implement_your_own_algorithm.ipynb
+    - ipython examples/Using_Hyperopt.ipynb
 
 pages:
   stage: deploy

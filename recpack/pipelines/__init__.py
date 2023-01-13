@@ -78,6 +78,24 @@ Example to register a metric::
 
     # Construct a NewMetric object with parameter K=20
     algo = METRIC_REGISTRY.get('NewMetric')(K=20)
+
+Optimising hyperparameters
+~~~~~~~~~~~~~~~~~~~~~
+
+Hyperparameter optimisation is a fundamental part of a recommendation pipeline. 
+You want to see which set of hyperparameters performs the best.
+When adding an algorithm to the pipeline_builder, you can specify optimisation info, 
+which will tell RecPack to optimise the hyperparameters for that algorithm.
+
+RecPack supports either an exhaustive gridsearch, or an optimised random search using a Tree of Parzen Estimator as 
+implemented in the `hyperopt <https://hyperopt.github.io/hyperopt/>`_ library.
+
+.. autosummary::
+    :toctree: generated/
+
+    OptimisationInfo
+    GridSearchInfo
+    HyperoptInfo
 """
 
 from recpack.pipelines.pipeline import Pipeline
@@ -85,3 +103,5 @@ from recpack.pipelines.pipeline import Pipeline
 from recpack.pipelines.registries import ALGORITHM_REGISTRY, METRIC_REGISTRY
 
 from recpack.pipelines.pipeline_builder import PipelineBuilder
+
+from recpack.pipelines.hyperparameter_optimisation import OptimisationInfo, GridSearchInfo, HyperoptInfo
