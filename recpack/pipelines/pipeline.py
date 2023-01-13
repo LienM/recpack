@@ -13,7 +13,6 @@ from typing import Tuple, Union, Dict, List, Any, Optional, Callable
 from hyperopt import Trials, fmin, tpe, space_eval, STATUS_OK
 import pandas as pd
 from scipy.sparse import csr_matrix
-from sklearn.model_selection import ParameterGrid
 from tqdm.auto import tqdm
 
 from recpack.algorithms.base import Algorithm, TorchMLAlgorithm
@@ -205,11 +204,9 @@ class Pipeline(object):
             }
 
         # Sort by metric value
-        optimal_params = sorted(
-            results,
-            key=lambda x: x[optimisation_metric.name],
-            reverse=not self.optimisation_metric_entry.minimise,
-        )[0]["params"]
+        optimal_params = sorted(results, key=lambda x: x["loss"], reverse=True)[0]["params"]
+
+        self._optimisation_results.append(pd.DataFrame.from_records(results).drop(columns=["loss", "status"]))
 
         if isinstance(algorithm_entry.optimisation_info, HyperoptInfo):
             results = self._optimise_w_hyperopt(optimise, algorithm_entry.optimisation_info)
