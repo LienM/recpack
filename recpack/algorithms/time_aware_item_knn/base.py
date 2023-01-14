@@ -107,6 +107,8 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         if decay_function not in self.DECAY_FUNCTIONS:
             raise ValueError(f"Decay function {decay_function} is not supported.")
 
+        # TODO Propose to replace with ExponentialDecay(0) -> a^0 = 1 (So effectively binarizes?)
+        # Since you always pass the csr_matrix.data, I think all values can made 1, so this proposal works.
         if fit_decay == 0:
             self.fit_decay_func = NoDecay(0)
         else:
@@ -175,7 +177,10 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         # The maximal timestamp in the matrix is used as 'now',
         # age is encoded as now - t
         now = timestamp_mat.data.max() + 1
-        # TODO It seems you never pass max_age at fitting time, is this on purpose? 
+        # TODO This passes the whole matrix, but your decay functions
+        # say it decays based on X_u (so max_age for a user)
+        # TODO It seems you never pass max_age at fitting time, is this on purpose?
+        # TODO: Propose to drop max_age as an argument
         timestamp_mat.data = self.fit_decay_func((now - timestamp_mat.data) / self.decay_interval)
         return csr_matrix(timestamp_mat)
 
@@ -192,7 +197,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         # The maximal timestamp in the matrix is used as 'now',
         # age is encoded as now - t
         now = timestamp_mat.data.max() + 1
-        # TODO Same here: You never pass max_age at prediction time. 
+        # TODO Same here: You never pass max_age at prediction time.
         timestamp_mat.data = self.predict_decay_func((now - timestamp_mat.data) / self.decay_interval)
         return csr_matrix(timestamp_mat)
 
