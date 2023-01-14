@@ -41,7 +41,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
     The standard framework for all of these approaches can be summarised as:
 
-    - When training the user interaction matrix is weighted to take into account temporal information available.
+    - When training the user interaction matrix is weighted to take into account temporal information.
     - Similarities are computed on this weighted matrix, using various similarity measures.
     - When predicting the interactions are similarly weighted, giving more weight to more recent interactions.
     - Recommendation scores are obtained by multiplying the weighted interaction matrix with
@@ -60,6 +60,8 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     :param fit_decay: Defines the decay scaling used for decay during model fitting.
         Defaults to (1/3600), such that the half life is 1 hour.
     :type fit_decay: float, Optional
+    # TODO It's a little confusing that predict_decay says that the half life is 1 hour
+    # But then you can configure a decay_interval to change this.
     :param predict_decay: Defines the decay scaling used for decay during prediction.
         Defaults to (1/3600), such that the half life is 1 hour.
     :type predict_decay: float, Optional
@@ -173,6 +175,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         # The maximal timestamp in the matrix is used as 'now',
         # age is encoded as now - t
         now = timestamp_mat.data.max() + 1
+        # TODO It seems you never pass max_age at fitting time, is this on purpose? 
         timestamp_mat.data = self.fit_decay_func((now - timestamp_mat.data) / self.decay_interval)
         return csr_matrix(timestamp_mat)
 
@@ -189,6 +192,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         # The maximal timestamp in the matrix is used as 'now',
         # age is encoded as now - t
         now = timestamp_mat.data.max() + 1
+        # TODO Same here: You never pass max_age at prediction time. 
         timestamp_mat.data = self.predict_decay_func((now - timestamp_mat.data) / self.decay_interval)
         return csr_matrix(timestamp_mat)
 
@@ -246,6 +250,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
                 distance = distance + (distance > 0).multiply(self.event_age_weight * min_age)
 
             # Decay the distances
+            # TODO Here you do pass it
             distance.data = self.fit_decay_func(distance.data, max_age=max_age_possible)
 
             similarities = csr_matrix(distance.sum(axis=0))

@@ -1,6 +1,7 @@
 from typing import Optional
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from recpack.algorithms.util import to_binary
 
@@ -9,39 +10,40 @@ class DecayFunction:
     def __init__(self, decay: float):
         self.decay = decay
 
-    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
-        """Apply the decay function.
+    def __call__(self, age_array: ArrayLike, max_age: Optional[float] = None) -> ArrayLike:
+        """Apply the decay.
 
-        :param age_array: array of age of events which will be decayed.
-        :type age_array: np.array
-        :param max_age: The max age normalisation parameter (Unused in this decay)
+        :param age_array: Array of event ages to decay.
+        :type age_array: ArrayLike
+        :param max_age: Maximum age of an event.
         :type max_age: float, optional
-        :returns: The decayed input time array. Larger values in the original array will have lower values.
-        :rtype: np.array
+        :returns: Array of event ages to which decays have been applied.
+        :rtype: ArrayLike
         """
         raise NotImplementedError()
 
 
 class ExponentialDecay(DecayFunction):
-    """Applies a exponential based decay function.
+    """Applies exponential decay.
 
-    For each value x in the ``age_array`` the decayed value is computed as
+    For each value x in ``age_array`` the decayed value is computed as
 
     .. math::
 
         e^{-\\alpha * x}
 
     where alpha is the decay parameter.
-    :param decay: The decay parameter, should be in the [0, 1] interval.
+
+    :param decay: Exponential decay parameter, should be in the [0, 1] interval.
     :type decay: float
     """
 
     def __init__(self, decay: float):
         if not (0 <= decay <= 1):
-            raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, 1].")
+            raise ValueError(f"Decay parameter = {decay} is not in the supported range: [0, 1].")
         self.decay = decay
 
-    def __call__(self, age_array: np.array, max_age: Optional[float] = None):
+    def __call__(self, age_array: ArrayLike, max_age: Optional[float] = None) -> ArrayLike:
         """Apply the decay function.
 
         :param age_array: array of age of events which will be decayed.
@@ -71,7 +73,7 @@ class ConvexDecay(DecayFunction):
 
     def __init__(self, decay: float):
         if not (0 < decay <= 1):
-            raise ValueError(f"decay parameter = {decay} is not in the supported range: ]0, 1].")
+            raise ValueError(f"Decay parameter = {decay} is not in the supported range: ]0, 1].")
         self.decay = decay
 
     def __call__(self, age_array: np.array, max_age: Optional[float] = None):
@@ -117,7 +119,9 @@ class ConcaveDecay(DecayFunction):
         :returns: The decayed input time array. Larger values in the original array will have lower values.
         :rtype: np.array
         """
-
+        # TODO Based on your formula, 
+        # I think max_age can just be taken from age_array here as it is user-specific.
+        # Unless the formula is wrong
         max_age = max_age if max_age is not None else age_array.max()
         return 1 - np.power(self.decay, 1 - (age_array / max_age))
 
