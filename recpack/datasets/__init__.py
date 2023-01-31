@@ -10,6 +10,7 @@
     DummyDataset
     AdressaOneWeek
     CiteULike
+    Globo
     MovieLens100K
     MovieLens1M
     MovieLens10M
@@ -72,6 +73,7 @@ from recpack.datasets.adressa import AdressaOneWeek
 from recpack.datasets.cite_u_like import CiteULike
 from recpack.datasets.cosmetics_shop import CosmeticsShop
 from recpack.datasets.dummy_dataset import DummyDataset
+from recpack.datasets.globo import Globo
 from recpack.datasets.movielens import MovieLens100K, MovieLens1M, MovieLens10M, MovieLens25M
 from recpack.datasets.netflix import Netflix
 from recpack.datasets.recsys_challenge import RecsysChallenge2015
