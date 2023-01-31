@@ -13,19 +13,16 @@ class ReciprocalRankK(ListwiseMetricK):
     """Computes the inverse of the rank of the first hit
     in the recommendation list.
 
-    The reciprocal rank is calculated as:
+    The reciprocal rank for a user is calculated as
 
     .. math::
 
-       \\text{ReciprocalRank}(u) = \\frac{1}{\\text{rank}_{u,i}}
+       \\text{ReciprocalRank}(u) = \\frac{1}{\\min\\limits_{i \\in \\text{Top-K}(u), \\\\ i \\in y^{true}_u} rank(u,i)}
 
-    with
+    when there is at least one matching item between recommendations in :math:`\\text{Top-K}(u)` and targets in :math:`y^{true}_u`, 
+    otherwise it is 0.
 
-    .. math::
-
-        \\text{rank}_{u,i} = \\min\\limits_{i \\in Top-K(u), \\\\ i \\in y^{true}_u} rank(u,i)
-
-    :param K: Size of the recommendation list consisting of the Top-K item predictions.
+    :param K: Amount of top recommendations to consider in the metric calculation.
     :type K: int
     """
 

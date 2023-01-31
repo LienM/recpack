@@ -80,7 +80,7 @@ Example to register a metric::
     algo = METRIC_REGISTRY.get('NewMetric')(K=20)
 
 Optimising hyperparameters
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Hyperparameter optimisation is a fundamental part of a recommendation pipeline. 
 You want to see which set of hyperparameters performs the best.

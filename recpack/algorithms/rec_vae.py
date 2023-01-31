@@ -33,6 +33,7 @@ class RecVAE(TorchMLAlgorithm):
 
 
     Default values for parameters were taken from the paper.
+
     :param batch_size: Batch size for SGD, defaults to 500
     :type batch_size: int, optional
     :param max_epochs: Maximum number of epochs (iterations),
@@ -51,7 +52,7 @@ class RecVAE(TorchMLAlgorithm):
     :param learning_rate: Learning rate, defaults to 1e-4
     :type learning_rate: float, optional
     :param dim_bottleneck_layer: Size of the latent representation,
-                                    defaults to 200
+        defaults to 200
     :type dim_bottleneck_layer: int, optional
     :param dim_hidden_layer: Dimension of the hidden layer, defaults to 600
     :type dim_hidden_layer: int, optional
