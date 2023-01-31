@@ -41,14 +41,14 @@ def test_cosmeticsshop(
     if event_types is None:
         d = datasets.CosmeticsShop(
             path=dataset_path,
-            filename="cosmeticsshop-sample.csv",
+            filename="cosmeticsshop-sample.zip",
             use_default_filters=False,
             extra_cols=extra_cols,
         )
     else:
         d = datasets.CosmeticsShop(
             path=dataset_path,
-            filename="cosmeticsshop-sample.csv",
+            filename="cosmeticsshop-sample.zip",
             use_default_filters=False,
             extra_cols=extra_cols,
             event_types=event_types,
@@ -72,7 +72,7 @@ def test_cosmeticsshop_bad_event_type(dataset_path):
     with pytest.raises(ValueError):
         _ = datasets.CosmeticsShop(
             path=dataset_path,
-            filename="cosmeticsshop-sample.csv",
+            filename="cosmeticsshop-sample.zip",
             use_default_filters=False,
             event_types=["hello"],
         )

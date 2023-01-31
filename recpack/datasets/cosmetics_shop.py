@@ -1,4 +1,6 @@
 """Module responsible for the CosmeticsShop dataset."""
+import os
+import zipfile
 
 import pandas as pd
 from typing import List, Optional, Tuple, Union
@@ -17,10 +19,7 @@ class CosmeticsShop(Dataset):
     All information and downloads can be found at
     https://www.kaggle.com/mkechinov/ecommerce-events-history-in-cosmetics-shop.
     Because downloading the data requires a Kaggle account we can't download it here,
-    you should download the data manually and provide the path to one of the monthly
-    files, or a combined file with all events.
-    If a monthly file is given, then only those events will be used. In order to use
-    the full dataset you need to combine the files.
+    you should download the data manually and provide the path to the downloaded zipfile.
 
     Default processing makes sure that:
 
@@ -55,7 +54,7 @@ class CosmeticsShop(Dataset):
     EVENT_TYPE_IX = "event_type"
     """Name of the column in the DataFrame that contains the event_types"""
 
-    DEFAULT_FILENAME = "2019-Dec.csv"
+    DEFAULT_FILENAME = "archive.zip"
     """Default filename that will be used if it is not specified by the user."""
 
     ALLOWED_EVENT_TYPES = ["view", "cart", "remove_from_cart", "purchase"]
@@ -120,19 +119,17 @@ class CosmeticsShop(Dataset):
         """
 
         self.fetch_dataset()
+        dfs = []
+        with zipfile.ZipFile(self.file_path, "r") as zip_ref:
+            for item in zip_ref.filelist:
+                with zip_ref.open(item, 'r') as f:
+                    df = pd.read_csv(f, parse_dates=[self.TIMESTAMP_IX],)
+                    # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
+                    df.loc[:, self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].view(int) / 1e9
+                    # Select only the specified event_types
+                    if self.event_types:
+                        df = df[df[self.EVENT_TYPE_IX].isin(self.event_types)].copy()
 
-        df = pd.read_csv(
-            self.file_path,
-            parse_dates=[self.TIMESTAMP_IX],
-        )
+                    dfs.append(df)
 
-        # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
-        df[self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].view(int) / 1e9  # pandas datetime -> seconds from epoch
-
-        # Select only the specified event_types
-        if self.event_types:
-            df = df[df[self.EVENT_TYPE_IX].isin(self.event_types)].copy()
-
-        df = df[self._columns].copy()
-
-        return df
+        return pd.concat(dfs)[self._columns].copy()
