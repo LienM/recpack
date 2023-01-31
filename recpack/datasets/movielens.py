@@ -37,8 +37,10 @@ class MovieLensDataset(Dataset):
     REMOTE_FILENAME = "ratings.csv"
     """Name of the file containing user ratings on the MovieLens server."""
 
-    DEFAULT_FILENAME = f"{REMOTE_ZIPNAME}_{REMOTE_FILENAME}"
-    """Default filename that will be used if it is not specified by the user."""
+    @property
+    def DEFAULT_FILENAME(self) -> str:
+        """Default filename that will be used if it is not specified by the user."""
+        return f"{self.REMOTE_ZIPNAME}_{self.REMOTE_FILENAME}"
 
     @property
     def _default_filters(self) -> List[Filter]:
@@ -64,7 +66,7 @@ class MovieLensDataset(Dataset):
         """
         # Download the zip into the data directory
         _fetch_remote(
-            f"{self.DATASETURL}/{self.REMOTE_ZIPNAME}zip", os.path.join(self.path, f"{self.REMOTE_ZIPNAME}.zip")
+            f"{self.DATASETURL}/{self.REMOTE_ZIPNAME}.zip", os.path.join(self.path, f"{self.REMOTE_ZIPNAME}.zip")
         )
 
         # Extract the ratings file which we will use
