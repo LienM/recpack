@@ -265,6 +265,9 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
                 similarities = similarities.multiply(invert(n_cooc))
             elif self.similarity == "conditional_probability":
                 similarities = similarities.multiply(1 / n_center_occ)
+            else:
+                # Just use the sum of the similarities (as in Xia 2010)
+                pass
             self.similarity_matrix_[i] = get_top_K_values(csr_matrix(similarities), self.K)
 
         self.similarity_matrix_ = self.similarity_matrix_.tocsr()
