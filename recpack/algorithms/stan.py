@@ -11,17 +11,17 @@ class STAN(Algorithm):
     """Sequence and Time Aware Neighbourhoods algorithm.
 
     Algorithm presented by Garg, Diksha, et al.
-    "Sequence and time aware neighborhood for session-based recommendations: Stan."
+    "Sequence and time aware neighborhood for session-based recommendations: STAN."
 
     The algorithm is a modified version of UserKNN with several decay schemes applied.
 
     Each of the user's interactions are weighted by multiplying them with
 
-    ..math::
+    .. math::
 
-        e^{- \\lambda_1 (t_{max} - t_i)}
+        e^{- \\lambda_1 \\, (t_{max} - t_i)}
 
-    Where lambda_1 is the `interaction_decay` parameter.
+    Where lambda_1 is the ``interaction_decay`` parameter.
 
     A second weighting scheme is applied when computing session similarities.
     The time of a session is the last timestamp in that session.
@@ -30,9 +30,9 @@ class STAN(Algorithm):
 
     .. math::
 
-        e^{- \\lambda_2 |T_{s1} - T_{s_2|}
+        e^{- \\lambda_2 \\, |T_{s1} - T_{s_2}|}
 
-    Where lambda_2 is the `session_decay` parameter.
+    Where lambda_2 is the ``session_decay`` parameter.
 
     A final weighting is applied to recommend items closest to
     the last matching item between similar users.
@@ -41,11 +41,11 @@ class STAN(Algorithm):
 
     .. math::
 
-        e^{- \\lambda_3 |pos_i - pos_{matching}|}
+        e^{- \\lambda_3 \\, |pos_i - pos_{matching}|}
 
-    Where lambda_3 is the `distance_from_match_decay` parameter.
+    Where lambda_3 is the ``distance_from_match_decay`` parameter.
 
-    ..note::
+    .. note::
 
         We modified the decay computations from the paper,
         by using a multiplicative weight, rather than a division.
