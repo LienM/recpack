@@ -38,7 +38,7 @@ class TARSItemKNNLiu2012(TARSItemKNN):
     last item visited gets value 2. The decay follows a logarithmic function.
 
     .. math::
-        
+
         \\log_\\alpha ((\\alpha-1)x + 1) + 1
 
     :param K: The number of neighbours to keep per item.

@@ -42,7 +42,7 @@ class TARSItemKNNHermann(TopKItemSimilarityMatrixAlgorithm):
         super().__init__(K=K)
         self.decay_interval = decay_interval
         self.fit_decay_func = InverseDecay()
-    
+
     def _transform_fit_input(self, X: Matrix) -> InteractionMatrix:
         """Weigh each of the interactions by the decay factor of its timestamp."""
         self._assert_is_interaction_matrix(X)
@@ -70,7 +70,7 @@ class TARSItemKNNHermann(TopKItemSimilarityMatrixAlgorithm):
             distance.data = np.abs(distance.data)
 
             # Add min age of i and j to the distance computed.
-            
+
             broadcasted_age_of_center = (last_timestamps_matrix > 0).multiply(last_timestamps_matrix[:, i])
             target_has_smallest_age = last_timestamps_matrix < broadcasted_age_of_center
             center_has_smallest_age = (cooc_ts > 0) - target_has_smallest_age

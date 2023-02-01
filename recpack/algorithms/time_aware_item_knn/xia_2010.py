@@ -30,21 +30,21 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
     Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``.
 
     - Concave decay function between item i and j is computed as:
-      
+
       .. math::
-      
+
         \\theta(x) = \\alpha^{x}, \\alpha \\in  [0, 1]
 
     - Convex decay function between item i and j is computed as:
-      
+
       .. math::
-        
+
         \\theta(x) = 1 - \\beta^{t-x}, \\beta \\in  (0, 1)
 
     - Linear decay function between item i and j is computed as:
-      
+
       .. math::
-        
+
         \\theta(x) = 1 - \\frac{x}{t} \\cdot \\gamma, \\gamma \\in  [0, 1]
 
     Where :math:`t` is the time between the interactions with both items.

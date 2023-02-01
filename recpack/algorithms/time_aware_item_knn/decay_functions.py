@@ -1,8 +1,8 @@
 import numpy as np
 from numpy.typing import ArrayLike
 
-class DecayFunction:
 
+class DecayFunction:
     def __call__(self, time_distances: ArrayLike) -> ArrayLike:
         """Apply the decay.
 
@@ -65,6 +65,7 @@ class ConvexDecay(DecayFunction):
     :param decay: The decay parameter, should be in the ]0, 1] interval.
     :type decay: float
     """
+
     @classmethod
     def validate_decay(cls, decay: float):
         """Verify if the decay parameter is in the right range for this decay function."""
@@ -103,7 +104,7 @@ class ConcaveDecay(DecayFunction):
     :param max_distance: Normalizing parameter, to put distances in the [0, 1].
     :type max_distance: float
     """
-    
+
     @classmethod
     def validate_decay(cls, decay: float):
         """Verify if the decay parameter is in the right range for this decay function."""
@@ -144,6 +145,7 @@ class LogDecay(DecayFunction):
     :param max_distance: Normalizing parameter, to put distances in the [0, 1].
     :type max_distance: float
     """
+
     @classmethod
     def validate_decay(cls, decay: float):
         """Verify if the decay parameter is in the right range for this decay function."""
@@ -215,14 +217,15 @@ class InverseDecay(DecayFunction):
 
     Decay parameter only added for interface unity.
     For each value x in the ``time_distances`` the decayed value is computed as
-    
+
     .. math::
 
         \\frac{1}{x}
-    
+
     :param decay: The decay parameter, willl not be used during computation.
     :type decay: float
     """
+
     def __call__(self, time_distances: ArrayLike):
         """Apply the decay function.
 

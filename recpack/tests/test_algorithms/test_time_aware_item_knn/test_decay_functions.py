@@ -13,6 +13,7 @@ from recpack.algorithms.time_aware_item_knn.decay_functions import (
 
 DUMMY_ARRAY = np.array([0.5, 1, 2])
 
+
 @pytest.mark.parametrize(
     "decay_function",
     [
@@ -37,13 +38,17 @@ def test_disabled_with_1(decay_function):
     # With decay = 0, the output should be a binary vector.
     np.testing.assert_array_equal(output, 1)
 
+
 MAX_DISTANCE = 100
-@pytest.mark.parametrize("decay_function",
-    [ExponentialDecay(np.random.rand()) for _ in range(10)] + 
-    [ConvexDecay(np.random.rand()) for _ in range(10)] +
-    [ConcaveDecay(np.random.rand(), MAX_DISTANCE) for _ in range(10)] +
-    [LinearDecay(np.random.rand(), MAX_DISTANCE) for _ in range(10)] +
-    [LogDecay(np.random.randint(2, 10), MAX_DISTANCE) for _ in range(10)],                                             
+
+
+@pytest.mark.parametrize(
+    "decay_function",
+    [ExponentialDecay(np.random.rand()) for _ in range(10)]
+    + [ConvexDecay(np.random.rand()) for _ in range(10)]
+    + [ConcaveDecay(np.random.rand(), MAX_DISTANCE) for _ in range(10)]
+    + [LinearDecay(np.random.rand(), MAX_DISTANCE) for _ in range(10)]
+    + [LogDecay(np.random.randint(2, 10), MAX_DISTANCE) for _ in range(10)],
 )
 def test_order_preservation(decay_function):
     for i in range(100):
@@ -54,7 +59,8 @@ def test_order_preservation(decay_function):
         # Older events should get less weight
         assert (output[0] < output[1]) == (a > b)
 
-#fmt: off
+
+# fmt: off
 @pytest.mark.parametrize(
     "input, decay_function, expected_output",
     [
@@ -86,7 +92,8 @@ def test_decay_computation(input, decay_function, expected_output):
     result = decay_function(input)
     np.testing.assert_array_almost_equal(result, expected_output)
 
-#fmt: on
+# fmt: on
+
 
 @pytest.mark.parametrize(
     "decay_function, input, decay, max_distance, expected_output",

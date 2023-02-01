@@ -46,14 +46,14 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
       the previously computed similarity matrix.
 
     The similarity between items is based on their decayed interaction vectors:
-    
+
     .. math::
 
         \\text{sim}(i,j) = s(\\Gamma(A_i), \\Gamma(A_j))
-    
-    Where :math:`s` is a similarity function (like ``cosine``), 
-    :math:`\\Gamma` a decay function (like ``exponential_decay``) and 
-    :math:`A_i` contains the distance to now from when the users interacted with item `i`, 
+
+    Where :math:`s` is a similarity function (like ``cosine``),
+    :math:`\\Gamma` a decay function (like ``exponential_decay``) and
+    :math:`A_i` contains the distance to now from when the users interacted with item `i`,
     or 0 if a user did not interact with the item.
 
     During computation, 'now' is considered as the maximal timestamp in the matrix + 1.
@@ -111,14 +111,14 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         if decay_function not in self.DECAY_FUNCTIONS:
             raise ValueError(f"Decay function {decay_function} is not supported.")
-        
+
         self.decay_function = decay_function
 
         # Verify decay parameters
         if self.decay_function in ["exponential", "log", "linear", "concave", "convex"]:
             if fit_decay != 0:
                 self.DECAY_FUNCTIONS[decay_function].validate_decay(fit_decay)
-            
+
             if predict_decay != 0:
                 self.DECAY_FUNCTIONS[decay_function].validate_decay(predict_decay)
 
@@ -130,7 +130,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         if decay == 0:
             return NoDecay()
 
-        elif self.decay_function == 'inverse':
+        elif self.decay_function == "inverse":
             return self.DECAY_FUNCTIONS[self.decay_function]()
         elif self.decay_function in ["exponential", "convex"]:
             return self.DECAY_FUNCTIONS[self.decay_function](decay)
@@ -190,7 +190,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         timestamp_mat = X.last_timestamps_matrix
         # To get 'now', we add 1 to the maximal timestamp. This makes sure there are no vanishing zeroes.
         now = timestamp_mat.data.max() + 1
-        ages = (now - timestamp_mat.data)/ self.decay_interval
+        ages = (now - timestamp_mat.data) / self.decay_interval
         timestamp_mat.data = self._get_decay_func(self.fit_decay, ages.max())(ages)
         return csr_matrix(timestamp_mat)
 
@@ -206,16 +206,16 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         timestamp_mat = X.last_timestamps_matrix
         # To get 'now', we add 1 to the maximal timestamp. This makes sure there are no vanishing zeroes.
         now = timestamp_mat.data.max() + 1
-        ages = (now - timestamp_mat.data)/ self.decay_interval
+        ages = (now - timestamp_mat.data) / self.decay_interval
         timestamp_mat.data = self._get_decay_func(self.predict_decay, ages.max())(ages)
         return csr_matrix(timestamp_mat)
 
 
 class TARSItemKNNCoocDistance(TARSItemKNN):
-    """Time Aware ItemKNN variant that considers time between two interactions 
+    """Time Aware ItemKNN variant that considers time between two interactions
     when computing similarity between two items.
 
-    Cooc Similarity between two items is computed as 
+    Cooc Similarity between two items is computed as
 
     .. math ::
 
@@ -231,7 +231,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
     last visited item :math:`i`.
     Timestamps are in multiples of ``decay_interval``, by default in seconds.
 
-        
+
     :param K: Number of nearest neighbours to store per item, defaults to 200
     :type K: int, optional
     :param fit_decay: Decay parameter when applying decay during training, defaults to 1/3600
@@ -282,7 +282,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
             distance.data = np.abs(distance.data)
 
             # Decay the distances
-            # We use the max_distance_possible, because the decay function needs an overall value 
+            # We use the max_distance_possible, because the decay function needs an overall value
             # and we only give it values per user.
             distance.data = decay_func(distance.data)
 

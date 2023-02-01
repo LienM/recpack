@@ -12,7 +12,7 @@ class TARSItemKNNDing(TARSItemKNN):
 
         \\text{sim}(u, i) = \\sum\\limits_{j \\in X_u} e^{-\\alpha \\cdot \\delta t_{u,j}} \\cdot \\text{sim}(i, j)
 
-    Where :math:`alpha` is the predict_decay parameter.
+    Where :math:`\\alpha` is the predict_decay parameter.
 
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
