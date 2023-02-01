@@ -81,7 +81,6 @@ class TARSItemKNNHermann(TopKItemSimilarityMatrixAlgorithm):
             distance = distance + (distance > 0).multiply(min_age)
 
             # Decay the distances
-            # TODO Here you do pass it
             distance.data = self.fit_decay_func(distance.data)
 
             similarities = csr_matrix(distance.sum(axis=0))

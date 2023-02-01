@@ -22,7 +22,7 @@ def mock_download(dataset_path, url, path):
 
 
 @pytest.fixture()
-def dataset(dataset_path):
+def adressa_dataset(dataset_path):
     """
     zipfile contents were constructed with specific checks in mind:
     20170101 -> contains 3 non view events + 5 view events with a 3rd user
@@ -49,20 +49,20 @@ def dataset(dataset_path):
     os.remove(ds.file_path)
 
 
-def test__load_dataframe(dataset):
+def test__load_dataframe(adressa_dataset):
     """Check if loading adressa works properly"""
 
-    df = dataset._load_dataframe()
-    assert (df.columns == [dataset.USER_IX, dataset.ITEM_IX, dataset.TIMESTAMP_IX]).all()
+    df = adressa_dataset._load_dataframe()
+    assert (df.columns == [adressa_dataset.USER_IX, adressa_dataset.ITEM_IX, adressa_dataset.TIMESTAMP_IX]).all()
 
     assert df.shape == (20, 3)
-    assert df[dataset.USER_IX].nunique() == 3
-    assert df[dataset.ITEM_IX].nunique() == 2
+    assert df[adressa_dataset.USER_IX].nunique() == 3
+    assert df[adressa_dataset.ITEM_IX].nunique() == 2
 
 
-def test_load_interaction_matrix(dataset):
+def test_load_interaction_matrix(adressa_dataset):
 
-    im = dataset.load()
+    im = adressa_dataset.load()
 
     assert im.shape == (3, 1)
     assert im.num_interactions == 15

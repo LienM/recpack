@@ -77,8 +77,6 @@ def mat():
     return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
 
 
-# TODO: there might be quite a few functionalities that fail if a timestamp has value 0,
-# Especially those relying on csr matrices for efficient computation.
 @pytest.fixture(scope="function")
 def mat_no_zero_timestamp():
     data = {
