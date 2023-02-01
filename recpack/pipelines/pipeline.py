@@ -207,7 +207,7 @@ class Pipeline(object):
             results = self._optimise_w_grid(optimise, algorithm_entry.optimisation_info)
 
         # Sort by metric value
-        optimal_params = sorted(results, key=lambda x: x["loss"], reverse=True)[0]["params"]
+        optimal_params = sorted(results, key=lambda x: x["loss"], reverse=False)[0]["params"]
 
         self._optimisation_results.append(pd.DataFrame.from_records(results).drop(columns=["loss", "status"]))
 
