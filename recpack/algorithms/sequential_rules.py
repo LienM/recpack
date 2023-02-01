@@ -7,7 +7,7 @@ from recpack.util import get_top_K_ranks, get_top_K_values
 
 
 class SequentialRules(TopKItemSimilarityMatrixAlgorithm):
-    """Predicts items interacted after the last visited item of a user.
+    """Recommends the item that most likely follows a user's last interaction.
 
     Implemented as described in Ludewig, Malte, and Dietmar Jannach.
     "Evaluation of session-based recommendation algorithms."
@@ -49,6 +49,9 @@ class SequentialRules(TopKItemSimilarityMatrixAlgorithm):
                 for gap, target in enumerate(hist[ix + 1 : min(ix + self.max_steps + 1, hist_len)]):
                     similarities[context, target] += self._weight(n_steps=gap + 1)
 
+        # The simialrity is now finalised by normalising the sum above, 
+        # by dividing with the amount of occurrences of the left hand side item.
+        # We also only keep the K highest values.
         self.similarity_matrix_ = get_top_K_values(
             csr_matrix(similarities.multiply(invert(X.binary_values.sum(axis=0).T))), self.K
         )

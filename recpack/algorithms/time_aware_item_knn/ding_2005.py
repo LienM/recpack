@@ -2,7 +2,7 @@ from recpack.algorithms.time_aware_item_knn.base import TARSItemKNN
 
 
 class TARSItemKNNDing(TARSItemKNN):
-    """Time aware algorithm weighting the user history when predicting.
+    """Time aware algorithm applying a decay on the user history when predicting.
 
     Algorithm as presented in Ding, Yi, and Xue Li. "Time weight collaborative filtering."
     Computation of the similarity matrix is the same as normal ItemKNN.
@@ -10,9 +10,9 @@ class TARSItemKNNDing(TARSItemKNN):
 
     .. math::
 
-        \\text{sim}(u, i) = \\sum\\limits_{j \\in X_u} e^{-\\alpha * \\delta t_{u,j}} * \\text{sim}(i, j)
+        \\text{sim}(u, i) = \\sum\\limits_{j \\in X_u} e^{-\\alpha \\cdot \\delta t_{u,j}} \\cdot \\text{sim}(i, j)
 
-    Where alpha is the predict_decay parameter.
+    Where :math:`alpha` is the predict_decay parameter.
 
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional

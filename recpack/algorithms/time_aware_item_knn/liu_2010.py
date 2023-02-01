@@ -9,11 +9,11 @@ class TARSItemKNNLiu(TARSItemKNN):
     Algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
     Proceedings of the fourth ACM conference on Recommender systems. 2010.
 
-    Each interaction is weighed as
+    Each interaction is decay to
 
     .. math::
 
-        e^{- \\alpha \\text{age}}
+        e^{- \\alpha \\cdot \\text{age}}
 
     Where alpha is the decay scaling parameter,
     and age is the time between the maximal timestamp in the matrix

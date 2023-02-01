@@ -25,23 +25,29 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
     Decay function parameter decides how to compute the similarity between two items.
 
     .. math::
-        \\text{sim}(i,j) = \\sum\\limits_{u \\in |U|} R_{u,i} \\cdot R_{u,j} \\cdot \\theta(|T_{u,i} - T_{u,j}|)
+        \\text{sim}(i,j) = \\sum\\limits_{u \\in U} R_{u,i} \\cdot R_{u,j} \\cdot \\theta(|T_{u,i} - T_{u,j}|)
 
     Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``.
 
     - Concave decay function between item i and j is computed as:
-    .. math::
-        \\theta(x) = \\alpha^{x} \\text{for} \\alpha \\in  [0, 1]
+      
+      .. math::
+      
+        \\theta(x) = \\alpha^{x}, \\alpha \\in  [0, 1]
 
     - Convex decay function between item i and j is computed as:
-    .. math::
-        \\theta(x) = 1 - \\beta^{t-x} \\text{for} \\beta \\in  (0, 1)
+      
+      .. math::
+        
+        \\theta(x) = 1 - \\beta^{t-x}, \\beta \\in  (0, 1)
 
     - Linear decay function between item i and j is computed as:
-    .. math::
-        \\theta(x) = 1 - \\frac{x}{t} \\cdot \\gamma \\text{for} \\gamma \\in  [0, 1]
+      
+      .. math::
+        
+        \\theta(x) = 1 - \\frac{x}{t} \\cdot \\gamma, \\gamma \\in  [0, 1]
 
-    With ``t`` the absolute time interval between the interactions on both items.
+    Where :math:`t` is the time between the interactions with both items.
 
     **Example of use**::
 

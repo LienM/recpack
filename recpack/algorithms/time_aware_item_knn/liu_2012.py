@@ -37,7 +37,9 @@ class TARSItemKNNLiu2012(TARSItemKNN):
     Weights are computed based on their position in a user's history. 1st item visited by a user gets value 1,
     last item visited gets value 2. The decay follows a logarithmic function.
 
-    Uses the :class:`recpack.algorithms.time_aware_item_knn.decay_functions.LogDecay` decay function and cosine similarity.
+    .. math::
+        
+        \\log_\\alpha ((\\alpha-1)x + 1) + 1
 
     :param K: The number of neighbours to keep per item.
     :type K: int

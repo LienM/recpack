@@ -46,11 +46,12 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
       the previously computed similarity matrix.
 
     The similarity between items is based on their decayed interaction vectors:
+    
     .. math::
 
         \\text{sim}(i,j) = s(\\Gamma(A_i), \\Gamma(A_j))
     
-    Where :math:`s` is a similarity function (like cosine similarity), 
+    Where :math:`s` is a similarity function (like ``cosine``), 
     :math:`\\Gamma` a decay function (like ``exponential_decay``) and 
     :math:`A_i` contains the distance to now from when the users interacted with item `i`, 
     or 0 if a user did not interact with the item.
@@ -70,7 +71,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         Allows more finegrained parameters for large scale datasets where events are collected over months of data.
         Defaults to 1 (second).
     :type decay_interval: int, optional
-    :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+    :param similarity: Which similarity measure to use. Defaults to ``"cosine"``.
         ``["cosine", "conditional_probability", "pearson"]`` are supported.
     :type similarity: str, Optional
     :param decay_function: The decay function to use, defaults to ``"exponential"``.
@@ -220,11 +221,11 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
 
         \\text{sim}(i,j) = \\sum\\limits_{u \\in U}[R_{ui} \\cdot R_{uj} \\cdot \\Gamma(|T_{ui} - T_{uj}|)]
 
-    Conditional Probability based similarity is computed as ::
+    Conditional Probability based similarity is computed as
 
     .. math ::
 
-        \\text{sim}(i,j) = \\frac{1}{\\limits_{u \\in U}R_{ui}} \\sum\\limits_{u \\in U}[R_{ui} \\cdot R_{uj} \\cdot \\Gamma(|T_{ui} - T_{uj}|)]
+        \\text{sim}(i,j) = \\frac{1}{\\sum\\limits_{u \\in U}R_{ui}} \\sum\\limits_{u \\in U}[R_{ui} \\cdot R_{uj} \\cdot \\Gamma(|T_{ui} - T_{uj}|)]
 
     Where :math:`\\Gamma()` is a decay function, and :math:`T_{ui}` is the timestamp at which user :math:`u`
     last visited item :math:`i`.

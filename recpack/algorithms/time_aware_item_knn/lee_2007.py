@@ -23,7 +23,7 @@ class TARSItemKNNLee(TARSItemKNN):
     :type K: int, Optional
     :param W: The size of the weighting matrix, defaults to 5.
     :type W: int, Optional
-    :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+    :param similarity: Which similarity measure to use. Defaults to ``"cosine"``.
         ``["cosine", "pearson"]`` are supported.
     :type similarity: str, Optional
     """
@@ -112,12 +112,12 @@ class TARSItemKNNLee_W3(TARSItemKNNLee):
     Weights are used both for prediction and for training.
 
     .. note::
-        This uses the hard coded weight matrix from the paper, and therefore is different from `TARSItemKNNLee(W=3)`
+        This uses the hard coded weight matrix from the paper, and therefore is different from ``TARSItemKNNLee(W=3)``
 
 
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
-    :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+    :param similarity: Which similarity measure to use. Defaults to ``"cosine"``.
         ``["cosine", "pearson"]`` are supported.
     :type similarity: str, Optional
     """
@@ -144,11 +144,11 @@ class TARSItemKNNLee_W5(TARSItemKNNLee):
     Weights are used both for prediction and for training.
 
     .. note::
-        This is identical to `TARSItemKNNLee(W=5)`
+        This is identical to ``TARSItemKNNLee(W=5)``
 
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
-    :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+    :param similarity: Which similarity measure to use. Defaults to ``"cosine"``.
         ``["cosine", "pearson"]`` are supported.
     :type similarity: str, Optional
     """
