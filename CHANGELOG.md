@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __datasets__
     * Fixed bug in MovieLens dataset download
 
+* __pipelines__
+    * Fixed issue with optimisation selecting the wrong parameters (introduced in 0.3.5)
+
 ### Additions
 * __datasets__
     * Added Globo dataset
