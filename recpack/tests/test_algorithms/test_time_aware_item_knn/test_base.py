@@ -11,7 +11,7 @@ import pytest
 from recpack.algorithms.time_aware_item_knn import TARSItemKNN, TARSItemKNNCoocDistance
 
 
-@pytest.fixture(params=["cosine", "conditional_probability"])
+@pytest.fixture(params=["cosine", "conditional_probability", "pearson"])
 def algorithm(request) -> TARSItemKNN:
     return TARSItemKNN(K=2, fit_decay=0.5, predict_decay=0.5, similarity=request.param)
 
