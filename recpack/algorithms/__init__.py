@@ -138,8 +138,6 @@ Time Aware Algorithms
     TARSItemKNNHermann
     TARSItemKNNXia
 
-    TARSUserKNNAnelli
-
 .. _algorithm-base-classes:
 
 Abstract Base Classes
@@ -291,7 +289,5 @@ from recpack.algorithms.time_aware_item_knn import (
     TARSItemKNNXia,
     TARSItemKNNVaz,
 )
-
-from recpack.algorithms.time_aware_user_knn.anelli_2019 import TARSUserKNNAnelli
 
 from recpack.algorithms.sequential_rules import SequentialRules

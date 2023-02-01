@@ -33,13 +33,11 @@ EPSILON = 1e-13
 
 
 class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
-    """ItemKNN algorithm where older interactions have less weight during prediction, training or both.
+    """Framework implementation for Time Aware ItemKNN algorithms, which give lower weight to older interactions.
 
-    This class is the baseclass for ItemKNN weighting approaches, combining their functionality,
-    and allowing unpublished combinations of settings.
-    Includes work by Liu, Nathan N., et al. (2010), Ding et al. (2005) and Lee et al. (2007).
+    This class was inspired by works from Liu, Nathan N., et al. (2010), Ding et al. (2005) and Lee et al. (2007).
 
-    The standard framework for all of these approaches can be summarised as:
+    The framework for these approaches can be summarised as:
 
     - When training the user interaction matrix is weighted to take into account temporal information.
     - Similarities are computed on this weighted matrix, using various similarity measures.
@@ -47,30 +45,36 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     - Recommendation scores are obtained by multiplying the weighted interaction matrix with
       the previously computed similarity matrix.
 
-    The default weighting in this base class is:
+    The similarity between items is based on their decayed interaction vectors:
     .. math::
 
-        e^{- \\alpha \\text{age}/\\text{decay_interval}}
+        \\text{sim}(i,j) = s(\\Gamma(A_i), \\Gamma(A_j))
+    
+    Where :math:`s` is a similarity function (like cosine similarity), 
+    :math:`\\Gamma` a decay function (like ``exponential_decay``) and 
+    :math:`A_i` contains the distance to now from when the users interacted with item `i`, 
+    or 0 if a user did not interact with the item.
 
-    Where alpha is the decay scaling parameter, and age is the time between "now" and the timestamp of the event.
-    "Now" is considered as the maximal timestamp in the matrix + 1s.
+    During computation, 'now' is considered as the maximal timestamp in the matrix + 1.
+    As such the age is always a positive non-zero value.
 
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
     :param fit_decay: Defines the decay scaling used for decay during model fitting.
-        Defaults to (1/3600), such that the half life is 1 hour.
+        Defaults to ``1/3600``.
     :type fit_decay: float, Optional
-    # TODO It's a little confusing that predict_decay says that the half life is 1 hour
-    # But then you can configure a decay_interval to change this.
     :param predict_decay: Defines the decay scaling used for decay during prediction.
-        Defaults to (1/3600), such that the half life is 1 hour.
+        Defaults to ``1/3600``.
     :type predict_decay: float, Optional
-    :param decay_interval: Interval in seconds to consider when computing decay.
-        Allows better specifications of parameters for large scale datasets with ages in terms of days / months.
+    :param decay_interval: Size of a single time unit in seconds.
+        Allows more finegrained parameters for large scale datasets where events are collected over months of data.
         Defaults to 1 (second).
     :type decay_interval: int, optional
     :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+        ``["cosine", "conditional_probability", "pearson"]`` are supported.
     :type similarity: str, Optional
+    :param decay_function: The decay function to use, defaults to ``"exponential"``.
+        Supported values are ``["exponential", "log", "linear", "concave", "convex", "inverse"]``
     """
 
     SUPPORTED_SIMILARITIES = ["cosine", "conditional_probability", "pearson"]
@@ -106,22 +110,31 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
         if decay_function not in self.DECAY_FUNCTIONS:
             raise ValueError(f"Decay function {decay_function} is not supported.")
+        
+        self.decay_function = decay_function
 
-        # TODO Propose to replace with ExponentialDecay(0) -> a^0 = 1 (So effectively binarizes?)
-        # Since you always pass the csr_matrix.data, I think all values can made 1, so this proposal works.
-        if fit_decay == 0:
-            self.fit_decay_func = NoDecay(0)
-        else:
-            self.fit_decay_func = self.DECAY_FUNCTIONS[decay_function](fit_decay)
-
-        if predict_decay == 0:
-            self.predict_decay_func = NoDecay(0)
-        else:
-            self.predict_decay_func = self.DECAY_FUNCTIONS[decay_function](predict_decay)
+        # Verify decay parameters
+        if self.decay_function in ["exponential", "log", "linear", "concave", "convex"]:
+            if fit_decay != 0:
+                self.DECAY_FUNCTIONS[decay_function].validate_decay(fit_decay)
+            
+            if predict_decay != 0:
+                self.DECAY_FUNCTIONS[decay_function].validate_decay(predict_decay)
 
         self.fit_decay = fit_decay
         self.predict_decay = predict_decay
         self.decay_function = decay_function
+
+    def _get_decay_func(self, decay, max_value):
+        if decay == 0:
+            return NoDecay()
+
+        elif self.decay_function == 'inverse':
+            return self.DECAY_FUNCTIONS[self.decay_function]()
+        elif self.decay_function in ["exponential", "convex"]:
+            return self.DECAY_FUNCTIONS[self.decay_function](decay)
+        elif self.decay_function in ["log", "linear", "concave"]:
+            return self.DECAY_FUNCTIONS[self.decay_function](decay, max_value)
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """Predict scores for nonzero users in X.
@@ -174,14 +187,10 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         :rtype: csr_matrix
         """
         timestamp_mat = X.last_timestamps_matrix
-        # The maximal timestamp in the matrix is used as 'now',
-        # age is encoded as now - t
+        # To get 'now', we add 1 to the maximal timestamp. This makes sure there are no vanishing zeroes.
         now = timestamp_mat.data.max() + 1
-        # TODO This passes the whole matrix, but your decay functions
-        # say it decays based on X_u (so max_age for a user)
-        # TODO It seems you never pass max_age at fitting time, is this on purpose?
-        # TODO: Propose to drop max_age as an argument
-        timestamp_mat.data = self.fit_decay_func((now - timestamp_mat.data) / self.decay_interval)
+        ages = (now - timestamp_mat.data)/ self.decay_interval
+        timestamp_mat.data = self._get_decay_func(self.fit_decay, ages.max())(ages)
         return csr_matrix(timestamp_mat)
 
     def _add_decay_to_predict_matrix(self, X: InteractionMatrix) -> csr_matrix:
@@ -194,44 +203,72 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         :rtype: csr_matrix
         """
         timestamp_mat = X.last_timestamps_matrix
-        # The maximal timestamp in the matrix is used as 'now',
-        # age is encoded as now - t
+        # To get 'now', we add 1 to the maximal timestamp. This makes sure there are no vanishing zeroes.
         now = timestamp_mat.data.max() + 1
-        # TODO Same here: You never pass max_age at prediction time.
-        timestamp_mat.data = self.predict_decay_func((now - timestamp_mat.data) / self.decay_interval)
+        ages = (now - timestamp_mat.data)/ self.decay_interval
+        timestamp_mat.data = self._get_decay_func(self.predict_decay, ages.max())(ages)
         return csr_matrix(timestamp_mat)
 
 
 class TARSItemKNNCoocDistance(TARSItemKNN):
+    """Time Aware ItemKNN variant that considers time between two interactions 
+    when computing similarity between two items.
 
-    # TODO: think about reasonable other similarity functions.
-    SUPPORTED_SIMILARITIES = ["cooc", "conditional_probability", "hermann"]
-    """Supported similarities, ``hermann`` is the similarity defined in Hermann et al. (2010),
-    dividing the sum of weighted cooccurrences by the number of cooccurrences"""
+    Cooc Similarity between two items is computed as 
+
+    .. math ::
+
+        \\text{sim}(i,j) = \\sum\\limits_{u \\in U}[R_{ui} \\cdot R_{uj} \\cdot \\Gamma(|T_{ui} - T_{uj}|)]
+
+    Conditional Probability based similarity is computed as ::
+
+    .. math ::
+
+        \\text{sim}(i,j) = \\frac{1}{\\limits_{u \\in U}R_{ui}} \\sum\\limits_{u \\in U}[R_{ui} \\cdot R_{uj} \\cdot \\Gamma(|T_{ui} - T_{uj}|)]
+
+    Where :math:`\\Gamma()` is a decay function, and :math:`T_{ui}` is the timestamp at which user :math:`u`
+    last visited item :math:`i`.
+    Timestamps are in multiples of ``decay_interval``, by default in seconds.
+
+        
+    :param K: Number of nearest neighbours to store per item, defaults to 200
+    :type K: int, optional
+    :param fit_decay: Decay parameter when applying decay during training, defaults to 1/3600
+    :type fit_decay: float, optional
+    :param decay_interval: Size of a single time unit in seconds.
+        Allows more finegrained parameters for large scale datasets where events are collected over months of data.
+        Defaults to 1 (second).
+    :type decay_interval: int, optional
+    :param similarity: Similarity function supplied, defaults to "cooc"
+    :type similarity: str, optional
+    :param decay_function: Decay function to use, ``["cooc", "conditional_probability"]`` are supported. Defaults to "exponential"
+    :type decay_function: str, optional
+    """
+
+    SUPPORTED_SIMILARITIES = ["cooc", "conditional_probability"]
+    """Supported similarities are ``"cooc"`` and ``"conditional_probability"``."""
 
     def __init__(
         self,
         K: int = 200,
         fit_decay: float = 1 / 3600,
-        predict_decay: float = 1 / 3600,
         decay_interval: int = 1,
         similarity: str = "cooc",
         decay_function: str = "exponential",
-        event_age_weight: float = 0,
     ):
-        super().__init__(K, fit_decay, predict_decay, decay_interval, similarity, decay_function)
-        self.event_age_weight = event_age_weight
+        super().__init__(K, fit_decay, 0, decay_interval, similarity, decay_function)
 
     def _fit(self, X: InteractionMatrix):
         num_users, num_items = X.shape
 
         # Get the timestamps matrix, and apply the interval
         last_timestamps_matrix = X.last_timestamps_matrix / self.decay_interval
-        now = last_timestamps_matrix.max() + 1 / self.decay_interval
 
         self.similarity_matrix_ = lil_matrix((X.shape[1], X.shape[1]))
 
-        max_age_possible = last_timestamps_matrix.data.max() - last_timestamps_matrix.data.min()
+        max_distance_possible = last_timestamps_matrix.data.max() - last_timestamps_matrix.data.min()
+        decay_func = self._get_decay_func(self.fit_decay, max_distance_possible)
+
         # Loop over all items as centers
         for i in tqdm(range(num_items)):
             n_center_occ = (last_timestamps_matrix[:, i] > 0).sum()
@@ -243,27 +280,14 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
             distance = cooc_ts - (cooc_ts > 0).multiply(last_timestamps_matrix[:, i])
             distance.data = np.abs(distance.data)
 
-            # Add min age of i and j to the distance computed.
-            if self.event_age_weight > 0:
-                broadcasted_age_of_center = (last_timestamps_matrix > 0).multiply(last_timestamps_matrix[:, i])
-                target_has_smallest_age = last_timestamps_matrix < broadcasted_age_of_center
-                center_has_smallest_age = (cooc_ts > 0) - target_has_smallest_age
-                min_age = target_has_smallest_age.multiply(last_timestamps_matrix) + center_has_smallest_age.multiply(
-                    last_timestamps_matrix[:, i]
-                )
-                min_age.data = now - min_age.data
-                distance = distance + (distance > 0).multiply(self.event_age_weight * min_age)
-
             # Decay the distances
-            # TODO Here you do pass it
-            distance.data = self.fit_decay_func(distance.data, max_age=max_age_possible)
+            # We use the max_distance_possible, because the decay function needs an overall value 
+            # and we only give it values per user.
+            distance.data = decay_func(distance.data)
 
             similarities = csr_matrix(distance.sum(axis=0))
             # Normalisation options.
-            if self.similarity == "hermann":
-                n_cooc = (cooc_ts > 0).sum(axis=0)
-                similarities = similarities.multiply(invert(n_cooc))
-            elif self.similarity == "conditional_probability":
+            if self.similarity == "conditional_probability":
                 similarities = similarities.multiply(1 / n_center_occ)
             else:
                 # Just use the sum of the similarities (as in Xia 2010)

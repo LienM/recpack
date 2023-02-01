@@ -18,7 +18,7 @@ def algorithm(request) -> TARSItemKNN:
 
 @pytest.fixture()
 def cooc_algorithm():
-    return TARSItemKNNCoocDistance(K=2, fit_decay=0.5, predict_decay=0.5, similarity="cooc")
+    return TARSItemKNNCoocDistance(K=2, fit_decay=0.5, similarity="cooc")
 
 
 def test_check_input(algorithm, matrix_sessions):
@@ -105,47 +105,37 @@ def test_predict(algorithm, mat):
     # TODO: value check?
 
 
-def test_cooc_decay_fit(cooc_algorithm, mat_no_zero_timestamp):
-    cooc_algorithm.fit(mat_no_zero_timestamp)
+@pytest.mark.parametrize(
+    "similarity, expected_similarities",
+    [
+        (
+            "cooc",
+            np.array(
+                [
+                    [0, np.exp(-1 / 2) * 3, 0, 0, 0],
+                    [np.exp(-1 / 2) * 3, 0, 0, 0, 0],
+                    [0, 0, 0, np.exp(-3 / 2), np.exp(-2 / 2)],
+                    [0, 0, np.exp(-3 / 2), 0, 0],
+                    [0, 0, np.exp(-2 / 2), 0, 0],
+                ]
+            ),
+        ),
+        (
+            "conditional_probability",
+            np.array(
+                [
+                    [0, np.exp(-1 / 2), 0, 0, 0],
+                    [np.exp(-1 / 2), 0, 0, 0, 0],
+                    [0, 0, 0, np.exp(-3 / 2) / 3, np.exp(-2 / 2) / 3],
+                    [0, 0, np.exp(-3 / 2), 0, 0],
+                    [0, 0, np.exp(-2 / 2), 0, 0],
+                ]
+            ),
+        ),
+    ],
+)
+def test_cooc_decay_fit(similarity, expected_similarities, mat_no_zero_timestamp):
+    algorithm = TARSItemKNNCoocDistance(K=2, fit_decay=0.5, similarity=similarity)
+    algorithm.fit(mat_no_zero_timestamp)
 
-    expected_similarities = np.array(
-        [
-            [0, np.exp(-1 / 2) * 3, 0, 0, 0],
-            [np.exp(-1 / 2) * 3, 0, 0, 0, 0],
-            [0, 0, 0, np.exp(-3 / 2), np.exp(-2 / 2)],
-            [0, 0, np.exp(-3 / 2), 0, 0],
-            [0, 0, np.exp(-2 / 2), 0, 0],
-        ]
-    )
-
-    np.testing.assert_array_almost_equal(cooc_algorithm.similarity_matrix_.toarray(), expected_similarities)
-
-    # hacky overwrite of the similarity
-    cooc_algorithm.similarity = "hermann"
-    cooc_algorithm.fit(mat_no_zero_timestamp)
-
-    expected_similarities = np.array(
-        [
-            [0, np.exp(-1 / 2), 0, 0, 0],
-            [np.exp(-1 / 2), 0, 0, 0, 0],
-            [0, 0, 0, np.exp(-3 / 2), np.exp(-2 / 2)],
-            [0, 0, np.exp(-3 / 2), 0, 0],
-            [0, 0, np.exp(-2 / 2), 0, 0],
-        ]
-    )
-    np.testing.assert_array_almost_equal(cooc_algorithm.similarity_matrix_.toarray(), expected_similarities)
-
-    # hacky overwrite of the similarity
-    cooc_algorithm.similarity = "conditional_probability"
-    cooc_algorithm.fit(mat_no_zero_timestamp)
-    expected_similarities = np.array(
-        [
-            [0, np.exp(-1 / 2), 0, 0, 0],
-            [np.exp(-1 / 2), 0, 0, 0, 0],
-            [0, 0, 0, np.exp(-3 / 2) / 3, np.exp(-2 / 2) / 3],
-            [0, 0, np.exp(-3 / 2), 0, 0],
-            [0, 0, np.exp(-2 / 2), 0, 0],
-        ]
-    )
-
-    np.testing.assert_array_almost_equal(cooc_algorithm.similarity_matrix_.toarray(), expected_similarities)
+    np.testing.assert_array_almost_equal(algorithm.similarity_matrix_.toarray(), expected_similarities)

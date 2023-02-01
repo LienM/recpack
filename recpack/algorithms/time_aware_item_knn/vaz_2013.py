@@ -11,10 +11,10 @@ class TARSItemKNNVaz(TARSItemKNN):
     :param K: The number of neighbours to compute per item. Defaults to 200.
     :type K: int, optional
     :param fit_decay: decay parameter used during fitting.
-        Defaults to 1/(24*3600) or in a halflife of a day for the events.
+        Defaults to 1/(24*3600).
     :type fit_decay: float, optional
     :param predict_decay: decay parameter used during predicting.
-        Defaults to 1/(24*3600) or in a halflife of a day for the events.
+        Defaults to 1/(24*3600).
     :type predict_decay: float, optional
     """
 

@@ -25,7 +25,7 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
     Decay function parameter decides how to compute the similarity between two items.
 
     .. math::
-        \\text{sim}(i,j) = \\sum\\limits_{u=1}^{|U|} R_{u,i} \\cdot R_{u,j} \\cdot \\theta(|T_{u,i} - T_{u,j}|)
+        \\text{sim}(i,j) = \\sum\\limits_{u \\in |U|} R_{u,i} \\cdot R_{u,j} \\cdot \\theta(|T_{u,i} - T_{u,j}|)
 
     Supported options are: ``"concave"``, ``"convex"`` and ``"linear"``.
 
@@ -91,8 +91,9 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
         be applied on the item similarity scores.
         Defaults to `"concave"`.
     :type decay_function: str, optional
-    :param decay_interval: Defines the basic time interval unit in seconds.
-        Defaults to 24*3600.
+    :param decay_interval: Size of a single time unit in seconds.
+        Allows more finegrained parameters for large scale datasets where events are collected over months of data.
+        Defaults to 1 (second).
     :typ decay_interval: int, optional
     """
 
@@ -112,7 +113,6 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
         super().__init__(
             K=K,
             fit_decay=fit_decay,
-            predict_decay=0,
             decay_interval=decay_interval,
             similarity="cooc",
             decay_function=decay_function,

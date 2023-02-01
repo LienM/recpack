@@ -27,13 +27,11 @@ class TARSItemKNNLiu(TARSItemKNN):
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
     :param fit_decay: Defines the decay scaling used for decay during model fitting.
-        Defaults to (1/3600), such that the half life is 1 hour.
+        Defaults to (1/3600).
     :type fit_decay: float, Optional
     :param predict_decay: Defines the decay scaling used for decay during prediction.
-        Defaults to (1/3600), such that the half life is 1 hour.
+        Defaults to (1/3600).
     :type predict_decay: float, Optional
-    :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
-    :type similarity: str, Optional
     """
 
     def __init__(

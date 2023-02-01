@@ -24,6 +24,7 @@ class TARSItemKNNLee(TARSItemKNN):
     :param W: The size of the weighting matrix, defaults to 5.
     :type W: int, Optional
     :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+        ``["cosine", "pearson"]`` are supported.
     :type similarity: str, Optional
     """
 
@@ -117,6 +118,7 @@ class TARSItemKNNLee_W3(TARSItemKNNLee):
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
     :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+        ``["cosine", "pearson"]`` are supported.
     :type similarity: str, Optional
     """
 
@@ -147,6 +149,7 @@ class TARSItemKNNLee_W5(TARSItemKNNLee):
     :param K: Amount of neighbours to keep. Defaults to 200.
     :type K: int, Optional
     :param similarity: Which similarity measure to use. Defaults to `"cosine"`.
+        ``["cosine", "pearson"]`` are supported.
     :type similarity: str, Optional
     """
 
