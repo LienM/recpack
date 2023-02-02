@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from recpack.algorithms import TARSItemKNNLiu2012
-from recpack.algorithms.time_aware_item_knn.liu_2012 import liu_decay
+from recpack.algorithms.time_aware_item_knn.liu_2012 import LiuDecay
 
 
 def test_liu_decay_order_preservation():
@@ -12,7 +12,7 @@ def test_liu_decay_order_preservation():
         b = np.random.rand()
 
         decay = np.random.randint(2, 10)
-        output = liu_decay(np.array([a, b]), decay)
+        output = LiuDecay(decay)(np.array([a, b]))
         # Events further from the first interaction get a higher weight
         assert (output[0] < output[1]) == (a < b)
 
@@ -25,8 +25,14 @@ def test_liu_decay_order_preservation():
     ],
 )
 def test_liu_decay(input, decay, expected_output):
-    result = liu_decay(input, decay)
+    result = LiuDecay(decay)(input)
     np.testing.assert_array_almost_equal(result, expected_output)
+
+
+@pytest.mark.parametrize("decay", [-1, 0, 1])
+def test_liu_decay_bad_input(decay):
+    with pytest.raises(ValueError):
+        LiuDecay.validate_decay(decay)
 
 
 def test_compute_users_first_interaction(mat_no_zero_timestamp):

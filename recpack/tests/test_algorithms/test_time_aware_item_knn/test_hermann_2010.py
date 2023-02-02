@@ -19,7 +19,7 @@ def mat():
     }
     df = pd.DataFrame.from_dict(data)
 
-    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX, shape=(3, 4))
 
 
 @pytest.fixture(scope="function")
@@ -47,14 +47,16 @@ def algorithm_1h_interval():
 def test_time_decay_knn_fit(mat, algorithm):
 
     algorithm.fit(mat)
-
+    # fmt: off
     expected_similarities = np.array(
         [
-            [0, 1 / 6, 1 / 7],
-            [1 / 6, 0, 1 / 5],
-            [1 / 7, 1 / 5, 0],
+            [0, 1 / 6, 1 / 7, 0],
+            [1 / 6, 0, 1 / 5, 0],
+            [1 / 7, 1 / 5, 0, 0],
+            [0, 0, 0, 0]
         ]
     )
+    # fmt: on
 
     np.testing.assert_almost_equal(algorithm.similarity_matrix_.toarray(), expected_similarities)
 
@@ -63,13 +65,16 @@ def test_time_decay_knn_fit_configured_time_unit(mat, algorithm_1h_interval):
 
     algorithm_1h_interval.fit(mat)
 
+    # fmt: off
     expected_similarities = np.array(
         [
-            [0, 3600 / 6, 3600 / 7],
-            [3600 / 6, 0, 3600 / 5],
-            [3600 / 7, 3600 / 5, 0],
+            [0, 3600 / 6, 3600 / 7, 0],
+            [3600 / 6, 0, 3600 / 5, 0],
+            [3600 / 7, 3600 / 5, 0, 0],
+            [0, 0, 0, 0]
         ]
     )
+    # fmt: on
 
     np.testing.assert_almost_equal(algorithm_1h_interval.similarity_matrix_.toarray(), expected_similarities)
 

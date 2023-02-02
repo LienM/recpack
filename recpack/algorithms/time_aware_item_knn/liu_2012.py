@@ -1,31 +1,39 @@
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.sparse import csr_matrix
 
 from recpack.algorithms.time_aware_item_knn.base import TARSItemKNN
+from recpack.algorithms.time_aware_item_knn.decay_functions import DecayFunction
 from recpack.matrix import InteractionMatrix
 
 
-def liu_decay(time_array: np.array, alpha: float) -> np.array:
+class LiuDecay(DecayFunction):
     """Computes a log based alpha function.
 
+    Every x in the `time_array` is discounted to:
     .. math::
 
         log_\\alpha ((\\alpha-1)x + 1) + 1
 
-    Where alpha is the alpha parameter, computed for each x in the time_array.
-
-    :param time_array: array of time based weights, which will be decayed.
-        Values should be in the [0, 1] interval.
-    :type time_array: np.array
-    :param alpha: The decay parameter, should be in the ]1, inf[ interval.
-    :type alpha: float
-    :returns: The decayed input time array. Larger values in the original array still have the highest values.
-    :rtype: np.array
-
+    Where :math:`\\alpha` is the decay parameter.
     """
-    if not alpha > 1:
-        raise ValueError(f"decay parameter alpha = {alpha} is not in the supported range: ]1, inf [")
-    return (np.log(((alpha - 1) * time_array) + 1) / np.log(alpha)) + 1
+
+    @classmethod
+    def validate_decay(cls, alpha: float):
+        if not alpha > 1:
+            raise ValueError(f"Decay parameter alpha = {alpha} is not in the supported range: ]1, inf [")
+
+    def __init__(self, alpha: float):
+        self.validate_decay(alpha)
+        self.alpha = alpha
+
+    def __call__(self, time_array: ArrayLike) -> ArrayLike:
+        """Apply decay.
+        :param time_array: array of time based weights, which will be decayed.
+        Values should be in the [0, 1] interval.
+        :type time_array: np.array
+        """
+        return (np.log(((self.alpha - 1) * time_array) + 1) / np.log(self.alpha)) + 1
 
 
 class TARSItemKNNLiu2012(TARSItemKNN):
@@ -48,6 +56,7 @@ class TARSItemKNNLiu2012(TARSItemKNN):
 
     def __init__(self, K=200, decay=2):
         super().__init__(K=K, fit_decay=decay, predict_decay=decay, decay_function="log", similarity="cosine")
+        self.decay_function = LiuDecay(decay)
         self.decay = decay
 
     def _add_decay_to_interaction_matrix(self, X: InteractionMatrix) -> csr_matrix:
@@ -66,8 +75,8 @@ class TARSItemKNNLiu2012(TARSItemKNN):
         last_user_interactions = X.binary_values.multiply(timestamp_mat.max(axis=1))
         # the input for the decay is (t - t0_u) / tl_u
         # Where t0_u is the users first interaction and tl_u the last
-        timestamp_mat.data = liu_decay(
-            (timestamp_mat.data - first_user_interactions.data) / last_user_interactions.data, self.decay
+        timestamp_mat.data = self.decay_function(
+            (timestamp_mat.data - first_user_interactions.data) / last_user_interactions.data
         )
         return csr_matrix(timestamp_mat)
 
