@@ -107,7 +107,7 @@ def compute_pearson_similarity(X: csr_matrix) -> csr_matrix:
 
     X = X - (X > 0).multiply(avg_per_item)
 
-    # Given the rescaled matrix, the pearson correlation is just cosine similarity on this matrix.s
+    # Given the rescaled matrix, the pearson correlation is just cosine similarity on this matrix.
     return compute_cosine_similarity(X)
 
 
