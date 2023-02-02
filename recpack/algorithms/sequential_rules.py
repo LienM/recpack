@@ -49,7 +49,7 @@ class SequentialRules(TopKItemSimilarityMatrixAlgorithm):
                 for gap, target in enumerate(hist[ix + 1 : min(ix + self.max_steps + 1, hist_len)]):
                     similarities[context, target] += self._weight(n_steps=gap + 1)
 
-        # The simialrity is now finalised by normalising the sum above, 
+        # The similarity is now finalised by normalising the sum computed above,
         # by dividing with the amount of occurrences of the left hand side item.
         # We also only keep the K highest values.
         self.similarity_matrix_ = get_top_K_values(
