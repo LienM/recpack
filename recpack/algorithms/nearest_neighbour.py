@@ -96,7 +96,7 @@ def compute_pearson_similarity(X: csr_matrix) -> csr_matrix:
     :rtype: csr_matrix
     """
 
-    if X.sum() == X.nnz:
+    if (X == 1).sum() == X.nnz:
         raise ValueError("Pearson similarity can not be computed on a binary matrix.")
 
     count_per_item = (X > 0).sum(axis=0).A

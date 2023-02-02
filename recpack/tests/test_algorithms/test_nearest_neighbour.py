@@ -297,8 +297,17 @@ def test_compute_pearson_similarity():
     assert corr[0, 0] == 0  # no self similarity
     assert corr[0, 1] == 0
     expected_sim_0_2 = ((-1.333 * -0.5) + (-0.333 * 0.5)) / (
-        np.sqrt(1.333 ** 2 + 0.333 ** 2 + 1.666 ** 2) * np.sqrt(2 * (0.5) ** 2)
+        np.sqrt(1.333**2 + 0.333**2 + 1.666**2) * np.sqrt(2 * (0.5) ** 2)
     )
     np.testing.assert_almost_equal(corr[0, 2], expected_sim_0_2, decimal=3)
-    expected_sim_0_3 = (1.666 * 0.5) / (np.sqrt(1.333 ** 2 + 0.333 ** 2 + 1.666 ** 2) * np.sqrt(2 * 0.5 ** 2))
+    expected_sim_0_3 = (1.666 * 0.5) / (np.sqrt(1.333**2 + 0.333**2 + 1.666**2) * np.sqrt(2 * 0.5**2))
     np.testing.assert_almost_equal(corr[0, 3], expected_sim_0_3, decimal=3)
+
+
+def test_compute_pearson_similarity_binary_matrix():
+    data = csr_matrix([[1, 0, 1, 0], [0, 1, 0, 1]])
+
+    with pytest.raises(ValueError) as e:
+        compute_pearson_similarity(data)
+
+    assert e.match("binary matrix")
