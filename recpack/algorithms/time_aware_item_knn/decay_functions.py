@@ -150,7 +150,7 @@ class LogDecay(DecayFunction):
     def validate_decay(cls, decay: float):
         """Verify if the decay parameter is in the right range for this decay function."""
         if not (1 < decay):
-            raise ValueError(f"decay parameter = {decay} is not in the supported range: ]1, inf[.")
+            raise ValueError(f"Decay parameter = {decay} is not in the supported range: ]1, inf[.")
 
     def __init__(self, decay: float, max_distance: float):
         self.validate_decay(decay)
@@ -190,7 +190,7 @@ class LinearDecay(DecayFunction):
     @classmethod
     def validate_decay(cls, decay: float):
         if not (0 <= decay):
-            raise ValueError(f"decay parameter = {decay} is not in the supported range: [0, +inf[.")
+            raise ValueError(f"Decay parameter = {decay} is not in the supported range: [0, +inf[.")
 
     def __init__(self, decay: float, max_distance: float):
         self.validate_decay(decay)

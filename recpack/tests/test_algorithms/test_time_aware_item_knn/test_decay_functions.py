@@ -138,3 +138,50 @@ def test_wrong_max_distance(decay_function):
         decay_function(DUMMY_ARRAY)
 
     assert e.match("At least one of the distances is bigger than the specified max_distance.")
+
+
+@pytest.mark.parametrize(
+    "decay_function, decay_value",
+    [
+        (ExponentialDecay, 0),
+        (ExponentialDecay, 1),
+        (ExponentialDecay, 0.5),
+        (ConvexDecay, 1),
+        (ConvexDecay, 0.5),
+        (ConcaveDecay, 1),
+        (ConcaveDecay, 0.5),
+        (LogDecay, 2),
+        (LogDecay, 4),
+        (LogDecay, 100),
+        (LinearDecay, 0),
+        (LinearDecay, 2),
+    ],
+)
+def test_validation_succeeds(decay_function, decay_value):
+    # If the validation fails, the function will raise an error
+    decay_function.validate_decay(decay_value)
+
+
+@pytest.mark.parametrize(
+    "decay_function, decay_value",
+    [
+        (ExponentialDecay, 2),
+        (ExponentialDecay, -1),
+        (ExponentialDecay, 1.000001),
+        (ConvexDecay, 0),
+        (ConvexDecay, 2),
+        (ConvexDecay, -1),
+        (ConcaveDecay, 0),
+        (ConcaveDecay, 2),
+        (ConcaveDecay, -1),
+        (LogDecay, 0),
+        (LogDecay, 1),
+        (LogDecay, -1),
+        (LinearDecay, -1),
+    ],
+)
+def test_validation_fails(decay_function, decay_value):
+    with pytest.raises(ValueError) as e:
+        decay_function.validate_decay(decay_value)
+
+    assert e.match("Decay parameter = ")
