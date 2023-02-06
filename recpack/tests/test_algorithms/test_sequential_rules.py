@@ -97,3 +97,9 @@ def test_predict(algorithm, long_user_histories):
     # cut off the last items in the histories
     pred_2 = algorithm.predict(long_user_histories.timestamps_lt(4))
     np.testing.assert_array_equal(pred_2.toarray(), algorithm.similarity_matrix_[[0, 2], :].toarray())
+
+
+def test_no_self_similarity(algorithm, long_user_histories):
+    algorithm.fit(long_user_histories)
+    n_items = long_user_histories.shape[1]
+    assert (algorithm.similarity_matrix_.toarray()[np.arange(n_items, n_items)] == 0).all()

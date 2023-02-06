@@ -41,13 +41,17 @@ class SequentialRules(TopKItemSimilarityMatrixAlgorithm):
         return get_top_K_ranks(X.last_timestamps_matrix, 1)
 
     def _fit(self, X: InteractionMatrix):
-        similarities = lil_matrix((X.shape[1], X.shape[1]))
+        num_items = X.shape[1]
+        similarities = lil_matrix((num_items, num_items))
 
         for user, hist in X.sorted_item_history:
             hist_len = len(hist)
             for ix, context in enumerate(hist):
                 for gap, target in enumerate(hist[ix + 1 : min(ix + self.max_steps + 1, hist_len)]):
                     similarities[context, target] += self._weight(n_steps=gap + 1)
+
+        # Set self similarity to 0
+        similarities[list(range(num_items)), list(range(num_items))] = 0
 
         # The similarity is now finalised by normalising the sum computed above,
         # by dividing with the amount of occurrences of the left hand side item.
