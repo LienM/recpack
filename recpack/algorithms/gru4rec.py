@@ -342,7 +342,7 @@ class GRU4Rec(TorchMLAlgorithm):
                         # Use only the prediction for the final item, i.e. last non-padding ID.
                         last_item_ix_in_chunk = (input_chunk != self.pad_token).sum(axis=1) - 1
 
-                        is_last_item_in_chunk = last_item_ix_in_chunk >= 0
+                        is_last_item_in_chunk = (last_item_ix_in_chunk >= 0).detach().cpu().numpy()
                         # Item scores is a matrix with the scores for each item
                         # based on the last item in the sequence
                         last_item_ix = last_item_ix_in_chunk[is_last_item_in_chunk]
