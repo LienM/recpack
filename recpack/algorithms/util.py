@@ -50,32 +50,28 @@ def get_users(data: Matrix) -> List[int]:
     return list(set(data.nonzero()[0]))
 
 
-def get_batches(users: Iterable, batch_size=1000) -> Iterator[List]:
-    """Get user ids in batches from a list of ids.
+def get_batches(iterable: Iterable, batch_size=1000) -> Iterator[List]:
+    """Get batches from an iterable.
 
-    The list of users will be split into batches of batch_size.
-    The final batch might contain less users, as it will be the remainder.
+    The final batch might contain less than batch_size entries, as it will be the remainder.
 
-    :param users: list of user ids that will be split
-    :type users: Iterable
+    :param iterable: List of values that will be split into batches of size `batch_size`
+    :type iterable: Iterable
     :param batch_size: Size of each batch, defaults to 1000
     :type batch_size: int, optional
-    :yield: Iterator of lists of users
+    :yield: Iterator of lists of values
     :rtype: Iterator[List]
     """
-    if not isgenerator(users):
-        users = iter(users)
+    if not isgenerator(iterable):
+        iterable = iter(iterable)
 
     while True:
 
-        batch = list(islice(users, 0, batch_size))
+        batch = list(islice(iterable, 0, batch_size))
         if batch:
             yield batch
         else:
             break
-
-        # start_ix = end_ix
-        # end_ix += batch_size
 
 
 def sample_rows(*args: Matrix, sample_size: int = 1000) -> List[Matrix]:
