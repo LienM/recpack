@@ -316,39 +316,3 @@ def test_perc_interaction_splitter(data_m_w_timestamps, tr_perc):
 
     assert tr.timestamps.shape[0] == num_tr_interactions
     assert te.timestamps.shape[0] == num_te_interactions
-
-
-@pytest.mark.parametrize("batch_size", [1, 2, 3])
-def test_fold_iterator_correctness(data_m_w_timestamps, batch_size):
-    splitter = splitters.FractionInteractionSplitter(0.7, seed=42)
-
-    data_m_in, data_m_out = splitter.split(data_m_w_timestamps)
-
-    fold_iterator = splitters.FoldIterator(data_m_in, data_m_out, batch_size=batch_size)
-
-    for fold_in, fold_out, users in fold_iterator:
-        assert fold_in.nnz > 0
-
-        assert fold_in.shape[0] == len(users)
-        assert fold_out.shape[0] == len(users)
-
-
-@pytest.mark.parametrize("batch_size", [1, 2, 3])
-def test_fold_iterator_completeness(data_m_w_timestamps, batch_size):
-
-    fold_iterator = splitters.FoldIterator(data_m_w_timestamps, data_m_w_timestamps, batch_size=batch_size)
-
-    nonzero_users = set(data_m_w_timestamps.indices[0])
-
-    all_batches = set()
-
-    for fold_in, fold_out, users in fold_iterator:
-        assert (fold_in != fold_out).nnz == 0
-
-        users_in_batch = set(users)
-
-        all_batches = all_batches.union(users_in_batch)
-
-        assert len(users_in_batch) == batch_size or (len(users_in_batch) == len(nonzero_users) % batch_size)
-
-    assert len(all_batches) == len(nonzero_users)

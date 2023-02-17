@@ -357,52 +357,8 @@ class MostRecentSplitter(Splitter):
         return data_in, data_out
 
 
-def yield_batches(iterable, n=1):
-    """Helper to generate batches from an iterable.
-
-    :param iterable: Iterable to chunk ito batches.
-    :type iterable: Iterable
-    :param n: Size of batch, defaults to 1
-    :type n: int, optional
-    :yield: Batch of length n of the iterable values
-    :rtype: Iterator[Any]
-    """
-    l = len(iterable)
-    for ndx in range(0, l, n):
-        yield iterable[ndx : min(ndx + n, l)]
-
-
 def csr_row_set_nz_to_val(csr: csr_matrix, row, value=0):
     """Set all nonzero elements to the given value. Useful to set to 0 mostly."""
     if not isinstance(csr, csr_matrix):
         raise ValueError("Matrix given must be of CSR format.")
     csr.data[csr.indptr[row] : csr.indptr[row + 1]] = value
-
-
-class FoldIterator:
-    def __init__(self, data_m_in, data_m_out, batch_size=1000):
-        self.data_m_in = data_m_in
-        self.data_m_out = data_m_out
-        self.batch_size = batch_size
-        assert self.batch_size > 0  # Avoid inf loops
-
-        self.data_m_in.eliminate_timestamps(inplace=True)
-        self.data_m_out.eliminate_timestamps(inplace=True)
-
-        # users need history, but absence of true labels is allowed (some
-        # metrics don't require true labels).
-        self.users = list(sorted(set(self.data_m_in.indices[0])))
-
-    def __iter__(self):
-        self.batch_generator = yield_batches(self.users, self.batch_size)
-        return self
-
-    def __next__(self):
-        user_batch = np.array(next(self.batch_generator))
-        fold_in = self.data_m_in.values[user_batch, :]
-        fold_out = self.data_m_out.values[user_batch, :]
-
-        return fold_in, fold_out, user_batch
-
-    def __len__(self):
-        return math.ceil(len(self.users) / self.batch_size)

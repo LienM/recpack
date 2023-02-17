@@ -17,12 +17,7 @@ import torch
 import torch.optim as optim
 
 from recpack.algorithms.base import TorchMLAlgorithm
-from recpack.algorithms.util import (
-    swish,
-    log_norm_pdf,
-    naive_sparse2tensor,
-)
-from recpack.scenarios.splitters import yield_batches
+from recpack.algorithms.util import swish, log_norm_pdf, naive_sparse2tensor, get_batches
 
 
 logger = logging.getLogger("recpack")
@@ -234,7 +229,7 @@ class RecVAE(TorchMLAlgorithm):
         losses = []
         np.random.shuffle(users)
 
-        for batch_idx, user_batch in enumerate(yield_batches(users, self.batch_size)):
+        for batch_idx, user_batch in enumerate(get_batches(users, self.batch_size)):
             X = naive_sparse2tensor(train_data[user_batch, :]).to(self.device)
 
             # Clear gradients

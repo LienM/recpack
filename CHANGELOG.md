@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * __preprocessing__
   * Make sure DataFrames returned in filters and preprocessors are copies, and no DataFrame is ever edited inplace.
+### Removed
+* __splitters__
+    * Helper function `yield_batches` and class `FoldIterator` were removed, as they were unused in samples.
+      Alternative function `get_batches` from `algorithms.util` should be used instead.
+
+### Changed
+* __algorithms__
+    * `RecVAE` and `MultVAE` implementations were updated to use the `get_batches` function.
 
 ## [0.3.6]
 
