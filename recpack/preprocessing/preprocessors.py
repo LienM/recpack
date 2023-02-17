@@ -5,8 +5,7 @@
 #   Lien Michiels
 #   Robin Verachtert
 
-"""Preprocessors turn data into Recpack internal representations."""
-
+"""Preprocessors turn data into RecPack internal representations."""
 import logging
 from typing import List, Optional
 
@@ -87,8 +86,8 @@ class DataFramePreprocessor:
     """
 
     def __init__(self, item_ix, user_ix, timestamp_ix=None):
-        self.item_id_mapping = dict()
-        self.user_id_mapping = dict()
+        self._item_id_mapping = dict()
+        self._user_id_mapping = dict()
 
         self.item_ix = item_ix
         self.user_ix = user_ix
@@ -120,22 +119,22 @@ class DataFramePreprocessor:
 
     def _map_users(self, df):
         logger.debug("Map users")
-        if not self.user_id_mapping:
+        if not self._user_id_mapping:
             raise RuntimeError("User ID Mapping should be fit before attempting to map users")
-        return df[self.user_ix].progress_map(lambda x: self.user_id_mapping.get(x))
+        return df[self.user_ix].progress_map(lambda x: self._user_id_mapping.get(x))
 
     def _map_items(self, df):
         logger.debug("Map items")
-        if not self.item_id_mapping:
+        if not self._item_id_mapping:
             raise RuntimeError("Item ID Mapping should be fit before attempting to map items")
-        return df[self.item_ix].progress_map(lambda x: self.item_id_mapping.get(x))
+        return df[self.item_ix].progress_map(lambda x: self._item_id_mapping.get(x))
 
     @property
     def shape(self):
         """Shape of the data processed, as `|U| x |I|`"""
         return (
-            max(self.user_id_mapping.values()) + 1,
-            max(self.item_id_mapping.values()) + 1,
+            max(self._user_id_mapping.values()) + 1,
+            max(self._item_id_mapping.values()) + 1,
         )
 
     def process(self, df: pd.DataFrame) -> InteractionMatrix:
@@ -186,6 +185,7 @@ class DataFramePreprocessor:
         interaction_ms = []
 
         for df in dfs:
+            df = df.copy()
             df.loc[:, InteractionMatrix.ITEM_IX] = self._map_items(df)
             df.loc[:, InteractionMatrix.USER_IX] = self._map_users(df)
 
@@ -212,8 +212,22 @@ class DataFramePreprocessor:
         item_ids = list(df[self.item_ix].unique())
         user_ids = list(df[self.user_ix].unique())
 
-        self.user_id_mapping = util.rescale_id_space(user_ids, id_mapping=self.user_id_mapping)
-        self.item_id_mapping = util.rescale_id_space(item_ids, id_mapping=self.item_id_mapping)
+        self._user_id_mapping = util.rescale_id_space(user_ids, id_mapping=self._user_id_mapping)
+        self._item_id_mapping = util.rescale_id_space(item_ids, id_mapping=self._item_id_mapping)
+
+    @property
+    def item_id_mapping(self) -> pd.DataFrame:
+        """Pandas DataFrame containing mapping from original item IDs to internal (consecutive) item IDs as columns."""
+        return pd.DataFrame.from_records(
+            list(self._item_id_mapping.items()), columns=[self.item_ix, InteractionMatrix.ITEM_IX]
+        )
+
+    @property
+    def user_id_mapping(self) -> pd.DataFrame:
+        """Pandas DataFrame containing mapping from original user IDs to internal (consecutive) user IDs as columns."""
+        return pd.DataFrame.from_records(
+            list(self._user_id_mapping.items()), columns=[self.user_ix, InteractionMatrix.USER_IX]
+        )
 
 
 class SessionDataFramePreprocessor(DataFramePreprocessor):

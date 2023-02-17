@@ -8,11 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [UNRELEASED]
-### bugfix
+
+### Bugfixes
 * __algorithms__
     * Fixed bug in GRU4Rec, which failed when used on a GPU after changes in 0.3.5 .
 
+* __preprocessing__
+  * Make sure DataFrames returned in filters and preprocessors are copies, and no DataFrame is ever edited inplace.
+
 ## [0.3.6]
+
 ### Bugfixes
 * __datasets__
     * Fixed bug in MovieLens dataset download
