@@ -49,8 +49,8 @@ def test_dataframe_preprocessor_no_filter_no_duplicates(dataframe):
 
     interaction_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
-    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert len(processor._item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor._user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
     assert interaction_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
     assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
@@ -79,8 +79,8 @@ def test_dataframe_preprocessor_no_filter_duplicates_dedupe(dataframe):
 
     interaction_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
-    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert len(processor._item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor._user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
     assert interaction_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
     assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
@@ -105,8 +105,8 @@ def test_dataframe_preprocessor_no_filter_duplicates_no_dedupe(dataframe):
 
     interaction_m = processor.process(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
-    assert len(processor.user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
+    assert len(processor._item_id_mapping.keys()) == len(dataframe[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor._user_id_mapping.keys()) == len(dataframe[InteractionMatrix.USER_IX].unique())
 
     assert interaction_m.shape[0] == len(dataframe[InteractionMatrix.USER_IX].unique())
     assert interaction_m.shape[1] == len(dataframe[InteractionMatrix.ITEM_IX].unique())
@@ -149,11 +149,11 @@ def test_dataframe_preprocessor_id_mapping_w_multiple_dataframes(dataframe):
         dataframe_2[InteractionMatrix.ITEM_IX].unique()
     )
 
-    assert len(processor.item_id_mapping.keys()) == len(unique_items)
-    assert len(processor.user_id_mapping.keys()) == len(unique_users)
+    assert len(processor._item_id_mapping.keys()) == len(unique_items)
+    assert len(processor._user_id_mapping.keys()) == len(unique_users)
 
-    assert len(processor.item_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.ITEM_IX].unique())
-    assert len(processor.user_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.USER_IX].unique())
+    assert len(processor._item_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor._user_id_mapping.keys()) != len(dataframe_2[InteractionMatrix.USER_IX].unique())
 
     assert interaction_ms[0].shape[0] == len(unique_users)
     assert interaction_ms[0].shape[1] == len(unique_items)
@@ -195,8 +195,8 @@ def test_dataframe_preprocessor_w_filter_no_duplicates(dataframe):
 
     filtered_df = myfilter.apply(dataframe)
 
-    assert len(processor.item_id_mapping.keys()) == len(filtered_df[InteractionMatrix.ITEM_IX].unique())
-    assert len(processor.user_id_mapping.keys()) == len(filtered_df[InteractionMatrix.USER_IX].unique())
+    assert len(processor._item_id_mapping.keys()) == len(filtered_df[InteractionMatrix.ITEM_IX].unique())
+    assert len(processor._user_id_mapping.keys()) == len(filtered_df[InteractionMatrix.USER_IX].unique())
 
     assert interaction_m.shape[0] == len(filtered_df[InteractionMatrix.USER_IX].unique())
     assert interaction_m.shape[1] == len(filtered_df[InteractionMatrix.ITEM_IX].unique())
@@ -301,3 +301,27 @@ def test_session_dataframe_preprocessor_process_many(session_pageviews, session_
     # There should be 5 sessions
     # for user 2 a gap in pageviews is covered by a purchase
     assert pv_im.shape[0] == 5
+
+
+def test_dataframe_preprocessor_empty_item_id_mapping():
+
+    processor = DataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    assert processor.item_id_mapping.shape == (0, 2)
+
+
+def test_dataframe_preprocessor_mappings(dataframe):
+    processor = DataFramePreprocessor(
+        InteractionMatrix.ITEM_IX,
+        InteractionMatrix.USER_IX,
+        timestamp_ix=InteractionMatrix.TIMESTAMP_IX,
+    )
+
+    interaction_m = processor.process(dataframe)
+
+    assert interaction_m.shape[0] == processor.user_id_mapping.shape[0]
+    assert interaction_m.shape[1] == processor.item_id_mapping.shape[0]
