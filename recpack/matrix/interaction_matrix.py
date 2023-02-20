@@ -69,7 +69,6 @@ class InteractionMatrix:
         timestamp_ix: str = None,
         shape: Tuple[int, int] = None,
     ):
-
         # Give each interaction a unique id,
         # this will allow selection of specific events
         # TODO Should check if these are unique. Or mabe just override
@@ -390,6 +389,22 @@ class InteractionMatrix:
 
         return self._apply_mask(mask, inplace=inplace)
 
+    def items_in(self, I: Union[Set[int], List[int]], inplace=False) -> Optional["InteractionMatrix"]:
+        """Keep only interactions with the specified items.
+
+        :param I: A Set or List of items to select the interactions.
+        :type I: Union[Set[int], List[int]]
+        :param inplace: Apply the selection in place or not, defaults to False
+        :type inplace: bool, optional
+        :return: None if `inplace`, otherwise returns a new InteractionMatrix object
+        :rtype: Union[InteractionMatrix, None]
+        """
+        logger.debug("Performing items_in comparison")
+
+        mask = self._df[InteractionMatrix.ITEM_IX].isin(I)
+
+        return self._apply_mask(mask, inplace=inplace)
+
     def interactions_in(self, interaction_ids: List[int], inplace: bool = False) -> Optional["InteractionMatrix"]:
         """Select the interactions by their interaction ids
 
@@ -521,8 +536,26 @@ class InteractionMatrix:
         :return: Number of active users.
         :rtype: int
         """
-        U, _ = self.indices
-        return len(set(U))
+        return len(self.active_users)
+
+    @property
+    def active_items(self) -> Set[int]:
+        """The set of all items with at least one interaction.
+
+        :return: Set of user IDs with at least one interaction.
+        :rtype: Set[int]
+        """
+        _, I = self.indices
+        return set(I)
+
+    @property
+    def num_active_items(self) -> int:
+        """The number of items with at least one interaction.
+
+        :return: Number of active items.
+        :rtype: int
+        """
+        return len(self.active_items)
 
     @property
     def num_interactions(self) -> int:
