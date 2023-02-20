@@ -7,67 +7,49 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [UNRELEASED]
 
 ### Bugfixes
+* Replaced remaining usage of `np.bool` with `bool` to be compatible with numpy `1.24.1`
 * __algorithms__
-    * Fixed bug in GRU4Rec, which failed when used on a GPU after changes in 0.3.5 .
-
+    * `GRU4Rec` fixed bug in training, where it still tried to learn padding tokens.
 * __preprocessing__
   * Make sure DataFrames returned in filters and preprocessors are copies, and no DataFrame is ever edited inplace.
-### Removed
-* __splitters__
-    * Helper function `yield_batches` and class `FoldIterator` were removed, as they were unused in samples.
-      Alternative function `get_batches` from `algorithms.util` should be used instead.
-
-### Changed
-* __algorithms__
-    * `RecVAE` and `MultVAE` implementations were updated to use the `get_batches` function.
-
-## [0.3.6]
-
-### Bugfixes
-* __datasets__
-    * Fixed bug in MovieLens dataset download
-
-* __pipelines__
-    * Fixed issue with optimisation selecting the wrong parameters (introduced in 0.3.5)
 
 ### Additions
+* Added getting started guide for using Hyperopt optimisation
+* __matrix__
+    * Added `items_in` function, which selects only those interactions with the given list of items.
+    * Added `active_items` and `num_active_items` properties, to get the active items in a dataset.
 * __datasets__
+    * Added MovieLens100K, MovieLens1M, MovieLens10M and MillionSongDataset (aka TasteProfileDataset).
     * Added Globo dataset
-
-### Changes
-* __datasets__
-    * CosmeticsShop now loads from zip archive instead of requiring users to manually append files together
-
-## [0.3.5]
-
-### Bugfixes
-* Replaced remaining usage of `np.bool` with `bool` to be compatible with numpy `1.24.1`
-* `GRU4Rec` fixed bug in training, where it still tried to learn padding tokens.
-* __pipelines__
-    * Make `PipelineBuilder` work with `Metric` (without K). Currently only `PercentileRanking`
-
-### Additions
-* __datasets__
-  * Added MovieLens100K, MovieLens1M, MovieLens10M and MillionSongDataset (aka TasteProfileDataset).
-
-### Changes
-* __tests.test_datasets__
-  * Split dataset tests into different files for ease of reading.
-
-### Breaking Changes
-* __metrics__:
-    * `.name` property of a metric now returns camelcase name instead of lowercase name used before.
-### Additions
-
 * __pipelines__
     * Added option to use hyperopt to optimise parameters
         * `grid` parameter has been superseded by the `optimisation_info` parameter, which takes an `OptimisationInfo` object. Two relevant subclasses have been defined: `GridSearchInfo` contains a grid with parameters to support grid search, `HyperoptInfo` allows users to specify a hyperopt space, with timeout and or maximum number of evaluations.
     * Extended output of optimisation output, to now also include an `Algorithm` column for easier analysis.
 
-* Added getting started guide for using Hyperopt optimisation
+### Changes
+* __datasets__
+    * CosmeticsShop now loads from zip archive instead of requiring users to manually append files together
+* __tests.test_datasets__
+  * Split dataset tests into different files for ease of reading.
+* __algorithms__
+    * `RecVAE` and `MultVAE` implementations were updated to use the `get_batches` function.
+* __pipelines__
+    * Made `PipelineBuilder` work with `Metric` (without K). Affects only `PercentileRanking`
+    * Fixed issue with optimisation selecting the wrong parameters.
+* __preprocessing__
+  * Made sure DataFrames returned in filters and preprocessors are copies, and no DataFrame is ever edited inplace.
+    * Updated `Prod2Vec` and `Prod2VecClustered` to remove similarities from and to unvisited items.
+
+### Breaking Changes
+* __metrics__:
+    * `.name` property of a metric now returns camelcase name instead of lowercase name used before.
+* __splitters__
+    * Helper function `yield_batches` and class `FoldIterator` were removed, as they were unused in samples.
+      Alternative function `get_batches` from `algorithms.util` should be used instead.
 
 ## [0.3.4]
 
@@ -98,11 +80,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         * Renamed `num_neg_samples` to `num_negatives` for consistency.
         * Renamed `J` for warp loss to `num_items`
     * Deprecated parameter `normalize` of ItemKNN has been removed.
-
 * __scenarios__
     * `n_most_recent` parameter for LastItemPrediction is changed to `n_most_recent_in` and default value changed to infinity such that it is inline with the TimedLastItemPrediction scenario.
     * `n` parameter for `StrongGeneralizationTimedMostRecent`scenario has been renamed to `n_most_recent_out`, and behaviour for a negative value has been removed.
-
 * __datasets__
     * renamed `load_dataframe` to `_load_dataframe`, it is now a private member, which should not be called directly.
     * renamed `preprocessing_default` parameter to `use_default_filters` for clarity.
@@ -117,24 +97,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [0.3.1] - ![](https://img.shields.io/date/1662375599.svg?label=2022-09-05)
-### Additions
 
+### Additions
 * __datasets__
     * Changed behaviour of `force=True` on the Adressa dataset, it is now guaranteed to redownload the tar file, and will no longer look for a local tar file. The tar file will also be deleted at the end of the download method.
     * Added `Netflix` dataset to use the Netflix Prize dataset.
-
 * __scenarios__
     * Added `TimedLastItemPrediction` scenario, which is different from LastItemPrediction, in that it only trains its model on data before a certain timestamp, and evaluates only on data after that timestamp, thus avoiding leakage.
-
 * Configured optional extra installs:
     * `pip install recpack[doc]` will install the dependencies to generate documentation
     * `pip install recpack[test]` will install the dependencies to run tests.
 
 ### Bugfixes
 * Pinned version of sphinx
-
 * __algorithms__
     * Added `validation_sample_size` parameter to the TorchMLAlgorithm base class and all child classes. This parameter allows a user to select only a sample of the validation data in every evaluation iteration. This speeds up the evaluation step after every training epoch significantly.
+
 
 ## [0.3.0] - ![](https://img.shields.io/date/1657025737.svg?label=2022-07-05)
 
@@ -145,20 +123,16 @@ In addition to interface changes and additions we also made a big effort to incr
 * __scenarios__
     * Parameters of the `WeakGeneralization` scenario have been changed to now only accept a single `frac_data_in` parameter. Which makes sure the validation task is as difficult as the test tasks.
     * Training data structure has changed. Rather than a single training dataset, we use two training datasets. `validation_training_data` is used to train models while optimising their parameters, and evaluation happens on the validation data. `full_training_data` is the union of training and validation data on which the final model should be trained during evaluation on the test dataset.
-
 * __pipelines__
     * PipelineBuilder's `set_train_data` function has been replaced with `set_full_training_data` and `set_validation_training_data` to set the two separate training datasets.
     * Added `set_data_from_scenario` function to `PipelineBuilder`, which makes setting data easy based on a split scenario.
     * Updated `get_metrics` function, which returns the metrics as a dataframe, rather than a dict.
-
 * Several module changes were made:
     * splitters module was restructured. Base module is called scenarios. Inside scenarios the splitters submodule contains the splitters functionality.
     * data module was removed, and the submodules were turned into modules (`dataset` and `matrix`). The matrix file is split into additional files as well.
-
 * __datasets__:
     * Default min rating for `Movielens25M` was changed from 1 to 4 similar to most paper preprocessing of the dataset.
     * `load_interaction_matrix` function was renamed to `load`
-
 * __metrics__:
     * `DiscountedCumulativeGainK` is renamed to `DCGK`
     * `NormalizedDiscountedCumulativeGainK` is renamed to `NDCGK`
@@ -219,7 +193,9 @@ In addition to interface changes and additions we also made a big effort to incr
     * Fixed bug in `NextItemPrediction` scenario:
         * if validation was specified, test_in data contained 1 too few interactions
 
+
 ## [0.2.1] - ![](https://img.shields.io/date/1634291547.svg?label=2021-10-15)
+
 ### Dependency Update
 * Removed dependency on numba
     * Removed numba decorators in shared account implementation.
@@ -232,6 +208,7 @@ In addition to interface changes and additions we also made a big effort to incr
     * `optimisation_results` property added to Pipeline to allow users to inspect the results for the different hyperparameters that were tried.
 * __data.datasets__
     * Added DummyDataset for easy testing purposes.
+
 
 ## [0.2.0] - ![](https://img.shields.io/date/1630311485.svg?label=2021-8-30)
 
@@ -249,34 +226,38 @@ In addition to interface changes and additions we also made a big effort to incr
     * After initializing a dataset, the code will make sure the specified path exists, and create directories if they were missing.
 
 ### Breaking changes
-
 * __Datasets__:
     * The filename parameter behaviour has changed.
     This parameter used to expect the full path to the file.
     It now expects just the filename, the directory is specified using `path`.
-
 * __preprocessing.preprocessors__:
     * Removed the `USER_IX` and `ITEM_IX` members from DataframePreprocessor. You should use `InteractionMatrix.USER_IX` and `InteractionMatrix.ITEM_IX` instead.
-
 * __util__:
     * `get_top_K_values` and `get_top_K_ranks` parameter `k` changed to `K` so it is in line with rest of Recpack.
 
+
 ## [0.1.2] - ![](https://img.shields.io/date/1627975447.svg?label=2021-8-3)
-* Added Gru4Rec algorithms
-    * GRU4RecNegSampling
-    * GRU4RecCrossEntropy
-* Added new loss functions:
-    * bpr_max_loss
-    * top_1_loss
-    * top_1_max_loss
-* Added sequence batch samplers
+
+### Additions
 * Cleanup of Torch class interface
-* Added `predict_topK` parameter to TorchMLAlgorithm baseclass and all children. This parameter is used to cut predictions in case a dense user x item matrix is too large to fit in memory.
 * Updated dependencies to support ranges rather than fixed versions.
+* __algorithms__
+    * Added GRU4RecNegSampling
+    * Added GRU4RecCrossEntropy 
+    * Added new loss functions:
+        * bpr_max_loss
+        * top_1_loss
+        * top_1_max_loss
+    * Added sequence batch samplers
+    * Added `predict_topK` parameter to TorchMLAlgorithm baseclass and all children. This parameter is used to cut predictions in case a dense user x item matrix is too large to fit in memory.
+
 
 ## [0.1.1] - ![](https://img.shields.io/date/1626758338.svg?label=2021-7-20)
+
 * Added option to install recpack from gitlab pypi repository.
     * See README for instructions.
+
+
 ## [0.1.0] - ![](https://img.shields.io/date/1626354902.svg?label=2021-07-15))
 
 * Very first release of Recpack

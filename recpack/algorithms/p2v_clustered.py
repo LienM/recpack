@@ -69,8 +69,8 @@ class Prod2VecClustered(Prod2Vec):
     :type learning_rate: float, optional
     :param clipnorm: Clips gradient norm.
         The norm is computed over all gradients together,
-        as if they were concatenated into a single vector, defaults to 1
-    :type clipnorm: int, optional
+        as if they were concatenated into a single vector, defaults to 1.0
+    :type clipnorm: float, optional
     :param max_epochs: Maximum number of epochs (iterations), defaults to 10
     :type max_epochs: int, optional
     :param stop_early: If True, early stopping is enabled,
@@ -107,6 +107,10 @@ class Prod2VecClustered(Prod2Vec):
         Uniform distribution will sample all items equally likely.
         Unigram distribution puts more weight on popular items. Defaults to "uniform"
     :type distribution: str, optional
+    :param predict_topK: The topK recommendations to keep per row in the matrix.
+        Use when the user x item output matrix would become too large for RAM.
+        Defaults to None, which results in no filtering.
+    :type predict_topK: int, optional
     :param validation_sample_size: Amount of users that will be sampled to calculate
         validation loss and stopping criterion value.
         This reduces computation time during validation, such that training times are strongly reduced.
@@ -126,6 +130,7 @@ class Prod2VecClustered(Prod2Vec):
         Kcl: int = 2,
         batch_size: int = 1000,
         learning_rate: float = 0.01,
+        clipnorm: float = 1.0,
         max_epochs: int = 10,
         stop_early: bool = False,
         max_iter_no_change: int = 5,
@@ -135,7 +140,9 @@ class Prod2VecClustered(Prod2Vec):
         replace: bool = False,
         exact: bool = False,
         keep_last: bool = False,
-        validation_sample_size: int = None,
+        distribution="uniform",
+        predict_topK: Optional[int] = None,
+        validation_sample_size: Optional[int] = None,
     ):
         super().__init__(
             num_components,
@@ -145,6 +152,7 @@ class Prod2VecClustered(Prod2Vec):
             K=K,
             batch_size=batch_size,
             learning_rate=learning_rate,
+            clipnorm=clipnorm,
             max_epochs=max_epochs,
             stop_early=stop_early,
             max_iter_no_change=max_iter_no_change,
@@ -154,6 +162,8 @@ class Prod2VecClustered(Prod2Vec):
             replace=replace,
             exact=exact,
             keep_last=keep_last,
+            distribution=distribution,
+            predict_topK=predict_topK,
             validation_sample_size=validation_sample_size,
         )
         self.num_clusters = num_clusters
@@ -171,12 +181,17 @@ class Prod2VecClustered(Prod2Vec):
             K = num_items
             warnings.warn("K is larger than the number of items.", UserWarning)
 
+        # Set embedding of inactive items to 0
+        active_items = X.active_items
+        inactive_items = list(set(range(num_items)).difference(active_items))
+        embedding[inactive_items] = 0
+
         # empty easily updated sparse matrix
         # Will be filled in per row
         item_cosine_similarity_ = lil_matrix((num_items, num_items))
 
         # Cluster the items in the embedding space:
-        cluster_assignments = self._cluster()
+        cluster_assignments = self._cluster(embedding)
 
         # Compute cluster to cluster similarities
         cluster_to_cluster_neighbours = self._get_top_K_clusters(X, cluster_assignments)
@@ -210,15 +225,18 @@ class Prod2VecClustered(Prod2Vec):
 
         # no self similarity, set diagonal to zero
         item_cosine_similarity_.setdiag(0)
+        # Remove all similarities for inactive items
+        item_cosine_similarity_[inactive_items] = 0
+        item_cosine_similarity_[:, inactive_items] = 0
+
         self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
 
-    def _cluster(self) -> np.ndarray:
+    def _cluster(self, embedding: np.ndarray) -> np.ndarray:
         """Use Kmeans to assign a cluster label to each item.
 
         :return: array with a cluster label for every item. Shape = (|I|,)
         :rtype: np.array
         """
-        embedding = self.model_.input_embeddings.weight.cpu().detach().numpy()
         kmeans = KMeans(self.num_clusters)
         cluster_assignments = kmeans.fit_predict(embedding)
         return cluster_assignments

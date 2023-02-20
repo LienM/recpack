@@ -6,7 +6,6 @@
 #   Robin Verachtert
 
 from unittest.mock import MagicMock
-from collections import defaultdict
 
 import pytest
 import numpy as np
@@ -98,7 +97,7 @@ def test_cluster_similarity_computation():
     )
 
     # Check if the correct number of clusters was created
-    cluster_assignments = alg._cluster()
+    cluster_assignments = alg._cluster(alg.model_.input_embeddings.weight.cpu().detach().numpy())
     assert cluster_assignments.shape[0] == 8
     assert 0 in cluster_assignments
     assert 1 in cluster_assignments
@@ -183,3 +182,44 @@ def test_fit_no_interaction_matrix(prod2vec, mat):
 def test_fit_no_timestamps(prod2vec, mat):
     with pytest.raises(ValueError):
         prod2vec.fit(mat.eliminate_timestamps(), (mat, mat))
+
+
+def test_no_self_similarity(prod2vec, mat):
+
+    prod2vec._create_similarity_matrix(mat)
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+    assert (similarity_matrix[np.arange(mat.shape[1]), np.arange(mat.shape[1])] == 0).all()
+
+
+@pytest.mark.parametrize(
+    "active_items, inactive_items",
+    [
+        ([0, 1, 2, 3], [4]),
+        ([0, 2, 3], [1, 4]),
+    ],
+)
+def test_no_similarity_from_inactive_items(prod2vec, mat, active_items, inactive_items):
+    matrix = csr_matrix((mat.shape[1], mat.shape[1]))
+    matrix[active_items, active_items] = 1
+
+    prod2vec._create_similarity_matrix(mat.items_in(active_items))
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+
+    assert (similarity_matrix[inactive_items] == 0).all()
+
+
+@pytest.mark.parametrize(
+    "active_items, inactive_items",
+    [
+        ([0, 1, 2, 3], [4]),
+        ([0, 2, 3], [1, 4]),
+    ],
+)
+def test_no_similarity_to_inactive_items(prod2vec, mat, active_items, inactive_items):
+    matrix = csr_matrix((mat.shape[1], mat.shape[1]))
+    matrix[active_items, active_items] = 1
+
+    prod2vec._create_similarity_matrix(mat.items_in(active_items))
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+
+    assert (similarity_matrix[:, inactive_items] == 0).all()

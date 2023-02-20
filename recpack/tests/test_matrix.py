@@ -195,6 +195,18 @@ def test_users_in(df):
     assert len(list(d.binary_item_history)) == 1
 
 
+def test_items_in(df):
+    d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+    d2 = d.items_in([0, 1])
+    assert d2.shape == (3, 4)
+    assert len(list(d2.binary_item_history)) == 2
+
+    # item_id 0 is not known to the DataFrame
+    d.items_in([0], inplace=True)
+    assert len(list(d.binary_item_history)) == 0
+
+
 def test_interactions_in_empty_set(df):
     d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
     with warnings.catch_warnings(record=True) as w:
@@ -305,12 +317,20 @@ def test_active_users(interaction_m):
     assert interaction_m.active_users == {0, 1, 2}
 
 
+def test_active_items(interaction_m):
+    assert interaction_m.active_items == {1, 2, 3}
+
+
 def test_density(interaction_m):
     np.testing.assert_almost_equal(interaction_m.density, 1 / 3)
 
 
 def test_num_active_users(interaction_m):
     assert interaction_m.num_active_users == 3
+
+
+def test_num_active_items(interaction_m):
+    assert interaction_m.num_active_items == 3
 
 
 def test_num_interactions(interaction_m):

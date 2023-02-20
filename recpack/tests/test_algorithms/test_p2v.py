@@ -48,8 +48,16 @@ def prod2vec(p2v_embedding, mat):
     return prod
 
 
+@pytest.fixture(scope="module")
+def diagonal_interaction_matrix() -> InteractionMatrix:
+    matrix = csr_matrix((6, 5))
+    matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
+
+    return InteractionMatrix.from_csr_matrix(matrix)
+
+
 def test_window():
-    # todo what about the error for small values?
+    # TODO what about the error for small values?
 
     sequence = [
         (123, ["computer", "artificial", "intelligence", "dog", "trees"]),
@@ -71,7 +79,6 @@ def test_window():
 
 
 def test_training_epoch(prod2vec, mat):
-
     prod2vec._init_model(mat)
 
     params = [o for o in prod2vec.model_.named_parameters() if o[1].requires_grad]
@@ -96,7 +103,7 @@ def test_evaluation_epoch(prod2vec, mat):
     params_before = [(name, p.clone()) for (name, p) in params]
 
     prod2vec.best_model = tempfile.NamedTemporaryFile()
-    prod2vec._create_similarity_matrix(None)
+    prod2vec._create_similarity_matrix(mat)
     # run a training step
     prod2vec._evaluate(to_csr_matrix(mat), to_csr_matrix(mat))
 
@@ -106,21 +113,15 @@ def test_evaluation_epoch(prod2vec, mat):
     prod2vec.best_model.close()
 
 
-def test_predict_warning(prod2vec):
-
-    with pytest.warns(UserWarning, match="K is larger than the number of items."):
-        # NOTE: the create_similarity_matrix func expects the interaction matrix X
-        # Which is used for subclasses of this one,
-        # but is unused by the based model, so we can use None.
-        prod2vec._create_similarity_matrix(None)
+def test_predict_warning(prod2vec, diagonal_interaction_matrix):
+    prod2vec.K = diagonal_interaction_matrix.shape[1] + 10
+    with pytest.warns(UserWarning, match="K was set to a value larger than the number of items"):
+        prod2vec._create_similarity_matrix(diagonal_interaction_matrix)
 
 
-def test_create_similarity_matrix(prod2vec):
-
-    # NOTE: the create_similarity_matrix func expects the interaction matrix X
-    # Which is used for subclasses of this one,
-    # but is unused by the based model, so we can use None.
-    prod2vec._create_similarity_matrix(None)
+def test_create_similarity_matrix(prod2vec, diagonal_interaction_matrix):
+    # TODO Keep test inputs and outputs together
+    prod2vec._create_similarity_matrix(diagonal_interaction_matrix)
     similarity_matrix = prod2vec.similarity_matrix_.toarray()
 
     # Get the most similar item for each item
@@ -133,15 +134,56 @@ def test_create_similarity_matrix(prod2vec):
     assert max(similarity_matrix[4]) == pytest.approx(0.70711, 0.00005)
 
 
+def test_create_similarity_matrix_no_self_similarity(prod2vec, diagonal_interaction_matrix):
+    prod2vec._create_similarity_matrix(diagonal_interaction_matrix)
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+    assert (similarity_matrix[np.arange(5), np.arange(5)] == 0).all()
+
+
+@pytest.mark.parametrize(
+    "active_items, inactive_items",
+    [
+        ([0, 1, 2, 3], [4]),
+        ([0, 2, 3], [1, 4]),
+        ([1, 4], [0, 2, 3]),
+        ([1], [0, 2, 3, 4]),
+    ],
+)
+def test_create_similarity_matrix_no_similarities_from_inactive_items(prod2vec, active_items, inactive_items):
+    matrix = csr_matrix((6, 5))
+    matrix[active_items, active_items] = 1
+
+    prod2vec._create_similarity_matrix(InteractionMatrix.from_csr_matrix(matrix))
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+
+    assert (similarity_matrix[inactive_items] == 0).all()
+
+
+@pytest.mark.parametrize(
+    "active_items, inactive_items",
+    [
+        ([0, 1, 2, 3], [4]),
+        ([0, 2, 3], [1, 4]),
+        ([1, 4], [0, 2, 3]),
+        ([1], [0, 2, 3, 4]),
+    ],
+)
+def test_create_similarity_matrix_no_similarities_to_inactive_items(prod2vec, active_items, inactive_items):
+    matrix = csr_matrix((6, 5))
+    matrix[active_items, active_items] = 1
+
+    prod2vec._create_similarity_matrix(InteractionMatrix.from_csr_matrix(matrix))
+    similarity_matrix = prod2vec.similarity_matrix_.toarray()
+
+    assert (similarity_matrix[:, inactive_items] == 0).all()
+
+
 def test_batch_predict(prod2vec):
     # Rewrite with different matrix
     matrix = csr_matrix((6, 5))
     matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
 
-    # NOTE: the create_similarity_matrix func expects the interaction matrix X
-    # Which is used for subclasses of this one,
-    # but is unused by the based model, so we can use None.
-    prod2vec._create_similarity_matrix(None)
+    prod2vec._create_similarity_matrix(InteractionMatrix.from_csr_matrix(matrix))
     predictions = prod2vec._batch_predict(matrix, get_users(matrix))
 
     np.testing.assert_array_almost_equal(
@@ -160,13 +202,11 @@ def test_batch_predict(prod2vec):
 
 
 def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
-
     prod2vec._init_model(larger_mat)
 
     U = prod2vec.num_negatives
 
     for item_1, item_2, neg_items in prod2vec._skipgram_sample_pairs(larger_mat):
-
         assert item_1.shape[0] == item_2.shape[0]
         assert item_1.shape[0] == neg_items.shape[0]
         assert neg_items.shape[1] == U
@@ -174,14 +214,12 @@ def test_skipgram_sample_pairs_large_sample(prod2vec, larger_mat):
         # There should be no collisions between columns of negative samples
         for i in range(U):
             for j in range(i):
-
                 overlap = neg_items[:, j].numpy() == neg_items[:, i].numpy()
 
                 np.testing.assert_array_equal(overlap, False)
 
 
 def test_skipgram_sample_pairs_error(prod2vec):
-
     data = {
         TIMESTAMP_IX: [3, 2, 1, 4, 0, 1, 2, 4, 0, 1, 2],
         ITEM_IX: [0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2],
@@ -200,7 +238,6 @@ def test_skipgram_sample_pairs_error(prod2vec):
 
 
 def test_skipgram_sample_pairs_small_sample(prod2vec, mat):
-
     prod2vec._init_model(mat)
 
     all_item_1 = np.array([], dtype=int)

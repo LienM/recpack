@@ -20,6 +20,7 @@ import torch.optim as optim
 from recpack.algorithms.base import TorchMLAlgorithm
 from recpack.algorithms.samplers import PositiveNegativeSampler
 from recpack.algorithms.loss_functions import skipgram_negative_sampling_loss
+from recpack.algorithms.util import get_batches
 from recpack.matrix import InteractionMatrix, Matrix, to_csr_matrix
 from recpack.util import get_top_K_values
 
@@ -36,9 +37,8 @@ class Prod2Vec(TorchMLAlgorithm):
     Applies SkipGram Negative Sampling to sequences
     of user interactions to learn an input (target) and output (context) embedding for every item.
 
-    Only input embeddings (target) are retained and used for making recommendations.
     Recommendations are made by computing the similarity between input embeddings
-    of different items and recommending those most similar.
+    of different items and recommending those items most similar.
 
     Where possible, defaults were taken from the paper.
 
@@ -47,15 +47,15 @@ class Prod2Vec(TorchMLAlgorithm):
     :param num_negatives: Number of negative samples for every positive sample, defaults to 10
     :type num_negatives: int, optional
     :param window_size: Size of the context window to the left and to the right of the target item
-         used in skipgram negative sampling, defaults to 2
+         used in skipgram negative sampling. Defaults to 2
     :type window_size: int, optional
     :param stopping_criterion: Used to identify the best model computed thus far.
         The string indicates the name of the stopping criterion.
-        Which criterions are available can be found at StoppingCriterion.FUNCTIONS
+        Which criterions are available can be found at StoppingCriterion.FUNCTIONS.
         Defaults to 'precision'
     :type stopping_criterion: str, optional
-    :param K: How many neigbours to use per item,
-        make sure to pick a value below the number of columns of the matrix to fit on.
+    :param K: Used to set a maximum number of neighbors, i.e., similar items,
+        for every item. Useful when the number of items in the dataset is large.
         Defaults to 200
     :type K: int, optional
     :param batch_size: Batch size for Adam optimizer. Higher batch sizes make each epoch more efficient,
@@ -66,8 +66,8 @@ class Prod2Vec(TorchMLAlgorithm):
     :type learning_rate: float, optional
     :param clipnorm: Clips gradient norm.
         The norm is computed over all gradients together,
-        as if they were concatenated into a single vector, defaults to 1
-    :type clipnorm: int, optional
+        as if they were concatenated into a single vector. Defaults to 1.0
+    :type clipnorm: float, optional
     :param max_epochs: Maximum number of epochs (iterations), defaults to 10
     :type max_epochs: int, optional
     :param stop_early: If True, early stopping is enabled,
@@ -135,8 +135,8 @@ class Prod2Vec(TorchMLAlgorithm):
         exact: bool = False,
         keep_last: bool = False,
         distribution="uniform",
-        predict_topK: int = None,
-        validation_sample_size: int = None,
+        predict_topK: Optional[int] = None,
+        validation_sample_size: Optional[int] = None,
     ):
         super().__init__(
             batch_size,
@@ -156,7 +156,7 @@ class Prod2Vec(TorchMLAlgorithm):
         self.num_components = num_components
         self.num_negatives = num_negatives
         self.window_size = window_size
-        self.similarity_matrix_ = None
+
         self.K = K
         self.replace = replace
         self.exact = exact
@@ -164,6 +164,9 @@ class Prod2Vec(TorchMLAlgorithm):
 
         self.distribution = distribution
 
+    def _init_model(self, X: Matrix) -> None:
+        self.model_ = SkipGram(X.shape[1], self.num_components).to(self.device)
+        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
         # Initialise sampler
         self.sampler = PositiveNegativeSampler(
             num_negatives=self.num_negatives,
@@ -172,27 +175,6 @@ class Prod2Vec(TorchMLAlgorithm):
             exact=self.exact,
             distribution=self.distribution,
         )
-
-    def _init_model(self, X: Matrix) -> None:
-        self.model_ = SkipGram(X.shape[1], self.num_components).to(self.device)
-        self.optimizer = optim.Adam(self.model_.parameters(), lr=self.learning_rate)
-
-    # def _evaluate(self, val_in: csr_matrix, val_out: csr_matrix) -> None:
-    #     if self.similarity_matrix_ is None:
-    #         raise RuntimeError("Expected similarity matrix to be computed before _evaluate")
-
-    #     val_in = self._transform_predict_input(val_in)
-    #     val_out = to_csr_matrix(val_out)
-
-    #     if self.validation_sample_size:
-    #         val_in, val_out = sample_rows(val_in, val_out, sample_size=self.validation_sample_size)
-
-    #     predictions = self._predict(val_in)
-    #     better = self.stopping_criterion.update(val_out, predictions)
-
-    #     if better:
-    #         logger.info("Model improved. Storing better model.")
-    #         self._save_best()
 
     def _train_epoch(self, X: InteractionMatrix) -> list:
         assert self.model_ is not None
@@ -237,18 +219,27 @@ class Prod2Vec(TorchMLAlgorithm):
         num_items = embedding.shape[0]
         if K > num_items:
             K = num_items
-            warnings.warn("K is larger than the number of items.", UserWarning)
+            warnings.warn(
+                """K was set to a value larger than the number of items.
+                 As a result, the number of neighbors for each item will not be restricted""",
+                UserWarning,
+            )
 
-        item_cosine_similarity_ = lil_matrix((num_items, num_items))
+        # Set embedding of inactive items to 0
+        active_items = X.active_items
+        inactive_items = list(set(range(num_items)).difference(active_items))
+        embedding[inactive_items] = 0
 
-        for batch in range(0, num_items, batch_size):
-            Y = embedding[batch : batch + batch_size]
+        item_cosine_similarity = lil_matrix((num_items, num_items))
+
+        for batch in get_batches(list(active_items), batch_size=batch_size):
+            Y = embedding[batch]
             item_cosine_similarity_batch = csr_matrix(cosine_similarity(Y, embedding))
 
-            item_cosine_similarity_[batch : batch + batch_size] = get_top_K_values(item_cosine_similarity_batch, K)
+            item_cosine_similarity[batch] = get_top_K_values(item_cosine_similarity_batch, K)
         # no self similarity, set diagonal to zero
-        item_cosine_similarity_.setdiag(0)
-        self.similarity_matrix_ = csr_matrix(item_cosine_similarity_)
+        item_cosine_similarity.setdiag(0)
+        self.similarity_matrix_ = csr_matrix(item_cosine_similarity)
 
     def _batch_predict(self, X: csr_matrix, users: List[int]) -> csr_matrix:
         """Predict scores for matrix X, given the selected users in this batch
@@ -277,7 +268,6 @@ class Prod2Vec(TorchMLAlgorithm):
         :yield: focus_batch, positive_samples_batch, negative_samples_batch
         :rtype: Iterator[Tuple[torch.LongTensor, torch.LongTensor, torch.LongTensor]]
         """
-        # TODO Should I add this to samplers?
         # Window, then extract focus (middle element) and context (all other elements).
         windowed_sequences = window(X.sorted_item_history, self.window_size)
         context = np.hstack(
@@ -296,8 +286,6 @@ class Prod2Vec(TorchMLAlgorithm):
 
         coocc = lil_matrix((X.shape[1], X.shape[1]), dtype=int)
         coocc[positives[:, 0], positives[:, 1]] = 1
-        # TODO I don't think this is necessary anymore, it's a result of windowing.
-        # coocc = to_binary(coocc + coocc.T)
         coocc.setdiag(1)
         coocc = coocc.tocsr()
 
