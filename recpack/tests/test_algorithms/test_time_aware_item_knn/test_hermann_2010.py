@@ -1,3 +1,10 @@
+# RecPack, An Experimentation Toolkit for Top-N Recommendation
+# Copyright (C) 2020  Froomle N.V.
+# License: GNU AGPLv3 - https://gitlab.com/recpack-maintainers/recpack/-/blob/master/LICENSE
+# Author:
+#   Lien Michiels
+#   Robin Verachtert
+
 from recpack.algorithms import TARSItemKNNHermann
 import pandas as pd
 import numpy as np
@@ -45,7 +52,6 @@ def algorithm_1h_interval():
 
 
 def test_time_decay_knn_fit(mat, algorithm):
-
     algorithm.fit(mat)
     # fmt: off
     expected_similarities = np.array(
@@ -62,7 +68,6 @@ def test_time_decay_knn_fit(mat, algorithm):
 
 
 def test_time_decay_knn_fit_configured_time_unit(mat, algorithm_1h_interval):
-
     algorithm_1h_interval.fit(mat)
 
     # fmt: off
@@ -80,7 +85,6 @@ def test_time_decay_knn_fit_configured_time_unit(mat, algorithm_1h_interval):
 
 
 def test_time_decay_knn_predict(mat, algorithm):
-
     algorithm.fit(mat)
     pred = algorithm.predict(mat)
 

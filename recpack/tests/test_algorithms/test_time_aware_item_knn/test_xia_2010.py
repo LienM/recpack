@@ -103,7 +103,6 @@ def mat_1_user_2_visits():
 def test_time_decay_knn(
     mat, mat_diag, mat_1_user_2_visits, decay_function, fit_decay, expected_similarities, expected_out
 ):
-
     algo = TARSItemKNNXia(K=2, fit_decay=fit_decay, decay_function=decay_function, decay_interval=1)
 
     algo.fit(mat)
@@ -127,7 +126,6 @@ def test_time_decay_knn(
     ],
 )
 def test_time_decay_knn_empty(mat_no_timestamps, decay_function, fit_decay):
-
     algo = TARSItemKNNXia(K=2, fit_decay=fit_decay, decay_function=decay_function, decay_interval=1)
 
     with pytest.raises(ValueError) as record:
@@ -171,7 +169,6 @@ def test_time_decay_knn_fn_validation_error(decay_function):
     ],
 )
 def test_time_decay_knn_predict(mat, mat_diag, decay_function, fit_decay):
-
     algo = TARSItemKNNXia(K=2, fit_decay=fit_decay, decay_function=decay_function, decay_interval=1)
 
     algo.fit(mat)
