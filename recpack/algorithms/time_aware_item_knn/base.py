@@ -5,10 +5,7 @@
 #   Lien Michiels
 #   Robin Verachtert
 
-"""Module with time-dependent ItemKNN implementations"""
-
 import numpy as np
-
 from scipy.sparse import csr_matrix
 
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
