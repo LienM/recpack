@@ -23,6 +23,26 @@ The Pipeline interface is recommended for easy comparison between algorithms. Fo
 
 For details and examples, check out the [quickstart documentation](recpack.froomle.ai/guides.quickstart.html)
 
+If you use RecPack for research purposes, please cite the [paper](https://doi.org/10.1145/3523227.3551472).
+
+```
+@inproceedings{10.1145/3523227.3551472,
+    author = {Michiels, Lien and Verachtert, Robin and Goethals, Bart},
+    title = {RecPack: An(Other) Experimentation Toolkit for Top-N Recommendation Using Implicit Feedback Data},
+    year = {2022},
+    isbn = {9781450392785},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3523227.3551472},
+    doi = {10.1145/3523227.3551472},
+    booktitle = {Proceedings of the 16th ACM Conference on Recommender Systems},
+    pages = {648–651},
+    numpages = {4},
+    location = {Seattle, WA, USA},
+    series = {RecSys '22}
+}
+```
+
 ## License
 
 RecPack, An Experimentation Toolkit for Top-N Recommendation
