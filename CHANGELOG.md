@@ -7,6 +7,12 @@ _Maintainer | Robin Verachtert | robin.verachtert@froomle.com_
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+### Bugfixes
+* __metrics__
+    * Fixed bug in `CalibratedRecallK` results property, which caused an error when requesting this property.
+
 ## [0.3.5] - ![](https://img.shields.io/date/1676895426.svg?label=2023-02-20)
 
 ### Bugfixes
