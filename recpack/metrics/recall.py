@@ -31,11 +31,11 @@ class RecallK(ListwiseMetricK):
     :param K: Size of the recommendation list consisting of the Top-K item predictions.
     :type K: int
     """
+
     def __init__(self, K):
         super().__init__(K)
 
     def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
-
         scores = scipy.sparse.lil_matrix(y_pred_top_K.shape)
 
         # Elementwise multiplication of top K predicts and true interactions
@@ -43,9 +43,7 @@ class RecallK(ListwiseMetricK):
 
         scores = scores.tocsr()
 
-        self.scores_ = csr_matrix(
-            sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1))).sum(axis=1)
-        )
+        self.scores_ = csr_matrix(sparse_divide_nonzero(scores, csr_matrix(y_true.sum(axis=1))).sum(axis=1))
 
         return
 
@@ -76,7 +74,6 @@ class CalibratedRecallK(ListwiseMetricK):
         super().__init__(K)
 
     def _calculate(self, y_true: csr_matrix, y_pred_top_K: csr_matrix) -> None:
-
         scores = scipy.sparse.lil_matrix(y_pred_top_K.shape)
 
         # Elementwise multiplication of top K predicts and true interactions
@@ -85,7 +82,7 @@ class CalibratedRecallK(ListwiseMetricK):
 
         optimal = csr_matrix(np.minimum(y_true.sum(axis=1), self.K))
 
-        self.scores_ = sparse_divide_nonzero(scores, optimal).sum(axis=1)
+        self.scores_ = csr_matrix(sparse_divide_nonzero(scores, optimal).sum(axis=1))
 
 
 def calibrated_recall_k(y_true, y_pred, k):
