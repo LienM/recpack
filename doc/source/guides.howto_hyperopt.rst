@@ -105,58 +105,59 @@ When sampling parameters, hyperopt will first choose which of the two options to
     the nested parameters remain nested in the parameter dictionary, and can not be mapped to parameters in the ``Algorithm`` class.
 
 
-Running a pipeline
+Running a Pipeline
 ------------------
 
 The configured optimisation information should be used in a pipeline to optimise the hyperparameters of the algorithm.
 
-```
-from hyperopt import hp
-import numpy as np
+:: 
 
-from recpack.algorithms import ItemKNN
-from recpack.datasets import DummyDataset
-from recpack.pipelines import PipelineBuilder, HyperoptInfo
-from recpack.scenarios import WeakGeneralization
+    from hyperopt import hp
+    import numpy as np
 
-HOUR = 3600
-DAY = 24*3600
+    from recpack.algorithms import ItemKNN
+    from recpack.datasets import DummyDataset
+    from recpack.pipelines import PipelineBuilder, HyperoptInfo
+    from recpack.scenarios import WeakGeneralization
 
-optimisation_info = HyperoptInfo(
-    hp.choice(
-        'similarity', [
-            {
-                'similarity': 'conditional_probability', 
-                'pop_discount': hp.uniform('pop_discount', 0, 1),
-                "K": hp.loguniform("cp_K", np.log(50), np.log(1000)),
-                "normalize_X": hp.choice("cp_normalize_X", [True, False]),
-                "normalize_sim": hp.choice("cp_normalize_sim",[True, False]),
-            }, 
-            {
-                'similarity': 'cosine',
-                "K": hp.loguniform("c_K", np.log(50), np.log(1000)),
-                "normalize_X": hp.choice("c_normalize_X", [True, False]),
-                "normalize_sim": hp.choice("c_normalize_sim",[True, False]),
-            }
-        ]
-    ),
-    timeout=DAY,
-    max_evals=50,
-)
+    HOUR = 3600
+    DAY = 24*3600
 
-im = DummyDataset().load()
-scenario = WeakGeneralization(validation=True)
-scenario.split(im)
+    optimisation_info = HyperoptInfo(
+        hp.choice(
+            'similarity', [
+                {
+                    'similarity': 'conditional_probability', 
+                    'pop_discount': hp.uniform('pop_discount', 0, 1),
+                    "K": hp.loguniform("cp_K", np.log(50), np.log(1000)),
+                    "normalize_X": hp.choice("cp_normalize_X", [True, False]),
+                    "normalize_sim": hp.choice("cp_normalize_sim",[True, False]),
+                }, 
+                {
+                    'similarity': 'cosine',
+                    "K": hp.loguniform("c_K", np.log(50), np.log(1000)),
+                    "normalize_X": hp.choice("c_normalize_X", [True, False]),
+                    "normalize_sim": hp.choice("c_normalize_sim",[True, False]),
+                }
+            ]
+        ),
+        timeout=DAY,
+        max_evals=50,
+    )
 
-pb = PipelineBuilder()
-# Use the configured search space when optimising the ItemKNN parameters
-pb.add_algorithm(ItemKNN, optimisation_info=optimisation_info)
-pb.set_data_from_scenario(scenario)
-# Set NDCG@10 as the optimisation metric.
-# Since it is a metric to be maximized, the loss will be the negative of the NDCG, such that hyperopt can minimize it.
-pb.set_optimisation_metric('NDCGK', 10)
-pb.add_metric('NDCGK', 10)
+    im = DummyDataset().load()
+    scenario = WeakGeneralization(validation=True)
+    scenario.split(im)
 
-pipe = pb.build()
-pipe.run()
-```
+    pb = PipelineBuilder()
+    # Use the configured search space when optimising the ItemKNN parameters
+    pb.add_algorithm(ItemKNN, optimisation_info=optimisation_info)
+    pb.set_data_from_scenario(scenario)
+    # Set NDCG@10 as the optimisation metric.
+    # Since it is a metric to be maximized, the loss will be the negative of the NDCG, such that hyperopt can minimize it.
+    pb.set_optimisation_metric('NDCGK', 10)
+    pb.add_metric('NDCGK', 10)
+
+    pipe = pb.build()
+    pipe.run()
+
