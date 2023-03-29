@@ -27,7 +27,9 @@ class TARSItemKNNLee(TARSItemKNN):
 
     Weights are used both for prediction and for training.
 
-    :param K: Amount of neighbours to keep. Defaults to 200.
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
     :type K: int, optional
     :param w: Shape of the weighting matrix, defaults to 5.
         ``[3, 5]`` are supported.

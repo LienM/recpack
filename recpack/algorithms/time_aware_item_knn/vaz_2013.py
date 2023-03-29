@@ -27,7 +27,9 @@ class TARSItemKNNVaz(TARSItemKNN):
     and x is the time between the maximal timestamp in the matrix
     and the timestamp of the event.
 
-    :param K: The number of neighbours to compute per item. Defaults to 200.
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
     :type K: int, optional
     :param fit_decay: Defines the decay scaling used for decay during model fitting.
         Defaults to 1/(24*3600). 

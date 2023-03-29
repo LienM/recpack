@@ -10,7 +10,6 @@ from scipy.sparse import csr_matrix, lil_matrix
 from tqdm.auto import tqdm
 
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
-from recpack.algorithms.time_aware_item_knn.base import TARSItemKNNCoocDistance
 from recpack.algorithms.time_aware_item_knn.decay_functions import InverseDecay
 from recpack.algorithms.util import invert
 from recpack.matrix import InteractionMatrix, Matrix
@@ -21,8 +20,8 @@ EPSILON = 1e-13
 
 
 class TARSItemKNNHermann(TopKItemSimilarityMatrixAlgorithm):
-    """ItemKNN algorithm with temporal decay,
-    taking into account age of events and pairwise distance between cooccurences.
+    """Time aware variant of ItemKNN that considers the time between two interactions 
+    when computing similarity between two items, as well as the age of an event.
 
     Presented in
     Hermann, C. (2010). 
@@ -41,7 +40,9 @@ class TARSItemKNNHermann(TopKItemSimilarityMatrixAlgorithm):
     where :math:`\\Delta t_{u,i,j}` is the distance in time units between the user interacting with item i and j.
     :math:`\\Delta d_{u,i,j}` is the maximal distance in time units between a user interactions with i or j to now.
 
-    :param K: number of neighbours to store while training. Defaults to 200.
+    :param K: Number of neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200.
     :type K: int, optional
     :param decay_interval: Size of a single time unit in seconds.
         Allows more finegrained parameters for large scale datasets where events are collected over months of data.

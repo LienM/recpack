@@ -15,16 +15,17 @@ from recpack.util import get_top_K_values
 
 
 class TARSItemKNNXia(TARSItemKNNCoocDistance):
-    """Time Decaying Nearest Neighbours model.
+    """Time aware variant of ItemKNN that considers the time between two interactions 
+    when computing similarity between two items.
 
     First described in
-    C. Xia, X. Jiang, Sen Liu, Zhaobo Luo and Zhang Yu, 
-    "Dynamic item-based recommendation algorithm with time decay," 
-    2010 Sixth International Conference on Natural Computation, 
+    C. Xia, X. Jiang, Sen Liu, Zhaobo Luo and Zhang Yu,
+    "Dynamic item-based recommendation algorithm with time decay,"
+    2010 Sixth International Conference on Natural Computation,
     Yantai, 2010, pp. 242-247, doi: 10.1109/ICNC.2010.5582899.
 
     For each item the K most similar items are computed during fit.
-    Decay function parameter decides how to compute the similarity between two items.
+    The ``decay_function`` parameter decides how to compute the similarity between two items.
 
     .. math::
         \\text{sim}(i,j) = \\sum\\limits_{u \\in U} R_{u,i} \\cdot R_{u,j} \\cdot \\theta(|T_{u,i} - T_{u,j}|)
@@ -90,9 +91,7 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
         make sure to pick a value below the number of columns of the matrix to fit on.
         Defaults to 200.
     :type K: int, optional
-    :param fit_decay: How strongly the decay function should influence the scores,
-        make sure to pick a value in the correct interval
-        for the selected decay function.
+    :param fit_decay: Defines the decay scaling used for decay during model fitting.
         Defaults to 0.5.
     :type fit_decay: float, optional
     :param decay_function: The decay function that needs to

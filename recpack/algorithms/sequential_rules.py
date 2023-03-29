@@ -25,7 +25,9 @@ class SequentialRules(TopKItemSimilarityMatrixAlgorithm):
     Considers only cooccurrences between item i and item j, when item j was visited after item i.
     The weight of each cooccurrence is based on the number of steps to get from 1 to the next :math:`1/x`.
 
-    :param K: Number of neighbours to keep per item. Defaults to 200
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on. 
+        Defaults to 200
     :type K: int, optional
     :param max_steps: Maximal amount of steps to look for neighbouring items. Defaults to 10.
     :type max_steps: int, optional
@@ -62,7 +64,7 @@ class SequentialRules(TopKItemSimilarityMatrixAlgorithm):
                 for gap, target in enumerate(hist[ix + 1 : min(ix + self.max_steps + 1, hist_len)]):
                     similarities[context, target] += self._weight(n_steps=gap + 1)
 
-        # Set self similarity to 0
+        # Set self-similarity to 0
         similarities[list(range(num_items)), list(range(num_items))] = 0
 
         # The similarity is now finalised by normalising the sum computed above,

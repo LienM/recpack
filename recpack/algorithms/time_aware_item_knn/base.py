@@ -56,7 +56,9 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     During computation, 'now' is considered as the maximal timestamp in the matrix + 1.
     As such the age is always a positive non-zero value.
 
-    :param K: Amount of neighbours to keep. Defaults to 200.
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
     :type K: int, Optional
     :param fit_decay: Defines the decay scaling used for decay during model fitting.
         Defaults to `` 1 / (24 * 3600)`` (one day).
@@ -199,10 +201,10 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
 
 
 class TARSItemKNNCoocDistance(TARSItemKNN):
-    """Time Aware ItemKNN variant that considers time between two interactions
+    """Framework for time aware variants of ItemKNN that consider the time between two interactions
     when computing similarity between two items.
 
-    Cooc Similarity between two items is computed as
+    Cooc similarity between two items is computed as
 
     .. math ::
 
@@ -214,22 +216,28 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
 
         \\text{sim}(i,j) = \\frac{1}{\\sum\\limits_{u \\in U}R_{ui}} \\sum\\limits_{u \\in U}[R_{ui} \\cdot R_{uj} \\cdot \\Gamma(|T_{ui} - T_{uj}|)]
 
-    Where :math:`\\Gamma()` is a decay function, and :math:`T_{ui}` is the timestamp at which user :math:`u`
-    last visited item :math:`i`.
+    Where :math:`\\Gamma()` is a decay function, :math:`T_{ui}` is the timestamp at which user :math:`u`
+    last visited item :math:`i` and :math:`R_{ui}` indicates whether user :math:`u` interacted with item :math:`i`.
     Timestamps are in multiples of ``decay_interval``, by default in seconds.
 
 
-    :param K: Number of nearest neighbours to store per item, defaults to 200
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
     :type K: int, optional
-    :param fit_decay: Decay parameter when applying decay during training, defaults to 1/3600
+    :param fit_decay: Defines the decay scaling used for decay during model fitting.
+        Defaults to 1 / (24 * 3600).
     :type fit_decay: float, optional
     :param decay_interval: Size of a single time unit in seconds.
         Allows more finegrained parameters for large scale datasets where events are collected over months of data.
         Defaults to 1 (second).
     :type decay_interval: int, optional
-    :param similarity: Similarity function supplied, defaults to "cooc"
+    :param similarity: Which similarity measure to use, ``["cooc", "conditional_probability"]`` are supported.
+        Defaults to "cooc".
     :type similarity: str, optional
-    :param decay_function: Decay function to use, ``["cooc", "conditional_probability"]`` are supported. Defaults to "exponential"
+    :param decay_function: Decay function to use.
+        Supported values are ``["exponential", "log", "linear", "concave", "convex", "inverse"]``.
+        Defaults to "exponential"
     :type decay_function: str, optional
     """
 
@@ -239,7 +247,7 @@ class TARSItemKNNCoocDistance(TARSItemKNN):
     def __init__(
         self,
         K: int = 200,
-        fit_decay: float = 1 / 3600,
+        fit_decay: float = 1 / (24 * 3600),
         decay_interval: int = 1,
         similarity: str = "cooc",
         decay_function: str = "exponential",

@@ -34,7 +34,9 @@ class TARSItemKNNLiu(TARSItemKNN):
     At prediction time a user's history is weighted using the same formula with a different alpha.
     This weighted history is then multiplied with the precomputed similarity matrix.
 
-    :param K: Amount of neighbours to keep. Defaults to 200.
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
     :type K: int, optional
     :param fit_decay: Defines the decay scaling used for decay during model fitting.
         Defaults to 1 / (24 * 3600).

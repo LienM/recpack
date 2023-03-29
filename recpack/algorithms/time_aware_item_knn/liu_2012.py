@@ -68,7 +68,9 @@ class TARSItemKNNLiu2012(TARSItemKNN):
     and x is the time between the maximal timestamp in the matrix
     and the timestamp of the event.
 
-    :param K: The number of neighbours to keep per item.
+    :param K: How many neigbours to use per item,
+        make sure to pick a value below the number of columns of the matrix to fit on.
+        Defaults to 200
     :type K: int
     :param decay: The parameter of the logarithmic decay function. Defaults to 2.
     :type decay: float
