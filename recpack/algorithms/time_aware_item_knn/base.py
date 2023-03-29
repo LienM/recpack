@@ -172,7 +172,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         elif self.similarity == "pearson":
             item_similarities = compute_pearson_similarity(X)
 
-        item_similarities = get_top_K_values(item_similarities, self.K)
+        item_similarities = get_top_K_values(item_similarities, K=self.K)
 
         self.similarity_matrix_ = item_similarities
 

@@ -214,7 +214,7 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         elif self.similarity == "conditional_probability":
             item_similarities = compute_conditional_probability(X, self.pop_discount)
 
-        item_similarities = get_top_K_values(item_similarities, self.K)
+        item_similarities = get_top_K_values(item_similarities, K=self.K)
 
         # j, M (*, j) = 1
         if self.normalize_sim:
@@ -293,7 +293,6 @@ class ItemPNN(ItemKNN):
         pdf: str = "empirical",
         seed: Optional[int] = None,
     ):
-
         super().__init__(
             K=K,
             similarity=similarity,
