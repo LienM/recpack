@@ -203,10 +203,10 @@ class Pipeline(object):
                 optimisation_metric.name: optimisation_metric.value,
             }
 
-        # Sort by metric value
-        optimal_params = sorted(results, key=lambda x: x["loss"], reverse=True)[0]["params"]
-
-        self._optimisation_results.append(pd.DataFrame.from_records(results).drop(columns=["loss", "status"]))
+            # Hyperopt always minimises, so to maximize a metric we just turn it negative.
+            if not self.optimisation_metric_entry.minimise:
+                result["loss"] *= -1
+            return result
 
         if isinstance(algorithm_entry.optimisation_info, HyperoptInfo):
             results = self._optimise_w_hyperopt(optimise, algorithm_entry.optimisation_info)

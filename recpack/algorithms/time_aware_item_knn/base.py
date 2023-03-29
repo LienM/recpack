@@ -6,7 +6,8 @@
 #   Robin Verachtert
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
+from tqdm.auto import tqdm
 
 from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 from recpack.algorithms.nearest_neighbour import (

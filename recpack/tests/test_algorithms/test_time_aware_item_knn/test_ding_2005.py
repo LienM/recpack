@@ -6,6 +6,8 @@
 #   Robin Verachtert
 
 import numpy as np
+
+
 from recpack.algorithms import TARSItemKNNDing, ItemKNN
 
 

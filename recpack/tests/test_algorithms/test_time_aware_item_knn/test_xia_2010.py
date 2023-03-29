@@ -4,14 +4,15 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
+import numpy as np
+import pandas as pd
+import pytest
+from scipy.sparse import csr_matrix
+
 
 from recpack.algorithms.time_aware_item_knn import (
     TARSItemKNNXia,
 )
-import scipy.sparse
-import pandas as pd
-import numpy as np
-import pytest
 from recpack.matrix import InteractionMatrix
 
 
@@ -172,10 +173,10 @@ def test_time_decay_knn_predict(mat, mat_diag, decay_function, fit_decay):
     algo = TARSItemKNNXia(K=2, fit_decay=fit_decay, decay_function=decay_function, decay_interval=1)
 
     algo.fit(mat)
-    assert type(algo.similarity_matrix_) is scipy.sparse.csr_matrix
+    assert isinstance(algo.similarity_matrix_, csr_matrix)
 
     result = algo.predict(mat_diag)
-    assert type(result) is scipy.sparse.csr_matrix
+    assert isinstance(result, csr_matrix)
 
     np.testing.assert_array_equal(result.toarray(), algo.similarity_matrix_.toarray())
 

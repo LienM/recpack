@@ -4,18 +4,11 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
-
-from scipy.sparse import csr_matrix
-from tqdm.auto import tqdm
-
-from recpack.algorithms.base import TopKItemSimilarityMatrixAlgorithm
 from recpack.algorithms.time_aware_item_knn.base import TARSItemKNNCoocDistance
-from recpack.matrix import InteractionMatrix
-from recpack.util import get_top_K_values
 
 
 class TARSItemKNNXia(TARSItemKNNCoocDistance):
-    """Time aware variant of ItemKNN that considers the time between two interactions 
+    """Time aware variant of ItemKNN that considers the time between two interactions
     when computing similarity between two items.
 
     First described in
