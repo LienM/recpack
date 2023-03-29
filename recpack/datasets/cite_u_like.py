@@ -4,14 +4,12 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
-
-"""Module responsible for the CiteULike dataset."""
+from typing import List
 
 import numpy as np
 import pandas as pd
-from typing import List
-from recpack.datasets.base import Dataset, _fetch_remote
 
+from recpack.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (
     Filter,
     MinItemsPerUser,
@@ -39,8 +37,10 @@ class CiteULike(Dataset):
     :type use_default_filters: bool, optional
     """
 
-    TIMESTAMP_IX = None
-    """The dataset has no notion of time, so there is no timestamp column present in the DataFrame."""
+    USER_IX = "user_id"
+    """Name of the column in the DataFrame with user identifiers"""
+    ITEM_IX = "item_id"
+    """Name of the column in the DataFrame with item identifiers"""
 
     DEFAULT_FILENAME = "users.dat"
     """Default filename that will be used if it is not specified by the user."""
@@ -82,7 +82,6 @@ class CiteULike(Dataset):
 
         u_i_pairs = []
         with open(self.file_path, "r") as f:
-
             for user, line in enumerate(f.readlines()):
                 item_cnt = line.strip("\n").split(" ")[0]  # First element is a count
                 items = line.strip("\n").split(" ")[1:]

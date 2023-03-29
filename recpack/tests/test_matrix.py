@@ -84,8 +84,13 @@ def test_init_without_timestamps(df):
     assert not d2.has_timestamps
 
 
-def test_values_w_dups(interaction_m_w_duplicate):
+def test_copy(interaction_m):
+    im = interaction_m.copy()
 
+    assert id(im) != id(interaction_m)
+
+
+def test_values_w_dups(interaction_m_w_duplicate):
     assert (
         interaction_m_w_duplicate.values.toarray()
         == np.array([[0, 1, 0, 0], [0, 2, 1, 0], [0, 0, 0, 1]], dtype=np.int32)
@@ -93,7 +98,6 @@ def test_values_w_dups(interaction_m_w_duplicate):
 
 
 def test_binary_values_w_dups(interaction_m_w_duplicate):
-
     binary_values = interaction_m_w_duplicate.binary_values
 
     assert (binary_values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 1, 0], [0, 0, 0, 1]], dtype=np.int32)).all()
@@ -104,12 +108,10 @@ def test_timestamps_no_dups(interaction_m):
 
 
 def test_timestamps_w_dups(interaction_m_w_duplicate):
-
     assert (interaction_m_w_duplicate.timestamps.values == np.array([3, 2, 4, 1, 1])).all()
 
 
 def test_timestamps_gt_w_dups(interaction_m_w_duplicate):
-
     filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_gt(2)
 
     assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 4])).all()
@@ -120,7 +122,6 @@ def test_timestamps_gt_w_dups(interaction_m_w_duplicate):
 
 
 def test_timestamps_lt_w_dups(interaction_m_w_duplicate):
-
     filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_lt(2)
 
     # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
@@ -132,7 +133,6 @@ def test_timestamps_lt_w_dups(interaction_m_w_duplicate):
 
 
 def test_timestamps_gte_w_dups(interaction_m_w_duplicate):
-
     filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_gte(2)
 
     assert (filtered_d_w_duplicate.timestamps.values == np.array([3, 2, 4])).all()
@@ -143,7 +143,6 @@ def test_timestamps_gte_w_dups(interaction_m_w_duplicate):
 
 
 def test_timestamps_lte_w_dups(interaction_m_w_duplicate):
-
     filtered_d_w_duplicate = interaction_m_w_duplicate.timestamps_lte(2)
 
     # data = {'timestamp': [3, 2, 1, 1, 4], 'item_id': [1, 1, 2, 3, 1], 'user_id': [0, 1, 1, 2, 1]}
@@ -155,7 +154,6 @@ def test_timestamps_lte_w_dups(interaction_m_w_duplicate):
 
 
 def test_indices_in(interaction_m):
-
     U = [0, 1]
     I = [1, 2]
 
@@ -269,7 +267,6 @@ def test_binary_item_history(interaction_m_w_duplicate):
 
 
 def test_interaction_history(interaction_m):
-
     for uid, user_history in interaction_m.interaction_history:
         hist = list(user_history)
 
@@ -286,7 +283,6 @@ def test_sorted_interaction_history_no_timestamps_raises(df):
 
 
 def test_sorted_interaction_history2(interaction_m_w_duplicate):
-
     cnt_users = 0
 
     for uid, user_history in interaction_m_w_duplicate.sorted_interaction_history:
@@ -303,7 +299,6 @@ def test_sorted_interaction_history2(interaction_m_w_duplicate):
 
 
 def test_sorted_interaction_history(interaction_m):
-
     for uid, user_history in interaction_m.sorted_interaction_history:
         hist = list(user_history)
         for id1, id2 in zip(hist, islice(hist, 1, None)):
@@ -442,7 +437,6 @@ def test_save(larger_mat):
     open_name = "recpack.matrix.interaction_matrix.open"
     mocker2 = MagicMock()
     with patch("recpack.matrix.interaction_matrix.pd.DataFrame.to_csv", mocker2):
-
         with patch(open_name, mocker):
             larger_mat.save("test_data")
 
@@ -458,7 +452,6 @@ def test_save(larger_mat):
 
 
 def test_load(larger_mat):
-
     mocker2 = MagicMock(return_value=larger_mat._df)
     with patch("recpack.matrix.interaction_matrix.pd.read_csv", mocker2):
         with patch(

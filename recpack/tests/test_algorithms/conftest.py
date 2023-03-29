@@ -8,54 +8,24 @@
 import numpy as np
 import pandas as pd
 import pytest
-import torch
-from torch.autograd import Variable
-import torch.nn as nn
 from scipy.sparse import csr_matrix
+import torch
+import torch.nn as nn
 
 
 from recpack.matrix import InteractionMatrix
 
-INPUT_SIZE = 1000
+
 USER_IX = InteractionMatrix.USER_IX
 ITEM_IX = InteractionMatrix.ITEM_IX
 TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
 
 
 @pytest.fixture(scope="function")
-def input_size():
-    return INPUT_SIZE
-
-
-@pytest.fixture(scope="function")
-def inputs():
-    torch.manual_seed(400)
-    return Variable(torch.randn(INPUT_SIZE, INPUT_SIZE))
-
-
-@pytest.fixture(scope="function")
-def targets():
-    torch.manual_seed(400)
-    return Variable(torch.randint(0, 2, (INPUT_SIZE,))).long()
-
-
-@pytest.fixture(scope="function")
-def small_mat_unigram():
-    data = {
-        TIMESTAMP_IX: np.random.randint(0, 10, size=10),
-        ITEM_IX: [0, 0, 0, 0, 0, 1, 2, 3, 4, 5],
-        USER_IX: np.random.randint(0, 10, size=10),
-    }
-    df = pd.DataFrame.from_dict(data)
-
-    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
-
-
-@pytest.fixture(scope="function")
-def pageviews():
+def X_in():
     pv_users, pv_items, pv_values = (
         [0, 0, 0, 2, 2, 2],
-        [0, 2, 3, 1, 3, 4],
+        [0, 2, 3, 1, 3, 1],
         [1, 2, 1, 1, 1, 1],
     )
 
@@ -65,34 +35,8 @@ def pageviews():
 
 
 @pytest.fixture(scope="function")
-def pageviews_for_pairwise():
-    pv_users, pv_items, pv_values = (
-        [0, 0, 0, 1, 1, 1, 3, 3, 4, 4],
-        [0, 1, 2, 0, 1, 2, 3, 4, 3, 4],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    )
-
-    pv = csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
-
-    return pv
-
-
-@pytest.fixture(scope="function")
-def pageviews_interaction_m(pageviews):
-    return InteractionMatrix.from_csr_matrix(pageviews)
-
-
-@pytest.fixture(scope="function")
-def purchases():
-    pur_users, pur_items, pur_values = (
-        [0, 2],
-        [0, 4],
-        [1, 1],
-    )
-
-    pur = csr_matrix((pur_values, (pur_users, pur_items)), shape=(10, 5))
-
-    return pur
+def X_in_interaction_m(X_in):
+    return InteractionMatrix.from_csr_matrix(X_in)
 
 
 @pytest.fixture(scope="function")
@@ -112,19 +56,6 @@ def larger_matrix():
     pv = csr_matrix((pv_values, (pv_users, pv_items)), shape=(num_users + 200, num_items))
 
     return pv
-
-
-@pytest.fixture(scope="function")
-def data():
-    pred_users, pred_items, pred_values = (
-        [0, 0, 0, 2, 2, 2],
-        [0, 2, 3, 1, 3, 4],
-        [0.3, 0.2, 0.1, 0.23, 0.3, 0.5],
-    )
-
-    pred = csr_matrix((pred_values, (pred_users, pred_items)), shape=(10, 5))
-
-    return pred
 
 
 @pytest.fixture(scope="function")

@@ -4,98 +4,73 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
+import warnings
 
-import numpy
+import numpy as np
 import pytest
-import random
-import scipy.sparse
-import recpack.algorithms
+from scipy.sparse import csr_matrix
+
+from recpack.algorithms import Popularity, Random
 
 
-@pytest.fixture(scope="function")
-def data():
-    # generate scipy.sparse matrix with user interactions.
-    users = list(range(10))
-    u_, i_ = [], []
-    for user in users:
-        items = list(range(10))
-        items_interacted = numpy.random.choice(items, 3, replace=False)
-
-        u_.extend([user] * 3)
-        i_.extend(items_interacted)
-    return scipy.sparse.csr_matrix((numpy.ones(len(u_)), (u_, i_)))
-
-
-@pytest.fixture(scope="function")
-def data_in_out():
-    d = []
-    for i in range(1, 11):
-        users = list(range(i))
-        u_in, i_in = [], []
-        u_out, i_out = [], []
-        for user in users:
-            items = list(range(10))
-            items_interacted = numpy.random.choice(items, 6, replace=False)
-            items_in = items_interacted[:3]
-            items_out = items_interacted[3:]
-
-            u_in.extend([user] * 3)
-            u_out.extend(([user] * 3))
-            i_in.extend(items_in)
-            i_out.extend(items_out)
-
-        in_ = scipy.sparse.csr_matrix(
-            (numpy.ones(len(u_in)), (u_in, i_in)), shape=(i, 10)
-        )
-        out_ = scipy.sparse.csr_matrix(
-            (numpy.ones(len(u_out)), (u_out, i_out)), shape=(i, 10)
-        )
-
-        d.append((in_, out_))
-    return d
-
-
-def test_random(data, data_in_out):
-
+def test_random(X_in):
     seed = 42
-    K = 5
-    algo = recpack.algorithms.Random(K=K, seed=42)
-    algo.fit(data)
+    K = 2
+    algo = Random(K=K, seed=seed)
+    algo.fit(X_in)
 
-    for out_, in_ in data_in_out:
-        result = algo.predict(in_)
-        assert len(result.nonzero()[1]) == result.shape[0] * K
-        # TODO: What else to test?
+    X_pred = algo.predict(X_in)
+
+    assert X_pred.nnz == len(set(X_pred.nonzero()[0])) * K
 
 
-def test_random_use_only_interacted_items(purchases):
-    algo = recpack.algorithms.Random(K=2, use_only_interacted_items=True)
+def test_random_use_only_interacted_items(X_in):
+    algo1 = Random(K=2, use_only_interacted_items=True)
+    algo2 = Random(K=2, use_only_interacted_items=False)
+    algo1.fit(X_in)
+    algo2.fit(X_in)
+    assert len(algo1.items_) < len(algo2.items_)
 
-    algo.fit(purchases)
-    assert (
-        len(algo.items_) == 2
-    )  # 2 purchased items in the purchases interaction matrix
 
-    algo = recpack.algorithms.Random(K=2, use_only_interacted_items=False)
+def test_random_K_is_None(X_in):
+    algo1 = Random(K=None, use_only_interacted_items=True)
+    algo2 = Random(K=None, use_only_interacted_items=False)
+    algo1.fit(X_in)
+    algo2.fit(X_in)
+    assert len(algo1.items_) < len(algo2.items_)
 
-    algo.fit(purchases)
-    assert len(algo.items_) == 5
+    X_pred = algo1.predict(X_in)
+
+    assert len(set(X_pred.nonzero()[1]).difference(set(X_in.nonzero()[1]))) == 0
 
 
 def test_popularity():
     item_i = [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
     user_i = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
     values = [1] * 10
-    train_data = scipy.sparse.csr_matrix((values, (user_i, item_i)))
-    algo = recpack.algorithms.Popularity(K=2)
+    train_data = csr_matrix((values, (user_i, item_i)))
+    algo = Popularity(K=20)
 
     algo.fit(train_data)
 
-    _in = scipy.sparse.csr_matrix(([1, 1], ([0, 1], [1, 1])), shape=(5, 5))
+    _in = csr_matrix(([1, 1], ([0, 1], [1, 1])), shape=(5, 5))
     prediction = algo.predict(_in)
 
-    assert (prediction[0] != prediction[1]).nnz == 0
-    assert prediction[0, 4] != 0
-    assert prediction[0, 3] != 0
+    # All users in _in get the same recommendations
+    np.testing.assert_almost_equal(prediction[0, :].toarray(), prediction[1, :].toarray())
+    # The most popular item is ranked highest
     assert prediction[0, 4] > prediction[0, 3]
-    assert (prediction[0, :3].toarray() == numpy.array([0, 0, 0])).all()
+    # Users who were not in _in do not receive any recommendations
+    assert prediction[2, :].nnz == 0
+
+
+def test_popularity_K_larger_than_num_items():
+    item_i = [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
+    user_i = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]
+    values = [1] * 10
+    train_data = csr_matrix((values, (user_i, item_i)))
+    algo = Popularity(K=20)
+    with warnings.catch_warnings(record=True) as w:
+        algo.fit(train_data)
+        assert len(w) > 0
+        assert "K is larger than the number of items." in str(w[-1].message)

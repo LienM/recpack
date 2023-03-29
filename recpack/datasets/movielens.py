@@ -4,16 +4,14 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
-
-"""Module responsible for the MovieLens datasets."""
-
-import numpy as np
 import os
-import pandas as pd
 from typing import List
 import zipfile
-from recpack.datasets.base import Dataset, _fetch_remote
 
+import numpy as np
+import pandas as pd
+
+from recpack.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (
     Filter,
     MinItemsPerUser,

@@ -4,16 +4,14 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
-
-from collections import Counter
-import random
-import sys
+from typing import Optional
+import warnings
 
 import numpy as np
-from scipy.sparse import csr_matrix
-
+from scipy.sparse import csr_matrix, lil_matrix
 
 from recpack.algorithms.base import Algorithm
+from recpack.util import get_top_K_values
 
 
 class Random(Algorithm):
@@ -35,41 +33,48 @@ class Random(Algorithm):
     :type use_only_interacted_items: boolean, optional
     """
 
-    def __init__(self, K=200, seed=None, use_only_interacted_items=True):
+    def __init__(self, K: Optional[int] = 200, seed: Optional[int] = None, use_only_interacted_items: bool = True):
         super().__init__()
         self.items = None
-        self.K = K
+        self.K = K  # TODO Allow K to be set to zero?
         self.use_only_interacted_items = use_only_interacted_items
 
         if seed is None:
-            seed = random.randrange(sys.maxsize)
-        random.seed(seed)
+            seed = np.random.get_state()[1][0]
         self.seed = seed
+        self.rand_gen = np.random.default_rng(seed=self.seed)
 
-    def _fit(self, X: csr_matrix):
+    def _fit(self, X: csr_matrix) -> "Random":
         if self.use_only_interacted_items:
             self.items_ = list(set(X.nonzero()[1]))
         else:
             self.items_ = list(np.arange(X.shape[1]))
 
-    def _predict(self, X: csr_matrix):
-        """Predict K random scores for items per row in X
+        if self.K is not None and len(self.items_) < self.K:
+            warnings.warn("K is larger than the number of items.", UserWarning)
 
-        Returns numpy array of the same shape as X,
-        with non zero scores for K items per row.
-        """
+        return self
 
+    def _predict(self, X: csr_matrix) -> csr_matrix:
         # For each user choose random K items, and generate a score for these items
         # Then create a matrix with the scores on the right indices
-        U = X.nonzero()[0]
+        users = list(set(X.nonzero()[0]))
 
-        score_list = [
-            (u, i, random.random()) for u in set(U) for i in np.random.choice(self.items_, size=self.K, replace=False)
-        ]
-        user_idxs, item_idxs, scores = list(zip(*score_list))
-        score_matrix = csr_matrix((scores, (user_idxs, item_idxs)), shape=X.shape)
+        num_items = X.shape[1]
+        K = min(len(self.items_), self.K) if self.K is not None else self.K
+        # Generate random scores for all items
+        random_scores = self.rand_gen.random((len(users), num_items))
 
-        return score_matrix
+        # Filter out only allowed items
+        allowed_items = np.zeros(num_items)
+        allowed_items[self.items_] = 1
+        # Get top K of allowed items per user
+        top_scores = get_top_K_values(csr_matrix(random_scores * allowed_items), K=K)
+
+        X_pred = csr_matrix(X.shape)
+        X_pred[users] = top_scores
+
+        return X_pred
 
 
 class Popularity(Algorithm):
@@ -87,25 +92,28 @@ class Popularity(Algorithm):
         super().__init__()
         self.K = K
 
-    def _fit(self, X: csr_matrix):
-        #  Values in the matrix X are considered as counts of visits
-        #  If your data contains ratings, you should make them binary before fitting
-        items = list(X.nonzero()[1])
-        sorted_scores = Counter(items).most_common()
-        self.sorted_scores_ = [(item, score / sorted_scores[0][1]) for item, score in sorted_scores]
+    def _fit(self, X: csr_matrix) -> "Popularity":
+        # Get popularity score for every item
+        interaction_counts = X.sum(axis=0).A[0]
+        sorted_scores = interaction_counts / interaction_counts.max()
+
+        num_items = X.shape[1]
+        if num_items < self.K:
+            warnings.warn("K is larger than the number of items.", UserWarning)
+
+        K = min(self.K, num_items)
+        ind = np.argpartition(sorted_scores, -K)[-K:]
+        a = np.zeros(X.shape[1])
+        a[ind] = sorted_scores[ind]
+        self.sorted_scores_ = a
+        return self
 
     def _predict(self, X: csr_matrix) -> csr_matrix:
         """For each user predict the K most popular items"""
-        items, values = zip(*self.sorted_scores_[: self.K])
 
-        users = set(X.nonzero()[0])
+        users = list(set(X.nonzero()[0]))
 
-        U, I, V = [], [], []
+        X_pred = lil_matrix(X.shape)
+        X_pred[users] = self.sorted_scores_
 
-        for user in users:
-            U.extend([user] * self.K)
-            I.extend(items)
-            V.extend(values)
-
-        score_matrix = csr_matrix((V, (U, I)), shape=X.shape)
-        return score_matrix
+        return X_pred.tocsr()

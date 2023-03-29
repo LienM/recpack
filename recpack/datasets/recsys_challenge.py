@@ -4,14 +4,14 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
-
-"""Module responsible for the RecsysChallenge2015 dataset."""
+import os
+from typing import List
+import zipfile
 
 import numpy as np
 import pandas as pd
-from typing import List
-from recpack.datasets.base import Dataset
 
+from recpack.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (
     Filter,
     MinUsersPerItem,
@@ -41,6 +41,10 @@ class RecsysChallenge2015(Dataset):
 
     USER_IX = "session"
     """Name of the column in the DataFrame that contains user identifiers."""
+    ITEM_IX = "item_id"
+    """Name of the column in the DataFrame with item identifiers"""
+    TIMESTAMP_IX = "seconds_since_epoch"
+    """Name of the column in the DataFrame that contains time of interaction in seconds since epoch."""
 
     DEFAULT_FILENAME = "yoochoose-clicks.dat"
     """Default filename that will be used if it is not specified by the user."""

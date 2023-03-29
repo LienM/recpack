@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bugfixes
 * __metrics__
     * Fixed bug in `CalibratedRecallK` results property, which caused an error when requesting this property.
+* __datasets__
+    * Made Datasets more robust by removing the defaults for `USER_IX`, `ITEM_IX`, `TIMESTAMP_IX`.
+    * Fixed bug in DummyDataset that used `num_users` to set `self.num_items`. 
+* __matrix__
+    * Made `InteractionMatrix` more robust to funky indices.
+* __tests.test_algorithms__
+    * Removed unused fixtures and cleaned up namings.
 
 ## [0.3.5] - ![](https://img.shields.io/date/1676895426.svg?label=2023-02-20)
 
