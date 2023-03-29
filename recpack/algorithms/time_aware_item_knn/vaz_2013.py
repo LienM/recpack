@@ -11,16 +11,19 @@ from recpack.algorithms.time_aware_item_knn.base import TARSItemKNN
 class TARSItemKNNVaz(TARSItemKNN):
     """Time decayed similarity algorithm with pearson similarity.
 
-    Algorithm as described in Vaz, Paula Cristina, Ricardo Ribeiro, and David Martins De Matos.
-    "Understanding the Temporal Dynamics of Recommendations across Different Rating Scales."
-    UMAP Workshops. 2013.
+    Algorithm as described in
+    Understanding the Temporal Dynamics of Recommendations across Different Rating Scales
+    Paula Cristina Vaz, Ricardo Ribeiro, David Martins de Matos.
+    Late-Breaking Results, Project Papers and Workshop Proceedings of the 21st Conference
+    on User Modeling, Adaptation, and Personalization. Rome, Italy, June 10-14, 2013.
 
     :param K: The number of neighbours to compute per item. Defaults to 200.
     :type K: int, optional
-    :param fit_decay: decay parameter used during fitting.
+    # TODO Describe what this decay means?
+    :param fit_decay: Decay parameter used during fitting.
         Defaults to 1/(24*3600).
     :type fit_decay: float, optional
-    :param predict_decay: decay parameter used during predicting.
+    :param predict_decay: Decay parameter used during predicting.
         Defaults to 1/(24*3600).
     :type predict_decay: float, optional
     """

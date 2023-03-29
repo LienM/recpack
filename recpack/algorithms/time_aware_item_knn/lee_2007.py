@@ -16,8 +16,16 @@ class TARSItemKNNLee(TARSItemKNN):
     """Time aware model which computes weights of interactions based on a bucketized approach,
     taking into account age of event, and time since publication of an item.
 
-    Algorithm extending the two fixed value matrices used in Lee, Tong Queue, Young Park, and Yong-Tae Park.
-    "A time-based approach to effective recommender systems using implicit feedback".
+    #TODO What does this mean?
+    Algorithm extending the two fixed value matrices used in
+    Tong Queue Lee, Young Park, Yong-Tae Park,
+    A time-based approach to effective recommender systems using implicit feedback,
+    Expert Systems with Applications,
+    Volume 34, Issue 4,
+    2008,
+    Pages 3055-3062,
+    ISSN 0957-4174,
+    https://doi.org/10.1016/j.eswa.2007.06.031.
 
     The automated computation of the weighting matrix follows the W=5 weighting scheme in the paper,
     each column ends with an integer value, and the next column follows on this previous column.
@@ -113,8 +121,15 @@ class TARSItemKNNLee_W3(TARSItemKNNLee):
     """Time aware model which computes weights of interactions based on a bucketized approach,
     taking into account age of event, and time since publication of an item.
 
-    Implements the W3 model from Lee, Tong Queue, Young Park, and Yong-Tae Park.
-    "A time-based approach to effective recommender systems using implicit feedback".
+    Implements the W3 model described in 
+    Tong Queue Lee, Young Park, Yong-Tae Park,
+    A time-based approach to effective recommender systems using implicit feedback,
+    Expert Systems with Applications,
+    Volume 34, Issue 4,
+    2008,
+    Pages 3055-3062,
+    ISSN 0957-4174,
+    https://doi.org/10.1016/j.eswa.2007.06.031.
 
     Weights are used both for prediction and for training.
 
@@ -145,8 +160,15 @@ class TARSItemKNNLee_W5(TARSItemKNNLee):
     """Time aware model which computes weights of interactions based on a bucketized approach,
     taking into account age of event, and time since publication of an item.
 
-    Implements the W5 model from Lee, Tong Queue, Young Park, and Yong-Tae Park.
-    "A time-based approach to effective recommender systems using implicit feedback".
+    Implements the W5 model described in
+    Tong Queue Lee, Young Park, Yong-Tae Park,
+    A time-based approach to effective recommender systems using implicit feedback,
+    Expert Systems with Applications,
+    Volume 34, Issue 4,
+    2008,
+    Pages 3055-3062,
+    ISSN 0957-4174,
+    https://doi.org/10.1016/j.eswa.2007.06.031.
 
     Weights are used both for prediction and for training.
 

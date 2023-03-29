@@ -46,8 +46,11 @@ class LiuDecay(DecayFunction):
 class TARSItemKNNLiu2012(TARSItemKNN):
     """Time aware variant of ItemKNN which uses a logarithmic decay function.
 
-    Algorithm as defined in Liu, Yue, et al. "Time-based k-nearest neighbor collaborative filtering."
-    2012 IEEE 12th International Conference on Computer and Information Technology
+    Algorithm as described in 
+    Y. Liu, Z. Xu, B. Shi and B. Zhang, 
+    "Time-Based K-nearest Neighbor Collaborative Filtering," 
+    2012 IEEE 12th International Conference on Computer and Information Technology, 
+    Chengdu, China, 2012, pp. 1061-1065, doi: 10.1109/CIT.2012.217.
 
     Weights are computed based on their position in a user's history. 1st item visited by a user gets value 1,
     last item visited gets value 2. The decay follows a logarithmic function.
@@ -62,6 +65,7 @@ class TARSItemKNNLiu2012(TARSItemKNN):
     """
 
     def __init__(self, K=200, decay=2):
+        # TODO Add decay function to the list so it can be created normally
         super().__init__(K=K, fit_decay=decay, predict_decay=decay, decay_function="log", similarity="cosine")
         self.decay_function = LiuDecay(decay)
         self.decay = decay

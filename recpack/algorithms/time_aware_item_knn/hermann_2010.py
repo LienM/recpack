@@ -24,8 +24,12 @@ class TARSItemKNNHermann(TopKItemSimilarityMatrixAlgorithm):
     """ItemKNN algorithm with temporal decay,
     taking into account age of events and pairwise distance between cooccurences.
 
-    Presented in Hermann, Christoph. "Time-based recommendations for lecture materials."
-    EdMedia+ Innovate Learning. Association for the Advancement of Computing in Education (AACE), 2010.
+    Presented in
+    Hermann, C. (2010). 
+    Time-Based Recommendations for Lecture Materials. 
+    In J. Herrington & C. Montgomerie (Eds.), 
+    Proceedings of ED-MEDIA 2010--World Conference on Educational Multimedia, Hypermedia & Telecommunications (pp. 1028-1033). 
+    Toronto, Canada: Association for the Advancement of Computing in Education (AACE). 
 
     Similarity between two items is computed as the avg of :math:`S_{u,i,j}`
     for each user that has seen both items i and j.

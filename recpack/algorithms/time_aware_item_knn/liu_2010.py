@@ -13,8 +13,12 @@ from recpack.algorithms.time_aware_item_knn.base import TARSItemKNN
 class TARSItemKNNLiu(TARSItemKNN):
     """ItemKNN algorithm where older interactions have less weight during both prediction and training.
 
-    Algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
-    Proceedings of the fourth ACM conference on Recommender systems. 2010.
+    Algorithm as described in
+    Nathan N. Liu, Min Zhao, Evan Xiang, and Qiang Yang. 
+    2010. Online evolutionary collaborative filtering. 
+    In Proceedings of the fourth ACM conference on Recommender systems (RecSys '10). 
+    Association for Computing Machinery, New York, NY, USA, 95–102. 
+    https://doi.org/10.1145/1864708.1864729
 
     Each interaction is decay to
 

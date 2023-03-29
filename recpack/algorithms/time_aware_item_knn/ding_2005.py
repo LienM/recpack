@@ -11,7 +11,14 @@ from recpack.algorithms.time_aware_item_knn.base import TARSItemKNN
 class TARSItemKNNDing(TARSItemKNN):
     """Time aware algorithm applying a decay on the user history when predicting.
 
-    Algorithm as presented in Ding, Yi, and Xue Li. "Time weight collaborative filtering."
+    Algorithm as presented in 
+    Yi Ding and Xue Li. 2005. 
+    Time weight collaborative filtering. 
+    In Proceedings of the 14th ACM international conference on Information and knowledge management (CIKM '05).
+    Association for Computing Machinery, New York, NY, USA, 485–492. 
+    https://doi.org/10.1145/1099554.1099689
+
+
     Computation of the similarity matrix is the same as normal ItemKNN.
     When predicting however the user's older interactions are given less weight in the final prediction score.
 

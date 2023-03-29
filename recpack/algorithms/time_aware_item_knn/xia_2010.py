@@ -17,9 +17,11 @@ from recpack.util import get_top_K_values
 class TARSItemKNNXia(TARSItemKNNCoocDistance):
     """Time Decaying Nearest Neighbours model.
 
-    First described in 'Dynamic Item-Based Recommendation Algorithm with Time Decay'
-    Chaolun Xia, Xiaohong Jiang, Sen Liu, Zhaobo Luo, Zhang Yu,
-    2010 Sixth International Conference on Natural Computation (ICNC 2010).
+    First described in
+    C. Xia, X. Jiang, Sen Liu, Zhaobo Luo and Zhang Yu, 
+    "Dynamic item-based recommendation algorithm with time decay," 
+    2010 Sixth International Conference on Natural Computation, 
+    Yantai, 2010, pp. 242-247, doi: 10.1109/ICNC.2010.5582899.
 
     For each item the K most similar items are computed during fit.
     Decay function parameter decides how to compute the similarity between two items.
