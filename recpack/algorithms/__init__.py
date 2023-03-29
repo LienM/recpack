@@ -128,8 +128,6 @@ Time Aware Algorithms
     TARSItemKNN
     TARSItemKNNDing
     TARSItemKNNLee
-    TARSItemKNNLee_W3
-    TARSItemKNNLee_W5
     TARSItemKNNLiu
     TARSItemKNNLiu2012
     TARSItemKNNVaz
@@ -282,8 +280,6 @@ from recpack.algorithms.time_aware_item_knn import (
     TARSItemKNNDing,
     TARSItemKNNHermann,
     TARSItemKNNLee,
-    TARSItemKNNLee_W3,
-    TARSItemKNNLee_W5,
     TARSItemKNNLiu,
     TARSItemKNNLiu2012,
     TARSItemKNNXia,
