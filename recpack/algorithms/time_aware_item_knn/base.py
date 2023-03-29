@@ -60,10 +60,10 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
     :type K: int, Optional
     :param fit_decay: Defines the decay scaling used for decay during model fitting.
         Defaults to ``1/3600``.
-    :type fit_decay: float, Optional
+    :type fit_decay: float, optional
     :param predict_decay: Defines the decay scaling used for decay during prediction.
         Defaults to ``1/3600``.
-    :type predict_decay: float, Optional
+    :type predict_decay: float, optional
     :param decay_interval: Size of a single time unit in seconds.
         Allows more finegrained parameters for large scale datasets where events are collected over months of data.
         Defaults to 1 (second).
@@ -94,6 +94,7 @@ class TARSItemKNN(TopKItemSimilarityMatrixAlgorithm):
         similarity: str = "cosine",
         decay_function: str = "exponential",
     ):
+        
         # Uses other default parameters for ItemKNN
         super().__init__(K=K)
 
