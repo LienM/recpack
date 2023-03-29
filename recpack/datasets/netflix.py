@@ -4,12 +4,12 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
+import os
+from typing import List
+import tarfile
 
 import numpy as np
-import os
 import pandas as pd
-import tarfile
-from typing import List
 
 from recpack.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (

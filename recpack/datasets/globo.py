@@ -4,15 +4,13 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
-
-"""Module responsible for the Globo dataset."""
 import os
+from typing import List, Optional, Tuple, Union
 import zipfile
 
 import pandas as pd
-from typing import List, Optional, Tuple, Union
-from recpack.datasets.base import Dataset
 
+from recpack.datasets.base import Dataset
 from recpack.preprocessing.filters import (
     Filter,
     MinItemsPerUser,
@@ -44,10 +42,8 @@ class Globo(Dataset):
 
     USER_IX = "user_id"
     """Name of the column in the DataFrame that contains user identifiers."""
-
     ITEM_IX = "click_article_id"
     """Name of the column in the DataFrame that contains item identifiers."""
-
     TIMESTAMP_IX = "click_timestamp"
     """Name of the column in the DataFrame that contains timestamp."""
 

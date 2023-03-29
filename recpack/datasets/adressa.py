@@ -6,12 +6,13 @@
 #   Robin Verachtert
 
 import json
-import numpy as np
 import os
-import pandas as pd
 import tarfile
-from tqdm.auto import tqdm
 from typing import List
+
+import numpy as np
+import pandas as pd
+from tqdm.auto import tqdm
 
 from recpack.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (

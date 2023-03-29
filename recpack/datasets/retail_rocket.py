@@ -4,13 +4,14 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
+import os
+from typing import List, Union, Tuple
+import zipfile
 
-"""Module responsible for the RetailRocket dataset."""
-
+import numpy as np
 import pandas as pd
-from typing import List, Tuple, Union
-from recpack.datasets.base import Dataset
 
+from recpack.datasets.base import Dataset, _fetch_remote
 from recpack.preprocessing.filters import (
     Filter,
     MinItemsPerUser,
@@ -46,13 +47,10 @@ class RetailRocket(Dataset):
 
     USER_IX = "visitorid"
     """Name of the column in the DataFrame that contains user identifiers."""
-
     ITEM_IX = "itemid"
     """Name of the column in the DataFrame that contains item identifiers."""
-
     TIMESTAMP_IX = "timestamp"
     """Name of the column in the DataFrame that contains timestamp."""
-
     EVENT_TYPE_IX = "event"
     """Name of the column in the DataFrame that contains the event_types"""
 

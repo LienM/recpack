@@ -9,46 +9,60 @@ import os
 
 import numpy as np
 import pytest
+from scipy.sparse import csr_matrix
 import torch
 
 from recpack.algorithms import BPRMF
 from recpack.algorithms.bprmf import MFModule
 
 
-def test_bprmf(pageviews):
-    a = BPRMF(num_components=2, max_epochs=2, batch_size=1)
-    a.fit(pageviews, (pageviews, pageviews))
+@pytest.fixture(scope="function")
+def X_in_for_pairwise():
+    pv_users, pv_items, pv_values = (
+        [0, 0, 0, 1, 1, 1, 3, 3, 4, 4],
+        [0, 1, 2, 0, 1, 2, 3, 4, 3, 4],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    )
 
-    pred = a.predict(pageviews)
+    pv = csr_matrix((pv_values, (pv_users, pv_items)), shape=(10, 5))
+
+    return pv
+
+
+def test_bprmf(X_in):
+    a = BPRMF(num_components=2, max_epochs=2, batch_size=1)
+    a.fit(X_in, (X_in, X_in))
+
+    pred = a.predict(X_in)
 
     # Users should be the exact same.
-    assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
+    assert set(pred.nonzero()[0]) == set(X_in.nonzero()[0])
 
 
-def test_bprmf_topK(pageviews):
+def test_bprmf_topK(X_in):
     a = BPRMF(num_components=2, max_epochs=2, batch_size=1, predict_topK=1)
 
-    a.fit(pageviews, (pageviews, pageviews))
+    a.fit(X_in, (X_in, X_in))
 
-    pred = a.predict(pageviews)
+    pred = a.predict(X_in)
 
-    assert set(pred.nonzero()[0]) == set(pageviews.nonzero()[0])
+    assert set(pred.nonzero()[0]) == set(X_in.nonzero()[0])
     # Each user should receive a single recommendation
-    assert pred.nonzero()[1].shape[0] == len(set(pageviews.nonzero()[0]))
+    assert pred.nonzero()[1].shape[0] == len(set(X_in.nonzero()[0]))
 
 
-def test_bprmf_w_interaction_mat(pageviews_interaction_m):
+def test_bprmf_w_interaction_mat(X_in_interaction_m):
     a = BPRMF(num_components=2, max_epochs=2, batch_size=1)
-    a.fit(pageviews_interaction_m, (pageviews_interaction_m, pageviews_interaction_m))
+    a.fit(X_in_interaction_m, (X_in_interaction_m, X_in_interaction_m))
 
-    pred = a.predict(pageviews_interaction_m)
+    pred = a.predict(X_in_interaction_m)
 
     # Users should be the exact same.
-    assert set(pred.nonzero()[0]) == set(pageviews_interaction_m.active_users)
+    assert set(pred.nonzero()[0]) == set(X_in_interaction_m.active_users)
 
 
 @pytest.mark.parametrize("seed", list(range(1, 25)))
-def test_pairwise_ranking(pageviews_for_pairwise, seed):
+def test_pairwise_ranking(X_in_for_pairwise, seed):
     """Tests that the pairwise ranking of 2 items is correctly computed."""
 
     a = BPRMF(
@@ -59,8 +73,8 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
         learning_rate=0.5,
         sample_size=50,
     )
-    a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
-    pred = a.predict(pageviews_for_pairwise)
+    a.fit(X_in_for_pairwise, (X_in_for_pairwise, X_in_for_pairwise))
+    pred = a.predict(X_in_for_pairwise)
 
     # Negative example scores should be lower than positive
     assert pred[1, 2] > pred[1, 4]
@@ -76,7 +90,7 @@ def test_pairwise_ranking(pageviews_for_pairwise, seed):
     assert pred[3, 4] > pred[3, 1]
 
 
-def test_save_and_load(pageviews_for_pairwise):
+def test_save_and_load(X_in_for_pairwise):
     a = BPRMF(
         num_components=4,
         max_epochs=1,
@@ -86,7 +100,7 @@ def test_save_and_load(pageviews_for_pairwise):
         save_best_to_file=True,
     )
 
-    a.fit(pageviews_for_pairwise, (pageviews_for_pairwise, pageviews_for_pairwise))
+    a.fit(X_in_for_pairwise, (X_in_for_pairwise, X_in_for_pairwise))
 
     assert os.path.isfile(a.filename)
 
@@ -102,15 +116,15 @@ def test_save_and_load(pageviews_for_pairwise):
     b.load(a.filename)
 
     np.testing.assert_array_equal(
-        a.predict(pageviews_for_pairwise).toarray(),
-        b.predict(pageviews_for_pairwise).toarray(),
+        a.predict(X_in_for_pairwise).toarray(),
+        b.predict(X_in_for_pairwise).toarray(),
     )
 
     # TODO cleanup
     os.remove(a.filename)
 
 
-def test_forward(pageviews_for_pairwise):
+def test_forward(X_in_for_pairwise):
     a = MFModule(3, 3, 2)
 
     U = torch.LongTensor([0, 1])
@@ -122,12 +136,11 @@ def test_forward(pageviews_for_pairwise):
     assert res_2 == res_1[1, 1]
 
 
-def test_bad_stopping_criterion(pageviews):
+def test_bad_stopping_criterion(X_in):
     with pytest.raises(ValueError):
         BPRMF(stopping_criterion="not_a_correct_value")
 
 
-def test_recall_stopping_criterion(pageviews):
-
+def test_recall_stopping_criterion(X_in):
     a = BPRMF(num_components=2, max_epochs=2, batch_size=1, stopping_criterion="recall")
-    a.fit(pageviews, (pageviews, pageviews))
+    a.fit(X_in, (X_in, X_in))

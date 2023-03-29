@@ -4,15 +4,13 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
-
-"""Module responsible for the CosmeticsShop dataset."""
 import os
+from typing import List, Optional, Tuple, Union
 import zipfile
 
 import pandas as pd
-from typing import List, Optional, Tuple, Union
-from recpack.datasets.base import Dataset
 
+from recpack.datasets.base import Dataset
 from recpack.preprocessing.filters import (
     Filter,
     MinItemsPerUser,
@@ -50,10 +48,8 @@ class CosmeticsShop(Dataset):
 
     USER_IX = "user_id"
     """Name of the column in the DataFrame that contains user identifiers."""
-
     ITEM_IX = "product_id"
     """Name of the column in the DataFrame that contains item identifiers."""
-
     TIMESTAMP_IX = "event_time"
     """Name of the column in the DataFrame that contains timestamp."""
 
@@ -130,7 +126,7 @@ class CosmeticsShop(Dataset):
             for item in zip_ref.filelist:
                 with zip_ref.open(item, 'r') as f:
                     df = pd.read_csv(f, parse_dates=[self.TIMESTAMP_IX],usecols=self._columns)
-                    # Adapt timestamp, this makes it so the timestamp is always seconds since epoch
+                    # Transform timestamp to seconds since epoch
                     df.loc[:, self.TIMESTAMP_IX] = df[self.TIMESTAMP_IX].view(int) / 1e9
                     # Select only the specified event_types
                     if self.event_types:

@@ -4,6 +4,8 @@
 # Author:
 #   Lien Michiels
 #   Robin Verachtert
+from typing import Callable
+from unittest.mock import MagicMock
 
 import pytest
 import scipy.sparse
@@ -12,9 +14,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-
-from typing import Callable
-from unittest.mock import MagicMock
 
 from recpack.algorithms import MultVAE
 from recpack.algorithms.loss_functions import vae_loss
@@ -54,7 +53,6 @@ def _training_step(
     targets: Variable,
     device: torch.device,
 ):
-
     # put model in train mode
     model.train()
     model.to(device)
@@ -78,8 +76,7 @@ def _training_step(
 def test_training_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix)
 
-    params = [np for np in mult_vae.model_.named_parameters()
-              if np[1].requires_grad]
+    params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -95,8 +92,7 @@ def test_training_epoch(mult_vae, larger_matrix):
 def test_evaluation_epoch(mult_vae, larger_matrix):
     mult_vae._init_model(larger_matrix)
 
-    params = [np for np in mult_vae.model_.named_parameters()
-              if np[1].requires_grad]
+    params = [np for np in mult_vae.model_.named_parameters() if np[1].requires_grad]
 
     # take a copy
     params_before = [(name, p.clone()) for (name, p) in params]
@@ -121,7 +117,13 @@ def test_predict(mult_vae, larger_matrix):
     assert not set(X_pred.nonzero()[0]).difference(larger_matrix.nonzero()[0])
 
 
-def test_multi_vae_forward(input_size, inputs, targets):
+def test_multi_vae_forward():
+    input_size = 100
+
+    torch.manual_seed(400)
+    inputs = Variable(torch.randn(input_size, input_size))
+    targets = Variable(torch.randint(0, 2, (input_size,))).long()
+
     mult_vae = MultiVAETorch(dim_input_layer=input_size)
 
     params = [np for np in mult_vae.named_parameters() if np[1].requires_grad]
