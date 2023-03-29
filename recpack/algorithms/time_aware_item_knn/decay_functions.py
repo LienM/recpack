@@ -28,7 +28,7 @@ class ExponentialDecay(DecayFunction):
 
     .. math::
 
-        e^{-\\alpha * x}
+        f(x) = e^{-\\alpha * x}
 
     where alpha is the decay parameter.
 
@@ -65,7 +65,7 @@ class ConvexDecay(DecayFunction):
 
     .. math::
 
-        \\alpha^{x}
+        f(x) = \\alpha^{x}
 
     where :math:`alpha` is the decay parameter.
 
@@ -102,7 +102,7 @@ class ConcaveDecay(DecayFunction):
 
     .. math::
 
-        1 - \\alpha^{1-\\frac{x}{N}}
+        f(x) = 1 - \\alpha^{1-\\frac{x}{N}}
 
     where :math:`alpha` is the decay parameter and :math:`N` is the ``max_distance`` parameter.
 
@@ -143,7 +143,7 @@ class LogDecay(DecayFunction):
 
     .. math::
 
-        log_\\alpha ((\\alpha-1)(1-\\frac{x}{N}) + 1)
+        f(x) = log_\\alpha ((\\alpha-1)(1-\\frac{x}{N}) + 1)
 
     where :math:`alpha` is the decay parameter and :math:`N` is the ``max_distance`` parameter.
 
@@ -184,7 +184,7 @@ class LinearDecay(DecayFunction):
 
     .. math::
 
-        \\max(1 - (\\frac{x}{N}) \\alpha, 0)
+        f(x) = \\max(1 - (\\frac{x}{N}) \\alpha, 0)
 
     where :math:`alpha` is the decay parameter and :math:`N` is the ``max_distance`` parameter.
 
@@ -227,10 +227,7 @@ class InverseDecay(DecayFunction):
 
     .. math::
 
-        \\frac{1}{x}
-
-    :param decay: The decay parameter, willl not be used during computation.
-    :type decay: float
+        f(x) = \\frac{1}{x}
     """
 
     def __call__(self, time_distances: ArrayLike):
