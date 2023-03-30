@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## Additions
+* __algorithms__
+    * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to `TARSItemKNNXia` to distinguish it from other time aware item KNN models.
+    * Created a base class for time aware variants of `ItemKNN`.
+    * Added the following time aware variants of `ItemKNN`:
+        * `TARSItenKNNHermann` as Presented in Hermann, Christoph. "Time-based recommendations for lecture materials." EdMedia+ Innovate Learning. Association for the Advancement of Computing in Education (AACE), 2010.
+        * `TARSItemKNNVaz` as described in Vaz, Paula Cristina, Ricardo Ribeiro, and David Martins De Matos. "Understanding the Temporal Dynamics of Recommendations across Different Rating Scales." UMAP Workshops. 2013.
+        * `SequentialRules` as described in Ludewig, Malte, and Dietmar Jannach. "Evaluation of session-based recommendation algorithms." User Modeling and User-Adapted Interaction 28.4 (2018): 331-390.
+        * `TARSItemKNNLee` from Lee, Tong Queue, Young Park, and Yong-Tae Park. "A time-based approach to effective recommender systems using implicit feedback." Expert systems with applications 34.4 (2008): 3055-3062.
+        * `TARSItemKNNDing` from Ding, Yi, and Xue Li. "Time weight collaborative filtering." Proceedings of the 14th ACM international conference on Information and knowledge management. 2005.
+        * `TARSItemKNNLiu2012`based on Liu, Yue, et al. "Time-based k-nearest neighbor collaborative filtering."
+
 ### Bugfixes
 * __metrics__
     * Fixed bug in `CalibratedRecallK` results property, which caused an error when requesting this property.
@@ -17,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Fixed bug in DummyDataset that used `num_users` to set `self.num_items`. 
 * __matrix__
     * Made `InteractionMatrix` more robust to funky indices.
+    * `InteractionMatrix` now verifies if shape matches
 * __tests.test_algorithms__
     * Removed unused fixtures and cleaned up namings.
 

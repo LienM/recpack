@@ -10,7 +10,7 @@ from typing import Optional
 
 import numpy as np
 from scipy.sparse import diags
-from scipy.sparse.csr import csr_matrix
+from scipy.sparse import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import Normalizer
 
@@ -82,6 +82,33 @@ def compute_cosine_similarity(X: csr_matrix) -> csr_matrix:
     # Set diagonal to 0, because we don't want to support self similarity
 
     return item_cosine_similarities
+
+
+def compute_pearson_similarity(X: csr_matrix) -> csr_matrix:
+    """Compute the pearson correlation as a similarity between each item in the matrix.
+
+    Self similarity is removed.
+    When computing similarity, the avg of nonzero entries per user is used.
+
+    :param X: Rating or psuedo rating matrix.
+    :type X: csr_matrix
+    :return: similarity matrix.
+    :rtype: csr_matrix
+    """
+
+    if (X == 1).sum() == X.nnz:
+        raise ValueError("Pearson similarity can not be computed on a binary matrix.")
+
+    count_per_item = (X > 0).sum(axis=0).A
+
+    avg_per_item = X.sum(axis=0).A.astype(float)
+
+    avg_per_item[count_per_item > 0] = avg_per_item[count_per_item > 0] / count_per_item[count_per_item > 0]
+
+    X = X - (X > 0).multiply(avg_per_item)
+
+    # Given the rescaled matrix, the pearson correlation is just cosine similarity on this matrix.
+    return compute_cosine_similarity(X)
 
 
 class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
@@ -187,7 +214,7 @@ class ItemKNN(TopKItemSimilarityMatrixAlgorithm):
         elif self.similarity == "conditional_probability":
             item_similarities = compute_conditional_probability(X, self.pop_discount)
 
-        item_similarities = get_top_K_values(item_similarities, self.K)
+        item_similarities = get_top_K_values(item_similarities, K=self.K)
 
         # j, M (*, j) = 1
         if self.normalize_sim:
@@ -266,7 +293,6 @@ class ItemPNN(ItemKNN):
         pdf: str = "empirical",
         seed: Optional[int] = None,
     ):
-
         super().__init__(
             K=K,
             similarity=similarity,

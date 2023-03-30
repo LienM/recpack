@@ -6,7 +6,11 @@
 #   Robin Verachtert
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, call
+
+from hyperopt import hp
+import numpy as np
+import pytest
 
 from hyperopt import hp
 import numpy as np
@@ -47,6 +51,23 @@ def test_pipeline_save_metrics(pipeline_builder):
         pipeline.save_metrics()
 
         mocker.assert_called_once_with(f"{pipeline_builder.results_directory}/results.json")
+
+
+def test_pipeline_save_metrics_w_optimisation(pipeline_builder_optimisation):
+    pipeline = pipeline_builder_optimisation.build()
+
+    pipeline.run()
+
+    mocker = MagicMock()
+    with patch("recpack.pipelines.pipeline.pd.DataFrame.to_json", mocker):
+        pipeline.save_metrics()
+
+        mocker.assert_has_calls(
+            [
+                call(f"{pipeline_builder_optimisation.results_directory}/results.json"),
+                call(f"{pipeline_builder_optimisation.results_directory}/optimisation_results.json"),
+            ]
+        )
 
 
 @pytest.mark.parametrize(

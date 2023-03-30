@@ -59,8 +59,6 @@ they have interacted with.
 
     SLIM
     ItemKNN
-    TARSItemKNNLiu
-    TARSItemKNN
     ItemPNN
     NMFItemToItem
     SVDItemToItem
@@ -119,6 +117,24 @@ Session-Based Algorithms
     GRU4RecNegSampling
     GRU4RecCrossEntropy
     STAN
+    SequentialRules
+
+Time Aware Algorithms
+----------------------
+
+.. autosummary::
+    :toctree: generated/
+
+    TARSItemKNN
+    TARSItemKNNDing
+    TARSItemKNNLee
+    TARSItemKNNLiu
+    TARSItemKNNLiu2012
+    TARSItemKNNVaz
+    
+    TARSItemKNNCoocDistance
+    TARSItemKNNHermann
+    TARSItemKNNXia
 
 .. _algorithm-base-classes:
 
@@ -258,4 +274,16 @@ from recpack.algorithms.gru4rec import (
 )
 
 from recpack.algorithms.stan import STAN
-from recpack.algorithms.tars_itemknn import TARSItemKNN, TARSItemKNNLiu
+from recpack.algorithms.time_aware_item_knn import (
+    TARSItemKNN,
+    TARSItemKNNCoocDistance,
+    TARSItemKNNDing,
+    TARSItemKNNHermann,
+    TARSItemKNNLee,
+    TARSItemKNNLiu,
+    TARSItemKNNLiu2012,
+    TARSItemKNNXia,
+    TARSItemKNNVaz,
+)
+
+from recpack.algorithms.sequential_rules import SequentialRules

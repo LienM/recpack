@@ -78,6 +78,18 @@ def mat():
 
 
 @pytest.fixture(scope="function")
+def mat_no_zero_timestamp():
+    data = {
+        TIMESTAMP_IX: [4, 3, 2, 5, 1, 2, 3, 5, 1, 2, 3],
+        ITEM_IX: [0, 1, 2, 3, 0, 1, 2, 4, 0, 1, 2],
+        USER_IX: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5],
+    }
+    df = pd.DataFrame.from_dict(data)
+
+    return InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
+
+
+@pytest.fixture(scope="function")
 def larger_mat():
     data = {
         TIMESTAMP_IX: np.random.randint(0, 100, size=100),
