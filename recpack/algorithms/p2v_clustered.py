@@ -111,12 +111,10 @@ class Prod2VecClustered(Prod2Vec):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
-    :param validation_sample_size: Amount of users to sample when computing
-        validation score.
-        This reduces computation time during validation,
-        such that training times are strongly reduced.
-        If None, all nonzero users are used.
-        Defaults to None.
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
     :type validation_sample_size: int, optional
 
     """

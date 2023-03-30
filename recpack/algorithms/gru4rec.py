@@ -283,9 +283,9 @@ class GRU4Rec(TorchMLAlgorithm):
 
                     if self.clipnorm:
                         nn.utils.clip_grad_norm_(self.model_.parameters(), self.clipnorm)
-
+                    
                     self.optimizer.step()
-
+                    
                     hidden = hidden.detach()
             logger.debug(f"Takes {time.time() - st} seconds to process batch")
             losses.append(batch_loss)
@@ -328,7 +328,7 @@ class GRU4Rec(TorchMLAlgorithm):
 
                 # Process the history in chunks, otherwise the linear layer goes OOM.
                 # 3M entries seemed a reasonable max
-                chunk_size = int((10**9) / (self.batch_size * self.num_items))
+                chunk_size = int((10 ** 9) / (self.batch_size * self.num_items))
                 for (input_chunk,) in self._chunk(chunk_size, positives_batch.to(self.device)):
                     input_mask = input_chunk != self.pad_token
                     # Remove rows with only pad tokens from chunk and from hidden.
@@ -357,9 +357,9 @@ class GRU4Rec(TorchMLAlgorithm):
                             .numpy()
                         )
 
-                    X_pred[uid_batch_w_last_item] = self._get_top_k_recommendations(
-                        csr_matrix(item_scores[:, :-1])
-                    )
+                        X_pred[uid_batch_w_last_item] = self._get_top_k_recommendations(
+                            csr_matrix(item_scores[:, :-1])
+                        )
 
         return X_pred.tocsr()
 
@@ -457,12 +457,10 @@ class GRU4RecCrossEntropy(GRU4Rec):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
-    :param validation_sample_size: Amount of users to sample when computing
-        validation score.
-        This reduces computation time during validation,
-        such that training times are strongly reduced.
-        If None, all nonzero users are used.
-        Defaults to None.
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
     :type validation_sample_size: int, optional
     """
 
@@ -628,12 +626,10 @@ class GRU4RecNegSampling(GRU4Rec):
         Use when the user x item output matrix would become too large for RAM.
         Defaults to None, which results in no filtering.
     :type predict_topK: int, optional
-    :param validation_sample_size: Amount of users to sample when computing
-        validation score.
-        This reduces computation time during validation,
-        such that training times are strongly reduced.
-        If None, all nonzero users are used.
-        Defaults to None.
+    :param validation_sample_size: Amount of users that will be sampled to calculate
+        validation loss and stopping criterion value.
+        This reduces computation time during validation, such that training times are strongly reduced.
+        If None, all nonzero users are used. Defaults to None.
     :type validation_sample_size: int, optional
     """
 
