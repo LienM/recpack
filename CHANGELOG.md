@@ -12,12 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Additions
 * __algorithms__
     * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to TARSItemKNNXia to distinguish it from other time aware item KNN models.
-    * Added `time_aware_user_knn` module
-        * `TARSUserKNNAnelli` as described in Anelli, Vito Walter, et al. "Local popularity and time in top-n recommendation." European Conference on Information Retrieval. Springer, Cham, 2019.
     * Added `TARSItenKNNHermann` as Presented in Hermann, Christoph. "Time-based recommendations for lecture materials." EdMedia+ Innovate Learning. Association for the Advancement of Computing in Education (AACE), 2010.
     * Added `TARSItemKNNVaz` as described in Vaz, Paula Cristina, Ricardo Ribeiro, and David Martins De Matos. "Understanding the Temporal Dynamics of Recommendations across Different Rating Scales." UMAP Workshops. 2013.
     * Added `SequentialRules` as described in Ludewig, Malte, and Dietmar Jannach. "Evaluation of session-based recommendation algorithms." User Modeling and User-Adapted Interaction 28.4 (2018): 331-390.
     * Added `validation_sample_size` parameter to the TorchMLAlgorithm base class and all child classes. This parameter allows a user to select only a sample of the validation data in every evaluation iteration. This speeds up the evaluation step after every training epoch significantly.
+    * Added `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
+    * Added `TARSItemKNNLee` from Lee, Tong Queue, Young Park, and Yong-Tae Park. "A time-based approach to effective recommender systems using implicit feedback." Expert systems with applications 34.4 (2008): 3055-3062.
+    * `TARSItemKNNDing` from Ding, Yi, and Xue Li. "Time weight collaborative filtering." Proceedings of the 14th ACM international conference on Information and knowledge management. 2005.
+    * `TARSItemKNN` baseclass which implements common functionality, and therefore extends the previous works on Time Aware ItemKNN
+    * `TARSItemKNNLiu2012`based on Liu, Yue, et al. "Time-based k-nearest neighbor collaborative filtering."
 
 * __pipelines__
     * `save_metrics` function has been improved, it now creates a directory when it does not yet exist. And it also saves the optimisation metrics now.
@@ -189,12 +192,6 @@ In addition to interface changes and additions we also made a big effort to incr
     * Added `STAN` algorithm, presented in Garg, Diksha, et al.
     "Sequence and time aware neighborhood for session-based recommendations: Stan". 
     This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
-    * Added various time aware item knn alternatives:
-        * `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
-        * `TARSItemKNNLee`, `TARSItemKNNLee_W3` and `TARSItemKNNLee_W5` from Lee, Tong Queue, Young Park, and Yong-Tae Park. "A time-based approach to effective recommender systems using implicit feedback." Expert systems with applications 34.4 (2008): 3055-3062.
-        * `TARSItemKNNDing` from Ding, Yi, and Xue Li. "Time weight collaborative filtering." Proceedings of the 14th ACM international conference on Information and knowledge management. 2005.
-        * `TARSItemKNN` baseclass which implements common functionality, and therefore extends the previous works on Time Aware ItemKNN
-        * `TARSItemKNNLiu2012`based on Liu, Yue, et al. "Time-based k-nearest neighbor collaborative filtering."
 
 * __data.matrix__
     * Added `last_timestamps_matrix`  property which creates a csr matrix, with the last timestamp as nonzero values.
