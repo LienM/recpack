@@ -112,9 +112,9 @@ def test_timed_most_recent_w_val(data_m_sessions, t, t_val):
     ).all()
 
 
-@pytest.mark.parametrize("t, n_history", [(4, 1), (5, 2)])
-def test_timed_last_item_split_n_history(data_m_sessions, t, n_history):
-    scenario = TimedLastItemPrediction(t=t, n_history=n_history)
+@pytest.mark.parametrize("t, n_most_recent_in", [(4, 1), (5, 2)])
+def test_timed_last_item_split_n_most_recent_in(data_m_sessions, t, n_most_recent_in):
+    scenario = TimedLastItemPrediction(t=t, n_most_recent_in=n_most_recent_in)
     scenario.split(data_m_sessions)
     tr = scenario.full_training_data
     te_data_in, te_data_out = scenario.test_data
@@ -140,10 +140,10 @@ def test_timed_last_item_split_n_history(data_m_sessions, t, n_history):
     test_counts = pd.merge(test_counts, full_data_user_counts, how="left")
 
     # The testing users should have been split with 1 item
-    # on the right and the `n_history` on the left.
+    # on the right and the `n_most_recent_in` on the left.
     assert (test_counts["test_out_user_counts"] == 1).all()
 
-    assert (test_counts["test_in_user_counts"] == n_history).all()
+    assert (test_counts["test_in_user_counts"] == n_most_recent_in).all()
 
 
 @pytest.mark.parametrize("t, delta_out", [(4, 1), (5, 2)])
@@ -167,14 +167,14 @@ def test_timed_last_item_split_delta_out(data_m_sessions, t, delta_out):
 
 
 @pytest.mark.parametrize(
-    "t, n_history, expected_error",
+    "t, n_most_recent_in, expected_error",
     [
-        (5, 0, "Using n_history = 0 is not supported."),
+        (5, 0, "Using n_most_recent_in = 0 is not supported."),
     ],
 )
-def test_timed_last_item_split_zero_values_for_n(t, n_history, expected_error):
+def test_timed_last_item_split_zero_values_for_n(t, n_most_recent_in, expected_error):
     with pytest.raises(ValueError) as value_error:
-        TimedLastItemPrediction(t=t, n_history=n_history)
+        TimedLastItemPrediction(t=t, n_most_recent_in=n_most_recent_in)
 
     assert value_error.match(expected_error)
 
@@ -185,8 +185,8 @@ def test_timed_last_item_split_zero_values_for_n(t, n_history, expected_error):
         (True, None),
     ],
 )
-def test_timed_last_item_split_n_history_no_t_val(validation, t_validation):
+def test_timed_last_item_split_n_most_recent_in_no_t_val(validation, t_validation):
     with pytest.raises(Exception) as error:
-        TimedLastItemPrediction(t=2, n_history=1, validation=validation, t_validation=t_validation)
+        TimedLastItemPrediction(t=2, n_most_recent_in=1, validation=validation, t_validation=t_validation)
 
     assert error.match("t_validation should be provided when using validation split.")
