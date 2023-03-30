@@ -54,7 +54,7 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
     :type fit_decay: float, optional
     :param decay_function: The decay function that needs to
         be applied on the item similarity scores.
-        Defaults to `"convex"`.
+        Defaults to ``"convex"``.
     :type decay_function: str, optional
     :param decay_interval: Size of a single time unit in seconds.
         Allows more finegrained parameters for large scale datasets where events are collected over months of data.
