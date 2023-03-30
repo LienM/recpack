@@ -45,41 +45,6 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
 
     Where :math:`t` is the time between the interactions with both items.
 
-    **Example of use**::
-
-        import numpy as np
-        from recpack.matrix import InteractionMatrix
-        from recpack.algorithms.experimental import TimeDecayingNearestNeighbour
-
-        USER_IX = InteractionMatrix.USER_IX
-        ITEM_IX = InteractionMatrix.ITEM_IX
-        TIMESTAMP_IX = InteractionMatrix.TIMESTAMP_IX
-
-        data = {
-            TIMESTAMP_IX: [1, 1, 1, 2, 3, 4],
-            ITEM_IX: [0, 0, 1, 2, 1, 2],
-            USER_IX: [0, 1, 2, 2, 1, 0]
-        }
-        df = pd.DataFrame.from_dict(data)
-
-        X = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
-
-        # We'll only keep the closest neighbour for each item.
-        # Default uses concave decay function with coefficient equal to 0.5
-        algo = TimeDecayingNearestNeighbour(K=1)
-        # Fit algorithm
-        algo.fit(X)
-
-        # We can inspect the fitted model
-        print(algo.similarity_matrix_.nnz)
-        # 3
-
-        # Get the predictions
-        predictions = algo.predict(X)
-
-        # Predictions is a csr matrix, inspecting the scores with
-        predictions.toarray()
-
     :param K: How many neigbours to use per item,
         make sure to pick a value below the number of columns of the matrix to fit on.
         Defaults to 200.
@@ -94,7 +59,7 @@ class TARSItemKNNXia(TARSItemKNNCoocDistance):
     :param decay_interval: Size of a single time unit in seconds.
         Allows more finegrained parameters for large scale datasets where events are collected over months of data.
         Defaults to 1 (second).
-    :typ decay_interval: int, optional
+    :type decay_interval: int, optional
     """
 
     SUPPORTED_DECAY_FUNCTIONS = ["concave", "convex", "linear"]
