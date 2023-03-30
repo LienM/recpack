@@ -79,14 +79,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Helper function `yield_batches` and class `FoldIterator` were removed, as they were unused in samples.
       Alternative function `get_batches` from `algorithms.util` should be used instead.
 
-### Additions
-
-* __pipelines__
-    * Added option to use hyperopt to optimise parameters
-        * `grid` parameter has been superseded by the `optimisation_info` parameter, which takes an `OptimisationInfo` object. Two relevant subclasses have been defined: `GridSearchInfo` contains a grid with parameters to support grid search, `HyperoptInfo` allows users to specify a hyperopt space, with timeout and or maximum number of evaluations.
-    * Extended output of optimisation output, to now also include an `Algorithm` column for easier analysis.
-
-* Added getting started guide for using Hyperopt optimisation
 
 ## [0.3.4]
 
