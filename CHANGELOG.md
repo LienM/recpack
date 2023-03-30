@@ -11,19 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Additions
 * __algorithms__
-    * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to TARSItemKNNXia to distinguish it from other time aware item KNN models.
-    * Added `TARSItenKNNHermann` as Presented in Hermann, Christoph. "Time-based recommendations for lecture materials." EdMedia+ Innovate Learning. Association for the Advancement of Computing in Education (AACE), 2010.
-    * Added `TARSItemKNNVaz` as described in Vaz, Paula Cristina, Ricardo Ribeiro, and David Martins De Matos. "Understanding the Temporal Dynamics of Recommendations across Different Rating Scales." UMAP Workshops. 2013.
-    * Added `SequentialRules` as described in Ludewig, Malte, and Dietmar Jannach. "Evaluation of session-based recommendation algorithms." User Modeling and User-Adapted Interaction 28.4 (2018): 331-390.
-    * Added `validation_sample_size` parameter to the TorchMLAlgorithm base class and all child classes. This parameter allows a user to select only a sample of the validation data in every evaluation iteration. This speeds up the evaluation step after every training epoch significantly.
-    * Added `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
-    * Added `TARSItemKNNLee` from Lee, Tong Queue, Young Park, and Yong-Tae Park. "A time-based approach to effective recommender systems using implicit feedback." Expert systems with applications 34.4 (2008): 3055-3062.
-    * `TARSItemKNNDing` from Ding, Yi, and Xue Li. "Time weight collaborative filtering." Proceedings of the 14th ACM international conference on Information and knowledge management. 2005.
-    * `TARSItemKNN` baseclass which implements common functionality, and therefore extends the previous works on Time Aware ItemKNN
-    * `TARSItemKNNLiu2012`based on Liu, Yue, et al. "Time-based k-nearest neighbor collaborative filtering."
-
-* __pipelines__
-    * `save_metrics` function has been improved, it now creates a directory when it does not yet exist. And it also saves the optimisation metrics now.
+    * `TimeAwareItemKNN` was moved from experimental to the main algorithms package, and renamed to `TARSItemKNNXia` to distinguish it from other time aware item KNN models.
+    * Created a base class for time aware variants of `ItemKNN`.
+    * Added the following time aware variants of `ItemKNN`:
+        * `TARSItenKNNHermann` as Presented in Hermann, Christoph. "Time-based recommendations for lecture materials." EdMedia+ Innovate Learning. Association for the Advancement of Computing in Education (AACE), 2010.
+        * `TARSItemKNNVaz` as described in Vaz, Paula Cristina, Ricardo Ribeiro, and David Martins De Matos. "Understanding the Temporal Dynamics of Recommendations across Different Rating Scales." UMAP Workshops. 2013.
+        * `SequentialRules` as described in Ludewig, Malte, and Dietmar Jannach. "Evaluation of session-based recommendation algorithms." User Modeling and User-Adapted Interaction 28.4 (2018): 331-390.
+        * `TARSItemKNNLee` from Lee, Tong Queue, Young Park, and Yong-Tae Park. "A time-based approach to effective recommender systems using implicit feedback." Expert systems with applications 34.4 (2008): 3055-3062.
+        * `TARSItemKNNDing` from Ding, Yi, and Xue Li. "Time weight collaborative filtering." Proceedings of the 14th ACM international conference on Information and knowledge management. 2005.
+        * `TARSItemKNNLiu2012`based on Liu, Yue, et al. "Time-based k-nearest neighbor collaborative filtering."
 
 ### Bugfixes
 * __metrics__
@@ -33,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Fixed bug in DummyDataset that used `num_users` to set `self.num_items`. 
 * __matrix__
     * Made `InteractionMatrix` more robust to funky indices.
+    * `InteractionMatrix` now verifies if shape matches
 * __tests.test_algorithms__
     * Removed unused fixtures and cleaned up namings.
 
@@ -79,7 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Helper function `yield_batches` and class `FoldIterator` were removed, as they were unused in samples.
       Alternative function `get_batches` from `algorithms.util` should be used instead.
 
-
 ## [0.3.4]
 
 ### Bugfixes
@@ -87,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * `BPRMF`: 
         * Changed optimizer to Adagrad instead of SGD. 
         * Set maximum on std of embedding initialisation to make sure the initial embedding does not contain too large values.
+
 
 ## [0.3.3] - ![](https://img.shields.io/date/1666253209.svg?label=2022-10-20)
 
@@ -130,10 +127,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __datasets__
     * Changed behaviour of `force=True` on the Adressa dataset, it is now guaranteed to redownload the tar file, and will no longer look for a local tar file. The tar file will also be deleted at the end of the download method.
     * Added `Netflix` dataset to use the Netflix Prize dataset.
-
 * __scenarios__
     * Added `TimedLastItemPrediction` scenario, which is different from LastItemPrediction, in that it only trains its model on data before a certain timestamp, and evaluates only on data after that timestamp, thus avoiding leakage.
-
 * Configured optional extra installs:
     * `pip install recpack[doc]` will install the dependencies to generate documentation
     * `pip install recpack[test]` will install the dependencies to run tests.
@@ -143,8 +138,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * __algorithms__
     * Added `validation_sample_size` parameter to the TorchMLAlgorithm base class and all child classes. This parameter allows a user to select only a sample of the validation data in every evaluation iteration. This speeds up the evaluation step after every training epoch significantly.
 
-* __algorithms__
-    * Added `validation_sample_size` parameter to the TorchMLAlgorithm base class and all child classes. This parameter allows a user to select only a sample of the validation data in every evaluation iteration. This speeds up the evaluation step after every training epoch significantly.
 
 ## [0.3.0] - ![](https://img.shields.io/date/1657025737.svg?label=2022-07-05)
 
@@ -181,6 +174,9 @@ In addition to interface changes and additions we also made a big effort to incr
 ### Additions
 * __algorithms__
     * Standardised train and predict input validation functions have been added, and used to make sure inputs are InteractionMatrix objects when needed, and contain timestamps when needed.
+    * Added `TARSItemKNNLiu` and `TARSItemKNN` algorithms, which compute item-item similarities based on a weighted matrix based on the age of events.
+        * `TARSItemKNNLiu` algorithm as defined in Liu, Nathan N., et al. "Online evolutionary collaborative filtering."
+
     * Added `STAN` algorithm, presented in Garg, Diksha, et al.
     "Sequence and time aware neighborhood for session-based recommendations: Stan". 
     This is a session KNN algorithm that takes into account order and time difference between sessions and interactions.
