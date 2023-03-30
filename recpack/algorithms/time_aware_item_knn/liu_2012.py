@@ -64,7 +64,7 @@ class TARSItemKNNLiu2012(TARSItemKNN):
 
         \\Gamma(x) = \\log_\\alpha ((\\alpha-1)x + 1) + 1
 
-    where alpha is the decay scaling parameter,
+    where :math:`\\alpha` is the decay scaling parameter,
     and x is the time between the maximal timestamp in the matrix
     and the timestamp of the event.
 
