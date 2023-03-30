@@ -50,12 +50,7 @@ def test_pipeline_save_metrics(pipeline_builder):
     with patch("recpack.pipelines.pipeline.pd.DataFrame.to_json", mocker):
         pipeline.save_metrics()
 
-        mocker.assert_has_calls(
-            [
-                call(f"{pipeline_builder.results_directory}/results.json"),
-                # call(f"{pipeline_builder.results_directory}/optimisation_results.json"),
-            ]
-        )
+        mocker.assert_called_once_with(f"{pipeline_builder.results_directory}/results.json")
 
 
 def test_pipeline_save_metrics_w_optimisation(pipeline_builder_optimisation):
