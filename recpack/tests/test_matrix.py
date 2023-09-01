@@ -222,16 +222,10 @@ def test_items_in(df):
 
 def test_interactions_in_empty_set(df):
     d = InteractionMatrix(df, ITEM_IX, USER_IX, timestamp_ix=TIMESTAMP_IX)
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.warns(UserWarning, match="No interaction IDs given, returning empty InteractionMatrix.") as w:
         d2 = d.interactions_in([])
         assert d2.shape == (3, 4)
         assert (d2.values.toarray() == np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], dtype=np.int32)).all()
-
-        # Cause all warnings to always be triggered.
-        warnings.simplefilter("always")
-        assert len(w) == 1
-
-        assert "No interaction IDs given, returning empty InteractionMatrix." in str(w[-1].message)
 
 
 def test_interactions_in(df):
@@ -241,16 +235,10 @@ def test_interactions_in(df):
     assert d2.shape == (3, 4)
     assert (d2.values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)).all()
 
-    with warnings.catch_warnings(record=True) as w:
-        # Cause all warnings to always be triggered.
-        warnings.simplefilter("always")
+    with pytest.warns(UserWarning, match="IDs \{10\} not present in data") as w:
         # interaction_id 10 is not known to the DataFrame
         d.interactions_in([0, 1, 10], inplace=True)
         assert (d.values.toarray() == np.array([[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0]], dtype=np.int32)).all()
-
-        assert len(w) == 1
-
-        assert "IDs {10} not present in data" in str(w[-1].message)
 
 
 def test_get_timestamp_raises(df):

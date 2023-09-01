@@ -38,19 +38,15 @@ def test_check_prediction():
     X = scipy.sparse.diags(a).tocsr()
 
     a = Algorithm()
-
-    with warnings.catch_warnings(record=True) as w:
+    
+    with pytest.warns(UserWarning, match="1 users") as w:
         # Cause all warnings to always be triggered.
         warnings.simplefilter("always")
         # Trigger a warning.
         a._check_prediction(X_pred, X)
-        # Verify some things
-        assert len(w) == 1
 
-        assert "1 users" in str(w[-1].message)
-
+    with pytest.warns(None):
         a._check_prediction(X, X)
-        assert len(w) == 1
 
 
 def test_check_fit_complete(X_in):
