@@ -219,7 +219,7 @@ def test_item_pnn_uniform_larger(larger_matrix):
     algo.fit(larger_matrix)
     sims2 = algo.similarity_matrix_.copy()
 
-    np.testing.assert_array_compare(operator.__ne__, sims, sims2)
+    assert np.any(np.not_equal(sims.toarray(), sims2.toarray()))
 
 
 @pytest.mark.parametrize(
