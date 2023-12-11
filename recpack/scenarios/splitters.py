@@ -191,7 +191,7 @@ class UserInteractionTimeSplitter(Splitter):
         :rtype: Tuple[InteractionMatrix, InteractionMatrix]
         """
 
-        max_ts_per_user = data.timestamps.max(level=0)
+        max_ts_per_user = data.timestamps.groupby(level=0).max()
 
         filt = max_ts_per_user < self.t
 

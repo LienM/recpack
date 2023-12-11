@@ -8,16 +8,16 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="recpack",
-    version="0.3.5",
+    version="0.3.6",
     python_requires=">=3.8",
     packages=find_packages(),
     install_requires=[
         "numpy>=1.21.2, ==1.*",
         "scipy>=1.6.0, ==1.*",
         "scikit-learn>=1.1.1, ==1.*",
-        "pandas>=1.2.1, ==1.*",
+        "pandas>=2.1.4, ==2.*",
         "PyYAML>=6.0.1, ==6.*",
-        "torch>=1.9.0, ==1.*",
+        "torch>=2.1.1, ==2.*",
         "tqdm>=4.46.0, ==4.*",
         "hyperopt>=0.2.7, ==0.2.*",
     ],
