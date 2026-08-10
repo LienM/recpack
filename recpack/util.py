@@ -64,8 +64,23 @@ def get_top_K_ranks(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
         K_row_pick = min(K, ri - le) if K is not None else ri - le
 
         if K_row_pick != 0:
+            row_cols = X.indices[le:ri]
+            row_data = X.data[le:ri]
 
-            top_k_row = X.indices[le + np.argpartition(X.data[le:ri], list(range(-K_row_pick, 0)))[-K_row_pick:]]
+            if K_row_pick < ri - le:
+                # Preselect the K largest values, plus any ties at the boundary,
+                # so the tie-break below sees all tied candidates.
+                partitioned = np.argpartition(row_data, -K_row_pick)
+                cutoff = row_data[partitioned[-K_row_pick]]
+                candidates = row_data >= cutoff
+                row_cols = row_cols[candidates]
+                row_data = row_data[candidates]
+
+            # Sort ascending by value, with the column index as tie-breaker,
+            # so a tie for the last position resolves to the largest index,
+            # independent of the matrix' internal storage order.
+            order = np.lexsort((row_cols, row_data))
+            top_k_row = row_cols[order[-K_row_pick:]]
 
             for rank, col_ix in enumerate(reversed(top_k_row)):
                 U.append(row_ix)

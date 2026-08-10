@@ -184,8 +184,15 @@ def test_batch_predict(prod2vec):
     matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
 
     prod2vec._create_similarity_matrix(InteractionMatrix.from_csr_matrix(matrix))
-    predictions = prod2vec._batch_predict(matrix, get_users(matrix))
+    users = get_users(matrix)
+    predictions = prod2vec._batch_predict(matrix, users)
 
+    # _batch_predict returns a compact matrix: row i corresponds to
+    # users[i], not to global user id i. User 5 has no interactions and
+    # is not in `users`, so it has no row in the output (it previously
+    # got an all-zero row, back when _batch_predict returned a full
+    # X.shape matrix).
+    assert users == [0, 1, 2, 3, 4]
     np.testing.assert_array_almost_equal(
         predictions.toarray(),
         np.array(
@@ -195,7 +202,6 @@ def test_batch_predict(prod2vec):
                 [0.0, 0.0, 0.0, 0.5, 0.0],
                 [0.0, 0.12309149, 0.5, 0.0, 0.0],
                 [0.70710678, 0.69631062, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0, 0.0],
             ]
         ),
     )

@@ -8,7 +8,7 @@
 import logging
 from typing import List
 
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix
 
 from tqdm.auto import tqdm
 
@@ -157,17 +157,18 @@ class BPRMF(TorchMLAlgorithm):
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: Sparse matrix of scores per user item pair.
+        :return: Sparse matrix of scores per user item pair,
+            compact with shape (len(users), num_items):
+            row i corresponds to users[i].
         :rtype: csr_matrix
         """
 
         user_tensor = torch.LongTensor(users).to(self.device)
         item_tensor = torch.arange(X.shape[1]).to(self.device)
 
-        result = lil_matrix(X.shape)
-        result[users] = self.model_(user_tensor, item_tensor).detach().cpu().numpy()
+        scores = self.model_(user_tensor, item_tensor).detach().cpu().numpy()
 
-        return result.tocsr()
+        return csr_matrix(scores)
 
     def _train_epoch(self, train_data: csr_matrix):
         """train a single epoch. Uses sampler to generate samples,

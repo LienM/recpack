@@ -7,7 +7,6 @@
 
 import logging
 from typing import List, Tuple
-from scipy.sparse import lil_matrix
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -235,7 +234,9 @@ class MultVAE(TorchMLAlgorithm):
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: Sparse matrix of scores per user item pair.
+        :return: Sparse matrix of scores per user item pair,
+            compact with shape (len(users), num_items):
+            row i corresponds to users[i].
         :rtype: csr_matrix
         """
         active_users = X[users]
@@ -244,10 +245,9 @@ class MultVAE(TorchMLAlgorithm):
 
         out_tensor, _, _ = self.model_(in_tensor)
 
-        result = lil_matrix(X.shape)
-        result[users] = out_tensor.detach().cpu().numpy()
+        scores = out_tensor.detach().cpu().numpy()
 
-        return result.tocsr()
+        return csr_matrix(scores)
 
 
 class MultiVAETorch(nn.Module):

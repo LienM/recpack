@@ -10,7 +10,7 @@ import logging
 from typing import List, Tuple, Optional
 
 import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -278,7 +278,9 @@ class RecVAE(TorchMLAlgorithm):
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: Sparse matrix of scores per user item pair.
+        :return: Sparse matrix of scores per user item pair,
+            compact with shape (len(users), num_items):
+            row i corresponds to users[i].
         :rtype: csr_matrix
         """
         active_users = X[users]
@@ -287,10 +289,9 @@ class RecVAE(TorchMLAlgorithm):
 
         out_tensor, _, _ = self.model_(in_tensor)
 
-        result = lil_matrix(X.shape)
-        result[users] = out_tensor.detach().cpu().numpy()
+        scores = out_tensor.detach().cpu().numpy()
 
-        return result.tocsr()
+        return csr_matrix(scores)
 
 
 class CompositePrior(nn.Module):

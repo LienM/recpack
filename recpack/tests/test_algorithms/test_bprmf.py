@@ -136,6 +136,31 @@ def test_forward(X_in_for_pairwise):
     assert res_2 == res_1[1, 1]
 
 
+def test_bprmf_predict_multi_batch_row_placement(X_in_for_pairwise):
+    """Predictions must land on the correct row even when users are split
+    across multiple, differently-ordered batches.
+
+    This guards against a regression in the row-reassembly logic that
+    replaced the old per-batch lil_matrix allocation (see
+    recpack.algorithms.util.csr_from_rows): a bug there would silently
+    shuffle or overwrite rows between batches, rather than raising.
+    """
+    a = BPRMF(num_components=4, max_epochs=1, batch_size=1, seed=42)
+    a.fit(X_in_for_pairwise, (X_in_for_pairwise, X_in_for_pairwise))
+
+    # batch_size=2 forces get_users' unordered set to be split into several
+    # batches, none of which is processed in row-index order.
+    a.batch_size = 2
+    X_pred = a.predict(X_in_for_pairwise)
+
+    users = sorted(set(X_in_for_pairwise.nonzero()[0]))
+    item_tensor = torch.arange(X_in_for_pairwise.shape[1])
+
+    for user in users:
+        expected = a.model_.forward(torch.LongTensor([user]), item_tensor).detach().numpy().flatten()
+        np.testing.assert_array_almost_equal(X_pred[user].toarray().flatten(), expected)
+
+
 def test_bad_stopping_criterion(X_in):
     with pytest.raises(ValueError):
         BPRMF(stopping_criterion="not_a_correct_value")

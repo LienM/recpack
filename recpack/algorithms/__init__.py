@@ -229,6 +229,7 @@ Use these to simplify certain tasks (such as batching) when creating a new algor
 .. autosummary::
     :toctree: generated/
 
+    csr_from_rows
     get_batches
     sample_rows
     naive_sparse2tensor

@@ -249,11 +249,13 @@ class Prod2Vec(TorchMLAlgorithm):
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: Sparse matrix of scores per user item pair.
+        :return: Sparse matrix of scores per user item pair,
+            compact with shape (len(users), num_items):
+            row i corresponds to users[i].
         :rtype: csr_matrix
         """
         scores = X @ self.similarity_matrix_
-        return scores
+        return scores[users]
 
     def _skipgram_sample_pairs(
         self, X: InteractionMatrix

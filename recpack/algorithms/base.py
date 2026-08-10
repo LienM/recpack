@@ -11,7 +11,7 @@ from typing import List, Tuple, Optional
 import warnings
 
 import numpy as np
-from scipy.sparse import csr_matrix, lil_matrix
+from scipy.sparse import csr_matrix, lil_matrix, vstack
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_is_fitted
 import tempfile
@@ -22,7 +22,7 @@ from recpack.algorithms.stopping_criterion import (
     EarlyStoppingException,
     StoppingCriterion,
 )
-from recpack.algorithms.util import get_batches, get_users, sample_rows
+from recpack.algorithms.util import csr_from_rows, get_batches, get_users, sample_rows
 from recpack.matrix import InteractionMatrix, to_csr_matrix, Matrix
 from recpack.util import get_top_K_values
 
@@ -506,7 +506,10 @@ class TorchMLAlgorithm(Algorithm):
     def _load_best(self):
         """Load the best model from temp file"""
         self.best_model.seek(0)
-        self.model_ = torch.load(self.best_model)
+        # weights_only=False is required since torch 2.6 to unpickle
+        # full model objects. The file was written by this process in
+        # _save_best, so it is trusted.
+        self.model_ = torch.load(self.best_model, weights_only=False)
 
     def _evaluate(self, val_in: Matrix, val_out: Matrix) -> None:
         """Perform evaluation step
@@ -554,7 +557,9 @@ class TorchMLAlgorithm(Algorithm):
         :type X: csr_matrix
         :param users: users selected for recommendation
         :type users: List[int]
-        :return: Sparse matrix of scores per user item pair.
+        :return: Sparse matrix of scores per user item pair,
+            compact with shape (len(users), num_items): row i corresponds
+            to users[i], not to global user id i.
         :rtype: csr_matrix
         """
         raise NotImplementedError("Please implement this function")
@@ -584,22 +589,32 @@ class TorchMLAlgorithm(Algorithm):
         :rtype: csr_matrix
         """
 
-        results = lil_matrix(X.shape)
+        batch_users = []
+        batch_results = []
         self.model_.eval()
         with torch.no_grad():
             for users in get_batches(get_users(X), batch_size=self.batch_size):
                 if isinstance(X, InteractionMatrix):
                     batch = X.users_in(users)
                 else:
-                    batch = lil_matrix(X.shape)
-                    batch[users] = X[users]
-                    batch = batch.tocsr()
+                    batch = csr_from_rows(X[users], users, X.shape)
 
-                results[users] = self._get_top_k_recommendations(self._batch_predict(batch, users=users)[users])
+                batch_users.extend(users)
+                # _batch_predict returns a compact (len(users) x num_items)
+                # matrix; the single full-shape assembly happens once, below.
+                batch_results.append(self._get_top_k_recommendations(self._batch_predict(batch, users=users)))
+
+        if not batch_results:
+            return csr_matrix(X.shape)
+
+        # Assemble the batch results into the full-size prediction matrix
+        # in a single pass, instead of writing into a full-size lil_matrix
+        # once per batch.
+        results = csr_from_rows(vstack(batch_results, format="csr"), batch_users, X.shape)
 
         logger.debug(f"shape of response ({results.shape})")
 
-        return results.tocsr()
+        return results
 
     def _transform_fit_input(
         self, X: Matrix, validation_data: Tuple[Matrix, Matrix]
@@ -628,11 +643,15 @@ class TorchMLAlgorithm(Algorithm):
     def load(self, filename):
         """Load torch model from file.
 
+        Only load models from trusted sources: the file is unpickled
+        (``weights_only=False``), which can execute arbitrary code
+        embedded in a malicious file.
+
         :param filename: File to load the model from
         :type filename: str
         """
         with open(filename, "rb") as f:
-            self.model_ = torch.load(f)
+            self.model_ = torch.load(f, weights_only=False)
 
     def save(self):
         """Save the current model to disk.

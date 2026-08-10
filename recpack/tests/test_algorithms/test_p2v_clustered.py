@@ -54,9 +54,12 @@ def test__predict(prod2vec, larger_mat):
     matrix[[0, 1, 2, 3, 4], [0, 1, 2, 3, 4]] = 1
 
     prod2vec._create_similarity_matrix(larger_mat)
-    predictions = prod2vec._batch_predict(matrix, get_users(matrix))
+    users = get_users(matrix)
+    predictions = prod2vec._batch_predict(matrix, users)
 
-    assert predictions.shape == matrix.shape
+    # _batch_predict returns a compact matrix, one row per user in `users`,
+    # not a full matrix.shape matrix.
+    assert predictions.shape == (len(users), matrix.shape[1])
 
 
 def test_cluster_similarity_computation():

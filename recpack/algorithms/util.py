@@ -50,6 +50,43 @@ def get_users(data: Matrix) -> List[int]:
     return list(set(data.nonzero()[0]))
 
 
+def csr_from_rows(rows: csr_matrix, row_indices: Union[List[int], np.ndarray], shape: tuple) -> csr_matrix:
+    """Place a block of rows into an otherwise empty csr_matrix of the given shape.
+
+    Row ``i`` of ``rows`` becomes row ``row_indices[i]`` of the result.
+    The result is constructed directly from the CSR internals
+    (data, indices and a recomputed indptr), which is much faster than
+    allocating a full-size lil_matrix and assigning rows into it.
+
+    :param rows: Matrix with the rows to place, shape (len(row_indices), shape[1]).
+    :type rows: csr_matrix
+    :param row_indices: For every row in ``rows``, the row index it should get
+        in the output matrix. Indices may be in any order, but must be unique.
+    :type row_indices: Union[List[int], np.ndarray]
+    :param shape: Shape of the output matrix.
+    :type shape: tuple
+    :return: Matrix of the requested shape, with the given rows filled in
+        and every other row empty.
+    :rtype: csr_matrix
+    """
+    row_indices = np.asarray(row_indices)
+
+    # The data arrays can only be reused directly
+    # if they are ordered by output row.
+    order = np.argsort(row_indices)
+    if not np.array_equal(order, np.arange(len(row_indices))):
+        rows = rows[order]
+        row_indices = row_indices[order]
+
+    row_counts = np.zeros(shape[0], dtype=rows.indptr.dtype)
+    row_counts[row_indices] = np.diff(rows.indptr)
+
+    indptr = np.zeros(shape[0] + 1, dtype=rows.indptr.dtype)
+    np.cumsum(row_counts, out=indptr[1:])
+
+    return csr_matrix((rows.data, rows.indices, indptr), shape=shape)
+
+
 def get_batches(iterable: Iterable, batch_size=1000) -> Iterator[List]:
     """Get batches from an iterable.
 
@@ -93,8 +130,7 @@ def sample_rows(*args: Matrix, sample_size: int = 1000) -> List[Matrix]:
         if type(mat) == InteractionMatrix:
             sampled_mat = mat.users_in(users)
         else:
-            sampled_mat = csr_matrix(mat.shape)
-            sampled_mat[users, :] = mat[users, :]
+            sampled_mat = csr_from_rows(mat[users, :], users, mat.shape)
 
         sampled_matrices.append(sampled_mat)
 

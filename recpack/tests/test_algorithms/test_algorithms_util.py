@@ -10,6 +10,7 @@ from scipy.sparse import csr_matrix
 from torch import Tensor
 
 from recpack.algorithms.util import (
+    csr_from_rows,
     get_batches,
     invert,
     naive_sparse2tensor,
@@ -132,3 +133,61 @@ def test_invert():
     inv = invert(a)
 
     np.testing.assert_almost_equal(inv, expected)
+
+
+def test_csr_from_rows():
+    rows = csr_matrix(np.array([[1, 0, 2], [0, 3, 0]]))
+
+    result = csr_from_rows(rows, [4, 1], (6, 3))
+
+    expected = np.zeros((6, 3))
+    expected[4] = [1, 0, 2]
+    expected[1] = [0, 3, 0]
+
+    assert isinstance(result, csr_matrix)
+    np.testing.assert_array_equal(result.toarray(), expected)
+
+
+def test_csr_from_rows_sorted_indices():
+    rows = csr_matrix(np.array([[1, 0, 2], [0, 3, 0]]))
+
+    result = csr_from_rows(rows, [1, 4], (6, 3))
+
+    expected = np.zeros((6, 3))
+    expected[1] = [1, 0, 2]
+    expected[4] = [0, 3, 0]
+
+    np.testing.assert_array_equal(result.toarray(), expected)
+
+
+def test_csr_from_rows_matches_lil_construction():
+    # The utility replaces the lil_matrix allocate-and-assign pattern:
+    # results must be identical for arbitrary inputs.
+    from scipy.sparse import lil_matrix, random as sparse_random
+
+    rng = np.random.default_rng(42)
+    for _ in range(5):
+        num_rows, num_cols = 50, 20
+        selected = rng.choice(num_rows, size=10, replace=False)
+
+        rows = csr_matrix(sparse_random(len(selected), num_cols, density=0.3, random_state=rng))
+
+        reference = lil_matrix((num_rows, num_cols))
+        reference[selected] = rows
+        reference = reference.tocsr()
+
+        result = csr_from_rows(rows, selected, (num_rows, num_cols))
+
+        np.testing.assert_array_almost_equal(result.toarray(), reference.toarray())
+
+
+def test_csr_from_rows_empty_rows():
+    # Rows without any values should be handled correctly.
+    rows = csr_matrix(np.array([[0, 0, 0], [1, 0, 0]]))
+
+    result = csr_from_rows(rows, [2, 0], (4, 3))
+
+    expected = np.zeros((4, 3))
+    expected[0] = [1, 0, 0]
+
+    np.testing.assert_array_equal(result.toarray(), expected)
