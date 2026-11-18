@@ -59,15 +59,31 @@ def get_top_K_ranks(X: csr_matrix, K: Optional[int] = None) -> csr_matrix:
     :return: Matrix with K values per row.
     :rtype: csr_matrix
     """
+    # Ties for the last position are broken explicitly in favour of the largest column index.
+    # This used to depend on scipy's internal storage order, which changed between versions.
+    if not X.has_sorted_indices:
+        X = X.sorted_indices()
+
     U, I, V = [], [], []
     for row_ix, (le, ri) in enumerate(zip(X.indptr[:-1], X.indptr[1:])):
         K_row_pick = min(K, ri - le) if K is not None else ri - le
 
         if K_row_pick != 0:
+            row_data = X.data[le:ri]
+            row_indices = X.indices[le:ri]
 
-            top_k_row = X.indices[le + np.argpartition(X.data[le:ri], list(range(-K_row_pick, 0)))[-K_row_pick:]]
+            # Value of the K-th largest element: everything above it is in the top K.
+            threshold = np.partition(row_data, -K_row_pick)[-K_row_pick]
+            above = np.flatnonzero(row_data > threshold)
+            # Fill the remaining slots with tied values, largest column index first (indices are sorted).
+            tied = np.flatnonzero(row_data == threshold)
+            selected = np.concatenate([above, tied[len(tied) - (K_row_pick - len(above)) :]])
 
-            for rank, col_ix in enumerate(reversed(top_k_row)):
+            # Order by value descending, ties by column index descending.
+            order = np.lexsort((-row_indices[selected], -row_data[selected]))
+            top_k_row = row_indices[selected[order]]
+
+            for rank, col_ix in enumerate(top_k_row):
                 U.append(row_ix)
                 I.append(col_ix)
                 V.append(rank + 1)
