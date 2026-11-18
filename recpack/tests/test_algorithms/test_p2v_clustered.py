@@ -81,18 +81,21 @@ def test_cluster_similarity_computation():
     )
 
     # assume we fitted a very easy to cluster set of embeddings.
+    # Clusters lie at angles 0, 80, 160 and 240 degrees, so no two neighbouring clusters are orthogonal.
+    # Orthogonal embeddings have a cosine similarity of exactly 0, which is only nonzero through
+    # float rounding noise, and that noise differs across platforms.
     alg.model_ = MagicMock()
     alg.model_.input_embeddings = MagicMock()
     alg.model_.input_embeddings.weight = torch.Tensor(
         [
-            [-1, -1],
-            [-1.2, -1.2],
-            [-1, 1],
-            [-1.2, 1.2],
-            [1, 1],
-            [1.2, 1.2],
-            [1, -1],
-            [1.2, -1.2],
+            [1.0, 0.0],
+            [1.2, 0.0],
+            [0.17, 0.98],
+            [0.21, 1.18],
+            [-0.94, 0.34],
+            [-1.13, 0.41],
+            [-0.5, -0.87],
+            [-0.6, -1.04],
         ]
     )
 
