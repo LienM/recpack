@@ -506,7 +506,7 @@ class TorchMLAlgorithm(Algorithm):
     def _load_best(self):
         """Load the best model from temp file"""
         self.best_model.seek(0)
-        self.model_ = torch.load(self.best_model)
+        self.model_ = torch.load(self.best_model, weights_only=False)
 
     def _evaluate(self, val_in: Matrix, val_out: Matrix) -> None:
         """Perform evaluation step
@@ -632,7 +632,7 @@ class TorchMLAlgorithm(Algorithm):
         :type filename: str
         """
         with open(filename, "rb") as f:
-            self.model_ = torch.load(f)
+            self.model_ = torch.load(f, weights_only=False)
 
     def save(self):
         """Save the current model to disk.
