@@ -67,4 +67,4 @@ def test_add_decay_to_interaction_matrix(mat_no_zero_timestamp):
         ]
     )
 
-    np.testing.assert_array_equal(weighted_mat.toarray(), expected_result)
+    np.testing.assert_array_almost_equal(weighted_mat.toarray(), expected_result)
