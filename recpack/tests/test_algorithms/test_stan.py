@@ -61,7 +61,7 @@ def test_fit(algo, mini_training_dataset):
     )
 
     expected_session_timestamps = [[3, 2, 0, 0]]
-    np.testing.assert_array_equal(algo.historical_session_timestamps_.A.T, expected_session_timestamps)
+    np.testing.assert_array_equal(algo.historical_session_timestamps_.toarray().T, expected_session_timestamps)
 
 
 def test_compute_session_similarity(algo, mini_training_dataset, mini_test_dataset):

@@ -250,7 +250,7 @@ class STAN(Algorithm):
             # so wether it is 1 or 0 does not impact the reproduction results.
             # Because recpack does not always remove history items,
             # it makes more sense to not recommend this last matching item as well.
-            item_weights = neighborhood_positions - (neighborhood_positions > 0).multiply(last_match.A)
+            item_weights = neighborhood_positions - (neighborhood_positions > 0).multiply(last_match.toarray())
 
             item_weights.data = np.exp(-np.abs(item_weights.data) * self.distance_from_match_decay)
 
