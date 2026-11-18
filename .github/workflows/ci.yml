@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # numpy is pinned to 1.x, which has no wheels for Python 3.13+.
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install CPU-only torch
+        # The default Linux torch wheel pulls in several GB of CUDA libraries the tests don't need.
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install recpack with test dependencies
+        run: pip install -e '.[test]'
+
+      - name: Run tests
+        run: pytest --cov=recpack recpack/tests/ --cov-config=.coveragerc --cov-report=term
+
+  notebooks:
+    name: Example notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install CPU-only torch
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install recpack, test dependencies and jupyter
+        # The NeuMF notebook imports pytest.
+        run: pip install -e '.[test]' jupyter
+
+      - name: Run notebooks
+        working-directory: examples
+        run: |
+          for nb in Demo.ipynb Implement_NeuMF.ipynb Implement_your_own_algorithm.ipynb Using_Hyperopt.ipynb; do
+            echo "::group::$nb"
+            ipython "$nb"
+            echo "::endgroup::"
+          done
