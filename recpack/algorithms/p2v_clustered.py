@@ -237,7 +237,8 @@ class Prod2VecClustered(Prod2Vec):
         :return: array with a cluster label for every item. Shape = (|I|,)
         :rtype: np.array
         """
-        kmeans = KMeans(self.num_clusters)
+        # n_init=10 was the default before scikit-learn 1.4; set explicitly to keep results unchanged.
+        kmeans = KMeans(self.num_clusters, n_init=10)
         cluster_assignments = kmeans.fit_predict(embedding)
         return cluster_assignments
 
