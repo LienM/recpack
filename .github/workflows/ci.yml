@@ -20,9 +20,9 @@ jobs:
         # numpy is pinned to 1.x, which has no wheels for Python 3.13+.
         python-version: ["3.10", "3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -41,9 +41,9 @@ jobs:
     name: Example notebooks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -51,8 +51,9 @@ jobs:
       - name: Install CPU-only torch
         run: pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Install recpack and jupyter
-        run: pip install -e . jupyter
+      - name: Install recpack, test dependencies and jupyter
+        # The NeuMF notebook imports pytest.
+        run: pip install -e '.[test]' jupyter
 
       - name: Run notebooks
         working-directory: examples
