@@ -1,5 +1,5 @@
 # MAC OS
-.DS_Store 
+.DS_Store
 
 # Data files
 *.npy
@@ -153,3 +153,5 @@ doc/source/generated/
 
 # Data downloaded through the Demo notebooks
 examples/data/*
+
+CLAUDE.md
